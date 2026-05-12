@@ -5,7 +5,6 @@
 // determinate. Prose summary is a deterministic template walk (no LLM, no
 // clock, no randomness).
 
-import { createHash } from "node:crypto";
 import type {
   FrameVersion,
   ArgumentSession,
@@ -61,16 +60,27 @@ function hasContradictingPremise(nodeId: NodeRef, session: ArgumentSession): boo
   return false;
 }
 
+function fnv1a32(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+function deterministicId(input: string): string {
+  const a = fnv1a32(input).toString(16).padStart(8, "0");
+  const b = fnv1a32(input + "\x01").toString(16).padStart(8, "0");
+  return a + b;
+}
+
 function branchIdFromConditions(checkpointId: NodeRef, optionId: string): string {
-  const h = createHash("sha256");
-  h.update(`${checkpointId}::${optionId}`);
-  return `br_${h.digest("hex").slice(0, 16)}`;
+  return `br_${deterministicId(`${checkpointId}::${optionId}`)}`;
 }
 
 function branchIdFromGate(gateId: NodeRef, slotName: string, value: string): string {
-  const h = createHash("sha256");
-  h.update(`${gateId}::${slotName}::${value}`);
-  return `br_${h.digest("hex").slice(0, 16)}`;
+  return `br_${deterministicId(`${gateId}::${slotName}::${value}`)}`;
 }
 
 function truncate(s: string, max = 80): string {
