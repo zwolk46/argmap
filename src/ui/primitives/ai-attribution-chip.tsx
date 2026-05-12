@@ -3,16 +3,19 @@ import type { HookInvocationRecord } from "@/llm-hooks";
 import { Tooltip } from "./tooltip";
 
 const HOOK_SHORT_NAMES: Record<string, string> = {
-  "g1-checkpoint-suggestion": "checkpoint",
-  "g2-interpretation-suggestion": "interp",
-  "g3-reasoning-summary": "summary",
-  "g4-cross-implications": "cross",
-  "g5-burden-thresholds": "burden",
-  "g6-prose-rewrite": "rewrite",
-  "g8-conclusion-direction": "direction",
-  "g9-authority-binding": "authority",
-  "g11-gate-suggestion": "gate",
-  "g13-session-advisor": "advisor",
+  G1: "checkpoint",
+  G2: "interp",
+  G3: "summary",
+  G4: "cross",
+  G5: "burden",
+  G6: "rewrite",
+  G7: "alt-path",
+  G8: "direction",
+  G9: "authority",
+  G10: "jurisdiction",
+  G11: "gate",
+  G12: "advisory",
+  G13: "advisor",
 };
 
 export function hookShortName(hook_id: string): string {

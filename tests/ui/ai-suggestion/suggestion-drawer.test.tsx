@@ -19,19 +19,6 @@ const PENDING = {
   generated_at: "2026-01-01T00:00:00Z",
 };
 
-function mockHookWith(status: AiSuggestionStatus, pending: unknown = PENDING) {
-  vi.doMock("@/ui/hooks/use-ai-suggestion", () => ({
-    useAiSuggestion: () => ({
-      pending,
-      status,
-      invoke: vi.fn(),
-      resolve: mockResolveSuggestion,
-      dismiss: vi.fn().mockImplementation(() => mockResolveSuggestion({ kind: "rejected" })),
-    }),
-  }));
-}
-
-// Use vi.mock at module level for the default scenario
 vi.mock("@/ui/hooks/use-ai-suggestion", () => ({
   useAiSuggestion: () => ({
     pending: PENDING,

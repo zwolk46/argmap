@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { validEdgeTypesFor, candidateLabel } from "@/ui/canvas/edges/edge-validity";
-import type { FrameVersion } from "@/schema";
+import type { FrameVersion, Node } from "@/schema";
 
 function makeFrame(...nodePairs: Array<[string, string]>): FrameVersion {
   return {
     id: "v-1", frame_id: "f-1", version_number: 1,
-    nodes: nodePairs.map(([id, type]) => ({ id, type, label: type })),
+    nodes: nodePairs.map(([id, type]) => ({ id, type })) as unknown as Node[],
     edges: [],
     created_at: "2026-01-01T00:00:00Z",
     is_milestone: false,

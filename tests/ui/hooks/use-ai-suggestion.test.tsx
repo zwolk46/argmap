@@ -37,15 +37,15 @@ describe("useAiSuggestion", () => {
   it("calls frame_store.invokeHook when store_kind=frame", async () => {
     mockInvokeHook.mockClear();
     const { result } = renderHook(() => useAiSuggestion("frame"));
-    await act(() => result.current.invoke("g1-checkpoint-suggestion", {}));
-    expect(mockInvokeHook).toHaveBeenCalledWith("g1-checkpoint-suggestion", {});
+    await act(() => result.current.invoke("G1", {}));
+    expect(mockInvokeHook).toHaveBeenCalledWith("G1", {});
   });
 
   it("calls session_store.invokeHook when store_kind=session", async () => {
     mockInvokeHook.mockClear();
     const { result } = renderHook(() => useAiSuggestion("session"));
-    await act(() => result.current.invoke("g1-checkpoint-suggestion", {}));
-    expect(mockInvokeHook).toHaveBeenCalledWith("g1-checkpoint-suggestion", {});
+    await act(() => result.current.invoke("G1", {}));
+    expect(mockInvokeHook).toHaveBeenCalledWith("G1", {});
   });
 
   it("dismiss calls resolveSuggestion with rejected decision", async () => {

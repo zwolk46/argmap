@@ -7,7 +7,7 @@ import { TooltipProvider } from "@/ui/primitives/tooltip";
 
 const FIXTURE: HookInvocationRecord = {
   id: "inv-1",
-  hook_id: "g1-checkpoint-suggestion",
+  hook_id: "G1",
   prompt_name: "checkpoint-v1",
   prompt_version: "1.0.0",
   provider_id: "anthropic",
@@ -40,24 +40,14 @@ describe("AiAttributionChip", () => {
 });
 
 describe("hookShortName", () => {
-  const V1_HOOKS = [
-    "g1-checkpoint-suggestion",
-    "g2-interpretation-suggestion",
-    "g3-reasoning-summary",
-    "g4-cross-implications",
-    "g5-burden-thresholds",
-    "g6-prose-rewrite",
-    "g8-conclusion-direction",
-    "g9-authority-binding",
-    "g11-gate-suggestion",
-    "g13-session-advisor",
-  ];
+  const CANONICAL_HOOKS = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12", "G13"];
 
-  for (const hook_id of V1_HOOKS) {
+  for (const hook_id of CANONICAL_HOOKS) {
     it(`has a short name for ${hook_id}`, () => {
       const name = hookShortName(hook_id);
-      expect(name).not.toBe(hook_id); // must be abbreviated
-      expect(name.length).toBeLessThan(hook_id.length);
+      expect(name).not.toBe(hook_id);
+      expect(typeof name).toBe("string");
+      expect(name.length).toBeGreaterThan(0);
     });
   }
 });

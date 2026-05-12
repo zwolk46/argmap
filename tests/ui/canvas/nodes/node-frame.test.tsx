@@ -17,7 +17,7 @@ const DEFAULT_DISPLAY: NodeDisplayFlags = {
 
 const ATTRIBUTION: HookInvocationRecord = {
   id: "inv-1",
-  hook_id: "g1-checkpoint-suggestion",
+  hook_id: "G1",
   prompt_name: "p",
   prompt_version: "1.0",
   provider_id: "anthropic",

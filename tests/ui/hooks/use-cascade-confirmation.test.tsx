@@ -2,14 +2,14 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useCascadeConfirmation } from "@/ui/hooks/use-cascade-confirmation";
-import type { FrameVersion } from "@/schema";
+import type { FrameVersion, Node } from "@/schema";
 import type { CascadeReport } from "@/runtime";
 
 const BLANK_VERSION: FrameVersion = {
   id: "v-1",
   frame_id: "f-1",
   version_number: 1,
-  nodes: [{ id: "n-1", type: "RootQuestion", label: "Root" }],
+  nodes: [{ id: "n-1", type: "RootQuestion" }] as unknown as Node[],
   edges: [],
   created_at: "2026-01-01T00:00:00Z",
   is_milestone: false,

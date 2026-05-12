@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { GLOSSARY_DICTIONARY, GlossaryTooltip } from "@/ui/primitives/glossary-tooltip";
 import { TooltipProvider } from "@/ui/primitives/tooltip";
