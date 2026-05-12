@@ -19,6 +19,8 @@ import type { SessionActionDispatchTable, SessionPatch } from "./action-runner";
 import { runSessionAction } from "./action-runner";
 import type { ComputeDriver } from "./compute-driver";
 
+export type AiSuggestionStatus = "idle" | "invoking" | "awaiting_decision" | "applying";
+
 export interface SessionStoreSnapshot {
   session: ArgumentSession | null;
   session_version: ArgumentSessionVersion | null;
@@ -26,6 +28,8 @@ export interface SessionStoreSnapshot {
   sessions_list: ArgumentSessionSummary[];
   is_loading: boolean;
   error: string | null;
+  pending_suggestion: unknown | null;
+  suggestion_status: AiSuggestionStatus;
 }
 
 interface SessionStoreActions {
@@ -34,6 +38,9 @@ interface SessionStoreActions {
   applyPatch(patch: SessionPatch): void;
   saveSessionMilestone(change_summary?: string): Promise<void>;
   previewMigration(target_frame_version_id: FrameVersionId): Promise<OrphanCandidate[]>;
+  invokeHook(hook_id: string, args: unknown): Promise<void>;
+  resolveSuggestion(decision: unknown): Promise<void>;
+  clearPendingSuggestion(): void;
   dispose(): void;
 }
 
@@ -47,6 +54,8 @@ export interface CreateSessionStoreOpts {
   compute_driver: ComputeDriver;
   now: () => string;
   generateId: () => string;
+  invoke_hook?: (hook_id: string, args: unknown) => Promise<unknown>;
+  apply_decision?: (hook_id: string, suggestion: unknown, decision: unknown) => Promise<void>;
 }
 
 export function createSessionStore(opts: CreateSessionStoreOpts) {
@@ -59,6 +68,8 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
     sessions_list: [],
     is_loading: false,
     error: null,
+    pending_suggestion: null,
+    suggestion_status: "idle" as AiSuggestionStatus,
 
     async loadSessionsForFrame(frame_id: FrameId): Promise<void> {
       set({ is_loading: true, error: null });
@@ -123,6 +134,33 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
       if (!session || !session_version) return [];
       const target_frame_version = await repo.loadFrameVersion(target_frame_version_id);
       return enumerateOrphanCandidates(session_version, target_frame_version);
+    },
+
+    async invokeHook(hook_id: string, args: unknown): Promise<void> {
+      set({ suggestion_status: "invoking" });
+      try {
+        const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
+        set({ pending_suggestion: result, suggestion_status: "awaiting_decision" });
+      } catch {
+        set({ suggestion_status: "idle" });
+      }
+    },
+
+    async resolveSuggestion(decision: unknown): Promise<void> {
+      set({ suggestion_status: "applying" });
+      const { pending_suggestion } = get();
+      try {
+        if (opts.apply_decision && pending_suggestion) {
+          const hook_id = (pending_suggestion as { hook_id?: string }).hook_id ?? "";
+          await opts.apply_decision(hook_id, pending_suggestion, decision);
+        }
+      } finally {
+        set({ pending_suggestion: null, suggestion_status: "idle" });
+      }
+    },
+
+    clearPendingSuggestion(): void {
+      set({ pending_suggestion: null, suggestion_status: "idle" });
     },
 
     dispose(): void {

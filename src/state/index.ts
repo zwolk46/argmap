@@ -24,7 +24,12 @@ export type {
 
 // Frame store
 export { createFrameStore } from "./frame-store";
-export type { FrameStore, FrameStoreSnapshot, CreateFrameStoreOpts } from "./frame-store";
+export type {
+  FrameStore,
+  FrameStoreSnapshot,
+  CreateFrameStoreOpts,
+  AiSuggestionStatus,
+} from "./frame-store";
 
 // Session store
 export { createSessionStore } from "./session-store";

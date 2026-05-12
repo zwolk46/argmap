@@ -173,4 +173,39 @@ export default [
       "argmap-determinism/no-unsorted-iteration": "error",
     },
   },
+  // UI module boundary: may import react, @xyflow/react, @/state, @/schema, @/layout.
+  // Type-only imports from @/llm-hooks are allowed; value imports are forbidden.
+  // Forbidden: @/runtime (values), @/persistence, @/modes.
+  {
+    files: ["src/ui/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/runtime", "@/runtime/*"],
+              message:
+                "src/ui/ may not import values from @/runtime. Use type-only imports if needed.",
+              allowTypeImports: true,
+            },
+            {
+              group: ["@/persistence", "@/persistence/*"],
+              message: "src/ui/ may not import from @/persistence.",
+            },
+            {
+              group: ["@/modes", "@/modes/*"],
+              message: "src/ui/ may not import from @/modes.",
+            },
+            {
+              group: ["@/llm-hooks", "@/llm-hooks/*"],
+              message:
+                "src/ui/ may only type-import from @/llm-hooks (SuggestionResult, ConfirmationDecision, HookId, HookInvocationRecord). No value imports.",
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

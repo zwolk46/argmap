@@ -5,18 +5,25 @@ import type { FrameActionDispatchTable, FramePatch } from "./action-runner";
 import { runFrameAction, validateOnly } from "./action-runner";
 import type { ComputeDriver } from "./compute-driver";
 
+export type AiSuggestionStatus = "idle" | "invoking" | "awaiting_decision" | "applying";
+
 export interface FrameStoreSnapshot {
   frame: Frame | null;
   frame_version: FrameVersion | null;
   validation: ReadonlyArray<ValidationResult>;
   is_loading: boolean;
   error: string | null;
+  pending_suggestion: unknown | null;
+  suggestion_status: AiSuggestionStatus;
 }
 
 interface FrameStoreActions {
   loadFrame(frame_id: FrameId): Promise<void>;
   applyPatch(patch: FramePatch): void;
   saveFrameMilestone(change_summary?: string): Promise<void>;
+  invokeHook(hook_id: string, args: unknown): Promise<void>;
+  resolveSuggestion(decision: unknown): Promise<void>;
+  clearPendingSuggestion(): void;
   dispose(): void;
 }
 
@@ -30,6 +37,8 @@ export interface CreateFrameStoreOpts {
   compute_driver: ComputeDriver;
   now: () => string;
   generateId: () => string;
+  invoke_hook?: (hook_id: string, args: unknown) => Promise<unknown>;
+  apply_decision?: (hook_id: string, suggestion: unknown, decision: unknown) => Promise<void>;
 }
 
 export function createFrameStore(opts: CreateFrameStoreOpts) {
@@ -41,6 +50,8 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
     validation: [],
     is_loading: false,
     error: null,
+    pending_suggestion: null,
+    suggestion_status: "idle" as AiSuggestionStatus,
 
     async loadFrame(frame_id: FrameId): Promise<void> {
       set({ is_loading: true, error: null });
@@ -88,6 +99,33 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
         frame,
         new_version: { ...frame_version, is_milestone: true, change_summary },
       });
+    },
+
+    async invokeHook(hook_id: string, args: unknown): Promise<void> {
+      set({ suggestion_status: "invoking" });
+      try {
+        const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
+        set({ pending_suggestion: result, suggestion_status: "awaiting_decision" });
+      } catch {
+        set({ suggestion_status: "idle" });
+      }
+    },
+
+    async resolveSuggestion(decision: unknown): Promise<void> {
+      set({ suggestion_status: "applying" });
+      const { pending_suggestion } = get();
+      try {
+        if (opts.apply_decision && pending_suggestion) {
+          const hook_id = (pending_suggestion as { hook_id?: string }).hook_id ?? "";
+          await opts.apply_decision(hook_id, pending_suggestion, decision);
+        }
+      } finally {
+        set({ pending_suggestion: null, suggestion_status: "idle" });
+      }
+    },
+
+    clearPendingSuggestion(): void {
+      set({ pending_suggestion: null, suggestion_status: "idle" });
     },
 
     dispose(): void {

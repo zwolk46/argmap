@@ -1,6 +1,9 @@
 // Contract surface
 export * from "./contracts";
 
+// Suggestion lifecycle types (used by @/ui type-only)
+export type { SuggestionResult, ConfirmationDecision } from "./types";
+
 // Registry
 export { HOOK_REGISTRY, getHook, listHooks, listHooksForMode } from "./registry";
 
