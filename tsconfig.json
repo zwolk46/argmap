@@ -26,7 +26,7 @@
       "@": ["src"],
       "@/*": ["src/*"]
     },
-    "types": ["vitest/globals", "node"]
+    "types": ["vitest/globals", "node", "vite/client"]
   },
   "include": ["src", "tests", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
   "exclude": ["node_modules", "dist", "tests/e2e", "playwright-report"]

@@ -166,4 +166,11 @@ export default [
       "argmap-determinism/no-unsorted-iteration": "error",
     },
   },
+  // LLM-hooks module: sorted-iteration for audit-trail reproducibility.
+  {
+    files: ["src/llm-hooks/**/*.{ts,tsx}"],
+    rules: {
+      "argmap-determinism/no-unsorted-iteration": "error",
+    },
+  },
 ];

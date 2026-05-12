@@ -22,16 +22,20 @@
     "ci": "npm run typecheck && npm run lint && npm run format && npm run test && npm run test:plugin && npm run ci:audit-iteration"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
     "@xyflow/react": "^12.3.5",
     "dexie": "^4.0.10",
     "elkjs": "^0.9.3",
+    "mustache": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "yaml": "^2.9.0",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
     "@testing-library/react": "^16.3.2",
+    "@types/mustache": "^4.2.6",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",

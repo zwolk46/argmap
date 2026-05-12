@@ -14,6 +14,7 @@ import type {
   Mode,
   Flavor,
 } from "@/schema";
+import type { PromptFileRecord } from "./dexie-schema";
 
 export interface FrameSummary {
   id: FrameId;
@@ -162,7 +163,13 @@ export interface Repository {
   ): Promise<ArgumentSessionExport>;
   importFrame(envelope: FrameExport): Promise<Frame>;
   importSession(envelope: ArgumentSessionExport): Promise<ArgumentSession>;
+
+  // Prompt file store — used by llm-hooks to cache bundled prompts.
+  loadPrompt(hook_name: string, version: string): Promise<PromptFileRecord | null>;
+  savePrompt(record: PromptFileRecord): Promise<void>;
 }
+
+export type { PromptFileRecord };
 
 export interface PendingFrameSave {
   frame: Frame;

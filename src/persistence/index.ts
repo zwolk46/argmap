@@ -1,6 +1,7 @@
 export {
   // Interface + types
   type Repository,
+  type PromptFileRecord,
   type FrameSummary,
   type ArgumentSessionSummary,
   type FrameVersionSummary,

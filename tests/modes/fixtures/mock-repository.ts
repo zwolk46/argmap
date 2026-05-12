@@ -88,6 +88,8 @@ export function mockRepository(overrides: Partial<Repository> = {}): MockReposit
     exportSession: noop,
     importFrame: noop,
     importSession: noop,
+    loadPrompt: () => Promise.resolve(null),
+    savePrompt: () => Promise.resolve(),
   };
   return mock;
 }

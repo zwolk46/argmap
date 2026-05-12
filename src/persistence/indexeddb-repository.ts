@@ -1,4 +1,4 @@
-import { ArgmapDb, applySchemaMigrationSweep } from "./dexie-schema";
+import { ArgmapDb, applySchemaMigrationSweep, type PromptFileRecord } from "./dexie-schema";
 import {
   type Repository,
   type FrameSummary,
@@ -872,6 +872,14 @@ export class IndexedDbRepository implements Repository {
       }
       throw new RepositoryError(op, err.message);
     }
+  }
+
+  async loadPrompt(hook_name: string, version: string): Promise<PromptFileRecord | null> {
+    return (await this.db.prompts.get([hook_name, version])) ?? null;
+  }
+
+  async savePrompt(record: PromptFileRecord): Promise<void> {
+    await this.db.prompts.put(record);
   }
 
   close(): void {
