@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`layout/run > matches snapshot for the simple-frame fixture 1`] = `
+{
+  "computed_at": "2026-05-11T00:00:00.000Z",
+  "height": 744,
+  "positions": [
+    {
+      "node_id": "concl_y",
+      "x": 24,
+      "y": 624,
+    },
+    {
+      "node_id": "gate_g",
+      "x": 134,
+      "y": 464,
+    },
+    {
+      "node_id": "root_q",
+      "x": 34,
+      "y": 24,
+    },
+    {
+      "node_id": "sq_a",
+      "x": 54,
+      "y": 184,
+    },
+    {
+      "node_id": "term_t",
+      "x": 74,
+      "y": 328,
+    },
+  ],
+  "width": 348,
+}
+`;

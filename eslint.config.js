@@ -157,4 +157,13 @@ export default [
       "argmap-determinism/no-unsorted-iteration": "error",
     },
   },
+  // Layout module: sorted-iteration housekeeping (matches runtime rule; layout
+  // is off the Article II § 2 boundary but the practical-determinism property
+  // benefits from the same mechanical enforcement — spec I.7 recommendation).
+  {
+    files: ["src/layout/**/*.{ts,tsx}"],
+    rules: {
+      "argmap-determinism/no-unsorted-iteration": "error",
+    },
+  },
 ];
