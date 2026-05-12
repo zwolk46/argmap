@@ -1,0 +1,585 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 20px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 4px; font-weight: 500; }
+  .doc .tag-locked { background: var(--color-background-success); color: var(--color-text-success); }
+  .doc .tag-defer { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .doc .tag-flag { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .field-list { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.65; color: var(--color-text-primary); white-space: pre-wrap; overflow-x: auto; }
+  .doc .field-list .cm { color: var(--color-text-secondary); }
+  .doc .ascii { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--color-text-primary); white-space: pre; overflow-x: auto; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+</style>
+<div class="doc">
+  <h1>Stream H — Persistence and Infrastructure</h1>
+  <p class="subtitle">Companion to stream_a_resolutions_v1.html, stream_b_schema_v1.html, stream_c_runtime_v1.html, stream_d_modes_v1.html, and stream_e_uiux_v1.html &nbsp;·&nbsp; Session date: May 10, 2026 &nbsp;·&nbsp; Version 1</p>
+
+  <div class="notice">
+    <p>This document specifies how the application persists its data, how it auto-saves, how version history is implemented on top of that persistence, and what concrete tech stack the app runs on. It covers Stream H end-to-end: storage strategy and format (H1), auto-save mechanics (H2), version-history implementation (H3), and tech-stack selection including frontend framework, graph rendering library, and build tooling (H4). It compiles directly against Stream B's schema and JSON envelope, Stream C's determinism guarantee and incremental-computation strategy, Stream D's atomicity constraints (frame-template deep-copy and session migration), and Stream E's rendering and side-pane requirements. Visual aesthetics, prompt files, and the F5 court-hierarchy database remain out of scope here; what this document fixes is the engineering substrate the rest of the application sits on.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>Conventions match the prior stream documents. TypeScript-flavored notation describes shapes and APIs; the actual implementation is plain TypeScript at the source level and JSON on disk. Where a decision is final, it is locked; where a sub-question is intentionally deferred, it is tagged accordingly. Section ids (H1, H2, H3, H4) match the master plan's Stream H sub-items.</p>
+
+  <h2>Decisions made in this session</h2>
+  <p>The following decisions are committed by this document. Each is a technical choice within agent discretion under Article V § 2(c)–(g); none reverses an architectural commitment under Article II or a prior stream's decision (verified in self-review below).</p>
+  <ol>
+    <li><strong>Local-first architecture for v1; cloud sync deferred to v2 with a sketched architecture.</strong> The client persists everything to browser-local storage and works fully offline. A sync layer can be added later without rewriting the app, because the persistence interface is abstracted (decision #4). Data movement between devices in v1 is via JSON file export/import, using the envelopes defined in Stream B B7.</li>
+    <li><strong>Browser storage backend: IndexedDB, accessed through Dexie.js.</strong> IndexedDB is the only browser-native store with the capacity, transactions, and indexed lookups the schema requires. Dexie is a thin wrapper that gives clean transaction semantics and typed queries without ceremony; it does not foreclose moving to raw IndexedDB later.</li>
+    <li><strong>On-disk export format is exactly the JSON envelope from Stream B B7.</strong> <code>FrameExport</code> and <code>ArgumentSessionExport</code> are the canonical interchange shapes. The IndexedDB layout decomposes those envelopes into per-record stores for transaction granularity, but every export round-trips losslessly.</li>
+    <li><strong>Repository pattern for persistence.</strong> A <code>Repository</code> interface defines the surface every persistence backend must implement (load Frame, save Frame, list versions, compute diff, etc.). The v1 implementation is <code>IndexedDbRepository</code>; the v2 cloud-sync implementation will be a wrapper composing local + remote repositories. Application code never touches IndexedDB directly.</li>
+    <li><strong>Auto-save debounce window: 5 seconds idle, 30 seconds maximum elapsed time.</strong> The window flushes on whichever fires first. Manual save and mode-transition saves bypass the debouncer and set <code>is_milestone: true</code>. The window is a tunable constant in one place; Stream C's incremental computation strategy keeps recompute cost bounded so the visible save cadence matches the user's edit pace.</li>
+    <li><strong>Versioning granularity: every frame-state edit forks a new <code>FrameVersion</code> (debounced); pure UI state does not.</strong> Frame-state includes nodes, edges, frame metadata, and node presentation hints (<code>x</code>, <code>y</code>, <code>collapsed</code>) — anything stored on the <code>FrameVersion</code> per Stream B. UI state (current selection, viewport pan/zoom, side-panel open/closed, current output-viewer tab) is per-user app state stored separately and is never versioned. The same rule applies to <code>ArgumentSessionVersion</code>.</li>
+    <li><strong>Single-transaction atomicity for frame-template deep-copy and session migration.</strong> Per Stream D's atomicity constraints, the deep-copy operation (regenerating every node and edge id and rewriting internal references) and the session-migration operation (forking an <code>ArgumentSessionVersion</code> plus applying orphan-resolution writes) are wrapped in a single Dexie transaction; either the entire operation commits or none of it does.</li>
+    <li><strong>Tech stack: React + TypeScript + Vite, with React Flow (xyflow) + ELK for the canvas, Zustand for application state, Dexie for persistence, Vitest + Playwright for testing.</strong> Each piece is the lowest-friction option that satisfies the requirements committed in Streams B–E; alternatives are noted under each H4 sub-section.</li>
+    <li><strong>Determinism is enforced at the runtime-module boundary, not at the framework boundary.</strong> Stream C's compute pipeline is a pure TypeScript module with explicit determinism contracts (stable iteration, no clock reads, no environment-dependent branches). The persistence layer, the React layer, and the Dexie layer all sit outside that boundary and are free to read clocks and rely on environment behavior. CI gates enforce the boundary.</li>
+    <li><strong>Schema migration is dispatched on the <code>schema_version</code> integer per Stream B B7.</strong> A single <code>MigrationRegistry</code> module holds N → N+1 transformer functions; on load, the reader walks from the file's <code>schema_version</code> to the current version, applying each transformer in turn before validating. The registry starts empty (v1 ships at <code>schema_version: 1</code>); the mechanism is in place so future upgrades are mechanical.</li>
+  </ol>
+
+  <h2 id="h1">H1 — Storage strategy</h2>
+
+  <h3>Architectural approach: local-first</h3>
+  <p>The application is local-first in v1. Every read and write hits a browser-local store; the app works fully offline; no network call sits on the critical path of any user action. This approach is chosen against the alternatives — a cloud-first SaaS, or a thick-client desktop app — for three reasons. <em>First</em>, it satisfies Article III § 5 (Reversibility): adding cloud sync later is a contained change because the persistence interface is abstracted; replacing local storage with cloud storage is the inverse change and would leave a dependency mass behind. <em>Second</em>, it satisfies Article III § 6 (Interface Fit): v1's infrastructure is small enough that a coding agent can stand it up without a server, an auth provider, a hosted database, or a deployment pipeline. <em>Third</em>, the user is a single person; multi-user collaboration is explicitly out of scope per Stream B B7. A cloud sync layer in v1 would be over-engineering for a use case that does not yet exist.</p>
+  <p>The cost of local-first is multi-device pain: the user's frames live in one browser profile on one machine. v1 mitigates this with file-based export/import using the JSON envelopes from Stream B B7. v2 replaces the mitigation with a real sync layer (sketched below). The Repository abstraction (decision #4) makes that replacement contained.</p>
+
+  <h3>Cloud sync — v2 sketch and rationale for deferral</h3>
+  <p>Cloud sync is deferred to v2. The intended v2 architecture is documented here so future agents do not re-derive it and so the v1 design can be checked against compatibility with the v2 path.</p>
+  <ul>
+    <li><strong>Auth.</strong> A managed auth provider (Supabase Auth, Clerk, or equivalent). The app gains a single "signed in / signed out" gate at startup; signed-out users see a "v1 local-only" banner and the app continues to function locally.</li>
+    <li><strong>Server.</strong> Either Supabase (Postgres + REST + auth bundled) or a small Node/Express + Postgres server. The choice is a v2 decision; both fit the schema. Postgres stores Frame, FrameVersion, ArgumentSession, and ArgumentSessionVersion records as JSONB columns plus indexed metadata for query performance.</li>
+    <li><strong>Sync model.</strong> Last-write-wins on each entity, scoped per-user (single-user means no real conflict). The client retains its full local copy and treats the server as an authoritative mirror; on reconnect, the client uploads any unsynced versions and downloads any newer versions. Because every version is immutable once written (per Article II § 4), conflict reduces to "which versions exist," not "what is the current content of an entity."</li>
+    <li><strong>Hosting.</strong> Vercel for the SPA; Supabase or Render/Fly.io for the server. Specific choice is v2 work.</li>
+  </ul>
+  <p>The v1 design preserves compatibility with this v2 sketch by routing every read and write through a single <code>Repository</code> interface (decision #4). The cloud-sync implementation will be a <code>SyncingRepository</code> that composes a local <code>IndexedDbRepository</code> with a <code>RemoteRepository</code>; v1 application code does not need to change.</p>
+
+  <h3>Browser storage backend: IndexedDB via Dexie</h3>
+  <p>IndexedDB is the only browser-native API that meets the requirements: storage capacity into the hundreds of megabytes (Frame versions are full snapshots, not deltas — per Stream B decision #4 — and a frame with active history can grow); structured records (each Frame, FrameVersion, and Session is a deeply nested object); indexed queries (we need to look up versions by <code>frame_id</code> and traverse parent pointers); transactions (per decision #7, atomicity matters for deep-copy and migration). LocalStorage is too small (5 MB) and synchronous; the File System Access API is unstable and gated by user permission per session.</p>
+  <p>Dexie.js wraps IndexedDB with a typed query builder, transaction helpers, and a schema-versioning system. The wrapper is small (≈40 KB minified) and replaceable; if Dexie ever becomes a constraint, the <code>IndexedDbRepository</code> can be reimplemented against raw IndexedDB without changing the rest of the application. Alternatives considered and rejected: <code>idb</code> (Jake Archibald's promisified wrapper — too thin; we end up rewriting Dexie's query helpers), RxDB (heavier, opinionated about reactivity), localForage (key-value only, no real transactions across keys).</p>
+
+  <h3>On-disk export format</h3>
+  <p>The export format is the JSON envelope defined in Stream B B7, repeated here for reference:</p>
+  <div class="field-list">FrameExport {
+  schema_version: integer
+  app_version: string
+  exported_at: timestamp
+  frame: Frame
+  current_version: FrameVersion
+  history?: FrameVersion[]      <span class="cm">// optional; omitted by default for size</span>
+}
+
+ArgumentSessionExport {
+  schema_version: integer
+  app_version: string
+  exported_at: timestamp
+  session: ArgumentSession
+  current_version: ArgumentSessionVersion
+  history?: ArgumentSessionVersion[]
+  embedded_frame_export?: FrameExport   <span class="cm">// when sharing a session standalone</span>
+}</div>
+  <p>Export operations build these envelopes from the IndexedDB stores. Import operations validate the envelope, run any schema migrations, and write the records into IndexedDB inside a single transaction. By default, export omits <code>history</code> for compactness; an "Export with full history" affordance includes it. <code>app_version</code> is the build's npm package version and is informational; <code>schema_version</code> is the gating value for migration.</p>
+
+  <h3>Repository abstraction</h3>
+  <p>All persistence operations route through a single interface. Application code (React components, Zustand stores, runtime modules) holds a reference to a <code>Repository</code> and never touches IndexedDB or Dexie directly. The interface is small and the surface intentionally narrow:</p>
+  <div class="field-list">interface Repository {
+  <span class="cm">// Frames</span>
+  listFrames(): Promise&lt;FrameSummary[]&gt;
+  loadFrame(frame_id: string): Promise&lt;Frame&gt;
+  saveFrame(frame: Frame): Promise&lt;void&gt;
+  deleteFrame(frame_id: string): Promise&lt;void&gt;             <span class="cm">// gated on no live sessions; checked by caller</span>
+
+  <span class="cm">// FrameVersions</span>
+  listFrameVersions(frame_id: string): Promise&lt;FrameVersion[]&gt;
+  loadFrameVersion(version_id: string): Promise&lt;FrameVersion&gt;
+  saveFrameVersion(version: FrameVersion): Promise&lt;void&gt;    <span class="cm">// also updates Frame.current_version_id atomically</span>
+
+  <span class="cm">// Argument sessions</span>
+  listSessionsForFrame(frame_id: string): Promise&lt;ArgumentSessionSummary[]&gt;
+  loadSession(session_id: string): Promise&lt;ArgumentSession&gt;
+  saveSession(session: ArgumentSession): Promise&lt;void&gt;
+  deleteSession(session_id: string): Promise&lt;void&gt;
+
+  listSessionVersions(session_id: string): Promise&lt;ArgumentSessionVersion[]&gt;
+  loadSessionVersion(version_id: string): Promise&lt;ArgumentSessionVersion&gt;
+  saveSessionVersion(version: ArgumentSessionVersion): Promise&lt;void&gt;
+
+  <span class="cm">// Composite operations — atomic per decision #7</span>
+  createFrameFromTemplate(template_frame_id: string, new_title: string): Promise&lt;Frame&gt;
+  migrateSession(session_id: string, target_frame_version_id: string,
+                 orphan_resolutions: OrphanResolution[]): Promise&lt;ArgumentSessionVersion&gt;
+  restoreFrameVersion(frame_id: string, ancestor_version_id: string): Promise&lt;FrameVersion&gt;
+  restoreSessionVersion(session_id: string, ancestor_version_id: string): Promise&lt;ArgumentSessionVersion&gt;
+
+  <span class="cm">// App state (per-user, not versioned)</span>
+  loadAppState(): Promise&lt;AppState&gt;
+  saveAppState(state: AppState): Promise&lt;void&gt;
+
+  <span class="cm">// Search</span>
+  searchFrames(query: string): Promise&lt;FrameSearchHit[]&gt;
+
+  <span class="cm">// Export / import</span>
+  exportFrame(frame_id: string, opts: { include_history: boolean }): Promise&lt;FrameExport&gt;
+  exportSession(session_id: string, opts: { include_frame: boolean; include_history: boolean }): Promise&lt;ArgumentSessionExport&gt;
+  importFrame(envelope: FrameExport): Promise&lt;Frame&gt;
+  importSession(envelope: ArgumentSessionExport): Promise&lt;ArgumentSession&gt;
+}</div>
+  <p>The interface deliberately exposes the composite operations (<code>createFrameFromTemplate</code>, <code>migrateSession</code>, <code>restoreFrameVersion</code>, <code>restoreSessionVersion</code>) rather than letting callers compose them from primitive saves. This places the atomicity contracts inside the implementation, where they can be enforced with a single transaction, instead of in caller code where they would inevitably leak.</p>
+  <p><code>FrameSummary</code>, <code>ArgumentSessionSummary</code>, <code>OrphanResolution</code>, <code>AppState</code>, and <code>FrameSearchHit</code> are small types defined alongside the repository module; their shapes follow naturally from Streams A, B, and D and are documented in the source rather than fixed here.</p>
+
+  <h3>IndexedDB store layout</h3>
+  <p>The Dexie database (named <code>argmap_v1</code>) declares the following object stores. Primary keys and secondary indexes are listed.</p>
+  <table>
+    <tr><th>Store</th><th>Primary key</th><th>Secondary indexes</th><th>Shape</th></tr>
+    <tr><td><code>frames</code></td><td><code>id</code></td><td><code>updated_at</code>, <code>last_opened_at</code>, <code>pinned</code>, <code>tags</code> (multi-entry)</td><td>Frame (per B3)</td></tr>
+    <tr><td><code>frame_versions</code></td><td><code>id</code></td><td><code>frame_id</code>, <code>[frame_id+version_number]</code>, <code>parent_version_id</code></td><td>FrameVersion (per B3)</td></tr>
+    <tr><td><code>argument_sessions</code></td><td><code>id</code></td><td><code>frame_id</code>, <code>updated_at</code></td><td>ArgumentSession (per B4, with embedded frame_version_snapshot)</td></tr>
+    <tr><td><code>argument_session_versions</code></td><td><code>id</code></td><td><code>session_id</code>, <code>[session_id+version_number]</code>, <code>parent_version_id</code></td><td>ArgumentSessionVersion (per B4)</td></tr>
+    <tr><td><code>app_state</code></td><td><code>key</code> (singleton: <code>"current"</code>)</td><td>—</td><td>AppState (recents, pinned set membership, coachmark dismissals, default output-view setting per A9, side-panel preferences)</td></tr>
+    <tr><td><code>search_index</code></td><td><code>frame_id</code></td><td>—</td><td>SearchIndexEntry (precomputed token list per Frame; rebuilt on Frame save)</td></tr>
+    <tr><td><code>prompts</code></td><td><code>[hook_name+version]</code></td><td><code>hook_name</code></td><td>PromptFile (reserved for Stream G; not populated in v1)</td></tr>
+  </table>
+  <p>The store layout follows the schema 1:1 with one accommodation: <code>FrameVersion</code> records carry a duplicated <code>frame_id</code> (also reachable through <code>frame.current_version_id</code> chains) for indexed lookup. The same applies to <code>ArgumentSessionVersion</code>'s <code>session_id</code>. Both already exist in the Stream B schema; the index just makes them queryable.</p>
+
+  <h3>Search index strategy</h3>
+  <p>Per Stream A A5, search runs across title, description, node text, tags, and Conclusion statements. The implementation is a precomputed token index per Frame, rebuilt on every Frame save.</p>
+  <ul>
+    <li>On <code>saveFrame</code> or <code>saveFrameVersion</code>, the repository computes a <code>SearchIndexEntry</code>: a flat token list extracted from the frame's title, description, tags, every node's primary text fields, and every Conclusion's <code>statement</code>. Tokenization is whitespace + lowercasing + punctuation stripping; no stemming in v1.</li>
+    <li>The entry is written to <code>search_index</code> in the same transaction as the frame save, so the index is never out of sync with the data.</li>
+    <li><code>searchFrames(query)</code> tokenizes the query and intersects against entries. For v1's expected scale (single-user, dozens to low hundreds of frames), this can be done in JavaScript without a dedicated search library; the entire <code>search_index</code> store is read into memory once on app start and kept warm.</li>
+    <li>If the user count or frame count grows beyond what in-memory intersection handles cleanly, the index can be replaced with a real search library (FlexSearch, MiniSearch, Lunr) without changing <code>Repository.searchFrames</code>. <span class="tag tag-defer">v2-as-needed</span></li>
+  </ul>
+
+  <h3>Atomicity contracts</h3>
+  <p>Three composite operations require single-transaction atomicity. Each is a method on <code>Repository</code> and is implemented inside a Dexie <code>db.transaction(...)</code> block.</p>
+  <ol>
+    <li><strong>Frame-template deep-copy</strong> (Stream D D1, Article II § 4 reversibility hint). Reads the source Frame and its <code>current_version</code> FrameVersion. Walks every Node and Edge, regenerates UUIDs, builds an id-translation map, rewrites every internal reference (NodeRef in edges, <code>output_target</code> on LogicalGate, <code>target_node_id</code> on CheckpointOption, <code>linked_to</code> on Term, etc.) using the map. Writes a new Frame with a new <code>id</code> and a new FrameVersion (version_number 1, no parent). Either every record commits or none does.</li>
+    <li><strong>Session migration</strong> (Stream D D2, D3). Reads the session's current state, computes the orphan list against the target FrameVersion, applies the user-provided <code>OrphanResolution</code>s (delete-and-discard, reattach-to-replacement, etc.), forks a new <code>ArgumentSessionVersion</code>, updates the session's <code>frame_version_id</code> and <code>frame_version_snapshot</code> and <code>current_version_id</code>. Single transaction.</li>
+    <li><strong>Restore (frame or session version)</strong> (Stream E E5). Reads the chosen ancestor, deep-copies its content into a new version with <code>parent_version_id</code> pointing at the ancestor and <code>change_summary: "restored from version N"</code>, updates the parent entity's <code>current_version_id</code>. Single transaction. Per Article II § 4, the ancestor is not modified.</li>
+  </ol>
+  <p>Auto-save writes (decision #5) are also transactional: the new <code>FrameVersion</code> record + the parent <code>Frame.current_version_id</code> + <code>Frame.updated_at</code> commit together. A partial-save failure leaves the prior state intact.</p>
+
+  <h3>Quota and failure handling</h3>
+  <p>IndexedDB has a per-origin quota. On modern browsers this is generous (Chromium grants up to ~60% of total disk; Firefox similar; Safari more conservative around 1 GB), but failures are still possible. The repository handles them:</p>
+  <ul>
+    <li><strong>Quota-exceeded on save.</strong> The repository raises a typed <code>QuotaExceededError</code>. The auto-save controller catches it, surfaces a non-blocking "couldn't save — your changes are still in memory" warning in the UI, and retries on the next change. The user can click the warning to open an export dialog.</li>
+    <li><strong>Generic transaction failure.</strong> The repository raises a <code>RepositoryError</code> with the failed operation name. The same UI affordance applies; the in-memory state is preserved.</li>
+    <li><strong>Read failure on app start.</strong> If the database is corrupt or unreadable, the user is shown a recovery screen offering "Export raw data," "Try opening anyway in read-only mode," and "Reset database" (with a strong confirmation). Reset deletes the database entirely; export attempts to dump whatever records survive.</li>
+  </ul>
+  <p>The persistent surface for these failures is intentionally a non-blocking warning rather than a modal; per Stream E's interaction patterns, the user keeps control of what to do next.</p>
+
+  <h3>Schema migration mechanism</h3>
+  <p>Per Stream B B7 and decision #10, schema migration is dispatched on <code>schema_version</code>. The <code>MigrationRegistry</code> module declares a sequence of <code>(from_version, to_version, transformer)</code> tuples; the reader walks the chain on import.</p>
+  <div class="field-list">type Migration = (input: AnyJson) =&gt; AnyJson
+
+interface MigrationRegistry {
+  readonly current_schema_version: integer
+  migrations: { [from: integer]: Migration }   <span class="cm">// from_version → transformer that produces from_version + 1</span>
+}
+
+function migrate(envelope: AnyJson, registry: MigrationRegistry): AnyJson {
+  let v = envelope.schema_version
+  while (v &lt; registry.current_schema_version) {
+    envelope = registry.migrations[v](envelope)
+    v += 1
+    envelope.schema_version = v
+  }
+  return envelope
+}</div>
+  <p>v1 ships with <code>current_schema_version: 1</code> and an empty <code>migrations</code> table. The first time a non-backward-compatible change ships, the responsible session adds a single transformer and bumps the constant; the registry is the only file that needs to change. Running migrations on import is also the path used when an older version of the app's IndexedDB is opened by a newer build (Dexie's own version-bump hook calls <code>migrate</code>).</p>
+
+  <h2 id="h2">H2 — Auto-save mechanics</h2>
+
+  <h3>What constitutes a save</h3>
+  <p>A save is the persistence of frame state or session state to IndexedDB through the Repository. There are two save kinds:</p>
+  <ul>
+    <li><strong>Auto-save</strong>: triggered by the debouncer (decision #5) after frame-state or session-state edits. Creates a new <code>FrameVersion</code> or <code>ArgumentSessionVersion</code> with <code>is_milestone: false</code>.</li>
+    <li><strong>Milestone save</strong>: triggered by an explicit user action (the "save milestone" command, mode transitions, frame-template deep-copy, session migration, or restore). Bypasses the debouncer and creates a version with <code>is_milestone: true</code>.</li>
+  </ul>
+  <p>App-state changes (selection, viewport, side-panel state, coachmark dismissals) are saved separately, debounced more aggressively (1-second window), and never create versions. They write to the singleton <code>app_state</code> record.</p>
+
+  <h3>Debounce parameters</h3>
+  <p>The auto-save debouncer follows the standard "idle + max" pattern.</p>
+  <ul>
+    <li><strong>Idle window: 5 seconds.</strong> If no frame-state edit has occurred for 5 seconds, flush.</li>
+    <li><strong>Maximum elapsed window: 30 seconds.</strong> If 30 seconds have passed since the first un-flushed edit, flush regardless of subsequent activity.</li>
+    <li><strong>Flush on navigation.</strong> If the user closes the tab, navigates away, or runs an action that needs the current state on disk (a milestone save, an export, a session migration), the debouncer flushes immediately. Tab-close is hooked via <code>beforeunload</code>; the flush is best-effort because browsers may not honor synchronous IndexedDB writes during unload, so the value is preserved primarily by the 30-second cap.</li>
+    <li><strong>Single in-flight save.</strong> Only one save is in flight at a time per Frame or Session. If a flush fires while the prior save is still in progress, the new flush is queued and runs on completion.</li>
+  </ul>
+  <p>5 seconds is short enough that data loss in a crash is bounded; 30 seconds is long enough that a heavy edit session does not produce a wall of versions in the history pane. Both are constants in one source file (<code>autosave.ts</code>) and tunable; user-facing exposure of these knobs is deferred unless it surfaces as a complaint.</p>
+
+  <h3>Versioning rules</h3>
+  <p>Per decision #6, the line between "versioned" and "not versioned" is drawn at the <code>FrameVersion</code> / <code>ArgumentSessionVersion</code> schema boundary. Anything stored on those types is versioned. Anything else is app state.</p>
+  <table>
+    <tr><th>Edit</th><th>Triggers a save?</th><th>Versioned?</th></tr>
+    <tr><td>Add / edit / delete a Node or Edge</td><td>auto-save (debounced)</td><td>yes — new FrameVersion</td></tr>
+    <tr><td>Edit Frame metadata (title, description, tags, default policies, jurisdiction_default, positions)</td><td>auto-save</td><td>yes — new FrameVersion</td></tr>
+    <tr><td>Drag a node (sets <code>x</code>, <code>y</code> on the Node)</td><td>auto-save</td><td>yes — new FrameVersion</td></tr>
+    <tr><td>Collapse / expand a SubQuestion (sets <code>collapsed</code>)</td><td>auto-save</td><td>yes — new FrameVersion</td></tr>
+    <tr><td>Add / edit / delete a Premise, ANSWERS / SUPPORTS / CONTRADICTS edge, session Authority, or InterpretationSelection</td><td>auto-save</td><td>yes — new ArgumentSessionVersion</td></tr>
+    <tr><td>Answer or change a Checkpoint response</td><td>auto-save</td><td>yes — new ArgumentSessionVersion</td></tr>
+    <tr><td>"Save milestone" click; mode transition; frame-template deep-copy; session migration; restore</td><td>immediate save</td><td>yes — new version with <code>is_milestone: true</code></td></tr>
+    <tr><td>Pan / zoom the canvas; change current selection; open / close a side panel; switch output-viewer tab</td><td>app-state save (debounced 1s)</td><td>no</td></tr>
+    <tr><td>Dismiss a coachmark; toggle the milestones-only filter; change a user preference</td><td>app-state save</td><td>no</td></tr>
+  </table>
+  <p>Presentation hints (<code>x</code>, <code>y</code>, <code>collapsed</code>) are versioned because they are stored on the Node within the FrameVersion (per Stream B B1) and because the layout engine treats them as fixed anchors (per Stream E E1). Restoring an older version is expected to restore the layout the user had at that point; that requires the hints to live with the version's content. The cost — a drag-drop creates a version after the 5-second idle — is acceptable; the version-history side pane filters auto-saves out of view by default per Stream E E5.</p>
+
+  <h3>Milestone forcing</h3>
+  <p>Per Stream B B3 ("manual saves and mode transitions force a new version with <code>is_milestone: true</code>") and Stream D D1 / D3, the following operations always set <code>is_milestone: true</code>:</p>
+  <ul>
+    <li>The user clicks "save milestone" with optional <code>change_summary</code>.</li>
+    <li>Operating-mode transition Frame Building → Argument Running (after C5 strict passes).</li>
+    <li>Architectural-mode transition (legal ↔ general).</li>
+    <li>Flavor change (personal ↔ academic).</li>
+    <li>Frame-template deep-copy (creates the destination Frame's v1 milestone).</li>
+    <li>Session migration (creates the migrated session's milestone).</li>
+    <li>Restore (creates the new branch's first version as a milestone, with <code>change_summary: "restored from version N"</code>).</li>
+  </ul>
+
+  <h3>Failure handling</h3>
+  <p>Saves can fail in three ways: quota exceeded, transaction abort (browser closes the database mid-write), and unexpected exceptions. The auto-save controller's behavior in each case:</p>
+  <ul>
+    <li><strong>Failure preserves in-memory state.</strong> The application's Zustand store is not mutated by a save attempt; saves read from the store. A failed save does not roll back any user-visible state.</li>
+    <li><strong>UI surface: non-blocking banner.</strong> A small banner appears at the top of the screen reading "Couldn't save your changes — they're still in memory. We'll keep trying." with a small "Export now" link. The banner clears on the next successful save.</li>
+    <li><strong>Retry: on the next edit.</strong> The debouncer's next fire attempts the save again. There is no exponential backoff in v1; the interaction model is "try every time the user edits, and surface failure if it persists." If two consecutive saves fail, the banner upgrades to a stronger warning ("Saves are failing. Export to keep your work safe.").</li>
+  </ul>
+
+  <h3>Concurrency</h3>
+  <p>v1 is single-user. Two browser tabs open on the same Frame is the only realistic concurrency case; it is handled by the <strong>BroadcastChannel API</strong> as a courtesy and the <strong>last-write-wins</strong> semantics of IndexedDB as the floor.</p>
+  <ul>
+    <li>On startup, each tab joins a BroadcastChannel keyed to the database name. When a tab saves a new FrameVersion, it broadcasts <code>{frame_id, new_version_id}</code> to peer tabs.</li>
+    <li>Peer tabs receiving the broadcast reload the affected Frame from disk. If the user has unsaved changes in that tab, a small banner appears: "This frame was edited in another tab. Reload to see the latest version, or keep editing here (your changes will be saved as a new branch)." The user picks; either path is non-destructive.</li>
+    <li>Without BroadcastChannel (older browsers), the floor behavior is last-write-wins per IndexedDB transaction. A user editing in two tabs simultaneously may produce two FrameVersions whose <code>parent_version_id</code> points at the same ancestor — i.e., a forked branch — which the version-history UI already handles.</li>
+  </ul>
+  <p>Because every version is preserved (Article II § 4), no data is lost in any of these cases; the worst outcome is a divergent branch the user resolves through the version-history pane.</p>
+
+  <h2 id="h3">H3 — Version history implementation</h2>
+
+  <h3>Storage layout</h3>
+  <p>One IndexedDB record per <code>FrameVersion</code> and one per <code>ArgumentSessionVersion</code>. No deduplication. The <code>frame_versions</code> store is indexed on <code>frame_id</code> for "list versions of frame X" queries and on <code>parent_version_id</code> for "what forked from this version" queries. Same pattern for <code>argument_session_versions</code>.</p>
+
+  <h3>Branch tree representation</h3>
+  <p>The version graph is a tree rooted at <code>version_number: 1</code>. Each version has at most one <code>parent_version_id</code>; multiple versions may share the same parent (i.e., branches). The history side pane (Stream E E5) renders the tree by walking from the root forward and indenting children of each fork point.</p>
+  <p>Building the tree for the side pane:</p>
+  <div class="field-list">async function buildVersionTree(frame_id: string): Promise&lt;VersionTreeNode&gt; {
+  const versions = await repo.listFrameVersions(frame_id)   <span class="cm">// already sorted by version_number ascending</span>
+  const by_id = new Map(versions.map(v =&gt; [v.id, v]))
+  const children: Map&lt;string, FrameVersion[]&gt; = new Map()
+  let root: FrameVersion | null = null
+  for (const v of versions) {
+    if (!v.parent_version_id) { root = v; continue }
+    const list = children.get(v.parent_version_id) ?? []
+    list.push(v)
+    children.set(v.parent_version_id, list)
+  }
+  return buildNode(root!, children)
+}</div>
+  <p>The same algorithm runs for ArgumentSessionVersions. Cost is O(n) in the version count; for v1's expected scale this is well below any user-perceived threshold.</p>
+
+  <h3>Diff algorithm</h3>
+  <p>Per Stream E E5, the Compare view shows nodes added / removed / edited, edges added / removed / edited, and frame metadata changes. The diff is a pure function over two FrameVersions:</p>
+  <div class="field-list">interface StructuralDiff {
+  nodes_added: Node[]
+  nodes_removed: Node[]
+  nodes_edited: { before: Node, after: Node, fields_changed: string[] }[]
+  edges_added: Edge[]
+  edges_removed: Edge[]
+  edges_edited: { before: Edge, after: Edge, fields_changed: string[] }[]
+  metadata_changes: { field: string, before: any, after: any }[]
+}
+
+function diffFrameVersions(a: FrameVersion, b: FrameVersion): StructuralDiff {
+  <span class="cm">// 1. Bucket nodes by id from each version.</span>
+  <span class="cm">// 2. nodes_added = ids in b not in a; nodes_removed = ids in a not in b.</span>
+  <span class="cm">// 3. For shared ids, compare field-by-field (excluding x, y, collapsed which are layout hints — </span>
+  <span class="cm">//    layout-only changes are surfaced as a single \"layout changed\" entry, not field-level).</span>
+  <span class="cm">// 4. Same for edges, keyed by id.</span>
+  <span class="cm">// 5. Frame metadata: title, mode, flavor, jurisdiction_default, positions, default_satisfaction_policies, tags.</span>
+  ...
+}</div>
+  <p>The function is pure, deterministic, and unit-tested with snapshot fixtures. Layout-hint changes are bucketed separately because they are typically not what the user wants to see when comparing versions; the Compare UI exposes them as a single line ("Layout updated for 4 nodes") rather than four entries. This is a UX refinement consistent with Stream E E5's "shows structural and field-level changes" framing.</p>
+  <p>The same shape and algorithm apply to <code>diffSessionVersions(a, b)</code> for ArgumentSessionVersion comparison; the relevant collections are <code>premises</code>, <code>argument_edges</code>, <code>checkpoint_responses</code>, <code>session_authorities</code>, and <code>interpretation_selections</code>.</p>
+
+  <h3>Restore implementation</h3>
+  <p>Restoring an ancestor creates a new version off that ancestor. The implementation:</p>
+  <div class="field-list">async function restoreFrameVersion(frame_id: string, ancestor_version_id: string): Promise&lt;FrameVersion&gt; {
+  return await db.transaction('rw', db.frames, db.frame_versions, async () =&gt; {
+    const frame = await db.frames.get(frame_id)
+    const ancestor = await db.frame_versions.get(ancestor_version_id)
+    if (!frame || !ancestor) throw new RepositoryError('not found')
+    const max_version = await db.frame_versions
+      .where('[frame_id+version_number]').between([frame_id, 0], [frame_id, Infinity])
+      .last()
+    const new_version: FrameVersion = {
+      id: uuid(),
+      frame_id: frame_id,
+      version_number: (max_version?.version_number ?? 0) + 1,
+      parent_version_id: ancestor_version_id,
+      created_at: now(),
+      change_summary: `restored from version ${ancestor.version_number}`,
+      nodes: deep_clone(ancestor.nodes),
+      edges: deep_clone(ancestor.edges),
+      is_milestone: true,
+    }
+    await db.frame_versions.add(new_version)
+    frame.current_version_id = new_version.id
+    frame.updated_at = now()
+    await db.frames.put(frame)
+    return new_version
+  })
+}</div>
+  <p>The transaction guarantees atomicity per decision #7. The ancestor is not modified (Article II § 4). The new version's <code>version_number</code> is the next integer in the frame's sequence regardless of which ancestor was restored — i.e., version numbers are monotonic across the entire frame's history, not per-branch. This matches the side pane's display, where v1, v2, v3, ... appear in chronological order with branches drawn as indents.</p>
+  <p>Session restore follows the same pattern over <code>argument_session_versions</code>.</p>
+
+  <h3>Performance: lazy loading</h3>
+  <p>The version-history side pane loads version metadata only — <code>id</code>, <code>version_number</code>, <code>parent_version_id</code>, <code>created_at</code>, <code>is_milestone</code>, <code>change_summary</code> — not the full <code>nodes</code> and <code>edges</code> payload. A <code>FrameVersionSummary</code> projection is a separate Repository method:</p>
+  <div class="field-list">interface FrameVersionSummary {
+  id: string
+  frame_id: string
+  version_number: integer
+  parent_version_id?: string
+  created_at: timestamp
+  is_milestone: boolean
+  change_summary?: string
+}
+
+repo.listFrameVersionSummaries(frame_id): Promise&lt;FrameVersionSummary[]&gt;</div>
+  <p>The summary projection reads the records but discards the heavy fields before returning. For Preview, Compare, and Restore, the full version is loaded on demand. For a frame with hundreds of versions this keeps the side pane responsive.</p>
+
+  <h3>Compaction</h3>
+  <p>Storage compaction (deduplicating identical nodes/edges across versions, or representing later versions as deltas against earlier ones) is deferred to v2, per Stream B decision #4 and B7 ("Storage size is a Stream H concern; deduplication can be layered in later without a schema change"). The on-disk format and the Repository surface are stable across that change. The trigger for v2 work is observed user complaint (or an internal storage-size metric exceeding a threshold), not a planned milestone. <span class="tag tag-defer">v2-as-needed</span></p>
+
+  <h2 id="h4">H4 — Tech stack selection</h2>
+
+  <h3>Frontend framework: React + TypeScript</h3>
+  <p><strong>React</strong> for the UI layer, <strong>TypeScript</strong> for everything. React is chosen for three reasons. <em>First</em>, it has the broadest ecosystem of mature, actively maintained graph-rendering libraries, and Stream E's requirements (custom node shapes, custom edge styles, drag-from-handle edge creation, Sugiyama auto-layout, side-pane interactions) map cleanly to React's component model. <em>Second</em>, future coding agents working on this project will be most productive in React; the constitution's Article III § 6 (Interface Fit) penalizes designs that require deep onboarding. <em>Third</em>, React's render model decouples UI updates from persistence operations, which matters for the auto-save controller — saves run on a debounced timeline, independent of React's render cycle.</p>
+  <p>TypeScript is required, not optional. Stream B's schema is written in a TypeScript-flavored notation; using TypeScript at the source level prevents schema drift from going undetected. Compile-time enforcement of node-type discrimination, edge-type validation, and condition-library exhaustiveness is the project's first line of defense against bugs that would otherwise surface only as broken sessions.</p>
+  <p>Alternatives considered: Svelte / SvelteKit (smaller, faster, but smaller graph-library ecosystem and less agent familiarity), Vue (similar tradeoffs to Svelte), vanilla TypeScript (would force the team to rebuild basic UI primitives). Solid.js (a strong technical fit, but ecosystem and agent familiarity are weaker than React).</p>
+
+  <h3>Graph rendering library: React Flow + ELK</h3>
+  <p><strong>React Flow</strong> (the open-source library now branded <em>xyflow</em>) for the canvas, with <strong>ELK</strong> (specifically <code>elkjs</code>, the JavaScript port) for auto-layout. The combination satisfies every Stream E E1 requirement.</p>
+  <ul>
+    <li><strong>Custom node components.</strong> React Flow allows registering a React component per node type. Each of Stream B's nine node types gets its own component, rendering the shape (rounded rect, square rect, hexagon, diamond, double-bordered, document icon, pill, etc.) and the type-specific content. Status badges, sub-flag chips, and Premise-count chips are slots within those components.</li>
+    <li><strong>Custom edge components.</strong> Edge styling per type (solid, dashed with stop-cap, dotted, thin gray with citation glyph) is implemented as React Flow custom edge components.</li>
+    <li><strong>Drag-from-handle edge creation.</strong> React Flow's <code>Connection</code> system natively supports dragging from a node's handle to another node, then firing an <code>onConnect</code> callback. The callback opens the edge-type picker (Stream E E2) and creates the edge through the Repository.</li>
+    <li><strong>Zoom, pan, minimap, controls.</strong> React Flow ships <code>&lt;Controls&gt;</code> and <code>&lt;MiniMap&gt;</code> components matching Stream E E1's affordances.</li>
+    <li><strong>Auto-layout via ELK.</strong> React Flow does not ship a hierarchical layout. <code>elkjs</code> exposes ELK's "layered" algorithm (Sugiyama-style, top-down). Integration is straightforward: feed ELK the graph, get back <code>x</code>, <code>y</code> coordinates, push them onto React Flow nodes. ELK runs in a Web Worker for non-blocking layout on large frames.</li>
+    <li><strong>Per-node x/y persistence.</strong> When the user drags a node, React Flow fires an event with the new coordinates; the handler writes them to the Node via the Repository. Subsequent ELK passes treat user-positioned nodes as fixed anchors per Stream E E1.</li>
+    <li><strong>Collapse / expand subtrees.</strong> Implemented at the React layer: a SubQuestion with <code>collapsed: true</code> renders as a single node with a "+N nodes" badge; on expand, the children are added back to React Flow's node list and ELK re-runs.</li>
+  </ul>
+  <p>Alternatives considered: <strong>Cytoscape.js</strong> (more graph-algorithm depth, but heavier and the React integration is more cumbersome — its renderer is canvas-based, which limits custom-component flexibility), <strong>D3</strong> directly (maximal flexibility, but rebuilds basic affordances React Flow gives for free), <strong>vis-network</strong> (similar concerns to Cytoscape; aging API), <strong>JointJS</strong> (commercial license complications). For Sugiyama, <strong>dagre</strong> was considered against ELK; ELK produces visibly better layouts on the kinds of frames legal analysis tends to produce (deeper hierarchies, asymmetric branching) and is the choice when layout quality matters more than minimal install size.</p>
+
+  <h3>Build tooling: Vite</h3>
+  <p><strong>Vite</strong> for development server and production build. Vite's dev server is fast, its config is minimal, and it has first-class React + TypeScript support. <code>vitest</code> (the test runner) shares Vite's pipeline, so unit and snapshot tests pick up the same module-resolution rules and TS settings as the application code — no second source of truth.</p>
+  <p>Alternatives: Webpack (heavier configuration), Parcel (less actively developed), Turbopack (tied to Next.js; this project does not need SSR), Rspack (newer; viable but no advantage over Vite for this scale).</p>
+
+  <h3>State management: Zustand</h3>
+  <p><strong>Zustand</strong> for global state (current Frame, current ArgumentSession, undo/redo stack pointer, user-mode/flavor). React Context for cross-cutting concerns (Repository instance, theme tokens, user preferences) where Zustand would be overkill. The Zustand store is the source of truth for the in-memory copy of the user's working state; the Repository writes that state to disk on debounced flushes.</p>
+  <p>Alternatives: Redux (boilerplate-heavy, ceremony cost not justified at v1's scale), Jotai (atom-based; viable but Zustand's slice model is a closer match to "one Frame, one Session" mental model), MobX (proxy-based; works but harder to reason about than Zustand's plain functions), pure React Context for everything (re-render performance risk on large frames).</p>
+
+  <h3>Persistence layer: Dexie.js</h3>
+  <p>Per H1: <strong>Dexie.js</strong> wrapping IndexedDB. The dependency adds ~40 KB minified; the alternative (raw IndexedDB) is more code and more bug surface for no benefit at this scale.</p>
+
+  <h3>Testing: Vitest + Playwright</h3>
+  <p><strong>Vitest</strong> for unit tests, snapshot tests, and Stream C's determinism test fixtures. <strong>Playwright</strong> for end-to-end browser tests covering the full stack (Repository → React → React Flow). The split mirrors the architecture: pure modules (the runtime pipeline, the Repository's pure helpers, the diff algorithm) are unit-tested with Vitest; user flows (build a frame, run a session, restore a version, migrate a session) are E2E-tested with Playwright.</p>
+  <p>Stream C's determinism test specifications land here as concrete files:</p>
+  <ul>
+    <li><strong>Snapshot tests</strong>: <code>tests/runtime/fixtures/*.json</code> — pairs of (input, expected output). Vitest snapshot mode compares byte-equal.</li>
+    <li><strong>Property tests</strong>: <code>tests/runtime/property/*.test.ts</code> using <code>fast-check</code>. Random well-formed frames + random sessions, asserting <code>compute(x) === compute(x)</code>.</li>
+    <li><strong>Cache-equality tests</strong>: every snapshot test runs both the full-recompute and incremental paths and asserts byte-equal output.</li>
+    <li><strong>Iteration-order audit</strong>: a custom ESLint rule (<code>no-unsorted-iteration</code>) running over the runtime modules; any <code>for…of</code> loop, <code>map</code>, or <code>forEach</code> over a Map, Set, or plain object that has not been preceded by a sort flagged as an error. The rule lives in <code>eslint-plugin-argmap-determinism/</code> in the repo. Specified as a CI gate per Stream C.</li>
+    <li><strong>Clock isolation</strong>: Vitest's <code>vi.useFakeTimers()</code> wraps every runtime test; the runtime modules are designed to take a clock as a parameter (or none at all), so a frozen clock surfaces any accidental <code>Date.now()</code> dependency immediately.</li>
+  </ul>
+
+  <h3>Linting, formatting, CI</h3>
+  <p><strong>ESLint</strong> with <code>typescript-eslint</code>, the React plugins, and the custom <code>no-unsorted-iteration</code> rule. <strong>Prettier</strong> for formatting. <strong>GitHub Actions</strong> (or whatever CI runs against the repo) executes, on every PR: typecheck, lint, unit tests, E2E smoke tests, and the iteration-order audit. The CI gate failing on the iteration-order audit is the practical enforcement of Stream C's determinism contract; this is the second line of defense after TypeScript's type system and is the line that catches the mistakes humans make under deadline.</p>
+
+  <h3>Module structure</h3>
+  <p>The repository is organized so that each module aligns with a stream. This makes future work — by review sessions, by Stream G implementation, by Stream I final-spec compilation — easy to scope.</p>
+  <div class="ascii">src/
+  schema/                  <span class="cm"># Stream B: types, Zod validators, JSON envelope</span>
+    nodes.ts
+    edges.ts
+    frame.ts
+    session.ts
+    satisfaction-policy.ts
+    validation-rules.ts    <span class="cm"># V-FR-*, V-ARG-* declarations</span>
+    envelope.ts            <span class="cm"># FrameExport, ArgumentSessionExport</span>
+    migrations.ts          <span class="cm"># MigrationRegistry; empty in v1</span>
+  runtime/                 <span class="cm"># Stream C: the determinism boundary</span>
+    compute.ts             <span class="cm"># the orchestrator</span>
+    phase1-validate.ts
+    phase2-foreclosure.ts
+    phase3-reachable.ts
+    phase4-status.ts
+    phase5-output.ts
+    conditions/            <span class="cm"># the 12 condition implementations from A3</span>
+    authority-binding.ts   <span class="cm"># C6</span>
+    incremental-cache.ts
+    iteration-helpers.ts   <span class="cm"># sortedIter, sortedKeys, etc. — the canonical sort-before-iterate</span>
+  modes/                   <span class="cm"># Stream D: action surfaces, mode transitions, orphan resolution</span>
+    frame-building.ts
+    argument-running.ts
+    mode-transition.ts
+    orphan-resolution.ts
+    interview-ordering.ts
+  persistence/             <span class="cm"># Stream H: this document</span>
+    repository.ts          <span class="cm"># interface</span>
+    indexeddb-repository.ts
+    dexie-schema.ts
+    autosave.ts
+    diff.ts                <span class="cm"># diffFrameVersions, diffSessionVersions</span>
+    search-index.ts
+    broadcast.ts           <span class="cm"># BroadcastChannel courtesy</span>
+  ui/                      <span class="cm"># Stream E: React + React Flow</span>
+    app.tsx                <span class="cm"># top-level shell, routing, repository provider</span>
+    frame-building/        <span class="cm"># E2: top bar, palette, outline, canvas, inspector</span>
+    argument-running/      <span class="cm"># E3: top bar, interview pane, output viewer, item editors</span>
+    canvas/                <span class="cm"># React Flow integration, custom node and edge components</span>
+    version-history/       <span class="cm"># E5: side pane, diff view, preview, restore</span>
+    mode-toggles/          <span class="cm"># E6</span>
+    onboarding/            <span class="cm"># E7</span>
+    primitives/            <span class="cm"># shared atoms: status badge, type icon, glossary tooltip</span>
+  state/                   <span class="cm"># Zustand stores + React Context providers</span>
+    frame-store.ts
+    session-store.ts
+    app-state-store.ts
+    repository-context.tsx
+  llm-hooks/               <span class="cm"># Stream G: prompt files, hook contracts; minimal in v1</span>
+    contracts.ts
+    prompts/               <span class="cm"># empty in v1; populated by Stream G</span>
+  layout/                  <span class="cm"># ELK integration in a Web Worker</span>
+    elk-worker.ts
+    elk-bridge.ts
+tests/
+  schema/
+  runtime/
+    fixtures/
+    property/
+  modes/
+  persistence/
+  ui/                      <span class="cm"># Playwright</span>
+eslint-plugin-argmap-determinism/    <span class="cm"># custom CI gate</span></div>
+  <p>This structure is a recommendation, not a constitutional commitment; an implementing agent may reorganize. The stream-aligned grouping is intentional: review sessions can scope to a single stream's directory; Stream G can populate <code>llm-hooks/prompts/</code> without touching anything else; Stream I can compile the final coding spec by reading each stream's directory in turn.</p>
+
+  <h3>Future hosting</h3>
+  <p>v1 ships as a static SPA. <code>vite build</code> produces a directory of static files; any static host (Vercel, Netlify, Cloudflare Pages, GitHub Pages, an S3 bucket) can serve it. The choice is deferred until v1 is implementable; the application has no server-side dependency in v1.</p>
+  <p>v2 (cloud sync) adds a backend. The sketched architecture (H1) is Vercel for the SPA + Supabase or a small Node/Express + Postgres for the sync API. <span class="tag tag-defer">v2</span></p>
+
+  <h2>Determinism implementation contract</h2>
+  <p>The persistence and infrastructure layers do not undermine Stream C's determinism guarantee, but they create the surface where the guarantee is enforced. The contract has three parts.</p>
+  <ol>
+    <li><strong>Module boundary.</strong> The runtime pipeline (<code>src/runtime/</code>) is a pure module: it imports nothing from <code>src/persistence/</code>, <code>src/ui/</code>, <code>src/state/</code>, <code>src/llm-hooks/</code>, or any third-party library that reads the clock or environment. Imports are restricted to <code>src/schema/</code> and standard JavaScript built-ins. Enforced by an ESLint <code>no-restricted-imports</code> rule.</li>
+    <li><strong>Sort before iterate.</strong> Every iteration over a <code>Set</code>, <code>Map</code>, or plain object inside <code>src/runtime/</code> is preceded by a sort by lexicographic id. The <code>iteration-helpers.ts</code> module provides <code>sortedIter</code>, <code>sortedKeys</code>, and <code>sortedEntries</code> as the canonical helpers; the custom ESLint rule <code>no-unsorted-iteration</code> flags any direct iteration that bypasses them.</li>
+    <li><strong>Frozen clock in tests.</strong> Every test in <code>tests/runtime/</code> runs under <code>vi.useFakeTimers()</code> and a frozen <code>Date.now()</code>. Any incidental clock dependency in runtime code is detected by the property-test suite, which runs each test twice with different frozen times and asserts identical output.</li>
+  </ol>
+  <p>The persistence layer reads the clock for <code>created_at</code> and <code>updated_at</code> fields. Those values flow into FrameVersion and ArgumentSessionVersion records, but they are inputs to <code>compute</code> only insofar as they live on the snapshot that <code>compute</code> reads — and the snapshot is by definition fixed at the moment <code>compute</code> runs. There is no clock read inside <code>compute</code> itself.</p>
+
+  <h2>Reserved / deferred design space</h2>
+  <ul>
+    <li><strong>Cloud sync.</strong> Architecture sketched (H1); implementation deferred to v2. Trigger for v2 work: user request, or stable v1 product. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Storage compaction / version-content deduplication.</strong> Per Stream B B7. Implementation strategy: a content-addressable store layer underneath the FrameVersion record, where identical Node and Edge subtrees are stored once and referenced by hash. Schema-compatible; can be added without changing the Repository interface. <span class="tag tag-defer">v2-as-needed</span></li>
+    <li><strong>Multi-user collaboration.</strong> The schema includes a <code>created_by</code> field hook on Node and Edge bases. Real concurrency control (CRDTs, operational transforms, or a server-side authoritative-state model) is out of scope. <span class="tag tag-defer">v2+</span></li>
+    <li><strong>Mobile / narrow-screen rendering.</strong> Per Stream E E5's deferral. The persistence layer is mobile-ready (IndexedDB works on every browser); the UI is desktop-first. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Search index quality upgrade.</strong> The in-memory tokenizer is intentionally simple (whitespace + lowercase + punctuation strip; no stemming, no fuzzy match). Replacement with FlexSearch or MiniSearch is contained behind the Repository interface. <span class="tag tag-defer">v2-as-needed</span></li>
+    <li><strong>Background indexing for very large frames.</strong> The synchronous in-transaction index build is fine up to ~hundreds of nodes per frame. For larger frames, indexing moves to a Web Worker. <span class="tag tag-defer">v2-as-needed</span></li>
+    <li><strong>Cross-frame storage queries.</strong> The deferred A6 cross-frame references will need a query model that spans frames; v1's per-frame storage layout supports this without restructuring (UUIDs are globally unique by design). <span class="tag tag-defer">v2 (with A6)</span></li>
+    <li><strong>Backup automation.</strong> v1 surfaces export-to-file as a manual user action. Scheduled or background backups are deferred. <span class="tag tag-defer">v2-as-needed</span></li>
+    <li><strong>Configurable debounce windows.</strong> 5 s / 30 s constants are the v1 defaults. User-facing controls deferred unless usage data shows the defaults misfit. <span class="tag tag-defer">v2-if-needed</span></li>
+    <li><strong>Telemetry / error reporting.</strong> v1 logs to the browser console only. A real telemetry pipeline (Sentry, custom backend) is out of scope. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Accessibility audit and screen-reader narration of the canvas.</strong> Stream E flagged this; it sits in Stream H's territory because it depends on the canvas library. React Flow's accessibility story is improving; the v1 implementation will surface ARIA labels on every node and use keyboard navigation through React Flow's built-ins. A full WCAG audit is deferred. <span class="tag tag-defer">v2-polish</span></li>
+  </ul>
+
+  <h2>End-of-session self-review <span class="anchor">(Article VIII § 4)</span></h2>
+
+  <p>Strict review of the work above against the Constitution. Structured to make a future review session's job tractable.</p>
+
+  <h3>Article II commitments — compliance check</h3>
+  <ul>
+    <li><strong>§ 1 Frame/Argument Split.</strong> Honored. The IndexedDB layout has separate stores for Frames/FrameVersions and ArgumentSessions/ArgumentSessionVersions; the Repository interface treats them as independent entities; auto-save versioning rules apply identically and independently. The session embeds a <code>frame_version_snapshot</code> per Stream B, so the session's content is sealed against frame edits without coupling the two version streams.</li>
+    <li><strong>§ 2 Determinism.</strong> Honored. The "Determinism implementation contract" section codifies the runtime-module boundary, the sort-before-iterate discipline, and the frozen-clock test environment. The auto-save layer reads the clock for <code>created_at</code>/<code>updated_at</code> but those values are inputs to <code>compute</code> only as fixed snapshot fields, never as live reads inside the pipeline. ESLint's <code>no-restricted-imports</code> rule (Decision #9) and the custom <code>no-unsorted-iteration</code> rule make the boundary checkable in CI.</li>
+    <li><strong>§ 3 Per-Node Satisfaction Criteria.</strong> Honored. The persistence layer stores <code>SatisfactionPolicy</code> per Stream B B1 / SatisfactionPolicy section without modification; nothing in H1–H4 reaches into the policy structure or its evaluation.</li>
+    <li><strong>§ 4 Independent Versioning.</strong> Honored, and structurally enforced. FrameVersions and ArgumentSessionVersions live in separate IndexedDB stores; their sequences (version_number) are independent; the Repository surface has separate <code>listFrameVersions</code> and <code>listSessionVersions</code> methods. The branch-tree algorithm runs independently for each. Article II § 4's "every save is preserved" is enforced by the absence of any deletion path on individual versions; the only delete is at the Frame or Session level (gated per Stream D), and even that does not retroactively rewrite history within a frame's lifetime.</li>
+    <li><strong>§ 5 Human-Readable Structure.</strong> Honored. The on-disk format is JSON, the schema is the same one Streams A–E use, and an exported FrameExport file is human-readable text. Nothing in the persistence layer hides logic in ordering or coupling variables; the search index is a derived projection, not an authoritative store.</li>
+    <li><strong>§ 6 Use-Case Commitment.</strong> Honored. The persistence design treats Mode and Flavor as schema fields that flow through unchanged; nothing in H privileges legal mode at the storage layer. The export envelope round-trips a legal frame and a general frame identically.</li>
+  </ul>
+
+  <h3>Article III quality criteria — score</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> Every persistence operation called for by Streams B–E has a defined Repository method or composite operation. Every atomicity constraint from Stream D (frame-template deep-copy, session migration, restore) is wrapped in a single transaction with explicit rollback semantics. Every versioning rule from Stream B (snapshots not deltas, milestone forcing, manual saves bypass debouncer) is implemented in H2. The model is correct in the sense that no upstream stream's contract is broken or weakened.</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> A practicing lawyer's expectation of working software is "I edit, it saves; I close the browser, my work is there; I open it on another machine, I can pick up where I left off." v1 satisfies the first two by default. The third is bridged by JSON export/import in v1 and by cloud sync in v2. The version-history model — every save preserved, restore creates a branch rather than overwriting — matches how lawyers expect a working document to behave (preferable to the "last save wins" pattern in older Office tools and consistent with Google Docs / Microsoft 365 expectations they will already have). The cost — multi-device pain in v1 — is honestly named and bounded.</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> The runtime-module boundary, the sort-before-iterate discipline, and the CI gates make determinism a checkable property rather than a wished-for one. Auditability: every entity is keyed on a UUID; every version carries provenance (<code>created_at</code>, <code>created_by</code>, <code>parent_version_id</code>, <code>change_summary</code>); every export is text JSON that can be diffed externally. The Repository interface logs in production are a v2 concern (deferred), but nothing structurally prevents adding them.</li>
+    <li><strong>§ 4 Clarity.</strong> The Repository interface is small (~25 methods), narrowly scoped, and replaces ad-hoc IndexedDB calls everywhere in the application. The module structure aligns with streams. The auto-save controller is one file with one tunable. The diff algorithm is a pure function with one entry point per entity type. A debugger looking for "where does state live and how does it get there" finds one answer per question.</li>
+    <li><strong>§ 5 Reversibility.</strong> Local-first → cloud sync is a contained change because the Repository interface is the seam. Dexie → raw IndexedDB is a contained change for the same reason. React Flow → Cytoscape (or any other graph library) is contained behind <code>src/ui/canvas/</code>. The MigrationRegistry mechanism keeps schema evolution mechanical. The choices that are most consequential and hardest to reverse — React, TypeScript, the JSON envelope — are also the choices that are most universal and least likely to need reversal.</li>
+    <li><strong>§ 6 Interface Fit.</strong> A future session needing only the auto-save mechanics can read H2; a session needing only the version-history implementation reads H3; a session bringing the project up in code reads H4 and the Module Structure section. The decisions are presented with rationale next to each, not in a separate appendix. The cheat sheet at the end of this document indexes by H-id.</li>
+  </ul>
+
+  <h3>Autonomous decisions — Article V § 3 trigger re-check</h3>
+  <p>Each numbered decision in "Decisions made in this session" checked against the escalation triggers:</p>
+  <ul>
+    <li>All ten decisions are agent-discretionary technical choices under Article V § 2(a)–(g). They concern storage backend, format encoding, save mechanics, version-history implementation, library selection, and module organization — all explicitly delegated.</li>
+    <li>None reverses a prior stream decision. Each decision is checked: #1 (local-first) implements the storage-backend choice that B7 explicitly assigned to Stream H; #2 (Dexie/IndexedDB) is a sub-choice within #1; #3 (JSON envelope) implements B7 verbatim; #4 (Repository) is an architectural pattern that was implicit in B7's "schema is storage-agnostic" framing; #5 (debounce window) implements Stream B's "auto-save creates a new FrameVersion at most once per significant edit (debounced); the rate is a Stream H tuning parameter"; #6 (versioning granularity) refines Stream B's same provision; #7 (single-transaction atomicity) implements Stream D's atomicity constraints; #8 (tech stack) selects libraries that satisfy Stream E's rendering and side-pane requirements; #9 (determinism boundary) implements Stream C's stated invariants; #10 (migration registry) implements Stream B B7 verbatim.</li>
+    <li>None forecloses a use case. Both legal and general modes (and personal/academic flavors) flow through the persistence layer identically; the React Flow canvas renders any node type from B1; the search index covers Conclusion statements regardless of mode.</li>
+    <li>None requires Anthropic safety input.</li>
+    <li>The Constitution does not speak to tech-stack or persistence-mechanism choice directly; Article III § 6 (Interface Fit) supplies the strongest soft constraint, and the decisions are documented against it. Article II § 2 (Determinism) supplies the strongest hard constraint, and the determinism implementation contract documents how every choice respects it. No trigger fires.</li>
+  </ul>
+
+  <h3>Mid-session self-review under Article XII § 2</h3>
+  <ul>
+    <li><strong>(a) Reverses a stream decision</strong>: no. The decision-by-decision check above confirms each decision implements rather than reverses.</li>
+    <li><strong>(b) Introduces a new architectural commitment or strong technical default</strong>: yes — the Repository pattern, the React Flow + ELK choice, the determinism module boundary, and the module structure are all strong technical defaults. They are introduced here for the first time. They do not modify any Article II commitment; they implement Articles II § 1, II § 2, and II § 4 with concrete machinery. Mid-session review: each is documented with rationale, alternatives considered, and reversibility analysis. Each is checked against the constitutional commitments in the section above and against the prior stream contracts in Decision #'s rationale. None requires user escalation.</li>
+    <li><strong>(c) Changes a current_state field from a different stream</strong>: this session updates current_state for Stream H completion only. Stream H's row moves from "not started" to "resolved" with this document as the authoritative source. No other stream's row changes. Open-questions list is updated to remove H from the "next session" enumeration and to flag the remaining work (Stream G, F5, visual polish).</li>
+    <li><strong>(d) Article V § 3 trigger</strong>: none, per the autonomous-decision check above.</li>
+  </ul>
+
+  <h3>In-session flags resolved</h3>
+  <p>Two in-session flags were raised and resolved in this session. Neither is escalated to the register because neither reverses a prior stream decision and the resolution of each is internally constrained by the Constitution and prior streams.</p>
+  <ul>
+    <li><strong>Flag (in-session, resolved).</strong> Should presentation hints (<code>x</code>, <code>y</code>, <code>collapsed</code>) be versioned, given that they create FrameVersions on every drag-drop? <strong>Resolution</strong>: yes, version them. They live on Node within FrameVersion per Stream B B1; the layout engine treats user-set hints as fixed anchors per Stream E E1; restoring an older version is expected to restore that version's layout. The cost (a debounced version per drag) is bounded by the 5-second idle window and is filtered out of the side pane by Stream E E5's "milestones only" filter. The cleaner alternative — in-place updates to the current FrameVersion — would weaken the immutability guarantee on FrameVersion records and complicate test fixtures.</li>
+    <li><strong>Flag (in-session, resolved).</strong> Should the diff algorithm surface layout-only changes (x/y, collapsed) at field-level granularity, or should it bucket them as a single line? <strong>Resolution</strong>: bucket. Stream E E5 frames the Compare view as "structural and field-level changes" with the user goal of "what changed semantically between v6 and v8." Showing four field-level entries for a four-node drag-drop adds noise without information; one line ("Layout updated for 4 nodes") preserves the signal. The diff algorithm is pure and can be re-tuned without affecting persistence.</li>
+  </ul>
+
+  <h3>Items deferred</h3>
+  <ul>
+    <li><strong>Cloud sync implementation.</strong> Architecture sketched in H1; deferred to v2.</li>
+    <li><strong>Storage compaction / deduplication.</strong> Per Stream B B7 plan; deferred to v2-as-needed.</li>
+    <li><strong>Hosting selection.</strong> v1 is a static SPA; any static host works. v2 hosting choice deferred.</li>
+    <li><strong>Search index quality upgrade.</strong> Simple tokenizer in v1; replaceable behind Repository interface.</li>
+    <li><strong>Telemetry, error reporting, observability.</strong> Out of v1 scope.</li>
+    <li><strong>Configurable debounce constants.</strong> 5 s / 30 s defaults; user-facing controls deferred.</li>
+    <li><strong>Mobile rendering and accessibility audit.</strong> Architectural support is in place (IndexedDB on mobile is fine; React Flow's keyboard nav is usable); full polish deferred to a v2 design pass per Stream E.</li>
+    <li><strong>Specific hosting and CI provider names.</strong> The categories are committed (static host, Git-based CI); specific vendor choices are an implementation-time decision.</li>
+  </ul>
+
+  <h2>What's unblocked next</h2>
+  <p>With Stream H specified end-to-end:</p>
+  <ul>
+    <li><strong>Stream G (LLM hook design)</strong> — fully unblocked. The hook integration points are listed in Stream C's "LLM hook integration points" table; the prompt-file storage path is committed here (<code>src/llm-hooks/prompts/</code>); the LlmSettings hook on Frame is reserved in Stream B B3. Remaining Stream G work: per-hook prompt files (G1–G6 by name in Stream C), input/output contracts in TypeScript, and the activation strategy (when each hook becomes live, how they are tested). Per the A2 AI-strategy decision, all hooks are build-time / opt-in / user-confirms; the Repository's prompts store is a stub for v1 and populated as Stream G ships hooks.</li>
+    <li><strong>Stream F5 (court hierarchy database)</strong> — independent and ready to start whenever the user prioritizes it. Sourcing strategy (existing public dataset / scrape / hand-build) remains an open question to resolve at session start. F5 plugs into the C6 authority-binding utility (Stream C) and the Authority chip rendering (Stream E E1, E4); no v1 schema change is required, but F5 may add a court-hierarchy lookup module under <code>src/runtime/authority-binding/</code>.</li>
+    <li><strong>Stream I (final coding spec)</strong> — now within reach. With B (schema), C (runtime), D (modes), E (UI/UX), and H (persistence + tech stack) complete, the only unfilled stream is G. Stream I can be deferred until G is at v1 depth, or it can run on a partial spec — the tradeoff depends on whether the user wants the coding agent to start implementing v1 with Stream G's hooks empty (legitimate; the application works without them) or wait for G.</li>
+    <li><strong>Visual polish for Stream E.</strong> Specific color values, typography, animation curves; deferred from Stream E. Now that H4 has selected the tech stack, this work can compile against React Flow's styling primitives (CSS variables, custom node component styles).</li>
+  </ul>
+
+  <h2>Cheat sheet — Stream H items</h2>
+  <table>
+    <tr><th>Id</th><th>Subject</th><th>Section</th></tr>
+    <tr><td>H1</td><td>Storage strategy: local-first IndexedDB via Dexie; JSON envelope from Stream B B7; Repository abstraction; per-store layout; in-memory search index; v2 cloud-sync sketch</td><td>H1</td></tr>
+    <tr><td>H2</td><td>Auto-save: 5 s idle / 30 s max debounce; transactional commits; milestone forcing on manual saves and mode transitions; non-blocking failure surface; BroadcastChannel for cross-tab courtesy</td><td>H2</td></tr>
+    <tr><td>H3</td><td>Version history implementation: one record per version; branch tree from parent_version_id; pure structural diff; lazy summary loading; compaction deferred</td><td>H3</td></tr>
+    <tr><td>H4</td><td>Tech stack: React + TypeScript + Vite; React Flow + ELK; Zustand; Dexie; Vitest + Playwright; ESLint custom rules including no-unsorted-iteration; module structure aligned with streams</td><td>H4</td></tr>
+    <tr><td>—</td><td>Determinism implementation contract: runtime-module import boundary; sort-before-iterate discipline; frozen-clock tests; ESLint enforcement</td><td>Determinism implementation contract</td></tr>
+  </table>
+
+</div>

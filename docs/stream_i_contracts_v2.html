@@ -1,0 +1,969 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 14px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .changelog { font-size: 11px; color: var(--color-text-secondary); background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 8px 12px; margin: 6px 0; }
+</style>
+<div class="doc">
+  <h1>stream_i_contracts_v2.html</h1>
+  <p class="subtitle">Cross-module integration contracts &nbsp;·&nbsp; Stream I session I.10 &nbsp;·&nbsp; May 11, 2026 &nbsp;·&nbsp; Supersedes <code>stream_i_contracts_v1.html</code></p>
+
+  <div class="notice">
+    <p>This document is the canonical TypeScript boundary between modules. It supersedes <code>stream_i_contracts_v1.html</code> in full. Per-module Stream I specs (I.2–I.9d4) and the I.10 integration spec cite specific interfaces from this document by name; coding sessions implement to these signatures. The contracts are <strong>shape-only</strong> — they fix the type surface that crosses module boundaries, not the implementation. Stream-specific internal types live in the per-module specs and need not appear here.</p>
+    <p style="margin-top:6px;">Where a contract refers to a Stream-B-defined entity (Frame, FrameVersion, ArgumentSession, etc.), the canonical shape is in <code>stream_b_schema_v1.html</code>; this document re-states only the cross-module-relevant surface and points to Stream B for the rest. For new shapes introduced by per-module specs (FramePatch / SessionPatch unions, dispatch tables, selector view types, etc.), this document pins the public surface that other modules consume; the internal details remain in each per-module spec.</p>
+  </div>
+
+  <h2>v2 changelog — what this bump resolves</h2>
+  <p>v2 consolidates the F-003 through F-009 family of in-session-escalated flags raised across I.1 through I.9d4. Each entry below names the flag, the affected contract section, and the resolution; the per-section bodies below incorporate every entry verbatim. Downstream coding sessions read v2 only; v1 is retained for historical record but is not authoritative under Article VII § 1(c)/(d).</p>
+  <table>
+    <thead><tr><th>Flag</th><th>Origin session</th><th>Resolved in section(s)</th><th>Shape</th></tr></thead>
+    <tbody>
+    <tr><td>F-003</td><td>I.1 (contracts v1)</td><td>Contract 1, Contract 4</td><td>Five TypeScript-precision corrections aligning v1 names with Stream B canonical (now applied to v2 inline).</td></tr>
+    <tr><td>F-004</td><td>I.9b (frame-building UI)</td><td>Contract 1, Contract 3, Contract 4, Contract 7, Contract 8</td><td>Five items: <code>selectCascadeSummary</code> + <code>CascadeReport</code> re-export; <code>presentation_hints_reset_all</code> FramePatch; <code>AppState.dismissed_warnings</code> + controllers; <code>Frame.archived</code>; <code>onOpenModeChangeDialog</code> page-prop reservation (superseded by F-007's removal).</td></tr>
+    <tr><td>F-005</td><td>I.9c (argument-running UI)</td><td>Contract 4, Contract 7, Contract 8</td><td>Five items: <code>selectInterviewItems</code> + <code>InterviewItem</code> re-export; <code>selectStatusSummary</code> + <code>StatusSummary</code>; <code>AppState.output_view_tab_choice_by_frame</code> + setter; <code>AppState.pane_widths</code>; <code>on_open_migration_dialog</code> page-prop reservation (superseded by F-007's removal).</td></tr>
+    <tr><td>F-006</td><td>I.9d1 (version history)</td><td>Contract 3 (v1.5 deferral), Contract 8</td><td>Five items: <code>FrameCanvasProps.read_only</code>; required <code>onToggleVersionHistory</code> + <code>version_history_open</code> on FrameBuildingPageProps; symmetric promotion on ArgumentRunningPageProps; app-routes mount pattern; Repository batch-loader v1.5 deferral (recorded as deferral note in Contract 3).</td></tr>
+    <tr><td>F-007</td><td>I.9d2 (mode change + migration)</td><td>Contract 4, Contract 7, Contract 8</td><td>Five items: <code>architectural_mode_changed</code> FramePatch with payload; <code>SessionStore.previewMigration</code> + <code>OrphanCandidate</code> re-export; dispatch entry; <code>metadata_edited.partial</code> Pick tuple with <code>flavor</code>; removal of <code>onOpenModeChangeDialog?</code> and <code>on_open_migration_dialog?</code> page-props (page-local mount pattern).</td></tr>
+    <tr><td>F-008</td><td>I.9d3 (session settings)</td><td>Contract 1, Contract 4, Contract 7, Contract 8</td><td>Six items: <code>output_overrides_cleared</code> SessionPatch + dispatch entry; <code>ArgumentSession.archived</code>; <code>session_metadata_edited.partial</code> Pick tuple with <code>archived</code>; <code>AppStateStore.deleteSession</code> (and symmetric <code>deleteFrame</code>); <code>on_open_session_settings</code> on <code>ArgumentRunningTopBarDeps</code>; optional <code>open_frame_settings_on_mount?</code> on the frame-building route variant.</td></tr>
+    <tr><td>F-009</td><td>I.9d4 (onboarding + coachmark)</td><td>Contract 3, Contract 4, Contract 7, Contract 8</td><td>Eleven items: existing-surface reaffirmations (<code>coachmark_dismissals</code>, <code>dismissCoachmark</code>, <code>selectCoachmarkDismissed</code>); <code>AppStateStore.resetCoachmarks</code>; <code>selectFirstLaunchDismissed</code>; <code>AppState.seen_new_feature_notices</code>; <code>AppStateStore.markNewFeatureNoticeSeen</code>; <code>selectNewFeatureNoticeSeen</code>; <code>Repository.createBlankFrame</code> + Atomicity contract § 4 + <code>CreateBlankFrameArgs</code>; <code>createBlankFrame</code> orchestration wrapper + <code>CreateFrameValidationError</code>; <code>AppStateStore.createFrame</code> with <code>CreateFrameArgs</code> union; app-routes <code>OnboardingWizard</code> mount + <code>HelpGlossaryPane</code> <code>OnboardingPreferencesSection</code> composition + <code>scroll_to_term?</code> prop. Five per-site coachmark anchoring inserts are spec-level and not contract-surface.</td></tr>
+    <tr><td>I.10</td><td>I.10 (this session)</td><td>Contract 7, Contract 8</td><td>Three items: <code>selectPinnedFrames</code> selector for the Home page; Home-page module surface (<code>HomePage</code> component + props) under Contract 8; explicit pinning of integration-test harness expectations under Cross-cutting.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Module dependency graph</h2>
+  <p>Allowed import directions (read "→" as "may import from"):</p>
+  <pre><code>schema       ← runtime  ← persistence ← state ← ui
+                   ↑                       ↑      ↑
+                   └─────── modes ─────────┘      │
+                                                  │
+schema ← llm-hooks ← state ← ui                   │
+schema ← layout ← state ← ui ─────────────────────┘
+                                                  │
+schema ← modes ← state ← ui                       │</code></pre>
+  <p>Hard rules (unchanged from v1):</p>
+  <ul>
+    <li><strong>schema imports nothing from this codebase.</strong> Pure types and validators.</li>
+    <li><strong>runtime imports only schema</strong> (Article II § 2; Stream H part 1; ESLint <code>no-restricted-imports</code>). It does not import persistence, ui, state, llm-hooks, modes, or layout. It does not import any third-party library that reads the clock or environment.</li>
+    <li><strong>llm-hooks imports schema</strong> (and may import the <code>Repository</code> interface from persistence for hook contexts; see HookContext below). It is never imported by runtime.</li>
+    <li><strong>persistence imports schema and runtime</strong> (the latter only to call <code>compute</code> on session restore; the runtime is itself pure).</li>
+    <li><strong>modes imports schema, runtime, persistence, and llm-hooks.</strong> Modes orchestrates user-initiated actions; it is the layer where action surfaces (D1, D2) live.</li>
+    <li><strong>layout imports schema only.</strong> Pure layout against frame structure; main thread speaks to the layout Web Worker via the bridge.</li>
+    <li><strong>state imports everything except ui.</strong> Stores hold references to Repository, dispatch into modes, subscribe to runtime outputs.</li>
+    <li><strong>ui imports state, schema, and primitives from layout and llm-hooks.</strong> No direct calls to persistence or runtime; routing through stores.</li>
+    <li><strong>ui sub-modules may value-import from sibling ui sub-modules</strong> within the boundary established by the I.9a UI-internal discipline (e.g., <code>@/ui/chrome</code> imports <code>@/ui/onboarding</code> for <code>OnboardingPreferencesSection</code>; <code>@/ui/home</code> imports <code>@/ui/onboarding</code> for <code>NewFrameWizard</code>).</li>
+  </ul>
+
+  <h2>Notation conventions</h2>
+  <ul>
+    <li>Types written in TypeScript. Where Stream B uses a TypeScript-like notation (with <code>?</code> for optional), this document follows TypeScript exactly.</li>
+    <li><code>NodeRef</code> and <code>EdgeRef</code> are aliases for <code>string</code> (entity ids). They live in <code>schema/identifiers.ts</code>.</li>
+    <li><code>timestamp</code> is <code>string</code> (ISO-8601). Stream B fixes this; reading it as <code>Date</code> happens in UI/state; runtime treats it as opaque.</li>
+    <li>Imports are written as <code>@/&lt;module&gt;/&lt;file&gt;</code>; the <code>@</code> alias is wired in <code>tsconfig.json</code> and <code>vite.config.ts</code>.</li>
+    <li>Where a type is defined in another contract section of this document, it is referenced by name without re-stating its shape.</li>
+    <li><strong>v2 convention:</strong> additions relative to v1 are flagged with the originating flag id (e.g., <code>// F-007 #1</code>) in inline comments. This is a documentation-aid; the production exports do not carry the comments.</li>
+  </ul>
+
+  <h2>Contract 1 — schema → (everywhere)</h2>
+  <p>The schema module exports the universe of canonical data shapes. The cross-module surface is large; what follows is the export list, organized by source file. Field-level shapes are in <code>stream_b_schema_v1.html</code> and <code>stream_i_schema_spec_v1.html</code> (I.2).</p>
+
+  <h3>From <code>@/schema/identifiers</code></h3>
+<pre><code>export type NodeRef = string;
+export type EdgeRef = string;
+export type FrameId = string;
+export type FrameVersionId = string;
+export type SessionId = string;
+export type SessionVersionId = string;
+export type HookId = "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "G7" | "G8" | "G9" | "G10" | "G11" | "G12" | "G13";
+</code></pre>
+
+  <h3>From <code>@/schema/nodes</code></h3>
+  <p>Node discriminated union and per-type shapes (RootQuestion, SubQuestion, Term, Interpretation, Checkpoint, LogicalGate {AndGate | OrGate | NotGate | IfThenGate | UnlessGate}, Conclusion, Authority, Premise). NodeBase carries <code>id</code>, optional <code>slug</code>, optional <code>notes</code>, optional <code>x</code>/<code>y</code>/<code>collapsed</code> presentation hints, optional <code>options_box</code> (<code>SatisfactionPolicy</code>), optional <code>created_by</code>. See B1 for the per-type field set. <code>ConclusionNode</code> carries <code>required_direction_kind</code> (legal-mode-aware enum vs. general-mode <code>position_id</code>) — the field mutated by the F-007 <code>architectural_mode_changed</code> dispatch.</p>
+
+  <h3>From <code>@/schema/edges</code></h3>
+  <p>Edge discriminated union with <code>EdgeType</code> = <code>"DECOMPOSES_INTO" | "TURNS_ON" | "INTERPRETED_AS" | "LEADS_TO" | "FORECLOSES" | "GATES" | "ANSWERS" | "SUPPORTS" | "CONTRADICTS" | "CITES" | "BINDING_IN" | "DISTINGUISHED_BY"</code>. EdgeBase carries <code>id</code>, <code>type</code>, <code>source</code>, <code>target</code>, optional <code>label</code>, optional <code>notes</code>, optional <code>weight</code> (SUPPORTS/CONTRADICTS), optional <code>created_by</code>.</p>
+
+  <h3>From <code>@/schema/frame</code></h3>
+<pre><code>export interface Frame {
+  id: FrameId;
+  slug?: string;
+  title: string;
+  description?: string;
+  mode: "legal" | "general";
+  flavor?: "personal" | "academic";          // present iff mode === "general"
+  jurisdiction_default?: Jurisdiction;       // present iff mode === "legal"
+  tags?: string[];
+  positions?: Position[];                    // present iff mode === "general"
+  archived: boolean;                         // F-004 #4 (default false)
+  current_version_id: FrameVersionId;
+  created_at: timestamp;
+  updated_at: timestamp;
+  pinned: boolean;
+  llm_settings: LlmSettings;
+}
+
+export interface FrameVersion {
+  id: FrameVersionId;
+  frame_id: FrameId;
+  version_number: number;
+  parent_version_id: FrameVersionId | null;
+  is_milestone: boolean;
+  change_summary: string;
+  created_at: timestamp;
+  nodes: Node[];
+  edges: Edge[];
+  llm_settings_snapshot?: LlmSettingsSnapshot;   // F-001 (G5 calibration projection)
+}
+</code></pre>
+
+  <h3>From <code>@/schema/session</code></h3>
+<pre><code>export interface ArgumentSession {
+  id: SessionId;
+  frame_id: FrameId;
+  title: string;
+  description?: string;
+  archived: boolean;                       // F-008 #3 (default false)
+  current_version_id: SessionVersionId;
+  created_at: timestamp;
+  updated_at: timestamp;
+}
+
+export interface ArgumentSessionVersion {
+  id: SessionVersionId;
+  session_id: SessionId;
+  version_number: number;
+  parent_version_id: SessionVersionId | null;
+  is_milestone: boolean;
+  change_summary: string;
+  created_at: timestamp;
+  frame_version_id: FrameVersionId;        // the FrameVersion this session is authored against
+  frame_version_snapshot: FrameVersionSnapshot;
+  premises: Premise[];
+  answers: CheckpointAnswer[];
+  selections: InterpretationSelection[];
+  argument_edges: ArgumentEdge[];           // SUPPORTS / CONTRADICTS / CITES on premises
+  session_authorities: Authority[];
+  output_overrides?: OutputOverrides;        // F-002 (G6 prose rewrite carrier)
+}
+</code></pre>
+
+  <h3>From <code>@/schema/satisfaction-policy</code></h3>
+  <p>The canonical <code>SatisfactionPolicy</code> + condition library + node-default registry. Twelve named conditions per Stream A A3 / Stream B SatisfactionPolicy. Composition is AND-by-default with at most one explicit AnyOf group; no nesting, no NOT. Per-type defaults are loaded from a frozen table at runtime; per-instance overrides land on NodeBase as <code>options_box</code>.</p>
+<pre><code>export type SatisfactionCondition =
+  | { kind: "premise_attached" }
+  | { kind: "interpretation_selected" }
+  | { kind: "all_children_resolved" }
+  | { kind: "path_complete" }
+  | { kind: "not_contradicted" }
+  | { kind: "premise_kind_in"; allowed: PremiseKind[] }
+  | { kind: "burden_met"; level: BurdenLevel }
+  | { kind: "authority_required" }
+  | { kind: "authority_binding" }
+  | { kind: "not_distinguished" }
+  | { kind: "standard_of_review_applied" }
+  | { kind: "not_foreclosed" };
+
+export interface SatisfactionPolicy {
+  conditions: SatisfactionCondition[];           // ANDed
+  any_of?: SatisfactionCondition[];              // at most one AnyOf group (ORed within)
+}
+
+export const SATISFACTION_POLICY_DEFAULTS: Readonly&lt;Record&lt;NodeType, SatisfactionPolicy&gt;&gt;;
+
+/** Pure: resolves per-instance override → frame default → library default. */
+export function resolveEffectivePolicy(node: Node, frame_default?: SatisfactionPolicy): SatisfactionPolicy;
+</code></pre>
+
+  <h3>From <code>@/schema/validation-rules</code></h3>
+  <p>The canonical <code>ValidationResult</code> shape, the rule-id union (V-FRAME-* / V-EDGE-* / V-ARG-*), per-rule severity (<code>error</code> / <code>warning</code> / <code>advisory</code>), and the predicate registry. Three modules produce <code>ValidationResult[]</code>: <code>schema</code> (rule definitions), <code>runtime</code> (phase 1 evaluation), and <code>llm-hooks</code> (G4 gap-detection advisories with severity <code>"warning"</code>). All three flow into the state layer's validation projection.</p>
+<pre><code>export type Severity = "error" | "warning" | "advisory";
+export type RuleId =
+  | "V-FRAME-1" | "V-FRAME-2" | "V-FRAME-3" | /* … per Stream B B6 */
+  | "V-EDGE-1" | "V-EDGE-2" | /* … */
+  | "V-ARG-1" | "V-ARG-2" | "V-ARG-3" | "V-ARG-4" | "V-ARG-5" | "V-ARG-6" | "V-ARG-7" | "V-ARG-8";
+
+export interface ValidationResult {
+  rule_id: RuleId;
+  severity: Severity;
+  message: string;
+  node_id?: NodeRef;
+  edge_id?: EdgeRef;
+  context?: Record&lt;string, string | number | boolean&gt;;
+}
+</code></pre>
+
+  <h3>From <code>@/schema/envelope</code></h3>
+  <p>The B7 JSON envelope shape for forward-compatible persistence. Records carry a <code>schema_version</code> tag; the loader applies migrations registered with <code>MigrationRegistry</code> and surfaces additive fields untouched (the mechanism by which <code>Frame.archived</code>, <code>ArgumentSession.archived</code>, <code>AppState.dismissed_warnings</code>, <code>AppState.seen_new_feature_notices</code>, <code>AppState.output_view_tab_choice_by_frame</code>, and <code>AppState.pane_widths</code> all land additively without schema migrations).</p>
+
+  <h3>From <code>@/schema/migrations</code></h3>
+  <p>The <code>MigrationRegistry</code> exports the canonical migrate-up function chain, keyed by source schema_version. Per Stream B, no v1 migration runs; the chain is in place for future versions. The forward-compat handler treats unknown fields as untouched, ensuring legacy records continue to load when new optional fields are introduced (the entire F-003 family of additive AppState / Frame / ArgumentSession fields exercise this path).</p>
+
+  <h2>Contract 2 — runtime → schema</h2>
+  <p>The runtime module computes <code>ComputeResult</code> from a <code>FrameVersion</code> + <code>ArgumentSessionVersion</code> + a clock anchor. The output is byte-identical for byte-identical input (Article II § 2). Tooling gates: <code>no-restricted-imports</code> for the boundary; <code>argmap-determinism/no-unsorted-iteration</code> for sort-before-iterate; frozen clock in Vitest.</p>
+<pre><code>// @/runtime
+import type {
+  Frame, FrameVersion, ArgumentSession, ArgumentSessionVersion,
+  Node, Edge, NodeRef, ValidationResult, SatisfactionPolicy,
+} from "@/schema";
+
+export type NodeStatus =
+  | { kind: "open"; failed_conditions: SatisfactionCondition[] }
+  | { kind: "satisfied"; via?: "binding_authority" | "persuasive_authority" }
+  | { kind: "contested"; reason: ContestedReason }
+  | { kind: "foreclosed"; by_edge_id: EdgeRef }
+  | { kind: "not_applicable" };
+
+export interface ComputeResult {
+  validation_results: ValidationResult[];
+  status_map: Record&lt;NodeRef, NodeStatus&gt;;
+  conditional_output: ConditionalOutput;        // B5
+  active_path?: NodeRef[];
+  decision_tree: DecisionTreeNode[];            // canonical, deterministic
+  evaluated_at: timestamp;                      // exactly the input's `at`
+  open_gates: OpenGate[];                       // per Stream B5
+  confidence: ConfidenceBreakdown;              // computed, never stored
+}
+
+export interface ComputeInput {
+  frame_version: FrameVersion;
+  session_version: ArgumentSessionVersion;
+  at: timestamp;                                 // single clock anchor; runtime never reads now()
+}
+
+/** The single entry point. Pure (modulo input.at). */
+export function compute(input: ComputeInput): ComputeResult;
+
+/** Validation-only path; runs phase 1 alone (frame validity). */
+export function validateOnly(frame_version: FrameVersion, at?: timestamp): ValidationResult[];
+
+/** Pure helper: rank premise reuse candidates by Jaccard + recency + kind-match.
+ *  v1 ships the deterministic version; v1.5 G7 wraps a different implementation
+ *  behind the same signature. F-005 / I.9c integration. */
+export function rankPremiseReuse(
+  candidates: ReadonlyArray&lt;Premise&gt;,
+  context: { node: Node; frame_version: FrameVersion },
+): ReadonlyArray&lt;PremiseReuseSuggestion&gt;;
+
+/** Pure helper: F-007's orphan enumeration. Reads target frame structure + session premises. */
+export function enumerateOrphanCandidates(
+  session_version: ArgumentSessionVersion,
+  target_frame_version: FrameVersion,
+): OrphanCandidate[];                            // canonical order; see Cross-cutting
+
+/** Pure helper: F-004 cascade-delete report. */
+export function computeCascadeReport(
+  frame_version: FrameVersion,
+  to_delete: { node_ids: NodeRef[]; edge_ids: EdgeRef[] },
+): CascadeReport;
+
+export interface CascadeReport {
+  // Nodes and edges that would be removed as a consequence of the requested deletions,
+  // grouped by the proximate cause for the deletion. Deterministic order per Stream C.
+  cascade_nodes: ReadonlyArray&lt;{ node_id: NodeRef; reason: CascadeReason }&gt;;
+  cascade_edges: ReadonlyArray&lt;{ edge_id: EdgeRef; reason: CascadeReason }&gt;;
+}
+
+export type CascadeReason =
+  | { kind: "orphaned_by_node"; cause_node_id: NodeRef }
+  | { kind: "orphaned_by_edge"; cause_edge_id: EdgeRef }
+  | { kind: "explicitly_requested" };
+
+export type ContestedReason =
+  | { kind: "premises_on_both_sides" }
+  | { kind: "graded_unclear" }
+  | { kind: "open_inputs_to_gate" };
+
+export interface OrphanCandidate {                // F-007 #2 (canonical shape; re-exported through @/state)
+  carrier_kind: "premise" | "argument_edge" | "checkpoint_answer" | "interpretation_selection" | "session_authority";
+  carrier_id: string;
+  /** Display-only verbatim string surfaced by the migration dialog rows. */
+  display_summary: string;
+  /** What the resolution picker suggests by default; see ResolutionPicker (UI). */
+  suggested_kind: "discard" | "reattach" | "no_op";
+  reattach_candidates?: ReadonlyArray&lt;{ target_node_id: NodeRef; label: string }&gt;;
+}
+</code></pre>
+
+  <h2>Contract 3 — persistence → schema, runtime</h2>
+  <p>The persistence module exposes the <code>Repository</code> interface (Dexie-backed; see I.4) plus <code>AutosaveController</code>, <code>SaveEvent</code>, <code>BroadcastEvents</code>, and the diff functions. The cross-module surface below pins what state and modes import. Internal implementation (Dexie schema, transaction shape, search index) is in <code>stream_i_persistence_spec_v1.html</code>.</p>
+
+  <h3>From <code>@/persistence/repository</code></h3>
+<pre><code>import type {
+  Frame, FrameVersion, ArgumentSession, ArgumentSessionVersion,
+  FrameId, FrameVersionId, SessionId, SessionVersionId,
+  Mode, Flavor, Jurisdiction,
+} from "@/schema";
+import type { ComputeResult, OrphanCandidate } from "@/runtime";
+
+export interface FrameSummary {
+  id: FrameId;
+  title: string;
+  description?: string;
+  mode: Mode;
+  flavor?: Flavor;
+  tags?: string[];
+  archived: boolean;                  // F-004 #4
+  pinned: boolean;
+  updated_at: timestamp;
+  current_version_id: FrameVersionId;
+  current_version_number: number;
+}
+
+export interface ArgumentSessionSummary {
+  id: SessionId;
+  frame_id: FrameId;
+  title: string;
+  description?: string;
+  archived: boolean;                  // F-008 #3
+  updated_at: timestamp;
+  current_version_id: SessionVersionId;
+}
+
+export interface FrameSearchHit {
+  frame_id: FrameId;
+  match_kind: "title" | "description" | "tag" | "node_text" | "conclusion_statement";
+  excerpt: string;
+}
+
+export interface AppState {
+  // F-003-family additive surface; B7 forward-compat handles legacy records without these fields.
+  recents: FrameId[];
+  pinned: FrameId[];
+  default_output_view: "path_overlay" | "decision_tree" | "prose";
+  app_provider_default: LlmProviderId | null;
+  coachmark_dismissals: Record&lt;string, boolean&gt;;     // F-009 #1 reaffirmed; "welcome_screen" is reserved
+  seen_new_feature_notices: Record&lt;string, boolean&gt;; // F-009 #4 (default {})
+  dismissed_warnings: ReadonlyArray&lt;{ rule_id: string; dismissed_at: timestamp }&gt;;  // F-004 #3
+  output_view_tab_choice_by_frame: Record&lt;FrameId, "prose" | "decision_tree" | "path_overlay"&gt;;  // F-005 #3
+  pane_widths: {
+    argument_running_left?: number;
+    frame_building_left?: number;
+    frame_building_right?: number;
+  };                                                  // F-005 #4 (v1.x polish wires resize handles)
+}
+
+export interface CreateBlankFrameArgs {              // F-009 #7
+  title: string;
+  description?: string;
+  mode: Mode;
+  flavor?: Flavor;                                   // present iff mode === "general"
+  jurisdiction_default?: Jurisdiction;               // present iff mode === "legal"
+}
+
+export interface CreateFromTemplateArgs {            // F-009 #9
+  start_from_template_id: FrameId;
+  title: string;
+}
+
+export interface OrphanResolution {
+  carrier_kind: OrphanCandidate["carrier_kind"];
+  carrier_id: string;
+  kind: "discard" | "reattach" | "no_op";
+  reattach_target_node_id?: NodeRef;                 // required iff kind === "reattach"
+}
+
+export interface Repository {
+  // ----- Frame surface
+  loadFrame(frame_id: FrameId): Promise&lt;Frame&gt;;
+  loadFrameVersion(version_id: FrameVersionId): Promise&lt;FrameVersion&gt;;
+  saveFrame(frame: Frame): Promise&lt;SaveEvent&gt;;
+  saveFrameVersion(payload: PendingFrameSave): Promise&lt;SaveEvent&gt;;
+  saveFrameMilestone(payload: PendingFrameSave): Promise&lt;SaveEvent&gt;;
+  listFrames(): Promise&lt;FrameSummary[]&gt;;
+  searchFrames(query: string): Promise&lt;FrameSearchHit[]&gt;;
+  deleteFrame(frame_id: FrameId): Promise&lt;void&gt;;
+  /** Atomicity contract § 2: deep-copy regenerates every node/edge id; one transaction. */
+  createFrameFromTemplate(source_id: FrameId, args: { title: string }): Promise&lt;{ frame: Frame; frame_version: FrameVersion }&gt;;
+  /** Atomicity contract § 4 (F-009 #7): create Frame + FrameVersion v1 with one stub
+   *  RootQuestion in a single transaction spanning frames + frame_versions + search_index. */
+  createBlankFrame(args: CreateBlankFrameArgs): Promise&lt;{ frame: Frame; frame_version: FrameVersion }&gt;;
+  /** Atomicity contract § 3: restore writes a new FrameVersion forking from the ancestor; one transaction. */
+  restoreFrameVersion(ancestor_id: FrameVersionId, change_summary: string): Promise&lt;FrameVersion&gt;;
+
+  // ----- Session surface (symmetric)
+  loadSession(session_id: SessionId): Promise&lt;ArgumentSession&gt;;
+  loadSessionVersion(version_id: SessionVersionId): Promise&lt;ArgumentSessionVersion&gt;;
+  saveSession(session: ArgumentSession): Promise&lt;SaveEvent&gt;;
+  saveSessionVersion(payload: PendingSessionSave): Promise&lt;SaveEvent&gt;;
+  saveSessionMilestone(payload: PendingSessionSave): Promise&lt;SaveEvent&gt;;
+  listSessionsForFrame(frame_id: FrameId): Promise&lt;ArgumentSessionSummary[]&gt;;
+  deleteSession(session_id: SessionId): Promise&lt;void&gt;;
+  restoreSessionVersion(ancestor_id: SessionVersionId, change_summary: string): Promise&lt;ArgumentSessionVersion&gt;;
+  /** Atomicity contract § 5: session migration to a new FrameVersion + orphan resolutions; one transaction. */
+  migrateSessionToFrameVersion(
+    session_id: SessionId,
+    target_frame_version_id: FrameVersionId,
+    resolutions: ReadonlyArray&lt;OrphanResolution&gt;,
+  ): Promise&lt;ArgumentSessionVersion&gt;;
+
+  // ----- AppState (singleton)
+  loadAppState(): Promise&lt;AppState&gt;;
+  saveAppState(state: AppState): Promise&lt;SaveEvent&gt;;
+
+  // ----- Diff (pure on top of two version reads)
+  diffFrameVersions(a: FrameVersion, b: FrameVersion): StructuralDiff;
+  diffSessionVersions(a: ArgumentSessionVersion, b: ArgumentSessionVersion): SessionStructuralDiff;
+}
+
+export interface AutosaveController {
+  scheduleFrameSave(payload: PendingFrameSave): void;     // 5s idle / 30s cap per H2
+  scheduleSessionSave(payload: PendingSessionSave): void; // same debounce policy
+  scheduleAppStateSave(state: AppState): void;            // 1s debounce per H2
+  saveFrameMilestone(payload: PendingFrameSave): Promise&lt;SaveEvent&gt;;
+  saveSessionMilestone(payload: PendingSessionSave): Promise&lt;SaveEvent&gt;;
+  subscribe(listener: (event: SaveEvent) =&gt; void): () =&gt; void;
+}
+
+export type SaveEvent =
+  | { kind: "save_succeeded"; entity_kind: "frame" | "session" | "app_state"; entity_id: string; version_id?: string }
+  | { kind: "save_failed"; entity_kind: "frame" | "session" | "app_state"; entity_id: string; error: RepositoryError }
+  | { kind: "peer_save"; entity_kind: "frame" | "session"; entity_id: string };
+
+export interface BroadcastEvents {
+  emit(event: SaveEvent): void;
+  subscribe(listener: (event: SaveEvent) =&gt; void): () =&gt; void;
+}
+
+export class QuotaExceededError extends Error { /* … */ }
+export class RepositoryError extends Error { /* … */ }
+</code></pre>
+
+  <h3>v1.5-deferred batch loader (F-006 #5)</h3>
+  <p>The Compare view in the version-history pane currently loads two FrameVersions (or two ArgumentSessionVersions) with <code>Promise.all</code> over the existing single-version loaders. If a future polish pass surfaces a perceptible Compare-view flash from the two parallel reads, the Repository surface gains an additive pair-loader without restructuring:</p>
+<pre><code>// v1.5 (NOT shipped in v1)
+loadFrameVersionPair(a_id: FrameVersionId, b_id: FrameVersionId): Promise&lt;[FrameVersion, FrameVersion]&gt;;
+loadSessionVersionPair(a_id: SessionVersionId, b_id: SessionVersionId): Promise&lt;[ArgumentSessionVersion, ArgumentSessionVersion]&gt;;
+</code></pre>
+  <p>v1 ships without these methods. The deferral is recorded so the v1.5 surface is additive when added.</p>
+
+  <h2>Contract 4 — modes → schema, runtime, persistence, llm-hooks</h2>
+  <p>The modes module orchestrates user-initiated actions: D1 (Frame Building dispatch table), D2 (Argument Running dispatch table), D3 (mode transitions including orphan resolution), and the createFrame surface. Every dispatch reads <code>deps.now()</code> exactly once per call (the single-clock-read property required by Article II § 2; F-003 family discipline restated). Every dispatch is a pure transformation from <code>(prior_state, patch, deps)</code> to <code>(next_state, change_summary)</code>; persistence side effects are performed by the action-runner in <code>@/state</code> wrapping the dispatch result.</p>
+
+  <h3>From <code>@/modes/dispatch</code> — Frame action surface</h3>
+<pre><code>import type {
+  Frame, FrameVersion, Mode, Flavor, Jurisdiction, Position,
+  Node, Edge, NodeRef, EdgeRef, ConclusionDirectionResolution,
+} from "@/schema";
+
+export type FramePatch =                              // F-005 narrowed the v1 `unknown` placeholder
+  | { kind: "node_added"; node: Node }
+  | { kind: "node_edited"; node_id: NodeRef; partial: Partial&lt;Node&gt; }
+  | { kind: "node_removed"; node_id: NodeRef; cascade?: { node_ids?: NodeRef[]; edge_ids?: EdgeRef[] } }
+  | { kind: "edge_added"; edge: Edge }
+  | { kind: "edge_edited"; edge_id: EdgeRef; partial: Partial&lt;Edge&gt; }
+  | { kind: "edge_removed"; edge_id: EdgeRef }
+  | { kind: "options_box_edited"; node_id: NodeRef; policy: SatisfactionPolicy | null }
+  | { kind: "metadata_edited"; partial: Partial&lt;Pick&lt;Frame, "title" | "description" | "tags" | "jurisdiction_default" | "positions" | "flavor" | "archived"&gt;&gt; }
+                                                       // F-004 #4 added archived; F-007 #4 added flavor
+  | { kind: "presentation_hints_reset_all" }            // F-004 #2 (atomic auto-arrange)
+  | { kind: "architectural_mode_changed";              // F-007 #1 (atomic mode + flavor + positions + direction resolutions)
+      target_mode: Mode;
+      target_flavor?: Flavor;
+      positions_added?: Position[];
+      conclusion_direction_resolutions: ConclusionDirectionResolution[];
+      change_summary: string;
+    };
+
+export interface FrameActionDispatchTable {
+  node_added(prior: FrameVersion, patch: Extract&lt;FramePatch, { kind: "node_added" }&gt;, deps: Deps): DispatchResult;
+  node_edited(prior: FrameVersion, patch: Extract&lt;FramePatch, { kind: "node_edited" }&gt;, deps: Deps): DispatchResult;
+  node_removed(prior: FrameVersion, patch: Extract&lt;FramePatch, { kind: "node_removed" }&gt;, deps: Deps): DispatchResult;
+  edge_added(prior: FrameVersion, patch: Extract&lt;FramePatch, { kind: "edge_added" }&gt;, deps: Deps): DispatchResult;
+  edge_edited(prior: FrameVersion, patch: Extract&lt;FramePatch, { kind: "edge_edited" }&gt;, deps: Deps): DispatchResult;
+  edge_removed(prior: FrameVersion, patch: Extract&lt;FramePatch, { kind: "edge_removed" }&gt;, deps: Deps): DispatchResult;
+  options_box_edited(prior: FrameVersion, patch: Extract&lt;FramePatch, { kind: "options_box_edited" }&gt;, deps: Deps): DispatchResult;
+  metadata_edited(prior: Frame, prior_version: FrameVersion, patch: Extract&lt;FramePatch, { kind: "metadata_edited" }&gt;, deps: Deps): { next_frame: Frame; next_version?: FrameVersion; change_summary: string };
+  presentation_hints_reset_all(prior: FrameVersion, deps: Deps): DispatchResult;     // F-004 #2
+  architectural_mode_changed(                                                          // F-007 #3
+    prior_frame: Frame, prior_version: FrameVersion,
+    patch: Extract&lt;FramePatch, { kind: "architectural_mode_changed" }&gt;, deps: Deps,
+  ): { next_frame: Frame; next_version: FrameVersion; change_summary: string };
+}
+
+export interface DispatchResult {
+  next_version: FrameVersion;
+  change_summary: string;
+}
+
+export interface Deps {
+  now(): timestamp;            // read exactly once per dispatch
+  uuid(): string;
+}
+</code></pre>
+
+  <h3>From <code>@/modes/dispatch</code> — Session action surface</h3>
+<pre><code>import type {
+  ArgumentSession, ArgumentSessionVersion, Premise, ArgumentEdge,
+  CheckpointAnswer, InterpretationSelection, Authority, NodeRef, EdgeRef,
+} from "@/schema";
+
+export type SessionPatch =
+  | { kind: "checkpoint_answered"; node_id: NodeRef; answer: CheckpointAnswer }
+  | { kind: "interpretation_selected"; term_id: NodeRef; interpretation_id: NodeRef | null }
+  | { kind: "premise_added"; premise: Premise }
+  | { kind: "premise_edited"; premise_id: string; partial: Partial&lt;Premise&gt; }
+  | { kind: "premise_removed"; premise_id: string }
+  | { kind: "argument_edge_added"; edge: ArgumentEdge }
+  | { kind: "argument_edge_removed"; edge_id: EdgeRef }
+  | { kind: "session_authority_added"; authority: Authority }
+  | { kind: "session_authority_edited"; authority_id: string; partial: Partial&lt;Authority&gt; }
+  | { kind: "session_authority_removed"; authority_id: string }
+  | { kind: "session_metadata_edited"; partial: Partial&lt;Pick&lt;ArgumentSession, "title" | "description" | "archived"&gt;&gt; }
+                                                                       // F-008 #4 added archived
+  | { kind: "output_overrides_cleared" };                              // F-008 #1 (zero payload)
+
+export interface SessionActionDispatchTable {
+  checkpoint_answered(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "checkpoint_answered" }&gt;, deps: Deps): SessionDispatchResult;
+  interpretation_selected(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "interpretation_selected" }&gt;, deps: Deps): SessionDispatchResult;
+  premise_added(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "premise_added" }&gt;, deps: Deps): SessionDispatchResult;
+  premise_edited(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "premise_edited" }&gt;, deps: Deps): SessionDispatchResult;
+  premise_removed(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "premise_removed" }&gt;, deps: Deps): SessionDispatchResult;
+  argument_edge_added(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "argument_edge_added" }&gt;, deps: Deps): SessionDispatchResult;
+  argument_edge_removed(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "argument_edge_removed" }&gt;, deps: Deps): SessionDispatchResult;
+  session_authority_added(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "session_authority_added" }&gt;, deps: Deps): SessionDispatchResult;
+  session_authority_edited(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "session_authority_edited" }&gt;, deps: Deps): SessionDispatchResult;
+  session_authority_removed(prior: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "session_authority_removed" }&gt;, deps: Deps): SessionDispatchResult;
+  session_metadata_edited(prior_session: ArgumentSession, prior_version: ArgumentSessionVersion, patch: Extract&lt;SessionPatch, { kind: "session_metadata_edited" }&gt;, deps: Deps): { next_session: ArgumentSession; next_version?: ArgumentSessionVersion; change_summary: string };
+  output_overrides_cleared(prior: ArgumentSessionVersion, deps: Deps): SessionDispatchResult;   // F-008 #2
+}
+
+export interface SessionDispatchResult {
+  next_version: ArgumentSessionVersion;
+  change_summary: string;
+}
+</code></pre>
+
+  <h3>From <code>@/modes/orchestration</code> — wrapper surface used by state</h3>
+<pre><code>import type { CreateBlankFrameArgs } from "@/persistence";
+
+/** F-009 #8: validates args, then delegates to Repository.createBlankFrame. */
+export function createBlankFrame(args: CreateBlankFrameArgs, deps: Deps, repo: Repository): Promise&lt;{ frame: Frame; frame_version: FrameVersion }&gt;;
+
+/** Pre-existing: deep-copy a template frame, regenerating ids. */
+export function createFrameFromTemplate(args: CreateFromTemplateArgs, deps: Deps, repo: Repository): Promise&lt;{ frame: Frame; frame_version: FrameVersion }&gt;;
+
+/** D3 mode transitions */
+export function attemptTransition(/* … */): TransitionResult;
+
+/** D2 interview ordering */
+export function computeInterviewOrder(
+  frame_version: FrameVersion,
+  session_version: ArgumentSessionVersion,
+): ReadonlyArray&lt;InterviewItem&gt;;                                  // canonical, deterministic
+
+/** D1 cascade-summary delegate (wraps runtime.computeCascadeReport). */
+export function summarizeCascade(
+  frame_version: FrameVersion,
+  to_delete: { node_ids: NodeRef[]; edge_ids: EdgeRef[] },
+): CascadeReport;
+
+export interface InterviewItem {                                  // F-005 #1 (canonical shape; re-exported through @/state)
+  node_id: NodeRef;
+  node_kind: "Checkpoint" | "Term" | "Interpretation";
+  is_jurisdictional: boolean;
+  recommended_next: boolean;
+  reason: "open" | "indeterminate" | "contested" | "best_inference_pending";
+  parent_breadcrumb: ReadonlyArray&lt;{ node_id: NodeRef; label: string }&gt;;
+  validation_findings: ValidationResult[];
+  label: string;
+}
+
+export class CreateFrameValidationError extends Error {           // F-009 #8
+  readonly kind = "create_frame_validation_error" as const;
+  readonly field: "title" | "mode" | "flavor" | "jurisdiction_default";
+  readonly message: string;
+  constructor(field: CreateFrameValidationError["field"], message: string) { super(message); this.field = field; this.message = message; }
+}
+
+export class OrphanResolutionInvalidError extends Error { /* … */ }
+</code></pre>
+
+  <h2>Contract 5 — layout → schema</h2>
+  <p>Layout consumes a FrameVersion and returns per-node positions. Pure with respect to its inputs. Runs in a Web Worker; the main thread speaks to it via the layout bridge. Per-NodeType dimensions are pinned in <code>NODE_DIMENSIONS</code>; ELK options are pinned in <code>ELK_LAYERED_OPTIONS</code>. The "practical-determinism property" (Stream I.7): identical input frame structure yields identical output positions across runs in the same ELK version; the layout module documents the ELK version it pins.</p>
+<pre><code>// @/layout
+import type { FrameVersion, NodeRef } from "@/schema";
+
+export interface NodePosition {
+  node_id: NodeRef;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface LayoutResult {
+  positions: ReadonlyArray&lt;NodePosition&gt;;
+  bounding_box: { width: number; height: number };
+}
+
+export function computeLayout(frame_version: FrameVersion): Promise&lt;LayoutResult&gt;;
+</code></pre>
+
+  <h2>Contract 6 — llm-hooks → schema, persistence (Repository)</h2>
+  <p>The llm-hooks module exposes one orchestrator per hook (G1..G13), a <code>HookContract</code>, a <code>LlmProvider</code> interface with two implementations (<code>AnthropicProvider</code> and <code>MockLlmProvider</code>), and a prompt loader reading bundled prompts under <code>llm-hooks/prompts/</code>. SHA-256 input-hashing per Stream G is exposed for the audit-trail caller. The runtime never imports llm-hooks (Article II § 2 boundary).</p>
+<pre><code>// @/llm-hooks
+import type { Frame, FrameVersion, ArgumentSession, ArgumentSessionVersion, HookId, Node, ValidationResult } from "@/schema";
+import type { Repository } from "@/persistence";
+
+export interface LlmProvider {
+  id: LlmProviderId;
+  invoke(args: { system: string; user: string; max_tokens?: number; temperature?: number }): Promise&lt;LlmResponse&gt;;
+}
+
+export interface LlmSettings {
+  provider: LlmProviderId;
+  per_hook_enabled: Partial&lt;Record&lt;HookId, boolean&gt;&gt;;
+  runtime_hooks_enabled: boolean;          // master toggle for G11/G12 (Stream G line 729)
+  invocations: ReadonlyArray&lt;HookInvocationRecord&gt;;
+}
+
+export interface LlmSettingsSnapshot {
+  provider: LlmProviderId;
+  per_hook_enabled_at_capture: Partial&lt;Record&lt;HookId, boolean&gt;&gt;;
+  runtime_hooks_enabled_at_capture: boolean;
+  calibration?: { g5: { threshold: number; updated_at: timestamp } };  // F-001 G5 projection
+}
+
+export interface HookInvocationRecord {
+  hook_id: HookId;
+  provider: LlmProviderId;
+  input_sha256: string;
+  output_sha256: string;
+  invoked_at: timestamp;
+  prompt_id: string;       // e.g. "G3.v1"
+  duration_ms: number;
+  status: "success" | "error" | "timeout";
+}
+
+export interface HookContext {
+  frame_version?: FrameVersion;
+  session_version?: ArgumentSessionVersion;
+  node?: Node;
+  repository?: Repository;        // hooks may read prior versions; runtime never gets this
+  llm_settings: LlmSettings;
+}
+
+export interface HookContract&lt;Input, Output&gt; {
+  hook_id: HookId;
+  prompt_id: string;
+  invoke(ctx: HookContext, input: Input): Promise&lt;Output&gt;;
+  /** Build-time hooks: bake the result and commit it to FrameVersion / SessionVersion fields. */
+  commit?(ctx: HookContext, input: Input, output: Output, repo: Repository): Promise&lt;void&gt;;
+}
+
+// Hooks shipped in v1: G1, G2, G3, G5, G6, G8, G9, G11, G13
+// Hooks ship in v1 with deterministic fallbacks: G7 (rankPremiseReuse), G10 (no AI; structural), G12 (off by default)
+</code></pre>
+
+  <h2>Contract 7 — state → schema, runtime, persistence, modes, llm-hooks</h2>
+  <p>State stores are Zustand-shaped; they are the integration surface ui consumes. Each store exposes a hook plus an imperative dispatcher. The shapes below are the cross-module API; internal selectors and reducers are I.5 territory. The v1 placeholders <code>FramePatch = unknown</code> and <code>FrameStoreSnapshot = unknown</code> are now narrowed to the explicit shapes pinned in Contract 4 and the per-store snapshot interfaces below.</p>
+<pre><code>// @/state
+import type {
+  Frame, FrameVersion, ArgumentSession, ArgumentSessionVersion,
+  Node, NodeRef, EdgeRef, FrameId, SessionId, FrameVersionId,
+} from "@/schema";
+import type {
+  ComputeResult, NodeStatus, CascadeReport, OrphanCandidate, InterviewItem,
+} from "@/runtime";                                                // re-exported through @/modes
+import type {
+  Repository, AppState, AutosaveController, FrameSummary,
+  ArgumentSessionSummary, CreateBlankFrameArgs, CreateFromTemplateArgs,
+  PendingFrameSave, PendingSessionSave, SaveEvent, BroadcastEvents,
+} from "@/persistence";
+import type {
+  FramePatch, SessionPatch, TransitionResult, FrameActionDispatchTable, SessionActionDispatchTable,
+} from "@/modes";
+import type {
+  LlmSettings, HookInvocationRecord, LlmProviderId,
+} from "@/llm-hooks";
+
+/** Re-exports through the @/state barrel (UI consumes through this boundary; no value import from @/modes or @/runtime). */
+export type {
+  CascadeReport,
+  OrphanCandidate,                     // F-007 #2
+  InterviewItem,                       // F-005 #1
+  CreateBlankFrameArgs,                // F-009 #9
+  CreateFromTemplateArgs,              // F-009 #9
+  FramePatch, SessionPatch,
+};
+
+// ---------- FrameStore ----------
+
+export interface FrameStoreSnapshot {
+  frame: Frame | null;
+  current_version: FrameVersion | null;
+  recents: FrameSummary[];
+  validation: ComputeResult["validation_results"];
+  loading: boolean;
+  has_pending_save: boolean;
+  peer_save_conflict: { frame_id: FrameId; conflict_at: timestamp } | null;
+  save_error: RepositoryError | null;
+}
+
+export interface FrameStore {
+  // Selectors
+  snapshot(): FrameStoreSnapshot;
+  current(): Frame | null;
+  currentVersion(): FrameVersion | null;
+  recents(): FrameSummary[];                    // FrameSummary[], not FrameId[]
+  validation(): ComputeResult["validation_results"];
+
+  // Actions
+  open(frame_id: FrameId): Promise&lt;void&gt;;
+  close(): Promise&lt;void&gt;;
+  applyEdit(patch: FramePatch): Promise&lt;void&gt;;
+  saveMilestone(change_summary?: string): Promise&lt;void&gt;;
+  restoreVersion(ancestor_id: FrameVersionId, change_summary: string): Promise&lt;void&gt;;
+  refreshRecents(): Promise&lt;void&gt;;
+
+  // Subscriptions
+  subscribe(listener: (snapshot: FrameStoreSnapshot) =&gt; void): () =&gt; void;
+}
+
+// ---------- SessionStore ----------
+
+export interface SessionStore {
+  current(): ArgumentSession | null;
+  currentVersion(): ArgumentSessionVersion | null;
+  computeResult(): ComputeResult | null;
+  statusOf(node_id: NodeRef): NodeStatus | undefined;
+
+  open(session_id: SessionId): Promise&lt;void&gt;;
+  close(): Promise&lt;void&gt;;
+  applyEdit(patch: SessionPatch): Promise&lt;void&gt;;
+  saveMilestone(change_summary?: string): Promise&lt;void&gt;;
+  restoreVersion(ancestor_id: SessionVersionId, change_summary: string): Promise&lt;void&gt;;
+
+  /** F-007 #2: load target FrameVersion, enumerate orphan candidates, return for UI preview. */
+  previewMigration(target_frame_version_id: FrameVersionId): Promise&lt;OrphanCandidate[]&gt;;
+
+  /** Commit the resolved migration. Repository.migrateSessionToFrameVersion under the hood. */
+  commitMigration(target_frame_version_id: FrameVersionId, resolutions: ReadonlyArray&lt;OrphanResolution&gt;): Promise&lt;void&gt;;
+
+  subscribe(listener: (snapshot: SessionStoreSnapshot) =&gt; void): () =&gt; void;
+}
+
+export interface SessionStoreSnapshot {
+  session: ArgumentSession | null;
+  current_version: ArgumentSessionVersion | null;
+  compute_result: ComputeResult | null;
+  loading: boolean;
+  has_pending_save: boolean;
+  peer_save_conflict: { session_id: SessionId; conflict_at: timestamp } | null;
+  save_error: RepositoryError | null;
+  frame_version_drift: FrameVersionDrift | null;
+}
+
+export interface FrameVersionDrift {
+  current_version_id: FrameVersionId;
+  authored_against_version_id: FrameVersionId;
+  level: "none" | "minor" | "major" | "breaking";
+  summary: string;
+}
+
+// ---------- AppStateStore ----------
+
+export type CreateFrameArgs = CreateBlankFrameArgs | CreateFromTemplateArgs;   // F-009 #9 (discriminated by "start_from_template_id" in args)
+
+export interface AppStateStore {
+  current(): AppState;
+  set(patch: Partial&lt;AppState&gt;): Promise&lt;void&gt;;                          // 1s debounce per H2
+  recordRecent(frame_id: FrameId): Promise&lt;void&gt;;
+  togglePinned(frame_id: FrameId): Promise&lt;void&gt;;
+  dismissWarning(rule_id: string): Promise&lt;void&gt;;                       // F-004 #3
+  restoreDismissedWarning(rule_id: string): Promise&lt;void&gt;;              // F-004 #3
+  dismissCoachmark(coachmark_id: string, persistent: boolean): Promise&lt;void&gt;;  // F-009 #1 reaffirmed
+  resetCoachmarks(): Promise&lt;void&gt;;                                     // F-009 #2
+  markNewFeatureNoticeSeen(notice_id: string): Promise&lt;void&gt;;           // F-009 #5
+  setDefaultOutputView(view: "path_overlay" | "decision_tree" | "prose"): Promise&lt;void&gt;;
+  setAppProviderDefault(provider: LlmProviderId | null): Promise&lt;void&gt;;
+  setOutputViewTabChoice(frame_id: FrameId, tab: "prose" | "decision_tree" | "path_overlay"): Promise&lt;void&gt;;  // F-005 #3
+
+  /** F-009 #9: discriminating union; routes through modes.createBlankFrame or modes.createFrameFromTemplate. */
+  createFrame(args: CreateFrameArgs): Promise&lt;FrameId&gt;;
+  /** F-008 #5; symmetric pair to deleteSession. Wraps Repository.deleteFrame. */
+  deleteFrame(frame_id: FrameId): Promise&lt;void&gt;;
+  /** F-008 #5: wraps Repository.deleteSession. */
+  deleteSession(session_id: SessionId): Promise&lt;void&gt;;
+}
+
+export const MAX_PINNED_FRAMES = 8;
+export const DEFAULT_RECENTS_CAP = 20;
+export class PinnedCapReached extends Error { /* … */ }
+
+// ---------- RepositoryProvider ----------
+
+export interface RepositoryProvider {
+  repository: Repository;
+  autosave: AutosaveController;
+  broadcast: BroadcastEvents;
+  llm_settings_default: LlmSettings;
+}
+
+// ---------- Selectors (pure; UI consumes through these) ----------
+
+export function selectValidationByNode(snapshot: FrameStoreSnapshot): Record&lt;NodeRef, ValidationResult[]&gt;;
+export function selectValidationByEdge(snapshot: FrameStoreSnapshot): Record&lt;EdgeRef, ValidationResult[]&gt;;
+export function selectValidationDrawer(snapshot: FrameStoreSnapshot): ValidationDrawerView;
+export function selectFrameCanCommitTransition(snapshot: FrameStoreSnapshot): boolean;
+export function selectStatusBadge(status: NodeStatus): StatusBadgeView;
+export function selectOpenGates(compute_result: ComputeResult | null): OpenGate[];
+export function selectOutputForView(view: "path_overlay" | "decision_tree" | "prose", session_snapshot: SessionStoreSnapshot, frame_snapshot: FrameStoreSnapshot): OutputViewPayload;
+export function selectFrameVersionDrift(session_snapshot: SessionStoreSnapshot, frame_snapshot: FrameStoreSnapshot): FrameVersionDrift | null;
+
+// AppState-derived
+export function selectIsPinned(state: AppState, frame_id: FrameId): boolean;
+export function selectRecents(state: AppState): ReadonlyArray&lt;FrameId&gt;;
+export function selectPinnedFrames(state: AppState): ReadonlyArray&lt;FrameId&gt;;   // I.10 #1 (Home page)
+export function selectCoachmarkDismissed(state: AppState, coachmark_id: string): boolean;       // F-009 #1
+export function selectFirstLaunchDismissed(state: AppState): boolean;                            // F-009 #3
+export function selectNewFeatureNoticeSeen(state: AppState, notice_id: string): boolean;         // F-009 #6
+
+// Runtime-derived
+export function selectCascadeSummary(snapshot: FrameStoreSnapshot, to_delete: { node_ids: NodeRef[]; edge_ids: EdgeRef[] }): CascadeReport;   // F-004 #1
+export function selectInterviewItems(session_snapshot: SessionStoreSnapshot, frame_snapshot: FrameStoreSnapshot): ReadonlyArray&lt;InterviewItem&gt;;   // F-005 #1
+
+// Status-summary chip
+export interface StatusSummary {                                                                  // F-005 #2
+  resolved_count: number;
+  total_count: number;
+  tentative_count: number;
+  conclusion_label: string | null;
+  conclusion_shape: "tentative" | "complete" | "indeterminate" | "none";
+}
+export function selectStatusSummary(session_snapshot: SessionStoreSnapshot, frame_snapshot: FrameStoreSnapshot): StatusSummary;
+
+export interface OrphanResolution {
+  carrier_kind: OrphanCandidate["carrier_kind"];
+  carrier_id: string;
+  kind: "discard" | "reattach" | "no_op";
+  reattach_target_node_id?: NodeRef;
+}
+</code></pre>
+
+  <h2>Contract 8 — ui → state, schema, layout, llm-hooks (primitives)</h2>
+  <p>The UI does not talk to runtime, persistence, or modes directly. Every action goes through a state store; every read comes from a store selector or its computed projection. UI components export React component types; the cross-module surface is the prop shapes below. Per-component design lives in the per-module UI specs (<code>stream_i_ui_chrome_canvas_spec_v1.html</code>, <code>stream_i_ui_frame_building_spec_v1.html</code>, <code>stream_i_ui_argument_running_spec_v1.html</code>, <code>stream_i_ui_version_history_spec_v1.html</code>, <code>stream_i_ui_mode_change_migration_spec_v1.html</code>, <code>stream_i_ui_session_settings_spec_v1.html</code>, <code>stream_i_ui_onboarding_spec_v1.html</code>, and the I.10 integration spec).</p>
+
+  <h3>App shell + routing</h3>
+<pre><code>// @/ui
+import type { ReactNode } from "react";
+import type { RepositoryProvider } from "@/state";
+import type { FrameId, SessionId } from "@/schema";
+
+/** Top-level shell. Mounts stores, repository, autosave, broadcast, providers, router, error-boundary. */
+export function App(props: { provider: RepositoryProvider }): ReactNode;
+
+export type Route =
+  | { kind: "home" }
+  | { kind: "frame_building"; frame_id: FrameId; open_frame_settings_on_mount?: boolean }   // F-008 note-(i)
+  | { kind: "argument_running"; session_id: SessionId };
+
+export function routeFromHash(hash: string): Route;
+export function hashFromRoute(route: Route): string;
+export function useRoute(): Route;
+export function useNavigate(): (next: Route) =&gt; void;
+</code></pre>
+
+  <h3>Module barrel re-exports</h3>
+  <p>The <code>@/ui</code> public barrel re-exports each subdirectory's page-level component:</p>
+<pre><code>// from @/ui/chrome
+export { TopBar, HelpButton, OperatingModeToggle, HelpGlossaryPane };
+// from @/ui/canvas
+export { FrameCanvas };
+// from @/ui/frame-building
+export { FrameBuildingPage };
+// from @/ui/argument-running
+export { ArgumentRunningPage };
+// from @/ui/version-history
+export { VersionHistoryPane, VersionHistoryPreviewProvider };
+// from @/ui/mode-change
+export { ArchitecturalModeChangeDialog, FlavorChangeDialog };
+// from @/ui/session-migration
+export { SessionMigrationDialog };
+// from @/ui/session-settings
+export { SessionSettingsPanel };
+// from @/ui/onboarding
+export { OnboardingWizard, NewFrameWizard, WelcomeScreen, OnboardingPreferencesSection, Coachmark, NewFeatureNotice, useCoachmark, useNewFeatureNotice };
+// from @/ui/home
+export { HomePage };                                                                                // I.10 #2
+// from @/ui/primitives
+export { StatusBadge, TypeIcon, SeverityIcon, GlossaryTooltip, ConfirmDialog, Dialog, Drawer, IconButton, SegmentedToggle, Popover, Tooltip };
+</code></pre>
+
+  <h3>Cross-cutting page-prop shapes (canonical)</h3>
+  <p>Below are the props each page component accepts. The app-routes layer mounts each page with the props derived from <code>useRoute()</code>, the relevant store, and the App-level dialogs that <em>are</em> App-mounted (F-006's VersionHistoryPane mount pattern; F-009's OnboardingWizard mount pattern). Page-local dialogs (F-007's mode-change + session-migration; F-008's session-settings) are owned by the page and not threaded through props.</p>
+<pre><code>export interface FrameCanvasProps {
+  enable_editing?: boolean;          // controls auto-arrange toolbar only
+  read_only?: boolean;               // F-006 #1: hides connector handles, disables drag/edge-creation/auto-arrange
+  // … (per Stream I.9a)
+}
+
+export interface FrameBuildingPageProps {
+  frame_id: FrameId;
+  open_frame_settings_on_mount?: boolean;   // F-008 note-(i): consumed once, cleared on next render tick
+  onToggleVersionHistory: () =&gt; void;        // F-006 #2: required (not optional)
+  version_history_open: boolean;             // F-006 #2: required
+}
+
+export interface ArgumentRunningPageProps {
+  session_id: SessionId;
+  onToggleVersionHistory: () =&gt; void;        // F-006 #3: required (not optional)
+  version_history_open: boolean;             // F-006 #3: required
+}
+
+export interface ArgumentRunningTopBarDeps {
+  on_open_session_settings: () =&gt; void;      // F-008 #6: required; replaces I.9c disabled placeholder
+  // … (per Stream I.9c)
+}
+
+export interface HelpGlossaryPaneProps {
+  open: boolean;
+  onClose: () =&gt; void;
+  scroll_to_term?: GlossaryTerm;              // F-009 #11
+}
+
+export interface HomePageProps {                            // I.10 #2
+  /** Optional initial search query (deep-link support; v1 reserves but does not surface from URL). */
+  initial_query?: string;
+}
+</code></pre>
+
+  <h2>Cross-cutting: validation result attachment</h2>
+  <p>Three modules produce <code>ValidationResult[]</code>: <code>schema</code> (rule definitions), <code>runtime</code> (phase 1 evaluation), and <code>llm-hooks</code> (G4 gap-detection advisories with severity <code>"warning"</code>). All three flow into the state layer's validation projection, which the UI surfaces via the per-node chips, bottom drawer, and inspector block (E2). The contracts above pin <code>ValidationResult</code> in <code>@/schema/validation-rules</code> as the canonical shape. <strong>Dismissal:</strong> the user may dismiss individual advisories per F-004 #3; dismissed warnings live in <code>AppState.dismissed_warnings</code> and are surfaced through <code>selectValidationDrawer</code>'s dismissal-aware projection. Dismissals are per-user and per-rule_id; they do not affect the underlying compute output.</p>
+
+  <h2>Cross-cutting: HookInvocationRecord audit trail</h2>
+  <p>Hook commits write into FrameVersion fields and append to <code>Frame.llm_settings.invocations</code>. The append happens through <code>Repository.saveFrame</code> in the same transaction as the FrameVersion write that the commit produces. The state layer renders the audit projection per Stream E; the UI never invokes hooks directly without going through llm-hooks contracts. <strong>Provenance discipline (D1 of UI determinism):</strong> every AI-attributed surface (G6 prose rewrite, G7 ranked premise reuse when enabled, G11 premise drafting, G12 advisories when enabled) carries an <code>AIAttributionChip</code> with verbatim fields from <code>HookInvocationRecord</code>. Deterministic fallbacks (v1 G7's <code>rankPremiseReuse</code>, v1 G10, v1 G12-off) carry no chip.</p>
+
+  <h2>Cross-cutting: F5 (court hierarchy database) deferred contract</h2>
+  <p>The F5 module under <code>src/runtime/f5/</code> is stubbed in v1. Its eventual interface is fixed by Stream F's F5Database API surface. v1 ships F6-v1 only; the F5 wire-in session adds the F5-database-lookup branch to <code>authority-binding.ts</code> per F6-v2's specification, which widens the result envelope additively (<code>kind</code>, <code>reasoning</code>, <code>database_version</code>) without changing the function signature. The <code>llm_settings_snapshot</code> projection on FrameVersion has reserved field-slot space for whichever F5-determinism mechanism the wire-in session selects (per <code>current_state.html</code> open question).</p>
+
+  <h2>Cross-cutting: integration-test harness expectations</h2>
+  <p>Added in I.10 to pin the test-environment surface that scenario-grouped integration tests depend on. Each integration test mounts <code>App</code> with a <code>RepositoryProvider</code> whose <code>repository</code> is a Dexie instance backed by <code>fake-indexeddb</code>, whose <code>autosave</code> uses the Vitest fake-timers clock, and whose <code>llm_settings_default.provider</code> resolves to <code>MockLlmProvider</code> by default. The relevant environment seams the harness exposes (and that downstream coding sessions must preserve):</p>
+  <ul>
+    <li><strong>Deterministic clock anchor.</strong> Vitest's global frozen-clock default at <code>2026-05-10T00:00:00Z</code> applies; integration tests may override per-scenario when they explicitly need a different anchor. The harness reads <code>Date.now()</code> only through <code>RepositoryProvider</code>'s injected <code>now()</code> (used by <code>AutosaveController</code> for the debounce timer); state-layer dispatches read it through their own <code>Deps</code>.</li>
+    <li><strong>Deterministic UUIDs.</strong> The harness injects a counter-backed <code>uuid()</code> (<code>"00000000-0000-4000-8000-000000000001"</code>, then <code>...000002</code>, etc.) via the same <code>Deps</code> seam. Tests that need explicit UUID values pin them; tests that snapshot output assert via stable JSON-key ordering and the counter sequence.</li>
+    <li><strong>fake-indexeddb backing.</strong> The harness installs <code>fake-indexeddb/auto</code> in <code>tests/integration/setup.ts</code> and resets the database between scenarios via <code>indexedDB.deleteDatabase("argmap")</code> followed by Repository re-construction.</li>
+    <li><strong>Mock LLM provider deterministic responses.</strong> Each test scenario that exercises an LLM-driven surface installs a <code>MockLlmProvider</code> whose <code>invoke</code> returns canonical responses keyed by <code>input_sha256</code>. The harness exposes a helper (<code>mockLlmFor(scenario)</code>) that builds the expected responses.</li>
+    <li><strong>Layout-worker shim.</strong> The layout module's Web Worker is replaced in tests with a synchronous main-thread shim that delegates to the same pure <code>computeLayout</code> implementation. Worker round-trip timing is not part of the test contract; structural layout output is.</li>
+  </ul>
+
+  <h2>What I.2–I.9d4 added (now applied) and what I.10 adds</h2>
+  <p>The per-module specs each extended this contracts doc with internal types and per-file signatures. The F-003 through F-009 consolidation has now applied every cross-module surface change inline above. The integration spec (<code>stream_i_integration_spec_v1.html</code>) is the I.10 deliverable that pairs with this contracts bump; it commits the Home-page module, the scenario-grouped Vitest integration test plan, the Playwright E2E plan, and the v1 ship checklist. Cross-module shape changes after v2 require an additional <code>_v3</code> bump rather than rewriting; the v1 → v2 precedent establishes the pattern.</p>
+
+  <h2>Compatibility statement</h2>
+  <p>v2 is a strict additive bump over v1 for every surface except the two page-prop placeholders explicitly removed by F-007 (<code>FrameBuildingPageProps.onOpenModeChangeDialog?</code> and <code>ArgumentRunningPageProps.on_open_migration_dialog?</code>). Those two placeholders never had real call sites — they were reserved by I.9b/I.9c with explicit "I.9d wires this" comments, and I.9d2 determined that the wiring is page-local rather than App-level. No downstream code depends on the removed shapes. Every other v1 surface is unchanged or has been extended with required-not-optional promotions or additive fields. The narrowings of <code>FramePatch</code> and <code>FrameStoreSnapshot</code> from <code>unknown</code> to their explicit unions are the canonicalization v1 explicitly anticipated ("I.5 narrows").</p>
+
+</div>

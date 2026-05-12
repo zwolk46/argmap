@@ -1,0 +1,721 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); margin: 14px 0 4px; padding-bottom: 4px; border-bottom: 0.5px solid var(--color-border-tertiary); letter-spacing: 0.02em; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+</style>
+<div class="doc">
+  <h1>stream_i_ui_version_history_spec_v1.html</h1>
+  <p class="subtitle">Stream I per-module spec — Version-history side pane (E5 + H3 wiring) &nbsp;·&nbsp; Stream I session I.9d1 &nbsp;·&nbsp; May 11, 2026</p>
+
+  <div class="notice">
+    <p>This document is the implementation source of truth for <code>src/ui/version-history/</code>. It replaces the I.9a placeholder export of <code>VersionHistoryPane</code> with the real implementation, wires the <code>onToggleVersionHistory</code> page-prop callback reserved by I.9b on <code>FrameBuildingPageProps</code> and the <code>on_toggle_version_history</code> callback reserved by I.9c on <code>ArgumentRunningPageProps</code>, and commits per-file TypeScript signatures and behavioral contracts for: the App-level integration in <code>app-routes.tsx</code> (open-state lifting, preview-state provider mount); the <code>VersionHistoryPane</code> top-level composition rendered as an I.9a <code>Drawer</code>; the two-tab variant for Argument Running (Sessions / Frames-read-only); the version tree with branch indentation derived from <code>parent_version_id</code> per Stream H H3's <code>buildVersionTree</code> shape (UI-side equivalent operating over <code>FrameVersionSummary[]</code> / <code>ArgumentSessionVersionSummary[]</code> for lazy summary loading); the milestone-only filter; the selection footer (Preview / Restore / Compare buttons); the preview surfaces (<code>FramePreviewView</code> for read-only frame-canvas overlay; <code>SessionPreviewView</code> for read-only argument-canvas overlay) with the sticky preview banner; the restore confirmation dialog wrapping I.9a's <code>ConfirmDialog</code>; the structural-diff Compare view consuming <code>diffFrameVersions</code> / <code>diffSessionVersions</code> with the layout-only bucketing per Stream H H3; and the version-history preview React Context the pages consume to conditionally render the preview surfaces in place of their normal content.</p>
+    <p style="margin-top:6px;">All imports from <code>@/runtime</code> (value), <code>@/modes</code> (value), and value-level imports from <code>@/llm-hooks</code> are forbidden per Contract 8 and the I.9a substrate's <code>no-restricted-imports</code> wiring. The version-history module's reads come from <code>@/state</code> selectors and snapshots (for the current version ids and the parent-frame title) and from <code>@/persistence</code>'s pure diff functions and <code>useRepository()</code> for async listing and loading; its writes go through <code>frame_store.restoreVersion</code> / <code>session_store.restoreVersion</code> for restore (which route through the modes orchestration wrappers and Repository atomicity contracts per the state spec). The module never calls <code>compute()</code>, never produces <code>NodeStatus</code> or <code>ConditionalOutput</code>, never invokes LLM hooks at the value level; preview surfaces render frame and session data without recomputation, so status badges and output payloads are absent during preview by design (status display reactivates on Exit Preview because the working state is unchanged).</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>The "File map" gives the inventory of every file under <code>src/ui/version-history/</code> plus the small refinement to <code>src/ui/app-routes.tsx</code> (the I.9a-owned routing dispatcher) and a one-line role per file. "Cross-document resolution notes" enumerates the small refinements this spec carries against prior specs (the I.9a UI substrate spec for <code>app-routes.tsx</code> and <code>FrameCanvasProps</code>; the I.9b frame-building spec for <code>FrameBuildingPageProps</code>; the I.9c argument-running spec for <code>ArgumentRunningPageProps</code>; the I.4 persistence spec for one optional Repository extension); these are held in the consolidated F-006 register flag below in the same pattern as F-003 / F-004 / F-005. The bulk of the document is per-file: file header → import list → exported types and component signatures in a <code>&lt;pre&gt;</code> block → behavioral contracts in prose. The Vitest acceptance tests at the end commit the testable surface; the coding session implementing this spec writes against those tests. The end-of-session self-review (Article VIII § 4) verifies the work against the Constitution.</p>
+
+  <p>The state-layer surface this spec consumes is pinned in <code>stream_i_state_spec_v1.html</code>: <code>FrameStore.restoreVersion</code> and <code>SessionStore.restoreVersion</code> (the lifecycle methods that resolve through the modes orchestration wrappers and Repository atomicity contracts 3 — restore is the only mutation surface this module dispatches); <code>FrameStoreSnapshot.current_version.id</code> and <code>SessionStoreSnapshot.session.current_version_id</code> / <code>session.frame_version_id</code> (for the "current" marker and the Argument Running "session was authored against" marker); <code>SessionStoreSnapshot.frame_version_drift</code> (read indirectly through the existing <code>selectFrameVersionDrift</code>, although I.9d1 does not surface drift itself — that is I.9c's <code>FrameVersionDriftIndicator</code>). The I.9a substrate components this spec composes are pinned in <code>stream_i_ui_chrome_canvas_spec_v1.html</code>: <code>Drawer</code> + <code>DrawerHeader</code> + <code>DrawerBody</code> + <code>DrawerFooter</code> (the pane shell), <code>ConfirmDialog</code> (the restore confirmation), <code>SegmentedToggle</code> (the two-tab switcher in Argument Running), <code>Pill</code> (the milestone-only filter chip), <code>IconButton</code> (the "back to history" button in Compare view), <code>FrameCanvas</code> with the new <code>read_only</code> prop (the read-only canvas in preview surfaces), and the primitives <code>StatusBadge</code> / <code>TypeIcon</code> (consumed by the Compare-view diff-entry rows for parity with the rest of the application). The persistence-layer surface is pinned in <code>stream_i_persistence_spec_v1.html</code>: <code>Repository.listFrameVersionSummaries</code> / <code>listSessionVersionSummaries</code> / <code>loadFrameVersion</code> / <code>loadSessionVersion</code> (async loaders consumed via <code>useRepository()</code>), <code>diffFrameVersions</code> / <code>diffSessionVersions</code> (pure functions imported by value), <code>FrameVersionSummary</code> / <code>ArgumentSessionVersionSummary</code> / <code>StructuralDiff</code> / <code>SessionStructuralDiff</code> (types). The visual-token surface is pinned in <code>stream_e_visual_polish_v1.html</code> (E5 surface map): <code>--color-surface-pane</code>, <code>--color-milestone-star</code>, <code>--color-mode-current-accent</code>, <code>--color-text-secondary</code>, <code>--space-4</code>, <code>--color-border-subtle</code>, <code>--color-status-not-applicable-bg</code>, and the diff-entry status/severity token pairs. The schema vocabulary (<code>FrameVersion</code>, <code>ArgumentSessionVersion</code>, <code>FrameVersionId</code>, <code>SessionVersionId</code>, <code>FrameId</code>, <code>SessionId</code>, <code>NodeRef</code>, <code>EdgeRef</code>) is consumed at canonical names from <code>@/schema</code> and the persistence types from <code>@/persistence</code>.</p>
+
+  <h2>File map</h2>
+  <p>The I.9d1 coding session implements the files below under <code>src/ui/version-history/</code> plus the small App-level refinement to <code>src/ui/app-routes.tsx</code> (I.9a-owned). The barrel <code>index.ts</code> re-exports <code>VersionHistoryPane</code> and the preview Provider as the public surface, replacing the I.9a placeholder of <code>VersionHistoryPane</code> (the placeholder file is removed by this session). The placeholder pages <code>FrameBuildingPage</code> / <code>ArgumentRunningPage</code> are not touched by I.9d1 — their real implementations already shipped in I.9b / I.9c; this spec's page-prop refinements (in "Cross-document resolution notes" below) are absorbed by I.9d1's edits to the existing page files, narrowly limited to the <code>Props</code> interface additions and the <code>buildTopBarSlots</code> deps wiring.</p>
+
+  <h3>App-level integration (refinement to I.9a)</h3>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>src/ui/app-routes.tsx</code> (refined)</td><td>The I.9a-owned routing dispatcher gains <code>version_history_open</code> local state, mounts the I.9d1 <code>VersionHistoryPreviewProvider</code> around the page tree, mounts a single <code>VersionHistoryPane</code> instance above the page (the pane scopes itself by current Route), and passes <code>version_history_open</code> + <code>onToggleVersionHistory</code> / <code>on_toggle_version_history</code> through to the active page. No other I.9a file is touched</td><td>(no new exports — the I.9a barrel <code>App</code> export remains unchanged)</td></tr>
+  </table>
+
+  <h3>Top-level</h3>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>version-history-pane.tsx</code></td><td>The top-level component. Renders an I.9a <code>Drawer</code> (right-side, ~520px width per E5's "right ~30% of the screen" framing, anchored as a tunable token); dispatches by current Route into the Frame Building single-panel layout or the Argument Running two-tab layout; owns the selected-version-id local state, the milestone-only filter local state, and the compare-view local state (which version is being compared to which); reads the active tab in Argument Running from local component state (not persisted; transient UI choice)</td><td><code>VersionHistoryPane</code>, <code>VersionHistoryPaneProps</code></td></tr>
+    <tr><td><code>pane-tabs.tsx</code></td><td>The Argument Running two-tab switcher built on the I.9a <code>SegmentedToggle</code>. Two values: <code>"sessions"</code> (default; ArgumentSessionVersions for the open session) and <code>"frames"</code> (read-only; FrameVersions for the parent frame). In Frame Building this component is not rendered; the pane shows the single Frame versions panel directly</td><td><code>PaneTabs</code>, <code>PaneTabsProps</code>, <code>PaneTabValue</code></td></tr>
+    <tr><td><code>milestone-filter.tsx</code></td><td>The "milestones only / all" filter chip toggle. Renders two I.9a <code>Pill</code> primitives with <code>variant="neutral"</code>; the active one carries the <code>--color-mode-current-accent-bg</code> background. Stateless; takes <code>value</code> + <code>onChange</code></td><td><code>MilestoneFilter</code>, <code>MilestoneFilterProps</code>, <code>MilestoneFilterValue</code></td></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel. Exports <code>VersionHistoryPane</code> (the canonical surface that replaces the I.9a placeholder of the same name in <code>src/ui/index.ts</code>), <code>VersionHistoryPreviewProvider</code> (the App-mounted context provider), <code>FramePreviewView</code> + <code>SessionPreviewView</code> (the conditional preview components the pages consume), and the <code>useVersionHistoryPreview</code> hook the pages use to read preview state and decide which view to render</td><td><code>VersionHistoryPane</code>, <code>VersionHistoryPreviewProvider</code>, <code>FramePreviewView</code>, <code>SessionPreviewView</code>, <code>useVersionHistoryPreview</code>, public types</td></tr>
+  </table>
+
+  <h3>Version tree</h3>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>version-tree.tsx</code></td><td>Renders the version list with branch indentation. Reads the summary list and the current-version-id from props; produces the indented display order via <code>buildVersionTreeShape</code>; renders one <code>VersionTreeRow</code> per entry. Scrollable when the list exceeds the pane height; auto-scrolls to the current version on first render and on current-version changes</td><td><code>VersionTree</code>, <code>VersionTreeProps</code>, <code>VersionTreeEntityKind</code></td></tr>
+    <tr><td><code>version-tree-row.tsx</code></td><td>Renders one version row: leading marker (<code>●</code> for the current version in <code>--color-mode-current-accent</code>; <code>★</code> for milestones in <code>--color-milestone-star</code>; <code>●</code> in muted color otherwise), version number, relative timestamp with absolute on hover (via I.9a <code>Tooltip</code>), <code>change_summary</code> (or "auto-save" fallback in <code>--color-text-secondary</code>), and the Argument-Running-Frames-tab-only "session was authored against this version" annotation. Click selects the row. Indented per <code>depth</code> using <code>--space-4</code> per level; connector lines drawn in <code>--color-border-subtle</code></td><td><code>VersionTreeRow</code>, <code>VersionTreeRowProps</code></td></tr>
+    <tr><td><code>version-tree-shape.ts</code></td><td>Pure helper that walks a <code>FrameVersionSummary[]</code> (or <code>ArgumentSessionVersionSummary[]</code>) — already sorted by <code>version_number</code> ascending per persistence — and returns a flat display-order list of <code>{ summary, depth, has_branch_children, is_last_child_of_parent }</code> entries. Parallel to Stream H H3's <code>buildVersionTree</code> but UI-side and operating on summaries (lazy loading). Filterable by milestone via a pre-pass that retains a summary only if <code>is_milestone</code> is true, preserving the tree shape (auto-save children of a retained milestone are dropped; milestone children of a dropped parent become roots in the filtered view)</td><td><code>buildVersionTreeShape</code>, <code>VersionTreeDisplayEntry</code>, <code>filterByMilestone</code></td></tr>
+    <tr><td><code>selection-footer.tsx</code></td><td>The pane's bottom footer. Three buttons (<code>Preview</code>, <code>Restore</code>, <code>Compare to v{current}</code>) plus a "[Selected: v{N}]" label. Each button disables when the selection is the current version (preview is meaningless; restore is a no-op; compare to itself is degenerate) or when its mode-specific gate fails (Restore is disabled in Argument Running's Frames tab regardless of selection). Footer reads selected-version-id and current-version-id from props; emits <code>on_preview_clicked</code> / <code>on_restore_clicked</code> / <code>on_compare_clicked</code></td><td><code>SelectionFooter</code>, <code>SelectionFooterProps</code></td></tr>
+  </table>
+
+  <h3>Preview surfaces (consumed by the pages, not by the pane itself)</h3>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>preview-context.tsx</code></td><td>The React Context that carries the preview state across the App tree. The pages read this context to decide whether to render their normal content or one of the preview views; the pane writes to this context when the user clicks Preview. The context value is a discriminated union: <code>{ kind: "none" } | { kind: "frame"; frame_id; version_id; version_number } | { kind: "session"; session_id; version_id; version_number }</code>. <code>VersionHistoryPreviewProvider</code> owns the state via <code>useReducer</code> with two actions (<code>enter</code>, <code>exit</code>); the <code>useVersionHistoryPreview</code> hook returns <code>{ state, enterFramePreview, enterSessionPreview, exit }</code></td><td><code>VersionHistoryPreviewProvider</code>, <code>useVersionHistoryPreview</code>, <code>PreviewState</code></td></tr>
+    <tr><td><code>frame-preview-view.tsx</code></td><td>Renders a read-only frame-canvas overlay when frame-preview is active. Loads the FrameVersion via <code>useRepository().loadFrameVersion(version_id)</code> on mount and on version-id changes; while loading, renders a centered loading affordance; on load, renders <code>FrameCanvas</code> with <code>frame_version={loaded}</code>, <code>operating_mode="frame_building"</code>, <code>read_only={true}</code> (the new prop — see "Cross-document resolution notes" item 1 below), no <code>status_map</code>, no <code>argument_overlay</code>; renders the sticky <code>PreviewBanner</code> at the top of the canvas. Selection in preview is allowed (read-only inspection); edits are not</td><td><code>FramePreviewView</code>, <code>FramePreviewViewProps</code></td></tr>
+    <tr><td><code>session-preview-view.tsx</code></td><td>Renders a read-only argument-canvas overlay when session-preview is active. Loads the ArgumentSessionVersion via <code>useRepository().loadSessionVersion(version_id)</code>; loads the current session's <code>frame_version_snapshot</code> from the <code>SessionStore</code> snapshot (read-only); renders <code>FrameCanvas</code> with <code>frame_version=snapshot</code>, <code>operating_mode="argument_running"</code>, <code>read_only={true}</code>, no <code>status_map</code> (preview does not recompute), and an <code>argument_overlay</code> projection built from the loaded version's <code>premises</code> + <code>argument_edges</code> + <code>session_authorities</code>. Renders the sticky <code>PreviewBanner</code>. The session-preview's argument overlay may contain <code>NodeRef</code>s that don't resolve in the current <code>frame_version_snapshot</code> (rare; only after a session migration that orphaned earlier versions): unresolved refs render as muted "orphaned" markers per the FrameCanvas's edge-rendering tolerance (the canvas already handles unresolved refs gracefully because session-side edges may reference recently-deleted nodes during edit-time normalization)</td><td><code>SessionPreviewView</code>, <code>SessionPreviewViewProps</code></td></tr>
+    <tr><td><code>preview-banner.tsx</code></td><td>The sticky banner that sits above the previewed canvas. Reads <code>useVersionHistoryPreview()</code> for the active preview state; renders one of two messages: "Previewing version {N} (read-only)" (frame preview) or "Previewing session version {N} (read-only)" (session preview); renders the "[Exit preview]" button that calls <code>exit()</code>. Background uses <code>--color-status-not-applicable-bg</code> per E5 visual polish; the banner is position-sticky at the top of the canvas with a thin border-bottom in <code>--color-border-subtle</code></td><td><code>PreviewBanner</code>, <code>PreviewBannerProps</code></td></tr>
+  </table>
+
+  <h3>Compare view (in-pane, replaces the version list when active)</h3>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>compare-view.tsx</code></td><td>The diff view that replaces the version list temporarily in the side pane. Header reads "Compare v{A} to v{B}" with a back-arrow <code>IconButton</code> (aria-label "Back to history") on the left. Body composes <code>CompareEntryList</code> sections: Nodes added / Nodes removed / Nodes edited / Edges added / Edges removed / Edges edited / Frame metadata changes (frame variant); Premises / Argument edges / Checkpoint responses / Interpretation selections / Session authorities / Session metadata (session variant). Loads both versions via <code>useRepository().loadFrameVersion</code> (or session variant); computes the diff once via <code>diffFrameVersions(a, b)</code> (or <code>diffSessionVersions</code>); caches the result in component-local state keyed by the (a_id, b_id) pair. Loading state renders a centered affordance; errors render an inline error message with a "Back to history" affordance</td><td><code>CompareView</code>, <code>CompareViewProps</code></td></tr>
+    <tr><td><code>compare-entry-list.tsx</code></td><td>Per-section list. Takes <code>{ title; kind: "added" | "removed" | "edited" | "layout_only" | "metadata"; entries: CompareEntry[] }</code>; renders an h3 header with the section title and a count chip; renders one <code>CompareEntryRow</code> per entry. The <code>kind</code> determines the leading-indicator color/icon per the E5 visual-polish diff-entry tokens. Empty sections are not rendered (no "0 nodes added" headers). The layout-only bucket is rendered as a single collapsed entry "Layout updated for N nodes" with an aria-expanded affordance the user can expand for the per-node list</td><td><code>CompareEntryList</code>, <code>CompareEntryListProps</code>, <code>CompareEntryListKind</code></td></tr>
+    <tr><td><code>compare-entry-row.tsx</code></td><td>One diff entry row. Renders the I.9a <code>TypeIcon</code> for the node-type or edge-type, the entry's preview text (statement preview for nodes, edge endpoints for edges, field name + before/after for metadata), and for "edited" entries the comma-separated <code>fields_changed</code> list as secondary text. Clicking emits <code>on_navigate_to_entity(entity_ref)</code> upward; the pane forwards the click to the page (via the <code>VersionHistoryPane.on_navigate_to_entity</code> prop) which scrolls the canvas to the implicated node and highlights it briefly</td><td><code>CompareEntryRow</code>, <code>CompareEntryRowProps</code></td></tr>
+  </table>
+
+  <h3>Restore confirmation</h3>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>restore-confirm-dialog.tsx</code></td><td>Wraps the I.9a <code>ConfirmDialog</code> with restore-specific copy per E5: title "Restore version {N}?"; body "Restoring version {N} will create a new version (v{current+1}) and switch to it. The current version (v{current}) and all later versions are preserved." per E5's exact framing; primary action label "Restore"; not <code>destructive</code> (restore is reversible by re-restoring). On confirm, calls <code>frame_store.restoreVersion(ancestor_version_id, change_summary)</code> or <code>session_store.restoreVersion(...)</code>; awaits resolve; closes the dialog; closes the pane (so the user lands on the new working version with the canvas restored). The <code>change_summary</code> passed to the store is the empty string here; the store fills in "restored from version N" per H3's restore implementation</td><td><code>RestoreConfirmDialog</code>, <code>RestoreConfirmDialogProps</code></td></tr>
+  </table>
+
+  <h3>Data hooks</h3>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>use-version-summaries.ts</code></td><td>Async data hook for the summary lists. Takes a discriminated <code>{ kind: "frame"; frame_id } | { kind: "session"; session_id }</code> argument; returns <code>{ status: "loading" | "ready" | "error"; summaries: SummaryUnion[]; error?: Error }</code>. Loads via <code>repository.listFrameVersionSummaries</code> or <code>listSessionVersionSummaries</code> on mount and on argument changes; re-fetches when the corresponding store's current-version-id changes (subscribed via <code>useFrameStore</code> / <code>useSessionStore</code> with a thin selector); idempotent across identical (kind, id) pairs by ref-stable cache lookup. The hook is the single async-data surface for the pane's tree; <code>VersionTree</code> consumes it indirectly via prop drilling from the pane root</td><td><code>useVersionSummaries</code>, <code>VersionSummariesResult</code>, <code>SummaryUnion</code></td></tr>
+    <tr><td><code>use-version-full-load.ts</code></td><td>Async data hook for full-version loading on demand. Used by <code>FramePreviewView</code> / <code>SessionPreviewView</code> / <code>CompareView</code>. Takes a discriminated <code>{ kind: "frame"; version_id } | { kind: "session"; version_id }</code>; returns <code>{ status: "loading" | "ready" | "error"; version: FrameVersion | ArgumentSessionVersion | null; error?: Error }</code>. Caches by version-id; the cache lives in a module-scoped <code>WeakMap</code> with bounded LRU semantics (max 8 entries — small enough to cap memory, large enough that switching between two compared versions doesn't thrash). The cache is invalidated whenever <code>FrameStore.onPeerSave</code> or <code>SessionStore.onPeerSave</code> fires (a parent-frame save can't change a historical FrameVersion, but it can introduce a new one that displaces an LRU entry; the bus-event subscription is a precaution against future write-paths)</td><td><code>useVersionFullLoad</code>, <code>VersionFullLoadResult</code></td></tr>
+  </table>
+
+  <h2>Cross-document resolution notes (for self-review)</h2>
+
+  <p>The I.9d1 spec carries five small refinements relative to the I.9a UI substrate spec, the I.9b frame-building UI spec, the I.9c argument-running UI spec, and the I.4 persistence spec. None is constitutionally novel; all are additive or callback-wiring promotions of placeholders to real implementations. Per the F-003 / F-004 / F-005 family pattern, the five items are consolidated into a single register flag (F-006) held in <code>flag_pending_from_i9d1.html</code> for merge into the live <code>flags.html</code>.</p>
+
+  <ol>
+    <li><strong>Add <code>read_only?: boolean</code> to <code>FrameCanvasProps</code> in the I.9a UI substrate spec.</strong> The version-history preview surfaces render <code>FrameCanvas</code> in read-only mode (no node drag, no connector-handle gesture, no auto-arrange, no edge-creation popup). The I.9a spec's existing <code>enable_editing?: boolean</code> prop disables only the toolbar's auto-arrange button; it does not suppress the per-node connector handle or the node-drag affordance, which are needed for the read-only display. Adding <code>read_only?: boolean</code> as an optional additive prop (default <code>false</code>) preserves backward compatibility with I.9b's and I.9c's existing call sites (both omit the prop and get the existing editing behavior). The new prop's contract: when <code>true</code>, the canvas (a) hides connector handles on per-node renderers, (b) sets React Flow's <code>nodesDraggable</code> and <code>edgesUpdatable</code> to <code>false</code>, (c) disables the toolbar's auto-arrange button regardless of <code>enable_editing</code>, (d) ignores the <code>on_node_moved</code> and <code>on_edge_created</code> callbacks (they are not called); selection and search and zoom remain functional. The implementation is local to <code>frame-canvas.tsx</code> and to <code>NodeFrame</code> in the per-node-type renderer suite; no cross-module change.</li>
+    <li><strong>Promote <code>onToggleVersionHistory</code> in <code>FrameBuildingPageProps</code> from optional to required, and add <code>version_history_open: boolean</code> as a required prop.</strong> The I.9b spec marked <code>onToggleVersionHistory?: () =&gt; void</code> as optional with the comment "I.9d wires this through the App once the version-history pane lands. Until then, the chrome button toggles an inert state." I.9d1 is the wiring step. The refined shape: <code>onToggleVersionHistory: () =&gt; void</code> (no <code>?</code>) and <code>version_history_open: boolean</code> (new). The page passes both into <code>buildTopBarSlots</code> at the existing <code>on_toggle_version_history</code> and <code>version_history_open</code> dep keys; no other I.9b file is touched. Refer to the page-composition skeleton in I.9b's <code>frame-building-page.tsx</code> section — the existing skeleton already references <code>onToggleVersionHistory</code> in the slot-builder call (line annotated "I.9d wires this through"); after I.9d1 the optionality is dropped and <code>version_history_open</code> is added.</li>
+    <li><strong>Promote <code>on_toggle_version_history</code> in <code>ArgumentRunningPageProps</code> from optional to required, and add <code>version_history_open: boolean</code> as a required prop.</strong> Symmetric to refinement #2 but for I.9c's argument-running spec. The I.9c skeleton already hard-codes <code>version_history_open: false /* I.9d */</code> in <code>buildTopBarSlots</code>; after I.9d1 the literal <code>false</code> is replaced with the page-prop value, and <code>on_toggle_version_history</code>'s optional fallback <code>?? noop</code> is removed from the slot-builder call.</li>
+    <li><strong>Refine <code>app-routes.tsx</code> (I.9a-owned) to lift <code>version_history_open</code> state, mount the <code>VersionHistoryPreviewProvider</code>, mount a single <code>VersionHistoryPane</code> instance, and thread the callbacks through.</strong> I.9a's <code>app-routes.tsx</code> was described as "a tiny component that switches on the current <code>Route</code> and renders the relevant page." I.9b's and I.9c's specs noted that I.9b/c/d each "replace its imports of the placeholder page components with their real implementations." I.9d1 makes the corresponding change: replaces the placeholder import of <code>VersionHistoryPane</code> with the real one; introduces <code>useState&lt;boolean&gt;(false)</code> for <code>version_history_open</code>; wraps the <code>RouterProvider</code>'s child tree in <code>&lt;VersionHistoryPreviewProvider&gt;</code>; renders <code>&lt;VersionHistoryPane open={version_history_open} onClose={() =&gt; setVersionHistoryOpen(false)} /&gt;</code> as a sibling of the active page component; passes <code>onToggleVersionHistory={() =&gt; setVersionHistoryOpen((v) =&gt; !v)}</code> and <code>version_history_open={version_history_open}</code> to whichever page is active. The pane reads <code>useRoute()</code> internally to scope to the current Frame or Session; the App-level mount avoids the alternative of duplicate-mounting the pane in both pages. The refinement is local to <code>app-routes.tsx</code>; no other I.9a file is touched. The I.9a barrel re-export <code>VersionHistoryPane</code> in <code>src/ui/index.ts</code> remains in place; only its source changes from the placeholder file (deleted) to the version-history module's barrel (added).</li>
+    <li><strong>Optional Repository extension (deferred to v1.5 by this spec): batch loader for diff source pairs.</strong> The Compare view loads two FrameVersions back-to-back via <code>loadFrameVersion(a_id)</code> then <code>loadFrameVersion(b_id)</code>. For v1 the two awaits run in parallel via <code>Promise.all</code> at the call site, which is sufficient (each load is one IndexedDB read on the primary key); the persistence-layer Repository surface does not need a batch loader. If a future polish pass surfaces that the two parallel reads cause a perceptible Compare-view flash, a <code>Repository.loadFrameVersionPair(a_id, b_id)</code> method that batches the two reads into a single transaction would be a clean additive surface; this is reserved for v1.5 and not committed in I.9d1. The same reservation applies to <code>loadSessionVersionPair</code>. This item is documented as part of F-006 to keep the cross-spec audit consolidated, but no spec edits are required by I.9d1 to land it.</li>
+  </ol>
+
+  <p>F-006 entries 1–4 are technical, additive (or required-from-optional in the page-prop case), and within agent-autonomous scope per Article V § 2(c). Entry 5 is a deferral note for future record-keeping. The five items are held as a single in-session-escalated register flag in the same family pattern as F-003 / F-004 / F-005; downstream coding sessions are not gated on a contracts-doc bump.</p>
+
+  <h2>Per-file specifications</h2>
+
+  <div class="file-header">// src/ui/app-routes.tsx (refined)</div>
+  <p>The I.9a-owned routing dispatcher. The refinement: lift <code>version_history_open</code> state, mount the <code>VersionHistoryPreviewProvider</code> around the child tree, mount a single <code>VersionHistoryPane</code> instance, and thread the callbacks through to the active page. The file remains a one-screen component; no logic is extracted to helpers.</p>
+<pre><code>import * as React from "react";
+import { useRoute } from "./routing";
+import {
+  VersionHistoryPane,
+  VersionHistoryPreviewProvider,
+  FramePreviewView,
+  SessionPreviewView,
+  useVersionHistoryPreview,
+} from "./version-history";
+import { FrameBuildingPage } from "./frame-building";
+import { ArgumentRunningPage } from "./argument-running";
+import { HomePage } from "./home";       // I.9a placeholder remains in v1
+import { OnboardingWizard } from "./onboarding";  // I.9a placeholder; replaced by I.9d4
+
+export function AppRoutes(): React.ReactElement {
+  const route = useRoute();
+  const [version_history_open, set_version_history_open] = React.useState(false);
+  const on_toggle = React.useCallback(() =&gt; set_version_history_open((v) =&gt; !v), []);
+  const on_close = React.useCallback(() =&gt; set_version_history_open(false), []);
+
+  return (
+    &lt;VersionHistoryPreviewProvider&gt;
+      &lt;PageWithPreview
+        route={route}
+        version_history_open={version_history_open}
+        on_toggle={on_toggle}
+      /&gt;
+      &lt;VersionHistoryPane open={version_history_open} onClose={on_close} /&gt;
+    &lt;/VersionHistoryPreviewProvider&gt;
+  );
+}
+
+function PageWithPreview(props: {
+  route: ReturnType&lt;typeof useRoute&gt;;
+  version_history_open: boolean;
+  on_toggle: () =&gt; void;
+}): React.ReactElement {
+  const preview = useVersionHistoryPreview();
+
+  if (preview.state.kind === "frame") {
+    return (
+      &lt;FramePreviewView
+        frame_id={preview.state.frame_id}
+        version_id={preview.state.version_id}
+        version_number={preview.state.version_number}
+      /&gt;
+    );
+  }
+  if (preview.state.kind === "session") {
+    return (
+      &lt;SessionPreviewView
+        session_id={preview.state.session_id}
+        version_id={preview.state.version_id}
+        version_number={preview.state.version_number}
+      /&gt;
+    );
+  }
+
+  switch (props.route.kind) {
+    case "home":         return &lt;HomePage /&gt;;
+    case "frame_building":
+      return (
+        &lt;FrameBuildingPage
+          frame_id={props.route.frame_id}
+          onToggleVersionHistory={props.on_toggle}
+          version_history_open={props.version_history_open}
+        /&gt;
+      );
+    case "argument_running":
+      return (
+        &lt;ArgumentRunningPage
+          session_id={props.route.session_id}
+          on_toggle_version_history={props.on_toggle}
+          version_history_open={props.version_history_open}
+        /&gt;
+      );
+  }
+}
+</code></pre>
+  <p>Behavioral contract. Three invariants: <em>preview state lives outside the page</em> (so the pane and the page agree on whether preview is active); <em>the pane is mounted exactly once</em> (the pane internally scopes to the current Route via <code>useRoute()</code> rather than being remounted per page, which would lose its selection state on every navigation); <em>preview replaces the page</em> (not overlaid; the page's chrome and side panels are hidden during preview, matching E5's "the current canvas dims and a banner reads 'Previewing version N'" framing — a true mode swap, not a translucent overlay). The "page mounted alongside" approach is rejected here in favor of the swap because preview is rare and intentional, so the user's working state needs no preservation behind the preview surface; on Exit Preview, the page remounts and re-loads from the (unchanged) stores via the existing <code>open(frame_id)</code> / <code>open(session_id)</code> lifecycle.</p>
+
+
+
+  <div class="file-header">// src/ui/version-history/version-history-pane.tsx</div>
+  <p>The top-level component. Renders the I.9a <code>Drawer</code> on the right edge; dispatches by Route into the Frame Building single-panel variant or the Argument Running two-tab variant; orchestrates selection, milestone-filter, and compare-view local state; mounts <code>SelectionFooter</code> and <code>RestoreConfirmDialog</code>.</p>
+<pre><code>import * as React from "react";
+import type { ReactElement } from "react";
+import type {
+  FrameVersionId, SessionVersionId, NodeRef, EdgeRef,
+} from "@/schema";
+import { useFrameStore, useSessionStore } from "@/state";
+import {
+  Drawer, DrawerHeader, DrawerBody, DrawerFooter,
+  useRoute,
+} from "@/ui";
+import { PaneTabs, type PaneTabValue } from "./pane-tabs";
+import { MilestoneFilter, type MilestoneFilterValue } from "./milestone-filter";
+import { VersionTree, type VersionTreeEntityKind } from "./version-tree";
+import { SelectionFooter } from "./selection-footer";
+import { CompareView } from "./compare-view";
+import { RestoreConfirmDialog } from "./restore-confirm-dialog";
+import { useVersionHistoryPreview } from "./preview-context";
+import { useVersionSummaries } from "./use-version-summaries";
+
+export interface VersionHistoryPaneProps {
+  open: boolean;
+  onClose: () =&gt; void;
+}
+
+export function VersionHistoryPane(props: VersionHistoryPaneProps): ReactElement | null;
+</code></pre>
+  <p>Behavioral contract. The pane reads <code>useRoute()</code> to determine scope; for the <code>home</code> route the pane renders null (version history has no entity scope to operate on); for <code>frame_building</code> the pane renders the single-Frame-versions variant; for <code>argument_running</code> the pane renders the two-tab variant.</p>
+  <p><em>Internal state</em>. Five pieces of local state: (1) <code>active_tab: PaneTabValue</code> — only used in argument-running variant; defaults to <code>"sessions"</code>; reset to <code>"sessions"</code> on Route change; (2) <code>milestone_filter: MilestoneFilterValue</code> — defaults to <code>"all"</code>; (3) <code>selected_version_id</code> — the currently selected row; defaults to null; reset on tab change and on Route change; (4) <code>compare_state: { from_id; to_id } | null</code> — when non-null, the pane renders <code>CompareView</code> in place of the version list; (5) <code>restore_dialog_open: boolean</code>.</p>
+  <p><em>Selection footer wiring</em>. On Preview click: read the preview-context controls, dispatch <code>enterFramePreview</code> or <code>enterSessionPreview</code> with the selected version's metadata; the pane stays open during preview (the user picks another version or clicks Exit Preview from the banner). On Restore click: set <code>restore_dialog_open</code> to true. On Compare click: read the current version id from the relevant store, set <code>compare_state</code> to <code>{ from_id: selected_version_id, to_id: current_version_id }</code>; the pane re-renders with <code>CompareView</code>. The back-arrow from Compare sets <code>compare_state</code> to null.</p>
+  <p><em>Frame Building variant layout</em>: a <code>Drawer</code> with <code>DrawerHeader</code> showing "Version history · {frame.title}"; <code>DrawerBody</code> rendering either the <code>MilestoneFilter</code> + <code>VersionTree</code> pair (when <code>compare_state === null</code>) or the <code>CompareView</code> (when active); <code>DrawerFooter</code> rendering the <code>SelectionFooter</code> with <code>allow_restore=true</code>. The pane mounts the <code>RestoreConfirmDialog</code> conditionally on <code>restore_dialog_open</code>; the dialog's <code>onConfirm</code> calls <code>frame_store.restoreVersion(selected_version_id, "")</code> and on resolve closes both the dialog and the pane.</p>
+  <p><em>Argument Running variant layout</em>: identical structure with <code>PaneTabs</code> rendered between <code>DrawerHeader</code> and <code>MilestoneFilter</code>. The active tab determines whether the <code>VersionTree</code> reads session-version summaries (<code>"sessions"</code> tab; entity_kind="session"; SelectionFooter's <code>allow_restore=true</code>) or frame-version summaries (<code>"frames"</code> tab; entity_kind="frame"; SelectionFooter's <code>allow_restore=false</code>, which disables the Restore button with the tooltip "Restore frame versions from Frame Building"). The Argument Running Frames-tab additionally passes the <code>session_authored_against_version_id</code> prop (from <code>session.frame_version_id</code>) to <code>VersionTree</code> so the row for the session's authoring FrameVersion renders the "session was authored here" annotation.</p>
+  <p><em>Cross-tab refresh</em>. The pane subscribes to the relevant store's current-version-id through <code>useFrameStore((s) =&gt; s.current_version?.id)</code> / <code>useSessionStore((s) =&gt; s.session?.current_version_id)</code>; when the id changes (local save, or peer-tab save arriving via <code>onPeerSave</code>), the <code>useVersionSummaries</code> hook re-fetches automatically.</p>
+
+  <div class="file-header">// src/ui/version-history/pane-tabs.tsx</div>
+  <p>The Argument Running two-tab switcher. Wraps the I.9a <code>SegmentedToggle</code> with two values and per-tab labels.</p>
+<pre><code>import * as React from "react";
+import { SegmentedToggle, type SegmentOption } from "@/ui";
+
+export type PaneTabValue = "sessions" | "frames";
+
+export interface PaneTabsProps {
+  value: PaneTabValue;
+  onChange: (next: PaneTabValue) =&gt; void;
+}
+
+export function PaneTabs(props: PaneTabsProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. The labels are "Sessions" and "Frames (read-only)"; both labels are the same across legal and general / personal / academic modes — version-history mechanics use neutral vocabulary per Stream E E5's "shared UI chrome uses neutral terminology" rule. The component does not consult mode/flavor.</p>
+
+  <div class="file-header">// src/ui/version-history/milestone-filter.tsx</div>
+  <p>The "milestones only / all" filter toggle. Two I.9a <code>Pill</code> primitives rendered side-by-side; clicking sets the value.</p>
+<pre><code>import * as React from "react";
+import { Pill } from "@/ui";
+
+export type MilestoneFilterValue = "milestones_only" | "all";
+
+export interface MilestoneFilterProps {
+  value: MilestoneFilterValue;
+  onChange: (next: MilestoneFilterValue) =&gt; void;
+}
+
+export function MilestoneFilter(props: MilestoneFilterProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. Per E5, the default value is <code>"all"</code>. The active pill renders with <code>variant="mode_accent"</code>; the inactive pill with <code>variant="neutral"</code>. The "milestones only" pill carries a leading ★ glyph in <code>--color-milestone-star</code>; the "all" pill carries no glyph. Tooltips: "milestones only" → "Hide auto-saves"; "all" → "Show every saved version including auto-saves".</p>
+
+  <div class="file-header">// src/ui/version-history/version-tree.tsx</div>
+  <p>Renders the version list with branch indentation. Reads the summary list, the current-version-id, the milestone filter value, and optionally the session-authored-against-version-id; produces the indented display order via <code>buildVersionTreeShape</code> + <code>filterByMilestone</code>; renders one row per entry.</p>
+<pre><code>import * as React from "react";
+import type { FrameVersionId, SessionVersionId } from "@/schema";
+import type { FrameVersionSummary, ArgumentSessionVersionSummary } from "@/persistence";
+import { VersionTreeRow } from "./version-tree-row";
+import {
+  buildVersionTreeShape, filterByMilestone,
+  type VersionTreeDisplayEntry,
+} from "./version-tree-shape";
+import type { MilestoneFilterValue } from "./milestone-filter";
+
+export type VersionTreeEntityKind = "frame" | "session";
+
+export interface VersionTreeProps {
+  entity_kind: VersionTreeEntityKind;
+  summaries: ReadonlyArray&lt;FrameVersionSummary | ArgumentSessionVersionSummary&gt;;
+  current_version_id: FrameVersionId | SessionVersionId | null;
+  selected_version_id: FrameVersionId | SessionVersionId | null;
+  on_select: (version_id: FrameVersionId | SessionVersionId) =&gt; void;
+  milestone_filter: MilestoneFilterValue;
+  session_authored_against_version_id?: FrameVersionId;
+}
+
+export function VersionTree(props: VersionTreeProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. <em>Display-order computation</em>: pass the summaries through <code>filterByMilestone</code> if <code>milestone_filter === "milestones_only"</code>; pass the result through <code>buildVersionTreeShape</code>; map each entry to a <code>VersionTreeRow</code> with the four marker booleans (<code>is_current</code>, <code>is_milestone</code>, <code>is_authored_against</code>, <code>is_selected</code>). <em>Auto-scroll</em>: on first render and on changes to <code>current_version_id</code>, scroll the current-version row into view via a <code>ref</code>-driven <code>scrollIntoView({ block: "center", behavior: "smooth" })</code>, collapsing to <code>behavior: "auto"</code> under <code>useReduceMotion()</code>. <em>Empty state</em>: when the summaries list is empty after milestone filtering, render a muted line "No milestones yet — save one to mark a meaningful waypoint." (frame-building) or "No session milestones yet." (argument-running sessions tab). <em>Keyboard navigation</em>: arrow keys move focus via roving <code>tabindex</code>; Enter or Space selects.</p>
+
+  <div class="file-header">// src/ui/version-history/version-tree-row.tsx</div>
+  <p>One version row. Renders the leading marker, version number, timestamp, milestone star, change_summary, and the optional "session was authored here" annotation.</p>
+<pre><code>import * as React from "react";
+import type {
+  FrameVersionSummary, ArgumentSessionVersionSummary,
+} from "@/persistence";
+
+export interface VersionTreeRowProps {
+  summary: FrameVersionSummary | ArgumentSessionVersionSummary;
+  depth: number;
+  is_current: boolean;
+  is_milestone: boolean;
+  is_authored_against: boolean;
+  is_selected: boolean;
+  on_select: (version_id: string) =&gt; void;
+}
+
+export function VersionTreeRow(props: VersionTreeRowProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. <em>Visual composition</em>: the row is a <code>&lt;button&gt;</code> indented by <code>depth * var(--space-4)</code>. Content (left to right): leading marker glyph (<code>●</code> in <code>--color-mode-current-accent</code> when <code>is_current</code>; <code>★</code> in <code>--color-milestone-star</code> when <code>is_milestone</code>; <code>●</code> in <code>--color-text-tertiary</code> otherwise — when both <code>is_current</code> and <code>is_milestone</code>, the star wins and the row's background carries a subtle <code>--color-mode-current-accent-bg</code> wash); "v{N}" in <code>--font-size-sm</code>; relative timestamp in <code>--color-text-secondary</code>; the <code>change_summary</code> (or "auto-save" italic fallback). Hovering the timestamp shows the absolute timestamp via I.9a <code>Tooltip</code>. <em>Annotation pill</em>: when <code>is_authored_against</code>, render a small <code>Pill</code> with text "session was authored here" in <code>variant="neutral"</code> at the right edge. <em>Selection visual</em>: <code>is_selected</code> applies a stronger background wash and sets <code>aria-pressed="true"</code>. <em>Branch connector lines</em>: vertical lines connecting parent and child rows drawn via a CSS pseudo-element in <code>--color-border-subtle</code>; the implementation technique is the coding session's call.</p>
+
+  <div class="file-header">// src/ui/version-history/version-tree-shape.ts</div>
+  <p>Pure helper that walks a summaries array and returns a flat display-order list. Parallel to Stream H H3's <code>buildVersionTree</code> but UI-side and operating on summaries.</p>
+<pre><code>import type {
+  FrameVersionSummary, ArgumentSessionVersionSummary,
+} from "@/persistence";
+
+export type AnySummary = FrameVersionSummary | ArgumentSessionVersionSummary;
+
+export interface VersionTreeDisplayEntry {
+  summary: AnySummary;
+  depth: number;
+  has_branch_children: boolean;
+  is_last_child_of_parent: boolean;
+}
+
+/** DFS-walk from the root (parent_version_id undefined), children ordered by
+    version_number ascending. Stable, O(n), deterministic. */
+export function buildVersionTreeShape(
+  summaries: ReadonlyArray&lt;AnySummary&gt;,
+): ReadonlyArray&lt;VersionTreeDisplayEntry&gt;;
+
+/** Pre-pass for milestones-only. Retains is_milestone=true entries and
+    rewrites surviving children's parent_version_id to the nearest retained
+    ancestor (or undefined if no retained ancestor remains in the chain). */
+export function filterByMilestone(
+  summaries: ReadonlyArray&lt;AnySummary&gt;,
+): ReadonlyArray&lt;AnySummary&gt;;
+</code></pre>
+  <p>Behavioral contract. The DFS walks children in <code>version_number</code> ascending order; among children of the same parent, the chronologically-earlier branch renders above the chronologically-later branch. The <code>is_last_child_of_parent</code> flag drives the rendering of the branch connector line's terminus. The <code>has_branch_children</code> flag drives an optional collapse-affordance reserved for a polish pass; v1 always renders branches expanded. The function is pure and deterministic; tests cover linear history, single branch off a milestone, multiple branches off the same parent, forked-with-sub-branch, and milestone-filtered variants.</p>
+
+  <div class="file-header">// src/ui/version-history/selection-footer.tsx</div>
+  <p>The pane's bottom footer. Renders the "[Selected: v{N}]" label and the three buttons.</p>
+<pre><code>import * as React from "react";
+import type { FrameVersionId, SessionVersionId } from "@/schema";
+
+export interface SelectionFooterProps {
+  selected_version_id: FrameVersionId | SessionVersionId | null;
+  selected_version_number: number | null;
+  current_version_id: FrameVersionId | SessionVersionId | null;
+  current_version_number: number | null;
+  allow_restore: boolean;
+  on_preview_clicked: () =&gt; void;
+  on_restore_clicked: () =&gt; void;
+  on_compare_clicked: () =&gt; void;
+}
+
+export function SelectionFooter(props: SelectionFooterProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. All three buttons are disabled when <code>selected_version_id</code> is null; the label reads "Select a version". Preview is additionally disabled when the selection equals the current version (tooltip "This is the current version"). Restore is additionally disabled when the selection equals the current version OR when <code>allow_restore</code> is false (tooltip "Restore frame versions in Frame Building" in the latter case). The Compare button label reads "Compare to v{current_version_number}".</p>
+
+
+
+  <div class="file-header">// src/ui/version-history/preview-context.tsx</div>
+  <p>The React Context for preview state. The provider owns the state via <code>useReducer</code>; the hook returns the state and the action functions.</p>
+<pre><code>import * as React from "react";
+import type {
+  FrameId, SessionId, FrameVersionId, SessionVersionId,
+} from "@/schema";
+
+export type PreviewState =
+  | { kind: "none" }
+  | { kind: "frame"; frame_id: FrameId; version_id: FrameVersionId; version_number: number }
+  | { kind: "session"; session_id: SessionId; version_id: SessionVersionId; version_number: number };
+
+export interface VersionHistoryPreviewControls {
+  state: PreviewState;
+  enterFramePreview(args: { frame_id: FrameId; version_id: FrameVersionId; version_number: number }): void;
+  enterSessionPreview(args: { session_id: SessionId; version_id: SessionVersionId; version_number: number }): void;
+  exit(): void;
+}
+
+export class VersionHistoryPreviewProviderMissingError extends Error {}
+
+export function VersionHistoryPreviewProvider(props: {
+  children: React.ReactNode;
+}): React.ReactElement;
+
+export function useVersionHistoryPreview(): VersionHistoryPreviewControls;
+</code></pre>
+  <p>Behavioral contract. The reducer accepts three actions: <code>{ type: "enter_frame"; ...args }</code>, <code>{ type: "enter_session"; ...args }</code>, <code>{ type: "exit" }</code>. Entering a preview always replaces any prior preview state (mutually exclusive with itself). The hook throws <code>VersionHistoryPreviewProviderMissingError</code> when called outside the provider, in the same pattern as I.9a's <code>RepositoryProviderMissingError</code>. The provider's reducer is the single mutator of preview state.</p>
+
+  <div class="file-header">// src/ui/version-history/frame-preview-view.tsx</div>
+  <p>The read-only frame-canvas overlay for frame-preview. Loads the FrameVersion, mounts the read-only canvas, renders the sticky banner.</p>
+<pre><code>import * as React from "react";
+import type { FrameId, FrameVersionId } from "@/schema";
+import { FrameCanvas, type ForeclosureVisibility } from "@/ui";
+import { PreviewBanner } from "./preview-banner";
+import { useVersionFullLoad } from "./use-version-full-load";
+
+export interface FramePreviewViewProps {
+  frame_id: FrameId;
+  version_id: FrameVersionId;
+  version_number: number;
+}
+
+export function FramePreviewView(props: FramePreviewViewProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. On mount, calls <code>useVersionFullLoad({ kind: "frame", version_id })</code>. Loading state renders a centered affordance; error state renders a banner with a "Return to working version" button calling <code>useVersionHistoryPreview().exit()</code>; success renders the canvas. <em>Canvas props</em>: <code>frame_version={loaded_version}</code>, <code>operating_mode="frame_building"</code>, <code>read_only={true}</code> (the new I.9a refinement), <code>enable_editing={false}</code>, <code>foreclosure_visibility="visible"</code>, <code>on_foreclosure_visibility_change={noop}</code>, <code>selected={local_selected}</code>, <code>on_selected_change={set_local_selected}</code> (preview allows inspection-by-selection), <code>on_node_moved={noop}</code> (the canvas honors the no-op contract under <code>read_only</code>), <code>on_edge_created={noop}</code>, <code>search_text={search}</code>, <code>on_search_change={set_search}</code>. The component owns local state for <code>selected</code> and <code>search_text</code> only. <em>Banner mount</em>: <code>&lt;PreviewBanner version_number={version_number} kind="frame" /&gt;</code> renders sticky above the canvas toolbar.</p>
+
+  <div class="file-header">// src/ui/version-history/session-preview-view.tsx</div>
+  <p>The read-only argument-canvas overlay for session-preview. Loads the ArgumentSessionVersion, reads the session's current <code>frame_version_snapshot</code>, builds an <code>argument_overlay</code> projection from the loaded version's data, and renders the canvas.</p>
+<pre><code>import * as React from "react";
+import type { SessionId, SessionVersionId } from "@/schema";
+import { useSessionStore } from "@/state";
+import { FrameCanvas, type ArgumentOverlayProjection } from "@/ui";
+import { PreviewBanner } from "./preview-banner";
+import { useVersionFullLoad } from "./use-version-full-load";
+
+export interface SessionPreviewViewProps {
+  session_id: SessionId;
+  version_id: SessionVersionId;
+  version_number: number;
+}
+
+export function SessionPreviewView(props: SessionPreviewViewProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. The view loads the historical <code>ArgumentSessionVersion</code> via <code>useVersionFullLoad({ kind: "session", version_id })</code>. It also reads the currently-open session's <code>frame_version_snapshot</code> from <code>useSessionStore((s) =&gt; s.session?.frame_version_snapshot)</code> (read-only); the historical version's <code>premises</code>, <code>argument_edges</code>, and <code>session_authorities</code> are projected into an <code>ArgumentOverlayProjection</code>. <em>Canvas props</em>: <code>frame_version={frame_version_snapshot}</code>, <code>operating_mode="argument_running"</code>, <code>read_only={true}</code>, <code>status_map={undefined}</code> (preview does not recompute; status badges are absent), <code>argument_overlay={projection_from_historical_version}</code>, <code>foreclosure_visibility="visible"</code>, callbacks no-op'd per the read-only contract. <em>Orphan handling</em>: the historical version's <code>argument_edges</code> may reference NodeRefs that don't resolve in the current <code>frame_version_snapshot</code> (rare; only after a session migration that orphaned earlier versions). The FrameCanvas's existing edge-rendering tolerates unresolved refs by suppressing such edges silently. <em>Banner mount</em>: <code>&lt;PreviewBanner version_number={version_number} kind="session" /&gt;</code>.</p>
+
+  <div class="file-header">// src/ui/version-history/preview-banner.tsx</div>
+  <p>The sticky banner above the previewed canvas. Reads <code>useVersionHistoryPreview()</code> for the active preview state; renders the message and Exit button.</p>
+<pre><code>import * as React from "react";
+import { useVersionHistoryPreview } from "./preview-context";
+
+export interface PreviewBannerProps {
+  version_number: number;
+  kind: "frame" | "session";
+}
+
+export function PreviewBanner(props: PreviewBannerProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. Renders one of two messages: "Previewing version {N} (read-only)" (frame preview) or "Previewing session version {N} (read-only)" (session preview); renders the "[Exit preview]" button that calls <code>useVersionHistoryPreview().exit()</code>. Background uses <code>--color-status-not-applicable-bg</code> per E5 visual polish; position-sticky at the top of the canvas with a thin border-bottom in <code>--color-border-subtle</code>; padding <code>--space-3</code> vertical and <code>--space-4</code> horizontal; text in <code>--font-size-sm</code>; the Exit button renders as a text-link in <code>--color-mode-current-accent</code>.</p>
+
+  <div class="file-header">// src/ui/version-history/compare-view.tsx</div>
+  <p>The diff view that replaces the version list in the side pane when compare is active. Loads both versions in parallel; computes the diff; renders the entry list.</p>
+<pre><code>import * as React from "react";
+import type {
+  FrameVersionId, SessionVersionId, NodeRef, EdgeRef,
+} from "@/schema";
+import type { StructuralDiff, SessionStructuralDiff } from "@/persistence";
+import { diffFrameVersions, diffSessionVersions } from "@/persistence";
+import { IconButton } from "@/ui";
+import { useRepository } from "@/state";
+import { CompareEntryList, type CompareEntryListKind } from "./compare-entry-list";
+
+export interface CompareViewProps {
+  entity_kind: "frame" | "session";
+  from_id: FrameVersionId | SessionVersionId;
+  to_id: FrameVersionId | SessionVersionId;
+  from_version_number: number;
+  to_version_number: number;
+  on_back: () =&gt; void;
+  on_navigate_to_entity: (ref: NodeRef | EdgeRef) =&gt; void;
+}
+
+export function CompareView(props: CompareViewProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. <em>Header</em>: "Compare v{from} to v{to}" with a back-arrow <code>IconButton</code> (aria-label "Back to history") on the left calling <code>on_back</code>. <em>Loading</em>: on mount, kicks off a parallel <code>Promise.all([repository.loadFrameVersion(from_id), repository.loadFrameVersion(to_id)])</code> (or session variant); while loading, renders a centered affordance; on error, renders an inline error with a "Back to history" affordance calling <code>on_back</code>. <em>Diff computation</em>: on both-loaded, calls <code>diffFrameVersions(a, b)</code> or <code>diffSessionVersions(a, b)</code>; the result is cached in component-local state keyed by the <code>(from_id, to_id)</code> pair. <em>Body</em>: frame variant renders four <code>CompareEntryList</code> sections — "Nodes" (added / removed / edited), "Edges", "Frame metadata", and conditionally "Layout-only changes" if <code>diff.layout_changed_count &gt; 0</code>. Session variant renders five sections — "Premises", "Argument edges", "Checkpoint responses", "Interpretation selections", "Session authorities", plus "Session metadata". <em>Empty diff</em>: renders a single muted "No differences" line; the back-arrow remains functional.</p>
+
+  <div class="file-header">// src/ui/version-history/compare-entry-list.tsx</div>
+  <p>Per-section list. Renders the section title with a count and one <code>CompareEntryRow</code> per entry.</p>
+<pre><code>import * as React from "react";
+import type { NodeRef, EdgeRef } from "@/schema";
+import { CompareEntryRow, type CompareEntryRowDescriptor } from "./compare-entry-row";
+
+export type CompareEntryListKind =
+  | "added"           // --color-status-satisfied + bg wash
+  | "removed"         // --color-severity-error + bg wash
+  | "edited"          // --color-status-contested + bg wash
+  | "layout_only"     // --color-text-tertiary; collapsed by default
+  | "metadata";       // neutral
+
+export interface CompareEntryListProps {
+  title: string;
+  kind: CompareEntryListKind;
+  entries: ReadonlyArray&lt;CompareEntryRowDescriptor&gt;;
+  on_navigate_to_entity: (ref: NodeRef | EdgeRef) =&gt; void;
+}
+
+export function CompareEntryList(props: CompareEntryListProps): React.ReactElement | null;
+</code></pre>
+  <p>Behavioral contract. Empty sections render null (no "0 nodes added" headers). The <code>kind="layout_only"</code> section renders as a single row "Layout updated for {N} nodes" with an aria-expanded affordance the user can click to expand; expanded state is component-local. Section headers read "{title} ({entries.length})". The order is the order received from the diff function (canonical per the persistence-layer spec; sorted by node/edge id lex ascending); the component does not re-sort.</p>
+
+  <div class="file-header">// src/ui/version-history/compare-entry-row.tsx</div>
+  <p>One diff entry row. Renders the type icon, the entry's preview text, and (for edited entries) the comma-separated <code>fields_changed</code> list.</p>
+<pre><code>import * as React from "react";
+import type { NodeRef, EdgeRef } from "@/schema";
+import { TypeIcon } from "@/ui";
+
+export type CompareEntryRowDescriptor =
+  | { kind: "node_added"; node_id: NodeRef; node_type: string; statement_preview: string }
+  | { kind: "node_removed"; node_id: NodeRef; node_type: string; statement_preview: string }
+  | { kind: "node_edited"; node_id: NodeRef; node_type: string; statement_preview: string; fields_changed: ReadonlyArray&lt;string&gt; }
+  | { kind: "edge_added"; edge_id: EdgeRef; edge_type: string; endpoints_preview: string }
+  | { kind: "edge_removed"; edge_id: EdgeRef; edge_type: string; endpoints_preview: string }
+  | { kind: "edge_edited"; edge_id: EdgeRef; edge_type: string; endpoints_preview: string; fields_changed: ReadonlyArray&lt;string&gt; }
+  | { kind: "metadata_changed"; field: string }
+  | { kind: "layout_only_summary"; node_count: number };
+
+export interface CompareEntryRowProps {
+  descriptor: CompareEntryRowDescriptor;
+  on_navigate_to_entity: (ref: NodeRef | EdgeRef) =&gt; void;
+}
+
+export function CompareEntryRow(props: CompareEntryRowProps): React.ReactElement;
+</code></pre>
+  <p>Behavioral contract. The row's leading indicator color is determined by the parent <code>CompareEntryList</code>'s <code>kind</code>; the row renders a <code>TypeIcon</code>, the preview text, and for edited entries "(fields: {fields_changed.join(', ')})" as secondary text. Clicking a node/edge row emits <code>on_navigate_to_entity(node_id | edge_id)</code>; metadata-changed and layout-only-summary rows are non-clickable. If the implicated node was removed in the comparison (exists in FROM but not in the current working state), the parent page renders an inline tooltip "Node not in current version" near the click target and no scroll occurs. Scroll uses smooth behavior normally and instant under <code>useReduceMotion()</code>.</p>
+
+  <div class="file-header">// src/ui/version-history/restore-confirm-dialog.tsx</div>
+  <p>Wraps the I.9a <code>ConfirmDialog</code> with restore-specific copy per E5.</p>
+<pre><code>import * as React from "react";
+import type { FrameVersionId, SessionVersionId } from "@/schema";
+import { ConfirmDialog } from "@/ui";
+import { useFrameStore, useSessionStore } from "@/state";
+
+export interface RestoreConfirmDialogProps {
+  open: boolean;
+  onClose: () =&gt; void;
+  entity_kind: "frame" | "session";
+  ancestor_version_id: FrameVersionId | SessionVersionId;
+  ancestor_version_number: number;
+  current_version_number: number;
+  on_restored: () =&gt; void;
+}
+
+export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): React.ReactElement | null;
+</code></pre>
+  <p>Behavioral contract. <em>Copy per E5</em>: title "Restore version {ancestor_version_number}?"; body "Restoring version {ancestor} will create a new version (v{current+1}) and switch to it. The current version (v{current}) and all later versions are preserved." Primary label "Restore"; <code>destructive=false</code> (reversible by re-restoring). <em>Dispatch</em>: on confirm, calls <code>frame_store.restoreVersion(ancestor_version_id, "")</code> or <code>session_store.restoreVersion(ancestor_version_id, "")</code> per <code>entity_kind</code>; the empty <code>change_summary</code> tells the store to use the default "restored from version N" per H3. While pending, Confirm is disabled with a loading state. On resolve, calls <code>on_restored</code> then <code>onClose</code>. On reject, displays the error inline; the user can retry or cancel.</p>
+
+  <div class="file-header">// src/ui/version-history/use-version-summaries.ts</div>
+  <p>Async data hook for the summary lists. The single async-data surface for the pane's version tree.</p>
+<pre><code>import * as React from "react";
+import type { FrameId, SessionId } from "@/schema";
+import type {
+  FrameVersionSummary, ArgumentSessionVersionSummary,
+} from "@/persistence";
+import { useRepository, useFrameStore, useSessionStore } from "@/state";
+
+export type SummaryUnion = FrameVersionSummary | ArgumentSessionVersionSummary;
+
+export type VersionSummariesArg =
+  | { kind: "frame"; frame_id: FrameId }
+  | { kind: "session"; session_id: SessionId };
+
+export interface VersionSummariesResult {
+  status: "loading" | "ready" | "error";
+  summaries: ReadonlyArray&lt;SummaryUnion&gt;;
+  error?: Error;
+}
+
+export function useVersionSummaries(arg: VersionSummariesArg): VersionSummariesResult;
+</code></pre>
+  <p>Behavioral contract. <em>Initial load</em>: calls <code>repository.listFrameVersionSummaries(frame_id)</code> or <code>listSessionVersionSummaries(session_id)</code> on mount; transitions <code>loading → ready</code> or <code>loading → error</code>. <em>Re-fetch trigger</em>: subscribes to <code>useFrameStore((s) =&gt; s.current_version?.id)</code> or <code>useSessionStore((s) =&gt; s.session?.current_version_id)</code> and re-fetches on changes — covering local saves and peer-tab saves (the BroadcastChannel routes through <code>onPeerSave</code>). <em>Argument changes</em>: an arg change resets status to loading and kicks off a new fetch. <em>Cleanup</em>: in-flight resolutions after unmount or arg change are ignored via a small <code>cancelled</code> flag.</p>
+
+  <div class="file-header">// src/ui/version-history/use-version-full-load.ts</div>
+  <p>Async data hook for full-version loading on demand. Used by the preview views and the Compare view.</p>
+<pre><code>import * as React from "react";
+import type { FrameVersionId, SessionVersionId } from "@/schema";
+import type { FrameVersion, ArgumentSessionVersion } from "@/schema";
+import { useRepository } from "@/state";
+
+export type VersionFullLoadArg =
+  | { kind: "frame"; version_id: FrameVersionId }
+  | { kind: "session"; version_id: SessionVersionId };
+
+export interface VersionFullLoadResult {
+  status: "loading" | "ready" | "error";
+  version: FrameVersion | ArgumentSessionVersion | null;
+  error?: Error;
+}
+
+export function useVersionFullLoad(arg: VersionFullLoadArg): VersionFullLoadResult;
+</code></pre>
+  <p>Behavioral contract. <em>Initial load</em>: calls <code>repository.loadFrameVersion(version_id)</code> or <code>loadSessionVersion(version_id)</code>. <em>Cache</em>: lives in a module-scoped <code>Map</code> with LRU semantics (max 8 entries; evict-oldest on insert when full). Cache key is the version_id. On cache hit, the hook resolves synchronously on first render with <code>status: "ready"</code>; historical versions are immutable in storage so the cache layer never serves stale data. <em>Errors</em>: a Repository error surfaces in <code>error</code>; the consumer renders an inline error banner with a retry affordance wired to remounting the hook.</p>
+
+  <div class="file-header">// src/ui/version-history/index.ts</div>
+<pre><code>export { VersionHistoryPane, type VersionHistoryPaneProps } from "./version-history-pane";
+export {
+  VersionHistoryPreviewProvider,
+  useVersionHistoryPreview,
+  VersionHistoryPreviewProviderMissingError,
+  type PreviewState,
+  type VersionHistoryPreviewControls,
+} from "./preview-context";
+export { FramePreviewView, type FramePreviewViewProps } from "./frame-preview-view";
+export { SessionPreviewView, type SessionPreviewViewProps } from "./session-preview-view";
+// Deliberately not re-exported: PaneTabs, MilestoneFilter, VersionTree,
+// VersionTreeRow, SelectionFooter, CompareView, CompareEntryList,
+// CompareEntryRow, RestoreConfirmDialog, PreviewBanner,
+// useVersionSummaries, useVersionFullLoad, version-tree-shape helpers.
+// External consumers compose via &lt;VersionHistoryPane /&gt; +
+// &lt;VersionHistoryPreviewProvider /&gt; + the two preview-view components
+// only; the rest is internal to this module.
+</code></pre>
+  <p>The top-level barrel exposes only the pane composition, the preview provider, the two preview views, and the preview hook. Sub-module internals are reachable for tests in <code>tests/ui/version-history/</code> but external consumers (<code>app-routes.tsx</code>) import only these four surfaces. This mirrors I.9b's and I.9c's barrel discipline.</p>
+
+
+
+  <h2>Determinism — UI-layer discipline</h2>
+
+  <p>The I.9a chrome+canvas substrate established four UI-layer determinism obligations (canonical output verbatim; AI-attribution chips on AI-touched fields; deterministic order with no client-side re-sort; canonical validation-finding order). I.9d1's surfaces touch the first and third; the second is unaffected (no AI in version-history); the fourth is unaffected (no validation surface). This section enumerates the obligations for I.9d1's surfaces.</p>
+
+  <h3>D1 — Canonical output is rendered verbatim</h3>
+  <p>The Compare view's diff entries render the <code>fields_changed</code> arrays from the persistence-layer <code>diffFrameVersions</code> / <code>diffSessionVersions</code> verbatim. The UI does not rewrite field names, abbreviate, or stylistically transform the diff output. Statement previews render the node's <code>statement</code> field verbatim (truncated for display via CSS text-overflow only, never via JS-side truncation that would alter the underlying string). The preview banner renders the version number from <code>FrameVersion.version_number</code> verbatim. Verified by the Vitest case <code>compare-view.test.tsx</code> asserting that a fixture diff with <code>fields_changed: ["statement", "notes"]</code> renders the comma-separated string "statement, notes" unchanged.</p>
+
+  <h3>D3 — Deterministic order is preserved; no client-side re-sort</h3>
+  <p>Three lists in this module are sorted by upstream sources and must not be re-ordered:</p>
+  <ul>
+    <li>The version tree (<code>VersionTree</code>) — order is supplied by <code>buildVersionTreeShape</code>, a deterministic DFS over the summary list (version_number ascending among children of a parent). The <code>filterByMilestone</code> pre-pass preserves the order; the component renders the resulting display-entry array in-order. The pane never re-sorts.</li>
+    <li>The Compare view's per-section entry lists — order is the order received from <code>diffFrameVersions</code> / <code>diffSessionVersions</code>, which the persistence-layer spec pins as canonical (sorted by node-id / edge-id lex ascending). <code>CompareEntryList</code> renders in-order; never re-sorts.</li>
+    <li>The Repository's <code>listFrameVersionSummaries</code> / <code>listSessionVersionSummaries</code> return summaries sorted by version_number ascending per the persistence-layer spec. <code>useVersionSummaries</code> passes the array through unchanged; <code>VersionTree</code> consumes it via <code>buildVersionTreeShape</code>'s deterministic DFS.</li>
+  </ul>
+
+  <h3>D2 / D4 — Inapplicable</h3>
+  <p>I.9d1's surfaces do not render AI-touched content (no G6 / G7 / G11 surfaces in version history); the AI-attribution chip obligation does not apply. I.9d1's surfaces do not render validation findings; the validation-canonical-order obligation does not apply.</p>
+
+
+  <h2>What this spec does not commit</h2>
+
+  <ul>
+    <li><strong>Storage compaction.</strong> Stream H H3 defers compaction (deduplicating identical nodes/edges across versions, or representing later versions as deltas) to v2 as-needed. I.9d1 does not surface compaction in the UI; if a future polish pass introduces it, the pane's API surface is unaffected because the Repository's interface is unchanged.</li>
+    <li><strong>Pixel-level visual diff (E5 deferred).</strong> Side-by-side rendering of "version A on the left, version B on the right" is reserved for v2 per E5's v1 scope. I.9d1 implements only structural diff per <code>StructuralDiff</code> / <code>SessionStructuralDiff</code>.</li>
+    <li><strong>Branch collapse affordances.</strong> The <code>VersionTreeDisplayEntry.has_branch_children</code> flag is reserved for a polish pass; v1 renders all branches expanded. The flag is computed in the pure helper but unused by the v1 row renderer.</li>
+    <li><strong>Session-preview recomputation.</strong> Session preview does not invoke <code>compute()</code> against the historical session version; status badges are absent during preview. A v1.5 polish pass may add a "Restore to inspect status" affordance in the preview banner; the spec does not commit to this. Adding it requires no schema changes — only an affordance in <code>PreviewBanner</code> and wiring to the session store's <code>restoreVersion</code>.</li>
+    <li><strong>Orphan-item badge in session preview.</strong> When the historical session version's argument_edges reference NodeRefs that don't resolve in the current frame_version_snapshot, v1 silently suppresses those edges per the FrameCanvas's existing tolerance. A future polish pass may render an "orphaned items: N" badge in the preview banner; v1 does not commit to this.</li>
+    <li><strong>Search-within-version-history.</strong> A search box that filters versions by <code>change_summary</code> text is a natural extension but not in v1 scope. The pane's structural framing supports this addition cleanly; v1 ships without it.</li>
+    <li><strong>Per-version export.</strong> The Repository's <code>exportFrame</code> / <code>exportSession</code> methods accept an <code>include_history</code> flag; exporting a single version through the pane is a natural extension but reserved. v1 ships export from the home / settings surfaces only.</li>
+    <li><strong>The exact pixel width of the pane.</strong> E5 specifies "the right ~30% of the screen" as the target; the spec pins a CSS custom property <code>--space-pane-version-history</code> (default value left to the visual-polish pass; suggested 520px) that <code>Drawer</code>'s <code>width</code> prop consumes. Fine-tuning is design's call.</li>
+    <li><strong>Cross-version session-preview alignment for migrated sessions.</strong> When a session has been migrated, its historical versions reference an older frame_version_snapshot that may differ structurally from the current one. v1 renders historical session versions against the session's CURRENT frame_version_snapshot with orphan-tolerance; a more faithful alternative (loading the historical frame_version_snapshot from a hypothetical embedded copy) is out of v1 scope and would require a schema change. The v1 design suffices because (a) migration is rare, (b) preview is for "did the user have this premise at version 7?"-style inspection, which the current rendering supports.</li>
+  </ul>
+
+
+  <h2>Vitest acceptance tests</h2>
+
+  <p>The test plan mirrors I.9b's and I.9c's structure: one test file per source file, plus integration files for the pane composition and the cross-page wiring flows. Each test asserts component behavior and the patch-shape contract with the relevant store — no DOM-pixel assertions, no snapshot tests, all assertions on text content, ARIA roles, and dispatched calls via fake store / Repository doubles.</p>
+
+  <table>
+    <thead><tr><th>Test file</th><th>Coverage</th></tr></thead>
+    <tbody>
+    <tr><td><code>app-routes-version-history.test.tsx</code></td><td>App-level integration: <code>useState&lt;boolean&gt;</code> for <code>version_history_open</code> initializes to false; clicking the chrome's <code>VersionHistoryButton</code> via the active page toggles it; the pane mounts when open is true and unmounts when false; the <code>VersionHistoryPreviewProvider</code> wraps the child tree; entering frame-preview via the preview hook causes <code>FramePreviewView</code> to render in place of <code>FrameBuildingPage</code>; entering session-preview causes <code>SessionPreviewView</code> in place of <code>ArgumentRunningPage</code>; exit returns to the page.</td></tr>
+    <tr><td><code>version-history-pane.test.tsx</code></td><td>Pane composition: renders null on <code>home</code> route; renders single-panel on <code>frame_building</code>; renders two-tab on <code>argument_running</code>; selected_version_id resets on tab change and Route change; Preview click dispatches the right preview-context action (frame vs. session vs. argument-running-frames-tab → frame preview); Restore click opens the dialog; Compare click swaps to <code>CompareView</code>; back-arrow from Compare restores the version list; cross-tab refresh (simulated by changing the store's current_version_id) re-fetches summaries.</td></tr>
+    <tr><td><code>pane-tabs.test.tsx</code></td><td>SegmentedToggle wrapper: renders both options; click changes value via <code>onChange</code>; keyboard arrow keys cycle (delegated to the I.9a primitive).</td></tr>
+    <tr><td><code>milestone-filter.test.tsx</code></td><td>Both pills render; clicking the inactive pill calls <code>onChange</code> with the other value; the active pill has the active variant; tooltips render the correct hint strings.</td></tr>
+    <tr><td><code>version-tree.test.tsx</code></td><td>With a fixture summary list, renders one row per entry; current-version row is marked; milestone rows show ★; auto-scroll-into-view fires on first render and on current-version-id change; milestone filter pre-pass drops auto-saves; empty filtered state renders the muted message; arrow-key navigation moves focus across rows.</td></tr>
+    <tr><td><code>version-tree-row.test.tsx</code></td><td>Marker glyph by state (current / milestone / both / neither); the change_summary or auto-save fallback; the absolute-timestamp tooltip; the "session was authored here" pill when is_authored_against; depth indent via CSS var consumption; the aria-pressed attribute.</td></tr>
+    <tr><td><code>version-tree-shape.test.tsx</code></td><td>The pure helper: linear-history fixture produces flat output with depth 0; single-branch fixture produces correct depth + has_branch_children + is_last_child_of_parent flags; multiple-branch fixture; forked-with-sub-branch; filterByMilestone preserves tree shape with re-parenting; identical inputs produce byte-identical outputs (determinism property test running each fixture twice).</td></tr>
+    <tr><td><code>selection-footer.test.tsx</code></td><td>All three buttons disabled when selection is null; Preview / Restore / Compare disabled when selection equals current; Restore additionally disabled when allow_restore is false with the tooltip text; the compare label includes the current version number; clicks dispatch the right callbacks.</td></tr>
+    <tr><td><code>preview-context.test.tsx</code></td><td>Provider mounts with initial state <code>{ kind: "none" }</code>; enterFramePreview transitions to <code>{ kind: "frame" }</code> with the right args; enterSessionPreview to <code>{ kind: "session" }</code>; entering one preview when the other was active discards the prior preview; exit transitions back to <code>{ kind: "none" }</code>; the hook throws <code>VersionHistoryPreviewProviderMissingError</code> outside the provider.</td></tr>
+    <tr><td><code>frame-preview-view.test.tsx</code></td><td>Mounts <code>useVersionFullLoad</code> with the right args; loading state renders the affordance; error state renders the banner with Return-to-working-version; success renders FrameCanvas with <code>operating_mode="frame_building"</code>, <code>read_only=true</code>, no status_map, no argument_overlay; selection state is local and read-write; PreviewBanner mounts above the canvas.</td></tr>
+    <tr><td><code>session-preview-view.test.tsx</code></td><td>Mounts <code>useVersionFullLoad</code> + <code>useSessionStore((s) =&gt; s.session?.frame_version_snapshot)</code>; loading state; success renders FrameCanvas with <code>operating_mode="argument_running"</code>, <code>read_only=true</code>, status_map undefined, argument_overlay projection from the loaded version; the orphan-handling case renders silent-skip; PreviewBanner mounts with kind="session".</td></tr>
+    <tr><td><code>preview-banner.test.tsx</code></td><td>Frame kind renders "Previewing version {N} (read-only)"; session kind renders "Previewing session version {N} (read-only)"; the Exit button calls <code>useVersionHistoryPreview().exit()</code>; sticky positioning verified via getComputedStyle.</td></tr>
+    <tr><td><code>compare-view.test.tsx</code></td><td>Loads both versions in parallel via Promise.all; loading state; success computes diff and renders sections; the four sections render for the frame variant; five sections for the session variant; empty diff renders "No differences"; back-arrow calls <code>on_back</code>; diff cache keyed by (from_id, to_id); the layout-only section is collapsed by default and expand toggles per-row visibility; fields_changed strings render verbatim.</td></tr>
+    <tr><td><code>compare-entry-list.test.tsx</code></td><td>Empty section renders null; non-empty section renders header with count "(N)"; entry rows render in supplied order; kind determines leading-indicator color (asserted via the kind-mapped CSS class).</td></tr>
+    <tr><td><code>compare-entry-row.test.tsx</code></td><td>Each descriptor kind renders expected text; clicking node/edge rows calls <code>on_navigate_to_entity</code>; metadata-changed and layout-only-summary rows are non-clickable.</td></tr>
+    <tr><td><code>restore-confirm-dialog.test.tsx</code></td><td>Frame variant: title and body strings match E5's framing; on confirm, calls <code>frame_store.restoreVersion(ancestor_id, "")</code>; on resolve, calls <code>on_restored</code> then <code>onClose</code>; on reject, displays error and re-enables. Session variant: parallel, dispatches to <code>session_store.restoreVersion</code>.</td></tr>
+    <tr><td><code>use-version-summaries.test.tsx</code></td><td>Initial mount triggers <code>repository.listFrameVersionSummaries(frame_id)</code> (or session); status transitions loading → ready; argument change resets and re-fetches; store-side current-version-id change triggers a re-fetch; in-flight cleanup on unmount.</td></tr>
+    <tr><td><code>use-version-full-load.test.tsx</code></td><td>Initial load via <code>repository.loadFrameVersion</code>; cache hit resolves synchronously on first render; LRU eviction at 8 entries; error surfaces in result.error; concurrent loads of the same version_id de-duplicate to a single Repository call.</td></tr>
+    <tr><td><code>index-barrel.test.ts</code></td><td>The barrel exports exactly the four public surfaces plus the hook, the error class, and the public types; internals are not exported (asserted via TypeScript-level test compiling a fixture that attempts to import an internal name).</td></tr>
+    </tbody>
+  </table>
+
+  <p>Test doubles. The fake <code>Repository</code> implements <code>listFrameVersionSummaries</code> / <code>listSessionVersionSummaries</code> / <code>loadFrameVersion</code> / <code>loadSessionVersion</code> backed by an in-memory map; the fake <code>FrameStore</code> / <code>SessionStore</code> implement the snapshot accessor and the <code>restoreVersion</code> method with a deferred-promise contract that tests resolve at will. The diff functions (<code>diffFrameVersions</code> / <code>diffSessionVersions</code>) are imported directly from <code>@/persistence</code> in the tests — pure, no double needed; the persistence-layer Vitest suite already exercises their correctness.</p>
+
+
+  <h2>I.9d1 self-review (Article VIII § 4)</h2>
+
+  <p>The Constitution requires that every stream commit a self-review against the relevant Article II commitments and Article III quality criteria before persistence. This section records that review.</p>
+
+  <h3>Article II — Architectural commitments</h3>
+  <ul>
+    <li><strong>§ 1 — Frame/Argument Split.</strong> Honored. The pane scopes by Route; Frame Building shows FrameVersions only; Argument Running shows ArgumentSessionVersions as the primary tab and FrameVersions as a read-only secondary tab. The argument-side Frames tab cannot dispatch frame-restore (Restore is disabled with a tooltip). The Frame Building variant cannot dispatch session-restore (variant never reaches the Sessions tab). Restore calls always go through the right store. No cross-store coupling.</li>
+    <li><strong>§ 2 — Determinism.</strong> Honored. Version-history reads from canonical sources whose order the persistence-layer spec pins; the UI never re-sorts. The diff functions are pure and deterministic; the UI consumes them as-received. The version-tree shape helper is a deterministic DFS. Preview surfaces render without invoking <code>compute()</code>; status badges and output payloads are absent during preview by design. Restore goes through the store's existing <code>restoreVersion</code> method, which routes through the modes orchestration wrapper and Repository atomicity contract 3. The Determinism section above enumerates the three applicable obligations and their verification surfaces.</li>
+    <li><strong>§ 3 — Per-node satisfaction.</strong> Unaffected. Version history does not surface or modify satisfaction policies; the diff view's "edited" entries list <code>fields_changed</code> verbatim, including <code>options_box</code> when changed, without interpretation.</li>
+    <li><strong>§ 4 — Independent versioning.</strong> Strongly honored — this stream is the user surface for independent versioning. The pane shows FrameVersions and ArgumentSessionVersions in separate views. Restore on one side does not touch the other. Preview on one side does not affect the other store. The "current" markers come from each store's own snapshot. The "session was authored against this version" annotation in the Argument Running Frames tab is a one-way read (session → frame), not a coupling — it surfaces drift transparently without coupling the streams' lifecycles. The pane never deletes a version (E5's "no deletion affordance" rule per Article II § 4); the only mutation is restore, which creates a new version off an ancestor, preserving the ancestor.</li>
+    <li><strong>§ 5 — Human-Readable Structure.</strong> Honored. The version tree's branch indentation makes the fork structure readable from the display itself; no hidden ordering or coupling variables. The diff entries display field-name → fields-changed pairs verbatim; no hidden interpretation.</li>
+    <li><strong>§ 6 — Use-Case Commitment.</strong> Honored. Both legal and general modes (personal/academic flavors) are first-class; the pane's chrome uses neutral vocabulary per Stream E E5's rule. The two-tab variant exists in both modes because session-vs-frame versioning applies to both. Preview surfaces render the canvas in the operating-mode appropriate to the kind being previewed; legal-mode-specific surfaces (Authority binding chips, jurisdiction visibility, BINDING_IN / DISTINGUISHED_BY edges) flow through unchanged via the FrameCanvas's existing mode-aware rendering.</li>
+  </ul>
+
+  <h3>Article III — Quality criteria</h3>
+  <ul>
+    <li><strong>§ 1 — Correctness.</strong> Every Stream E E5 surface (entry point, side-pane layout, milestone-vs-auto-save filter, preview, restore, compare, per-mode scope, no-deletion-affordance) maps to a concrete component or behavioral contract. Stream H H3's storage layout, branch-tree representation, diff algorithm, and lazy summary loading are consumed at canonical names (<code>FrameVersionSummary</code>, <code>diffFrameVersions</code>, <code>buildVersionTree</code> mirrored UI-side as <code>buildVersionTreeShape</code>). The acceptance tests assert behavioral coverage of every component in the File map.</li>
+    <li><strong>§ 2 — Legal Practice Fit.</strong> The visual chrome inherits the serious / neutral / lawyerly register the visual-polish doc committed: the milestone star in warm gold, muted secondary text for auto-saves, the structural diff listing edited fields verbatim rather than summarizing-by-AI. The "session was authored here" annotation maps to how a working lawyer would track "this brief was written against the trial-court order of X date"; the per-version preserve-everything posture matches how a working analyst expects of drafts. Restore-creates-a-branch (rather than overwrites) maps to how a lawyer expects of working documents — nothing gets lost.</li>
+    <li><strong>§ 3 — Determinism and Auditability.</strong> Version history is the user surface for the determinism guarantee Article II § 2 protects. Every save preserved (no compaction in v1); every restore creates a new version with provenance ("restored from version N"); every diff is a pure deterministic function over two version snapshots. The audit trail across pane → store → modes-orchestration → Repository → IndexedDB transaction is unbroken; no surface in this module short-circuits it.</li>
+    <li><strong>§ 4 — Clarity.</strong> Every Stream E surface mapped to a specific file; every component has a typed prop interface; the dependencies on store selectors and Repository methods are named per component; the preview-state lifecycle is named end-to-end (pane.onPreviewClicked → useVersionHistoryPreview.enter → Provider state → page route-switch reads → FramePreviewView / SessionPreviewView render → banner.onExit → Provider.exit). The implementing session reads: Constitution, current_state.html, buildkit index, contracts doc, state spec, persistence spec, the I.9a spec, the I.9b spec, the I.9c spec, the visual-polish doc, and this spec.</li>
+    <li><strong>§ 5 — Reversibility.</strong> Per-component primitives compose; the pane's content swap (version list vs. compare view) is local component state; the preview-state swap-the-page pattern is reversible (Exit Preview); restore creates a new version rather than overwriting. The optional <code>read_only</code> prop on FrameCanvas is purely additive. The <code>VersionHistoryPreviewProvider</code> wraps the child tree at the App level and can be unwrapped without changing component code if a future architecture removes preview altogether.</li>
+    <li><strong>§ 6 — Interface Fit.</strong> The I.9d1 spec is bounded to the version-history side pane and its App-level integration; sibling surfaces (mode-change dialog, session-migration dialog, session-settings panel, onboarding wizard) are I.9d2 / I.9d3 / I.9d4 work. A single coding session implementing I.9d1 reads the documents named in § 4 above; the chain is bounded and reasonable.</li>
+  </ul>
+
+  <h3>Article V § 3 — Escalation re-check</h3>
+  <ul>
+    <li><strong>(a) Reverses a user-stated strategy.</strong> No. The split into I.9d1–I.9d4 is authorized by the planning update in <code>current_state.html</code> dated May 11, 2026 (agent-autonomous under Article V § 2(c)); the per-spec refinements promote optional callbacks reserved by I.9b/I.9c into required wiring, which is the documented intent of those reservations.</li>
+    <li><strong>(b) Reverses or weakens an Article II commitment.</strong> No. Article II § 4 (independent versioning) is the user surface this stream serves; nothing weakens it. Article II § 2 (determinism) is reinforced by the no-recompute-during-preview rule and the no-client-side-resort discipline. Article II § 1 (Frame/Argument split) is preserved by the per-store dispatch.</li>
+    <li><strong>(c) Two Article II commitments conflict and the conflict is unresolvable from the Constitution.</strong> No. One tension surfaced: the Argument Running Frames tab shows the parent frame's history, which is a frame-side concept appearing on the argument-side page. Resolved by making the tab read-only (no restore from argument-side) and by using the existing FrameStore.onPeerSave + SessionStore.onParentFrameSaved bridge already established in I.5. The pane reads the frame-store snapshot for the parent frame's title and current-version-id, the same read-only access pattern I.9c's ArgumentRunningPage already uses.</li>
+    <li><strong>(d) Forecloses a use case.</strong> No. Both legal and general modes preserved; both flavors preserved; both operating modes preserved.</li>
+    <li><strong>(e) Anthropic safety policies require user input.</strong> No.</li>
+    <li><strong>(f) Constitution silent or contradictory on a substantial question.</strong> Two discretionary calls under Article V § 2(c): (1) the page-swap-on-preview pattern vs. translucent-overlay pattern — chose the swap because E5's "the current canvas dims and a banner reads 'Previewing version N'" framing matches a mode swap more closely than a translucent overlay, and the swap is simpler; (2) App-mounted single-instance pane vs. per-page mounted pane — chose App-mounted-single because the I.9b and I.9c specs explicitly anticipated "I.9d wires this through the App" wiring. Both choices are within Article V § 2(c) territory; neither is a § 3 trigger.</li>
+  </ul>
+
+  <h3>In-session escalated flags from this stream</h3>
+  <p>This stream produced F-006, comprising five sub-items, all resolved by this spec and held in the In-session escalated table of <code>flags.html</code>:</p>
+  <ul>
+    <li><strong>F-006.1.</strong> Add optional <code>read_only?: boolean</code> to <code>FrameCanvasProps</code> in <code>stream_i_ui_chrome_canvas_spec_v1.html</code>. The new prop is additive; existing call sites are unaffected. Behavioral contract pinned in this spec's "Cross-document resolution notes" item 1. Resolved-by-spec.</li>
+    <li><strong>F-006.2.</strong> Promote <code>onToggleVersionHistory</code> in <code>FrameBuildingPageProps</code> from optional to required, and add <code>version_history_open: boolean</code> as a required prop. The I.9b page-composition skeleton already references these in <code>buildTopBarSlots</code>; I.9d1's refinement is the wiring promotion the I.9b comment anticipated. Resolved-by-spec.</li>
+    <li><strong>F-006.3.</strong> Symmetric promotion for <code>ArgumentRunningPageProps</code> in I.9c's spec. Resolved-by-spec.</li>
+    <li><strong>F-006.4.</strong> Refine <code>app-routes.tsx</code> (I.9a-owned) to lift <code>version_history_open</code> state, mount the <code>VersionHistoryPreviewProvider</code>, mount a single <code>VersionHistoryPane</code> instance, and thread the callbacks. Per-file specification pinned above. Resolved-by-spec.</li>
+    <li><strong>F-006.5.</strong> Optional Repository extension reserved for v1.5: a <code>loadFrameVersionPair</code> / <code>loadSessionVersionPair</code> batch loader if the Compare view's two parallel reads become a perceptible flash. v1 ships with <code>Promise.all</code> over the existing single-version loaders, which the persistence spec already pins. Resolved-by-deferral; no spec edits required.</li>
+  </ul>
+
+  <h3>Article II § 2 — Implementation-level confirmation</h3>
+  <p>The single architectural risk in this stream is the temptation for the UI to recompute status during preview (because seeing status would feel useful in some preview workflows) and thereby invoke <code>compute()</code> via the compute driver against the previewed version. The spec resolves this by holding the line on "no recompute during preview" (preview shows raw data; status badges are absent) and by routing all mutation paths through the store's existing <code>restoreVersion</code> method. The preview surfaces' FrameCanvas mounts pass <code>status_map={undefined}</code> deliberately, and the no-op <code>on_node_moved</code> / <code>on_edge_created</code> callbacks ensure that even if an interaction inadvertently produces a drag event, no state changes. The page-swap-on-preview pattern ensures the user is unambiguously in a read-only state (banner present, no edit affordances, no live session overlay) for the duration of the preview.</p>
+
+</div>

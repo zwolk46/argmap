@@ -1,0 +1,1901 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 22px 0 6px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+<div class="doc">
+  <h1>stream_i_runtime_spec_v1.html</h1>
+  <p class="subtitle">Per-module spec for <code>src/runtime/</code> &nbsp;·&nbsp; Stream I session I.3 &nbsp;·&nbsp; May 10, 2026</p>
+
+  <div class="notice">
+    <p>This document is the implementation source of truth for <code>src/runtime/</code>. It commits per-file TypeScript signatures, the five-phase compute pipeline (validate → resolve foreclosure → compute reachable + active → compute status map → generate output), the LogicalGate evaluator with its named-slot semantics, the per-condition implementations of the 12-condition library, the C6 authority-binding determination, the F5 stub structure, the determinism implementation discipline, and Vitest acceptance tests for the module. The cross-module surface (what other modules import from <code>@/runtime</code>) is pinned in <code>stream_i_contracts_v1.html</code> Contract 2; this spec adds the per-file organization, internal types, and behavioral contracts the coding session implements against.</p>
+    <p style="margin-top:6px;">The runtime is the determinism boundary of the application (Article II § 2). <code>src/runtime/</code> imports only <code>@/schema</code> and standard JavaScript built-ins; it imports nothing from <code>@/persistence</code>, <code>@/ui</code>, <code>@/state</code>, <code>@/llm-hooks</code>, <code>@/modes</code>, <code>@/layout</code>, React, Dexie, Zustand, ELK, or any third-party library that reads the clock or environment. Three tooling gates shipped in the I.1 skeleton enforce this: ESLint <code>no-restricted-imports</code> (the module boundary), the custom <code>argmap-determinism/no-unsorted-iteration</code> rule (sort-before-iterate), and <code>vitest.config.ts</code>'s frozen-clock fake timers. The runtime spec below assumes all three are in force.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>The coding session(s) implementing <code>src/runtime/</code> read, in order: Constitution and Protocol, <code>current_state.html</code>, <code>stream_i_buildkit_index_v1.html</code>, <code>stream_i_contracts_v1.html</code> Contract 2 (binding) and Contract 1 (schema imports), <code>src/schema/README.md</code> (the cross-session compression artifact written by the I.2 coding session), and this document. No prior stream documents (A–H) are read; the consolidated state in <code>current_state.html</code> plus this per-module spec is the design surface. Implement-until-green against the Vitest tests at the end of this document; write <code>src/runtime/README.md</code> as the cross-session compression artifact for downstream sessions (most importantly <code>@/persistence</code>, which calls <code>compute</code> on session restore, and <code>@/state</code>, which subscribes to compute results). This spec uses TypeScript exclusively in code blocks; pseudocode passages are pseudocode and labeled as such.</p>
+
+  <p>The buildkit index allots one or two coding sessions for <code>src/runtime/</code>: phases 1–3 (validate, foreclosure, reachable/active sets, plus the graph data structure and iteration helpers) form a natural first session; phases 4–5 (status determination, output generation) plus the condition library and C6 authority-binding form the second. The file map below is organized to support that split: files belonging to the first half are listed first, and downstream files import only from upstream files within the module.</p>
+
+  <h2>File map</h2>
+  <p>Twelve files under <code>src/runtime/</code> (counting <code>f5/index.ts</code> as one). The barrel <code>index.ts</code> re-exports only the public surface (<code>compute</code>, the iteration helpers for tests, and the public <code>BindingResult</code> type for the F5 wire-in session); internal phase functions are not re-exported.</p>
+  <table>
+    <tr><th>File</th><th>Purpose</th><th>Primary exports</th></tr>
+    <tr><td><code>iteration-helpers.ts</code></td><td>Sort-before-iterate helpers; the only sanctioned iteration primitives in the runtime</td><td><code>sortedIter</code>, <code>sortedKeys</code>, <code>sortedEntries</code>, <code>sortedBy</code></td></tr>
+    <tr><td><code>graph.ts</code></td><td>Reify a FrameVersion as an in-memory graph; compute synthetic edges from CheckpointOption.target_node_id and LogicalGate.output_target</td><td><code>buildGraph</code>, <code>Graph</code>, <code>SyntheticEdge</code>, <code>TraversalEdge</code>, <code>STRUCTURAL_EDGE_TYPES</code>, <code>findRoot</code>, <code>forwardReach</code>, <code>topologicalSort</code></td></tr>
+    <tr><td><code>foreclosure.ts</code></td><td>Phase 2: resolve the foreclosed set from explicit FORECLOSES edges, dispositive Term auto-foreclosure, and cascade</td><td><code>resolveForeclosure</code>, <code>foreclosureScopeFor</code>, <code>ForeclosureScope</code></td></tr>
+    <tr><td><code>reachable-active.ts</code></td><td>Phase 3: compute reachable and active sets; per-node-type branch-following logic</td><td><code>computeReachableSet</code>, <code>computeActiveSet</code></td></tr>
+    <tr><td><code>gates.ts</code></td><td>Cross-cutting: LogicalGate evaluation honoring the named-slot schema; boolean projection of NodeStatus for non-gate inputs</td><td><code>evaluateGate</code>, <code>gateRoutesTo</code>, <code>GateResult</code>, <code>booleanizeStatus</code></td></tr>
+    <tr><td><code>conditions.ts</code></td><td>Per-condition implementations of the 12-condition library; the policy evaluator</td><td><code>evaluateCondition</code>, <code>evaluatePolicy</code>, <code>PolicyResult</code>, <code>ConditionResult</code></td></tr>
+    <tr><td><code>status.ts</code></td><td>Phase 4: compute the status map in reverse topological order with the fixed precedence ladder</td><td><code>computeStatusMap</code></td></tr>
+    <tr><td><code>output.ts</code></td><td>Phase 5: trace the active path, generate ConditionalOutput (including branches for indeterminate gates and unresolved Checkpoints), render deterministic prose, compute the confidence breakdown, surface open gates</td><td><code>generateOutput</code>, <code>traceActivePath</code>, <code>renderProse</code>, <code>computeConfidenceBreakdown</code></td></tr>
+    <tr><td><code>authority-binding.ts</code></td><td>C6: determine whether an Authority is binding in a target jurisdiction, with the v1 manual-override + string-match fallback and a stub branch for the F5 wire-in</td><td><code>isBinding</code>, <code>BindingResult</code>, <code>BindingSource</code>, <code>BindingCertainty</code></td></tr>
+    <tr><td><code>f5/index.ts</code></td><td>F5 stub: the v1 export is a no-op; the F5 wire-in session populates this module per F6-v2 specifications</td><td><code>queryF5Binding</code> (stub), <code>F5_AVAILABLE</code> (false in v1)</td></tr>
+    <tr><td><code>compute.ts</code></td><td>The orchestrator. Composes the five phases into the deterministic top-level <code>compute</code> function; supplies the convenience overload that destructures an ArgumentSession</td><td><code>compute</code> (both signatures), <code>ComputeInput</code></td></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel. Re-exports <code>compute</code>, the iteration helpers (for tests only), <code>BindingResult</code> / <code>BindingSource</code> / <code>BindingCertainty</code> (for the F5 wire-in session)</td><td><code>compute</code>, plus re-exports above</td></tr>
+  </table>
+
+  <p>Conventions throughout: every function is pure (same inputs → same output, no side effects, no clock reads, no randomness, no environment branches); every iteration over a <code>Set</code>, <code>Map</code>, or plain object goes through one of the helpers in <code>iteration-helpers.ts</code> (the custom ESLint rule fails CI otherwise); arrays whose order is semantic (e.g., <code>active_path</code>, <code>ConditionalOutput.branches</code>, <code>open_gates</code>) are produced by walking already-sorted inputs so the output order is itself a deterministic function of the inputs; the orchestrator threads a single <code>computed_at</code> timestamp into every <code>NodeStatus.evaluated_at</code> and <code>ConditionalOutput.computed_at</code> field, never reading the wall clock.
+
+  <h2>Cross-document resolution notes (for self-review)</h2>
+  <p>While compiling this spec from <code>stream_c_runtime_v1.html</code> against <code>stream_i_contracts_v1.html</code> Contract 2 and <code>stream_i_schema_spec_v1.html</code>, three precision questions arose where the contracts doc and the canonical schema spec diverged or were silent. In each case this spec adopts the schema spec's resolution (the schema spec is canonical for the persisted shapes the runtime produces; per <code>stream_i_schema_spec_v1.html</code>'s self-review and the existing F-003 register flag, the contracts doc's paraphrased shapes are corrected at a future I.1 review session and downstream coding is not gated on the bump). The three items are itemized in this session's self-review (Article VIII § 4) and one of them — Contract 2's silence on how <code>NodeStatus.evaluated_at</code> is supplied — is logged as a register flag with the rationale that adopting Contract 2's silence as-is would force the runtime either to read the clock (forbidden by Article II § 2) or to make <code>evaluated_at</code> optional in the schema (a schema change). The constitutionally clean resolution is the one this spec adopts: the <code>compute</code> input gains a required <code>computed_at: string</code> field that the orchestrator threads into every <code>NodeStatus</code> and <code>ConditionalOutput</code>. The contracts doc is the doc that needs the additive correction, not the schema or the runtime.</p>
+
+  <div class="file-header">// src/runtime/iteration-helpers.ts</div>
+  <p>The I.1 skeleton ships <code>iteration-helpers.ts</code> with working <code>sortedIter</code>, <code>sortedKeys</code>, and <code>sortedEntries</code>; this spec re-states the signatures as the contract and adds <code>sortedBy</code>, which the runtime needs for sorting nodes and edges by <code>id</code> when the source is a <code>ReadonlyArray</code> rather than a <code>Set</code>/<code>Map</code>. The helpers are the sole sanctioned iteration entry points inside <code>src/runtime/</code>; the custom <code>argmap-determinism/no-unsorted-iteration</code> ESLint rule fails CI on any direct iteration over a <code>Set</code>, <code>Map</code>, or plain object.</p>
+
+<pre><code>/**
+ * Iterate over a Set in lexicographic id order.
+ * `keyFn` extracts the sort key; defaults to the value itself (for Set&lt;string&gt;).
+ */
+export function sortedIter&lt;T&gt;(
+  xs: ReadonlySet&lt;T&gt;,
+  keyFn?: (x: T) =&gt; string,
+): T[];
+
+/**
+ * Iterate over a Map's keys in lexicographic order. Returns a fresh array.
+ */
+export function sortedKeys&lt;K extends string, V&gt;(m: ReadonlyMap&lt;K, V&gt;): K[];
+export function sortedKeys&lt;V&gt;(m: { [k: string]: V }): string[];
+
+/**
+ * Iterate over a Map's [key, value] entries in lexicographic-by-key order.
+ */
+export function sortedEntries&lt;K extends string, V&gt;(m: ReadonlyMap&lt;K, V&gt;): Array&lt;[K, V]&gt;;
+export function sortedEntries&lt;V&gt;(m: { [k: string]: V }): Array&lt;[string, V]&gt;;
+
+/**
+ * Stable sort of an array by a string key. Returns a fresh array.
+ * Used wherever the runtime iterates a ReadonlyArray whose source order is not
+ * already deterministic (e.g., FrameVersion.nodes in input position).
+ */
+export function sortedBy&lt;T&gt;(xs: ReadonlyArray&lt;T&gt;, keyFn: (x: T) =&gt; string): T[];
+</code></pre>
+
+  <p>Implementation notes for the coding session: each helper allocates one fresh array and sorts via <code>String.prototype.localeCompare</code> with explicit <code>"en"</code> locale and <code>{ sensitivity: "variant" }</code> options to make ordering machine-independent. The helpers are tested in <code>tests/runtime/iteration-helpers.test.ts</code> already shipped in the skeleton; this spec adds a property test (Vitest acceptance tests below) asserting that two invocations of any helper on a structurally equal input produce structurally equal output regardless of original Set/Map insertion order.</p>
+
+  <div class="file-header">// src/runtime/graph.ts</div>
+  <p>Reifies a <code>FrameVersion</code> into an in-memory <code>Graph</code> structure used by every downstream phase. The graph exposes both stored edges (from <code>FrameVersion.edges</code>) and synthetic edges that carry routing information stored on node fields rather than as Edge entities — specifically <code>CheckpointOption.target_node_id</code> (synthesized as <code>OPTION_LEADS_TO</code>) and <code>LogicalGate.output_target</code> (synthesized as <code>GATES</code> when not already present as an explicit GATES edge). Synthetic edges never persist; they exist so traversal code does not have to special-case Checkpoint and LogicalGate at every callsite (per Stream C "CheckpointOption target traversal model").</p>
+
+<pre><code>import type {
+  FrameVersion, Node, Edge, NodeRef, EdgeType,
+  Checkpoint, LogicalGate, RootQuestion,
+} from "@/schema";
+
+/**
+ * The set of edge types that carry the structural resolution flow of a frame.
+ * V-FR-6 (DAG check) operates on the structural sub-graph; reachability,
+ * topological sort, foreclosure cascade, and active-set computation all
+ * filter to these edge types unless otherwise noted.
+ *
+ * Note: includes the synthetic OPTION_LEADS_TO type produced by Checkpoint
+ * options, which is not a member of the persisted EdgeType union.
+ */
+export const STRUCTURAL_EDGE_TYPES: ReadonlySet&lt;TraversalEdgeType&gt; = new Set([
+  "DECOMPOSES_INTO", "TURNS_ON", "INTERPRETED_AS",
+  "LEADS_TO", "GATES", "OPTION_LEADS_TO",
+]);
+
+/** Edge type union extended with the synthetic OPTION_LEADS_TO. */
+export type TraversalEdgeType = EdgeType | "OPTION_LEADS_TO";
+
+/**
+ * Synthetic edges carry routing information not stored as Edge entities.
+ * Discriminated by `synthetic: true`; otherwise structurally equivalent to a
+ * subset of the persisted Edge fields.
+ */
+export interface SyntheticEdge {
+  readonly synthetic: true;
+  readonly type: "OPTION_LEADS_TO" | "GATES";
+  readonly source: NodeRef;
+  readonly target: NodeRef;
+  /** Present only when `type === "OPTION_LEADS_TO"`. */
+  readonly option_id?: string;
+}
+
+/** Either a persisted Edge or a SyntheticEdge produced by Graph.outTraversal. */
+export type TraversalEdge = Edge | SyntheticEdge;
+
+/**
+ * Pure, opaque graph projection of a FrameVersion. Holds no references to
+ * mutable state. Caller-side mutation of the input FrameVersion is undefined
+ * behavior; the Graph captures a fresh view at construction time.
+ */
+export interface Graph {
+  /** Lookup a node by id; throws if absent (callers should validate first). */
+  readonly nodeById: (id: NodeRef) =&gt; Node;
+  /** All node ids, sorted lexicographically. Cached. */
+  readonly allNodeIds: ReadonlyArray&lt;NodeRef&gt;;
+  /** All persisted edges (FrameVersion.edges) sorted by id. Cached. */
+  readonly allEdges: ReadonlyArray&lt;Edge&gt;;
+  /**
+   * Yield every outgoing edge (persisted + synthetic) from `nodeId`,
+   * in deterministic order: persisted edges by edge id, then synthetic
+   * edges by (type, target).
+   */
+  readonly outTraversal: (nodeId: NodeRef) =&gt; ReadonlyArray&lt;TraversalEdge&gt;;
+  /**
+   * Yield every incoming edge (persisted only — synthetic edges are not
+   * indexed by target). Used by status-determination ancestor walks.
+   */
+  readonly incoming: (nodeId: NodeRef) =&gt; ReadonlyArray&lt;Edge&gt;;
+}
+
+/** Build a Graph from a FrameVersion. Pure. */
+export function buildGraph(frame: FrameVersion): Graph;
+
+/**
+ * Find the unique RootQuestion. V-FR-1 guarantees exactly one in a valid
+ * frame; if zero or more than one is present, throws RuntimeStructuralError
+ * (the orchestrator catches and short-circuits to incomplete output).
+ */
+export function findRoot(frame: FrameVersion): RootQuestion;
+
+/**
+ * Forward reachability from `start` along `STRUCTURAL_EDGE_TYPES`,
+ * skipping nodes in `blocked`. Returns a sorted array (caller uses as Set
+ * via `new Set(forwardReach(...))` when set semantics are needed).
+ */
+export function forwardReach(
+  start: NodeRef,
+  graph: Graph,
+  blocked?: ReadonlySet&lt;NodeRef&gt;,
+): ReadonlyArray&lt;NodeRef&gt;;
+
+/**
+ * Topological sort over the structural sub-graph. Returns a node-id ordering
+ * such that for every structural edge u → v, `topo.indexOf(u) &lt; topo.indexOf(v)`.
+ * Throws RuntimeStructuralError if a cycle is detected (V-FR-6 should have
+ * caught this, but the runtime is defensive per Stream C decision #9).
+ *
+ * Stability: ties are broken by lexicographic id, so the output is fully
+ * deterministic given the input frame.
+ */
+export function topologicalSort(graph: Graph): ReadonlyArray&lt;NodeRef&gt;;
+
+/**
+ * Defensive error for runtime structural violations that V-FR validation
+ * should have caught. Thrown by graph utilities; caught by the orchestrator
+ * which converts to ValidationResult and short-circuits to incomplete output.
+ */
+export class RuntimeStructuralError extends Error {
+  constructor(
+    public readonly kind: "no_root" | "multiple_roots" | "cycle" | "missing_node",
+    public readonly node_ids: ReadonlyArray&lt;NodeRef&gt;,
+    message: string,
+  ) {
+    super(message);
+    this.name = "RuntimeStructuralError";
+  }
+}
+</code></pre>
+
+  <p>Implementation notes:</p>
+  <ul>
+    <li><strong>Synthetic edges from LogicalGate.output_target.</strong> Schema-spec LogicalGate variants (<code>AndGate</code>, <code>OrGate</code>, <code>NotGate</code>, <code>IfThenGate</code>, <code>UnlessGate</code>) all carry an optional <code>output_target?: NodeRef</code>. <code>buildGraph</code> emits a <code>SyntheticEdge</code> of type <code>"GATES"</code> for each gate whose <code>output_target</code> is set AND for which no persisted GATES edge from the gate to the same target already exists in <code>frame.edges</code>. The de-duplication keeps the traversal surface clean even when an author drew an explicit GATES edge in addition to the field.</li>
+    <li><strong>Synthetic edges from CheckpointOption.target_node_id.</strong> For each Checkpoint, for each option in <code>checkpoint.options</code> sorted by <code>option.id</code>, emit a <code>SyntheticEdge</code> of type <code>"OPTION_LEADS_TO"</code> when <code>option.target_node_id</code> is set. The <code>option_id</code> field on the synthetic edge identifies which option produced it (consumed by the active-set walk in <code>reachable-active.ts</code>).</li>
+    <li><strong>outTraversal ordering.</strong> Persisted edges first, sorted by <code>edge.id</code>; then synthetic edges, sorted lexicographically by <code>(type, target)</code> with type as the primary key. The whole projection is pre-computed at <code>buildGraph</code> time and cached per node id; <code>outTraversal</code> returns a stable <code>ReadonlyArray</code> reference for the same node across calls.</li>
+    <li><strong>topologicalSort algorithm.</strong> Kahn's algorithm walking nodes in lexicographic id order at each step, with the structural sub-graph filtered via <code>STRUCTURAL_EDGE_TYPES</code>. Annotation/citation/argument-layer edges (<code>FORECLOSES</code>, <code>BINDING_IN</code>, <code>CITES</code>, <code>DISTINGUISHED_BY</code>, <code>SUPPORTS</code>, <code>CONTRADICTS</code>, <code>ANSWERS</code>) are excluded; this matches V-FR-6's DAG scope. The sort is total: every node in <code>frame.nodes</code> appears exactly once, including Premise and Authority nodes (which are leaves in the structural sub-graph and appear at the end of any valid ordering).</li>
+    <li><strong>findRoot.</strong> Walks <code>frame.nodes</code> filtering for <code>type === "RootQuestion"</code>; throws <code>RuntimeStructuralError("no_root")</code> or <code>"multiple_roots"</code> if the count is not exactly one. The orchestrator catches and emits a synthetic <code>ValidationResult</code> with <code>rule_id: "V-FR-1"</code> + <code>severity: "error"</code> in addition to whatever validation phase 1 produced.</li>
+  </ul>
+
+  <div class="file-header">// src/runtime/foreclosure.ts</div>
+  <p>Phase 2 of the pipeline (Stream C2). Computes the foreclosed node-id set from two independent sources — explicit <code>FORECLOSES</code> edges sourced from selected Interpretations, and dispositive Term auto-foreclosure — then cascades forward along the structural sub-graph. Output is a <code>ReadonlySet&lt;NodeRef&gt;</code> consumed by phases 3, 4, and 5. The phase also exports <code>foreclosureScopeFor</code>, which the status determiner consults in phase 4 to distinguish "moot" foreclosure (status <code>foreclosed</code>) from "decided" foreclosure (status <code>satisfied</code> via <code>structural_resolution</code>).</p>
+
+<pre><code>import type {
+  FrameVersion, ArgumentSession, NodeRef, Term, Interpretation,
+  ForeclosesEdge, InterpretationSelection,
+} from "@/schema";
+import type { Graph } from "./graph";
+
+/** "moot" — branch was made irrelevant; status becomes `foreclosed`.
+ *  "decided" — branch was resolved by the foreclosing Interpretation; status
+ *  becomes `satisfied` via `structural_resolution`. */
+export type ForeclosureScope = "moot" | "decided";
+
+/**
+ * Phase 2 entry point. Composes explicit + dispositive sources, then cascades.
+ * Pure. The returned set's iteration order is unspecified; consumers must use
+ * `sortedIter` if they need order-sensitive output.
+ */
+export function resolveForeclosure(
+  frame: FrameVersion,
+  session: Pick&lt;ArgumentSession, "interpretation_selections"&gt;,
+  graph: Graph,
+): ReadonlySet&lt;NodeRef&gt;;
+
+/**
+ * Determine the foreclosure scope for a node that is in the foreclosed set.
+ * Walks `frame.edges` for FORECLOSES edges targeting `node_id` whose source
+ * is a selected Interpretation: any such edge with `scope === "decided"`
+ * makes the node decided; otherwise moot. Dispositive auto-foreclosure is
+ * always moot (no FORECLOSES edge involved).
+ *
+ * Returns "moot" by default if the node is not actually in the foreclosed set;
+ * callers must check membership first.
+ */
+export function foreclosureScopeFor(
+  node_id: NodeRef,
+  frame: FrameVersion,
+  session: Pick&lt;ArgumentSession, "interpretation_selections"&gt;,
+): ForeclosureScope;
+</code></pre>
+
+  <h4>Algorithm — explicit FORECLOSES edges</h4>
+  <p>For each selected interpretation id (collected from <code>session.interpretation_selections</code> via flat-map over <code>selected_interpretation_ids</code>), walk <code>frame.edges</code> sorted by <code>edge.id</code>: every FORECLOSES edge whose <code>source</code> is a selected interpretation id contributes its <code>target</code> to the direct foreclosed set. The <code>scope</code> field is read by <code>foreclosureScopeFor</code> in phase 4; phase 2 itself does not branch on scope.</p>
+
+  <h4>Algorithm — dispositive Term auto-foreclosure</h4>
+  <p>For each parent question (RootQuestion or SubQuestion) in lexicographic id order, collect its child Terms (via TURNS_ON edges, sorted by edge id). Sort the children by <code>(term.order, term.id)</code> — <code>order</code> is the primary key, lexicographic <code>id</code> is the deterministic tiebreaker for equal-order Terms. Walk the sorted children: the first Term that is both <code>dispositive: true</code> AND has at least one selected Interpretation in <code>session.interpretation_selections</code> is the winner. If a winner exists, every other sibling Term under the same parent — including later dispositive Terms — is added to the direct foreclosed set. If no winner exists, no auto-foreclosure happens at this parent.</p>
+
+  <p>Per Stream C2: explicit FORECLOSES and dispositive auto-foreclosure are independent sources; the direct foreclosed set is the union. Both run before cascade.</p>
+
+  <h4>Algorithm — cascade</h4>
+  <p>Cascade is a reachability subtraction. Compute <code>fullReach = forwardReach(root, graph)</code> with no blocking; compute <code>liveReach = forwardReach(root, graph, blocked = direct)</code>. The cascade-foreclosed set is <code>(fullReach &minus; liveReach) &cup; direct</code>. This guarantees every node strictly downstream of a directly-foreclosed node along the structural sub-graph is itself foreclosed unless reachable through some other live ancestor. The cascade respects the structural-edge filter: annotation edges (CITES, DISTINGUISHED_BY, BINDING_IN-as-edge) are excluded by <code>forwardReach</code>'s use of <code>STRUCTURAL_EDGE_TYPES</code>.</p>
+
+  <p>Note on iteration determinism: <code>forwardReach</code> internally uses a queue/stack initialized with <code>[start]</code> and pushes targets in the order they appear in <code>graph.outTraversal(cur)</code> (which is itself sorted). The visited-set check prevents re-walks. The output array's order does not affect downstream consumers (only set membership is queried), but the array itself is produced deterministically.</p>
+
+  <h4>Algorithm — foreclosureScopeFor</h4>
+  <p>Walk <code>frame.edges</code> sorted by edge id; for each FORECLOSES edge whose <code>target === node_id</code>, check whether the <code>source</code> is in the set of selected interpretation ids AND the edge's <code>scope === "decided"</code>. If any such edge exists, return <code>"decided"</code>. Otherwise return <code>"moot"</code>. Dispositive auto-foreclosure produces no FORECLOSES edge, so a node foreclosed only by dispositive auto-foreclosure correctly resolves to <code>"moot"</code> by default.</p>
+
+  <p>The function is called once per foreclosed node by the status determiner. It does not need to be O(1); a per-call linear scan over the edges is acceptable at v1 frame sizes (low thousands of edges). If profiling later shows hot-spotting, a precomputed map from <code>node_id</code> to scope can be added behind the same signature.</p>
+
+  <div class="file-header">// src/runtime/reachable-active.ts</div>
+  <p>Phase 3 of the pipeline. Computes two derived sets the downstream phases depend on. <strong>Reachable</strong>: every node visitable from the RootQuestion along the structural sub-graph, honoring foreclosure but ignoring whether a branch is currently selected. This is the set of nodes the user could reach by changing answers. <strong>Active</strong>: every node visitable from the RootQuestion honoring both foreclosure AND following only branches the session's selections, responses, and gate evaluations actually route through. Nodes outside the active set get status <code>not_applicable</code> in phase 4. The two sets diverge at branching nodes (Term, Checkpoint, LogicalGate); both are needed.</p>
+
+<pre><code>import type {
+  FrameVersion, ArgumentSession, NodeRef, Node,
+  Term, Checkpoint, LogicalGate, CheckpointResponse, InterpretationSelection,
+} from "@/schema";
+import type { Graph, TraversalEdge } from "./graph";
+
+/**
+ * The set of nodes reachable from the RootQuestion along structural edges,
+ * skipping foreclosed nodes. Pure.
+ */
+export function computeReachableSet(
+  frame: FrameVersion,
+  graph: Graph,
+  foreclosed: ReadonlySet&lt;NodeRef&gt;,
+): ReadonlySet&lt;NodeRef&gt;;
+
+/**
+ * The set of nodes the session's current selections, responses, and gate
+ * evaluations actually visit. Pure. Skips foreclosed nodes; consults
+ * selection records, checkpoint responses, and gate evaluation to decide
+ * which branches to follow at each node.
+ *
+ * The active set may contain a node multiple times under different parent
+ * paths in the conceptual sense, but the returned Set deduplicates by id;
+ * `traceActivePath` in `output.ts` reconstructs the per-path information
+ * separately when it walks for output generation.
+ */
+export function computeActiveSet(
+  frame: FrameVersion,
+  session: Pick&lt;ArgumentSession,
+    "interpretation_selections" | "checkpoint_responses" | "status_map"&gt;,
+  graph: Graph,
+  foreclosed: ReadonlySet&lt;NodeRef&gt;,
+): ReadonlySet&lt;NodeRef&gt;;
+</code></pre>
+
+  <h4>Algorithm — computeReachableSet</h4>
+  <p>Direct call to <code>forwardReach(findRoot(frame).id, graph, blocked = foreclosed)</code> from <code>graph.ts</code>; collect the result into a <code>Set</code> and return as <code>ReadonlySet&lt;NodeRef&gt;</code>. Pure and deterministic.</p>
+
+  <h4>Algorithm — computeActiveSet</h4>
+  <p>BFS from the RootQuestion. Initialize a queue with <code>[rootId]</code>. While the queue is non-empty: pop the current node id; if it is in <code>foreclosed</code> or already in <code>active</code>, skip. Add to <code>active</code>. For each outgoing traversal edge from the current node (in the order produced by <code>graph.outTraversal</code>, which is already deterministic): if the edge type is not in <code>STRUCTURAL_EDGE_TYPES</code>, skip; otherwise consult <code>branchIsFollowed(node, edge, session)</code> — if it returns <code>true</code>, push the edge target onto the queue.</p>
+
+  <p>The per-node-type branch-following logic is internal to this file (not exported); it is the single point where the runtime decides which structural edges out of a node should be considered "active" for the current session. Pseudocode:</p>
+
+<pre><code>function branchIsFollowed(node: Node, edge: TraversalEdge,
+                          session: SessionLike): boolean {
+  switch (node.type) {
+    case "RootQuestion":
+    case "SubQuestion":
+      // All structural outgoing edges (DECOMPOSES_INTO, TURNS_ON, LEADS_TO,
+      // GATES) are followed; questions don't branch — they decompose.
+      return true;
+
+    case "Term": {
+      // Only follow INTERPRETED_AS edges to interpretations that are in
+      // the session's selection record for this Term. Other edge types
+      // out of a Term (none in v1) would be followed.
+      if (edge.type !== "INTERPRETED_AS") return true;
+      const selectedIds = selectedInterpretationIdsFor(node.id, session);
+      return selectedIds.has(edge.target);
+    }
+
+    case "Interpretation":
+      // Interpretations route via LEADS_TO to Checkpoint / SubQuestion /
+      // Conclusion / LogicalGate. All such edges are followed; routing
+      // is fixed by the frame author.
+      return edge.type === "LEADS_TO";
+
+    case "Checkpoint": {
+      // Only follow OPTION_LEADS_TO edges whose option_id matches the
+      // session's CheckpointResponse for this Checkpoint. Persisted
+      // edges out of a Checkpoint are not part of the routing flow.
+      if (edge.type !== "OPTION_LEADS_TO") return false;
+      const response = responseFor(node.id, session);
+      if (!response) return false;
+      return (edge as SyntheticEdge).option_id === response.selected_option_id;
+    }
+
+    case "LogicalGate":
+      // Only follow GATES edges (persisted or synthetic from output_target)
+      // when the gate evaluates to "satisfied". Indeterminate or
+      // not_satisfied gates do not route. The gate evaluator is invoked
+      // here (it is pure and consults status_map only for input nodes,
+      // which precede the gate in topological order).
+      if (edge.type !== "GATES") return false;
+      return gateRoutesTo(node, edge, session);
+
+    default:
+      // Premise / Authority / Conclusion: no outgoing structural edges
+      // followed in active-set computation.
+      return false;
+  }
+}
+</code></pre>
+
+  <p>The accessor helpers (<code>selectedInterpretationIdsFor</code>, <code>responseFor</code>) are local to this file: each scans the relevant session array sorted by lexicographic id and returns either a <code>Set&lt;NodeRef&gt;</code> (for selections, since multiple per Term are permitted per the alternative-paths pattern) or a single <code>CheckpointResponse | undefined</code>. Both are pure and side-effect-free; both treat the absence of a record as "no selection / no response," which causes the active-set walk to stop at that node (and the status determiner to report <code>open</code>).</p>
+
+  <p><strong>Gate-evaluation timing.</strong> <code>gateRoutesTo</code> requires the status of the gate's input nodes to be known. In active-set computation, a gate's inputs may be in the active set but their status has not yet been computed (status determination is phase 4, downstream of active-set). The runtime resolves this by passing <code>session.status_map</code> as an input to <code>computeActiveSet</code> — but <code>status_map</code> is itself the output of a later phase, creating an apparent dependency loop. The resolution: on the first compute pass, <code>status_map</code> is empty; <code>gateRoutesTo</code> falls back to treating any unresolved input as <code>indeterminate</code>, which means the gate does not route (per Stream C, only <code>satisfied</code> routes). The active set computed under an empty status map is therefore a lower bound. Phase 4 then computes status with the lower-bound active set, and phase 5's path tracer (<code>output.ts</code>) re-walks from the root using the <em>current</em> status map for accurate gate-routing decisions during output generation. This two-pass arrangement is the simplest way to keep the pipeline acyclic; an iterative fixpoint version is reserved for v2 if profiling shows the lower-bound active set materially under-estimating coverage in real frames.</p>
+
+  <p>The two-pass arrangement is invisible to <code>compute</code>'s caller and does not affect determinism: every input combination produces the same active set, status map, and active path. It is documented here because the coding session will see <code>computeActiveSet</code> taking a <code>status_map</code> argument that is empty on first call and must understand why.</p>
+
+  <div class="file-header">// src/runtime/gates.ts</div>
+  <p>Cross-cutting LogicalGate evaluation. Called by <code>reachable-active.ts</code> (for gate routing during active-set computation), <code>status.ts</code> (for the gate's own NodeStatus), and <code>output.ts</code> (for path tracing and indeterminate-gate branch generation). Honors the schema spec's named-slot encoding: <code>AndGate</code>/<code>OrGate</code> use <code>inputs: NodeRef[]</code>; <code>NotGate</code> uses <code>input: NodeRef</code>; <code>IfThenGate</code> uses <code>antecedent</code> and <code>consequent</code>; <code>UnlessGate</code> uses <code>main</code> and <code>exception</code>. The evaluator branches on <code>gate.gate_type</code> with TypeScript exhaustiveness. There is no uniform <code>inputs[]</code> on LogicalGate — gates know their slot names from their type.</p>
+
+<pre><code>import type {
+  LogicalGate, AndGate, OrGate, NotGate, IfThenGate, UnlessGate,
+  NodeRef, NodeStatus,
+} from "@/schema";
+import {
+  isAndGate, isOrGate, isNotGate, isIfThenGate, isUnlessGate,
+} from "@/schema";
+
+/** A gate's evaluation result. Routing happens only on `"satisfied"`. */
+export type GateResult = "satisfied" | "not_satisfied" | "indeterminate";
+
+/**
+ * Boolean projection of a NodeStatus for use as a gate input.
+ * Per Stream C "Boolean evaluation of non-gate inputs":
+ *   satisfied                            -&gt; satisfied
+ *   foreclosed (scope === "decided")     -&gt; satisfied
+ *   foreclosed (scope === "moot")        -&gt; indeterminate
+ *   not_applicable, open, contested      -&gt; indeterminate
+ *
+ * Callers that pass `undefined` (input not yet evaluated) get `indeterminate`,
+ * which is the conservative default and the value that prevents premature
+ * routing during the first-pass active-set computation.
+ */
+export function booleanizeStatus(
+  status: NodeStatus | undefined,
+): "satisfied" | "indeterminate";
+
+/**
+ * Evaluate a LogicalGate against the current status_map. Pure.
+ *
+ * Inputs are looked up by NodeRef from `status_map`; for gates whose inputs
+ * are themselves gates, status_map must already contain the input gates'
+ * statuses (status determination walks reverse-topologically, so this
+ * ordering is guaranteed in phase 4).
+ */
+export function evaluateGate(
+  gate: LogicalGate,
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+): GateResult;
+
+/**
+ * Convenience predicate used by `reachable-active.ts` to decide whether
+ * a gate's GATES outgoing edge should be followed during active-set walk.
+ * Equivalent to `evaluateGate(gate, status_map) === "satisfied"`.
+ */
+export function gateRoutesTo(
+  gate: LogicalGate,
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+): boolean;
+</code></pre>
+
+  <h4>Per-gate-type evaluation</h4>
+  <p>Pseudocode for <code>evaluateGate</code>'s switch arms; each arm uses TypeScript narrowing through the schema's type guards (<code>isAndGate</code>, etc.) so the named slots are accessible by name without further casting.</p>
+
+<pre><code>// AND: every input satisfied. Indeterminate iff at least one input is
+//      indeterminate AND no input is not_satisfied. Otherwise not_satisfied.
+function evaluateAnd(g: AndGate, sm): GateResult {
+  let hasIndeterminate = false;
+  for (const inputId of sortedBy(g.inputs, x =&gt; x)) {  // NodeRef[] is string[]; sort lexicographically
+    const b = booleanizeStatus(sm.get(inputId));
+    if (b === "indeterminate") {
+      // Check whether any input is definitively not_satisfied (which would
+      // short-circuit to not_satisfied). Need to peek raw status, not just boolean.
+      const raw = sm.get(inputId);
+      if (raw &amp;&amp; raw.status !== "satisfied"
+                 &amp;&amp; raw.status !== "open" &amp;&amp; raw.status !== "contested"
+                 &amp;&amp; raw.status !== "not_applicable"
+                 &amp;&amp; !(raw.status === "foreclosed")) {
+        // Reserved: no current status maps to "definitively not satisfied"
+        // for AND; the indeterminate path is the conservative default.
+      }
+      hasIndeterminate = true;
+    }
+  }
+  if (hasIndeterminate) return "indeterminate";
+  // All inputs satisfied (booleanizeStatus returned "satisfied" for each).
+  return "satisfied";
+}
+
+// OR: any input satisfied. Indeterminate iff every non-satisfied input is
+//     indeterminate. Otherwise not_satisfied.
+function evaluateOr(g: OrGate, sm): GateResult {
+  let anySatisfied = false;
+  let allNonSatisfiedAreIndeterminate = true;
+  for (const inputId of sortedBy(g.inputs, x =&gt; x)) {
+    const b = booleanizeStatus(sm.get(inputId));
+    if (b === "satisfied") anySatisfied = true;
+    // booleanizeStatus only returns "satisfied" or "indeterminate" in v1;
+    // there is no "not_satisfied" projection because no NodeStatus value
+    // maps to a definitive boolean false. Indeterminate covers "open",
+    // "contested", "not_applicable", and "foreclosed (moot)"; "satisfied"
+    // covers actual satisfaction and "foreclosed (decided)".
+  }
+  if (anySatisfied) return "satisfied";
+  // No satisfied input found and only "satisfied"/"indeterminate" possible;
+  // therefore every input is indeterminate.
+  return "indeterminate";
+}
+
+// NOT: input not_satisfied. Indeterminate iff input indeterminate.
+//      satisfied iff input not_satisfied; not_satisfied iff input satisfied.
+//
+// Caveat: because booleanizeStatus collapses many states into "indeterminate",
+// NOT can only produce "satisfied" when the input has a hard not_satisfied
+// signal. In v1 the only such signal is an upstream gate that itself
+// evaluated to "not_satisfied" — propagated through status_map by phase 4
+// recording the gate's NodeStatus.failed_conditions accordingly. For
+// non-gate inputs whose boolean projection is "indeterminate", NOT is
+// "indeterminate"; this is the conservative behavior and matches Stream C.
+function evaluateNot(g: NotGate, sm): GateResult {
+  const inputStatus = sm.get(g.input);
+  if (!inputStatus) return "indeterminate";
+  // Treat the upstream gate's own evaluated result, if recorded, as authoritative.
+  // The status determiner stores gate evaluations as NodeStatus.failed_conditions
+  // entries: ["gate_evaluated_not_satisfied"] for not_satisfied, none / "satisfied"
+  // for satisfied, ["inputs_indeterminate"] for indeterminate.
+  if (inputStatus.status === "satisfied") return "not_satisfied";
+  if (inputStatus.status === "open"
+      &amp;&amp; (inputStatus.failed_conditions ?? []).includes("gate_evaluated_not_satisfied")) {
+    return "satisfied";
+  }
+  return "indeterminate";
+}
+
+// IF_THEN: antecedent not_satisfied OR consequent satisfied.
+//          Indeterminate iff antecedent indeterminate, OR (antecedent
+//          satisfied AND consequent indeterminate).
+//          Otherwise not_satisfied (antecedent satisfied AND consequent
+//          not_satisfied).
+function evaluateIfThen(g: IfThenGate, sm): GateResult {
+  const a = sm.get(g.antecedent);
+  const c = sm.get(g.consequent);
+  if (!a) return "indeterminate";
+  if (a.status !== "satisfied") {
+    // Antecedent not satisfied (open / contested / not_applicable / foreclosed-moot
+    // / explicitly not_satisfied via gate). For an antecedent that is itself
+    // a gate evaluated not_satisfied, IF_THEN is satisfied (vacuously).
+    if (a.status === "open"
+        &amp;&amp; (a.failed_conditions ?? []).includes("gate_evaluated_not_satisfied")) {
+      return "satisfied";
+    }
+    return "indeterminate";
+  }
+  // Antecedent satisfied; consequent decides.
+  if (!c) return "indeterminate";
+  if (c.status === "satisfied") return "satisfied";
+  if (c.status === "open"
+      &amp;&amp; (c.failed_conditions ?? []).includes("gate_evaluated_not_satisfied")) {
+    return "not_satisfied";
+  }
+  return "indeterminate";
+}
+
+// UNLESS: main satisfied AND exception not_satisfied.
+//         Indeterminate iff main indeterminate, OR main satisfied AND
+//         exception indeterminate. Otherwise not_satisfied.
+function evaluateUnless(g: UnlessGate, sm): GateResult {
+  const m = sm.get(g.main);
+  const x = sm.get(g.exception);
+  if (!m || m.status !== "satisfied") {
+    if (m &amp;&amp; m.status === "open"
+        &amp;&amp; (m.failed_conditions ?? []).includes("gate_evaluated_not_satisfied")) {
+      return "not_satisfied";
+    }
+    return "indeterminate";
+  }
+  if (!x) return "indeterminate";
+  if (x.status === "open"
+      &amp;&amp; (x.failed_conditions ?? []).includes("gate_evaluated_not_satisfied")) {
+    return "satisfied";
+  }
+  if (x.status === "satisfied") return "not_satisfied";
+  return "indeterminate";
+}
+</code></pre>
+
+  <p>Implementation note on the <code>"gate_evaluated_not_satisfied"</code> failed-condition convention: when phase 4's status determiner evaluates a LogicalGate and gets <code>not_satisfied</code>, it stores the gate's <code>NodeStatus</code> as <code>{ status: "open", failed_conditions: ["gate_evaluated_not_satisfied"] }</code>. This is the runtime's hard signal that propagates not-satisfaction up through chained gates. Without it, downstream NOT / IF_THEN / UNLESS gates would all collapse to <code>indeterminate</code> in the booleanization step, which is wrong for chained logic. This convention is invisible at the <code>NodeStatus</code> consumer surface (UI shows the gate as <code>open</code> either way; the failed condition appears in the inspector tooltip) and is consumed only inside <code>gates.ts</code>. The string is a constant exported as <code>GATE_NOT_SATISFIED_MARKER</code> from this file for the status determiner to reference symbolically.</p>
+
+  <p>The short-circuit-friendliness mentioned in Stream C ("AND can resolve to not_satisfied as soon as one input fails") is honored in implementation by early returns inside the for-loops; the truth table outcome is identical to a full evaluation, so determinism is preserved.</p>
+
+  <h4>Cycle defense</h4>
+  <p>V-FR-6 forbids cycles in the structural sub-graph, which includes GATES edges. The runtime is defensive: if <code>evaluateGate</code> is called for a gate whose input is itself the gate (transitively), the input lookup in <code>status_map</code> returns <code>undefined</code> (because status determination walks reverse-topologically and a cycle would have been caught by <code>topologicalSort</code> in <code>graph.ts</code>), and <code>booleanizeStatus(undefined) === "indeterminate"</code> propagates safely. The orchestrator emits a synthetic <code>ValidationResult</code> at the catch site and the cycle never silently routes.</p>
+
+  <div class="file-header">// src/runtime/conditions.ts</div>
+  <p>Per-condition implementations of the 12-condition library (per Article II § 3 and the schema spec's <code>satisfaction-policy.ts</code>). The policy evaluator walks <code>policy.all_of</code> and the optional <code>policy.any_of</code> group exactly once, accumulating <code>via</code> labels and <code>failed_conditions</code> names. Every condition function is pure and order-stable: it consults frame, session, and the partial <code>status_map</code> (which contains children's statuses but not the current node's, since computation is reverse-topological). Conditions never read the clock and never invoke an LLM.</p>
+
+<pre><code>import type {
+  Node, FrameVersion, ArgumentSession, NodeRef, NodeStatus, Premise,
+  Condition, SatisfactionPolicy, BurdenLevel, BurdenThresholdMap,
+  Checkpoint,
+} from "@/schema";
+import { resolveEffectivePolicy } from "@/schema";
+
+export type ConditionViaLabel =
+  | "binding_authority"
+  | "persuasive_authority"
+  | "stipulation"
+  | "structural_resolution"
+  | "default";
+
+export interface ConditionResult {
+  passed: boolean;
+  via: ReadonlyArray&lt;ConditionViaLabel&gt;;
+}
+
+export interface PolicyResult {
+  passed: boolean;
+  via: ReadonlyArray&lt;ConditionViaLabel&gt;;
+  failed: ReadonlyArray&lt;string&gt;;       // condition kind names; empty when passed
+}
+
+/**
+ * Evaluate a single Condition against a node and the current state.
+ * Pure. The dispatch is a switch on `condition.kind`; each arm is the
+ * implementation listed below.
+ */
+export function evaluateCondition(
+  condition: Condition,
+  node: Node,
+  frame: FrameVersion,
+  session: ArgumentSession,
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+): ConditionResult;
+
+/**
+ * Evaluate a SatisfactionPolicy. AND-combines `all_of`; if `any_of` is
+ * present, requires at least one of its conditions to pass (one OR group,
+ * no nesting, per Article II § 3 and the schema spec). The returned
+ * `via` array is sorted (lexicographic) and deduplicated; `failed` lists
+ * the kind of every failed condition in the order they were evaluated.
+ */
+export function evaluatePolicy(
+  policy: SatisfactionPolicy,
+  node: Node,
+  frame: FrameVersion,
+  session: ArgumentSession,
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+): PolicyResult;
+</code></pre>
+
+  <h4>Per-condition implementations</h4>
+  <p>One arm per <code>condition.kind</code>, exhaustive on the schema's discriminated union. Each implementation is described in prose with the small implementation details a coding session needs; pseudocode is provided where the algorithm is non-obvious. Conditions whose semantics are pinned in Stream C (e.g., <code>burden_met</code>) are restated here in full because the spec is the surface the coding session implements.</p>
+
+  <p><strong><code>premise_attached</code></strong> — applies to Checkpoint nodes only. Walk <code>session.argument_edges</code> sorted by edge id; pass iff at least one ANSWERS edge has <code>target === node.id</code>. <code>via</code> is empty.</p>
+
+  <p><strong><code>interpretation_selected</code></strong> — applies to Term nodes (and, by inheritance through <code>Term.linked_to</code>, to linked Terms). Walk <code>session.interpretation_selections</code> sorted by <code>(term_id, selected_at)</code>; pass iff at least one record has <code>term_id === node.id</code> AND <code>selected_interpretation_ids.length &gt;= 1</code>. For a linked Term (<code>node.linked_to</code> non-null), follow the chain (resolved by <code>frame.nodes</code> lookup, walking until no further <code>linked_to</code> and detecting cycles defensively even though V-NODE-3 guarantees acyclicity), and consult the selection record on the chain endpoint. <code>via</code> is empty.</p>
+
+  <p><strong><code>all_children_resolved</code></strong> — applies to RootQuestion / SubQuestion / Conclusion nodes. Children are the targets of outgoing edges of types <code>{DECOMPOSES_INTO, TURNS_ON, LEADS_TO}</code> (collected by walking <code>frame.edges</code> sorted by edge id, filtering by source === node.id and the type set). If the children list is empty, fail (a question with no children cannot be resolved). For each child, look up <code>status_map.get(childId)</code>; treat <code>satisfied</code> as resolved (and accumulate the child's <code>via</code> array into this condition's <code>via</code>); treat <code>foreclosed</code> as resolved (do NOT contribute to <code>via</code>); anything else (open, contested, not_applicable, missing) fails the condition. The "foreclosed children do not block parent satisfaction" semantics implements the legal idiom "ruled on one ground, declined to reach the others" (Stream C). <code>via</code> is the union of satisfied children's <code>via</code> arrays, sorted and deduplicated.</p>
+
+  <p><strong><code>path_complete</code></strong> — applies to Conclusion nodes. Pass iff there exists at least one path from the RootQuestion to <code>node.id</code> through the active set, every node on which has status <code>satisfied</code> or <code>foreclosed</code> with scope <code>decided</code>. Implementation: walk reverse-incoming from the Conclusion using <code>graph.incoming</code>, ascending until reaching the RootQuestion; if any node on the chosen ancestor path is missing from <code>status_map</code> or has a non-satisfied / non-decided-foreclosed status, fail. When multiple ancestor paths exist (the alternative-paths pattern), pass iff at least one path satisfies the condition. <code>via</code> reflects the via labels accumulated along the satisfied path.</p>
+
+  <p><strong><code>not_contradicted</code></strong> — applies to Checkpoint, Interpretation, Conclusion. Walk <code>session.argument_edges</code> sorted by edge id; pass iff no CONTRADICTS edge has <code>target === node.id</code>. <code>via</code> is empty.</p>
+
+  <p><strong><code>premise_kind_in</code></strong> — applies to Checkpoint, Interpretation, Conclusion. Pass iff at least one Premise from <code>session.premises</code> (sorted by premise id) is connected to this node via an ANSWERS, SUPPORTS, or CONTRADICTS edge in <code>session.argument_edges</code> AND the premise's <code>kind</code> is in the condition's <code>kinds</code> array. <code>via</code> is empty (premise kind alone does not contribute to via labels). The schema spec types <code>kinds: string[]</code> as an open string union; the policy editor (Stream E) filters offered kinds by frame mode/flavor.</p>
+
+  <p><strong><code>burden_met</code></strong> — applies to Checkpoint nodes only. Categorical scoring per Stream C decision #6. The runtime imports the scoring tables and threshold map from this file (the F-001 wiring section below explains how G5-calibrated thresholds override the defaults). Pseudocode:</p>
+
+<pre><code>// Default scoring tables. Frozen in v1; G5 (calibrated thresholds) override
+// only the threshold map, not the kind-weight tables.
+const PREMISE_KIND_WEIGHT_LEGAL: Readonly&lt;Record&lt;string, number&gt;&gt; = {
+  stipulated: 100, found: 70, disputed: 30, procedural: 50,
+};
+const PREMISE_KIND_WEIGHT_ACADEMIC: Readonly&lt;Record&lt;string, number&gt;&gt; = {
+  stipulated: 100, empirical: 70, definitional: 50, normative: 30,
+};
+const PREMISE_KIND_WEIGHT_PERSONAL: Readonly&lt;Record&lt;string, number&gt;&gt; = {
+  stipulated: 100, observation: 60, value: 40, assumption: 20,
+};
+const EDGE_WEIGHT_MULTIPLIER: Readonly&lt;Record&lt;string, number&gt;&gt; = {
+  strong: 1.0, moderate: 0.66, weak: 0.33,
+};
+const DEFAULT_BURDEN_THRESHOLD: Readonly&lt;Record&lt;BurdenLevel, number&gt;&gt; = {
+  scintilla: 25, preponderance: 50, substantial_evidence: 60,
+  clear_and_convincing: 80, beyond_reasonable_doubt: 95,
+};
+
+function condBurdenMet(node, frame, session, status_map, params): ConditionResult {
+  if (node.type !== "Checkpoint") return { passed: false, via: [] };
+  const level = params.level;                  // BurdenLevel; required by Condition shape
+  const thresholds = frame.llm_settings_snapshot?.calibrated_thresholds
+                   ?? DEFAULT_BURDEN_THRESHOLD;
+  const threshold = thresholds[level];
+  const weightTable = pickKindWeights(frame.mode, frame.flavor);
+  let score = 0;
+  const via = new Set&lt;ConditionViaLabel&gt;();
+  for (const e of sortedBy(session.argument_edges, x =&gt; x.id)) {
+    if (e.target !== node.id) continue;
+    if (e.type !== "SUPPORTS" &amp;&amp; e.type !== "ANSWERS" &amp;&amp; e.type !== "CONTRADICTS") continue;
+    const prem = session.premises.find(p =&gt; p.id === e.source);
+    if (!prem) continue;
+    const kw = weightTable[prem.kind] ?? 30;
+    const ew = EDGE_WEIGHT_MULTIPLIER[(e as any).weight ?? "moderate"] ?? 0.66;
+    if (e.type === "SUPPORTS" || e.type === "ANSWERS") {
+      score += kw * ew;
+      if (prem.kind === "stipulated") via.add("stipulation");
+    } else {
+      score -= kw * ew;
+    }
+  }
+  return { passed: score &gt;= threshold, via: sortedIter(via) };
+}
+</code></pre>
+
+  <p>The threshold lookup checks the FrameVersion's <code>llm_settings_snapshot.calibrated_thresholds</code> (per F-001) before falling back to <code>DEFAULT_BURDEN_THRESHOLD</code>. This is the single F-001 wiring point in the runtime; see the dedicated section below for the full data flow. The kind-weight tables are NOT subject to G5 override in v1 (the calibrated_thresholds field carries thresholds only); a future schema extension can broaden the projection without changing the runtime's interface.</p>
+
+  <p><strong><code>authority_required</code></strong> — applies to Checkpoint nodes (legal mode). Pass iff there exists at least one Premise <code>p</code> in <code>session.premises</code> with <code>p.authority_ref</code> non-null AND an ANSWERS edge in <code>session.argument_edges</code> with <code>source === p.id</code> AND <code>target === node.id</code>. <code>via</code> is empty (the authority_binding condition handles the binding/persuasive labeling). Note that V-ARG-2 (validation rule) catches the schema-level case "Checkpoint requires_authority but the answering Premise has no authority_ref" — this condition is a redundant runtime check that lives in the policy library so frames can opt in or out per-instance.</p>
+
+  <p><strong><code>authority_binding</code></strong> — applies to Checkpoint, Interpretation, Conclusion (legal mode). Delegates to <code>isBinding</code> from <code>authority-binding.ts</code> for each cited Authority. Pseudocode:</p>
+
+<pre><code>function condAuthorityBinding(node, frame, session, status_map, params): ConditionResult {
+  // Collect every Authority cited toward `node` from two sources:
+  //   1. Frame-layer CITES edges to this node (Interpretation only via V-EDGE-1).
+  //   2. Argument-layer Premises whose authority_ref is set, where the Premise
+  //      ANSWERS or SUPPORTS this node.
+  const cited: Authority[] = [];
+  for (const e of sortedBy(frame.edges, x =&gt; x.id)) {
+    if (e.type !== "CITES" || e.target !== node.id) continue;
+    const auth = lookupAuthority(e.source, frame, session);
+    if (auth) cited.push(auth);
+  }
+  for (const p of sortedBy(session.premises, x =&gt; x.id)) {
+    if (!p.authority_ref) continue;
+    const reaches = session.argument_edges.some(e =&gt;
+      (e.type === "ANSWERS" || e.type === "SUPPORTS")
+      &amp;&amp; e.source === p.id &amp;&amp; e.target === node.id);
+    if (!reaches) continue;
+    const auth = lookupAuthority(p.authority_ref, frame, session);
+    if (auth) cited.push(auth);
+  }
+  // Determine binding for each cited Authority against the frame's default
+  // jurisdiction. via = "binding_authority" if any binds, "persuasive_authority"
+  // if at least one Authority is cited but none binds, empty otherwise.
+  const via = new Set&lt;ConditionViaLabel&gt;();
+  let anyBinding = false;
+  for (const auth of sortedBy(cited, x =&gt; x.id)) {
+    if (!frame.jurisdiction_default) continue;
+    const result = isBinding(auth, frame.jurisdiction_default);
+    if (result.binding) {
+      via.add("binding_authority");
+      anyBinding = true;
+    } else if (cited.length &gt; 0) {
+      via.add("persuasive_authority");
+    }
+  }
+  return { passed: anyBinding, via: sortedIter(via) };
+}
+</code></pre>
+
+  <p>The condition passes iff at least one cited Authority is binding in the frame's default jurisdiction (or in the Interpretation's <code>jurisdiction_override</code> if applicable — to be added when Interpretation jurisdiction-override semantics are reviewed; v1 uses frame default). Per-Interpretation override is reserved for v2 and does not block coding.</p>
+
+  <p><strong><code>not_distinguished</code></strong> — applies to Interpretation, Conclusion (legal mode). Walk <code>frame.edges</code> sorted by edge id; pass iff no DISTINGUISHED_BY edge has <code>target === node.id</code>. <code>via</code> is empty.</p>
+
+  <p><strong><code>standard_of_review_applied</code></strong> — applies to RootQuestion, SubQuestion, Conclusion (legal mode). Pass iff <code>node.standard_of_review</code> is non-null AND non-empty. (For SubQuestion that inherits from a parent, the inherited value satisfies the condition; the runtime walks <code>graph.incoming</code> ascending until reaching a node with a populated <code>standard_of_review</code> or running out of ancestors.) Conclusion nodes do not carry <code>standard_of_review</code> on the schema; for Conclusions, ascend the incoming graph until the nearest ancestor with a populated value. <code>via</code> is empty.</p>
+
+  <p><strong><code>not_foreclosed</code></strong> — universal. Pass iff <code>node.id</code> is NOT in the foreclosed set. Implementation note: the policy evaluator does not have direct access to the foreclosed set as a parameter; instead, the orchestrator passes foreclosure state into condition evaluation by reading the prior foreclosure check that already happened in phase 4 step 1 (see <code>status.ts</code>). For nodes that reach phase 4 step 4 (policy evaluation), the condition trivially passes (the foreclosure check is the very first step of the status determiner; foreclosed nodes never reach policy evaluation). This condition exists in the policy library for completeness — frames can list it explicitly to make the precondition visible — and as a future-proofing point if the precedence ladder is ever revised. In v1 it is effectively always-pass when reached; the implementation is a simple <code>{ passed: true, via: [] }</code>. <code>via</code> is empty.</p>
+
+  <h4>Policy evaluator</h4>
+
+<pre><code>export function evaluatePolicy(
+  policy: SatisfactionPolicy,
+  node: Node,
+  frame: FrameVersion,
+  session: ArgumentSession,
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+): PolicyResult {
+  const via = new Set&lt;ConditionViaLabel&gt;();
+  const failed: string[] = [];
+
+  // all_of (AND-combined). Iterate in the order conditions appear in the
+  // policy array — the policy itself is a deterministic ordered list, so
+  // no extra sort is needed here.
+  for (const cond of policy.all_of) {
+    const r = evaluateCondition(cond, node, frame, session, status_map);
+    for (const v of r.via) via.add(v);
+    if (!r.passed) failed.push(cond.kind);
+  }
+
+  // any_of, if present. At most one AnyOf group; no nesting (per A3).
+  if (policy.any_of &amp;&amp; policy.any_of.length &gt; 0) {
+    let anyPassed = false;
+    for (const cond of policy.any_of) {
+      const r = evaluateCondition(cond, node, frame, session, status_map);
+      if (r.passed) {
+        anyPassed = true;
+        for (const v of r.via) via.add(v);
+        // Do NOT break: continue collecting via labels from other passing
+        // conditions in the AnyOf group, so the via record is complete.
+      }
+    }
+    if (!anyPassed) failed.push("any_of_group_unsatisfied");
+  }
+
+  return {
+    passed: failed.length === 0,
+    via: sortedIter(via),                       // lexicographic; deterministic
+    failed: [...failed],
+  };
+}
+</code></pre>
+
+  <p>The OR-group implementation continues iterating after finding a passing condition (it does not short-circuit) so that <code>via</code> labels from every passing condition are collected. This produces a richer audit trail at no behavioral cost; determinism is preserved since the iteration order is the policy's array order.</p>
+
+  <div class="file-header">// src/runtime/status.ts</div>
+  <p>Phase 4 of the pipeline (Stream C3). Walks the frame in reverse topological order and assigns a <code>NodeStatus</code> to every non-source node (Premise and Authority are sources, not gates, and receive no status — per Article II § 3 and the schema spec's policy table). The walk applies the fixed precedence ladder from <code>current_state.html</code> "Status enum and precedence": <code>foreclosed</code> &gt; <code>not_applicable</code> &gt; <code>contested</code> &gt; <code>open</code> &gt; <code>satisfied</code>. <code>foreclosed</code> with scope <code>decided</code> resolves to <code>satisfied</code> with <code>via: ["structural_resolution"]</code>; this is recorded as a special branch within the foreclosure check rather than a separate precedence tier. The threading of <code>computed_at</code> into every <code>NodeStatus.evaluated_at</code> is the responsibility of this module — the orchestrator passes the timestamp; the determiner stamps it on every status it produces.</p>
+
+<pre><code>import type {
+  FrameVersion, ArgumentSession, NodeRef, Node, NodeStatus, Checkpoint,
+} from "@/schema";
+import type { Graph } from "./graph";
+import type { ForeclosureScope } from "./foreclosure";
+
+/**
+ * Phase 4 entry point. Pure.
+ *
+ * Returns a complete map: every node in `frame.nodes` either receives a
+ * NodeStatus (non-source nodes) or is omitted from the map (Premise and
+ * Authority — they are sources, not gates). Callers must not assume a
+ * status is present for every node id.
+ *
+ * `computed_at` is the orchestrator-supplied logical timestamp; every
+ * NodeStatus produced has `evaluated_at: computed_at`. The runtime never
+ * reads the wall clock.
+ */
+export function computeStatusMap(
+  frame: FrameVersion,
+  session: ArgumentSession,
+  graph: Graph,
+  foreclosed: ReadonlySet&lt;NodeRef&gt;,
+  active: ReadonlySet&lt;NodeRef&gt;,
+  computed_at: string,
+): ReadonlyMap&lt;NodeRef, NodeStatus&gt;;
+
+/**
+ * The marker string the gates module uses to convey "this gate evaluated
+ * to not_satisfied" through the NodeStatus.failed_conditions array.
+ * Re-exported here for symmetry with status.ts being the producer.
+ */
+export const GATE_NOT_SATISFIED_MARKER = "gate_evaluated_not_satisfied";
+</code></pre>
+
+  <h4>Algorithm</h4>
+  <p>Compute the structural topological sort once at the top (via <code>topologicalSort(graph)</code>); reverse it; iterate in that order. For each node id in the reversed sort:</p>
+
+  <ol>
+    <li><strong>Premise / Authority skip.</strong> If the node's <code>type</code> is <code>"Premise"</code> or <code>"Authority"</code>, do not assign status; continue. (These nodes are still in the topological sort because they appear in <code>frame.nodes</code>; they simply don't receive status assignments. Map omission, not <code>undefined</code>, is the encoding.)</li>
+    <li><strong>Foreclosure check.</strong> If the node id is in <code>foreclosed</code>, consult <code>foreclosureScopeFor(node_id, frame, session)</code>: if <code>"decided"</code>, assign <code>{ status: "satisfied", via: ["structural_resolution"], evaluated_at: computed_at }</code> with no <code>failed_conditions</code>. If <code>"moot"</code>, assign <code>{ status: "foreclosed", evaluated_at: computed_at }</code>. Continue.</li>
+    <li><strong>Active-set check.</strong> If the node id is NOT in <code>active</code> (and was not foreclosed in step 2), assign <code>{ status: "not_applicable", evaluated_at: computed_at }</code>. Continue.</li>
+    <li><strong>LogicalGate evaluation.</strong> If the node is a LogicalGate, call <code>evaluateGate(node, status_map)</code> against the in-progress status map (which contains every input's status, since gates depend on structurally-prior nodes and we walk reverse-topologically). Map the gate result to <code>NodeStatus</code> as: <code>"satisfied"</code> → <code>{ status: "satisfied", evaluated_at }</code>; <code>"not_satisfied"</code> → <code>{ status: "open", failed_conditions: [GATE_NOT_SATISFIED_MARKER], evaluated_at }</code>; <code>"indeterminate"</code> → <code>{ status: "open", failed_conditions: ["inputs_indeterminate"], evaluated_at }</code> (per Stream C decision #7). Continue.</li>
+    <li><strong>Contested check (Checkpoint-specific).</strong> If the node is a Checkpoint, evaluate the contested heuristic: a Checkpoint is <code>contested</code> when (a) at least one ANSWERS edge exists in <code>session.argument_edges</code> targeting this Checkpoint, AND (b) at least one CONTRADICTS edge exists from a Premise targeting this Checkpoint OR the chosen option's <code>routes_to_status === "contested"</code> (per the schema spec's <code>CheckpointOption.routes_to_status</code>). If contested, assign <code>{ status: "contested", failed_conditions: ["contradicting_premises"], evaluated_at }</code>. Continue.</li>
+    <li><strong>Policy evaluation.</strong> Resolve the effective policy via <code>resolveEffectivePolicy(node.type, node.options_box, frame.default_satisfaction_policies[node.type])</code> from <code>@/schema</code>. Pass it to <code>evaluatePolicy(policy, node, frame, session, status_map)</code>; build the NodeStatus from the result: <code>{ status: result.passed ? "satisfied" : "open", via: result.passed ? result.via : [], failed_conditions: result.failed, evaluated_at }</code>. The <code>via</code> array is omitted (rather than empty) when the status is <code>open</code> — Stream C and the schema spec both treat <code>via</code> as a satisfied-state badge.</li>
+  </ol>
+
+  <p>Notes:</p>
+  <ul>
+    <li><strong>Order of checks.</strong> Foreclosure → active → gate-or-contested → policy. The first matching check wins; the precedence ladder is implemented by the order of these branches, not by post-hoc comparison. This makes status assignment a single deterministic pass per node.</li>
+    <li><strong>via labels for satisfied nodes.</strong> The <code>via</code> array is the union of: any labels the policy evaluator collected from condition results, plus <code>"binding_authority"</code> / <code>"persuasive_authority"</code> for legal-mode satisfied Checkpoints / Interpretations / Conclusions whose Authority condition contributed (these come through the <code>authority_binding</code> condition's <code>via</code> output). The status determiner does not add any via labels of its own beyond the foreclosed-decided branch's <code>"structural_resolution"</code>; everything else flows through condition results.</li>
+    <li><strong>Sub_flags display naming (current_state.html).</strong> The schema spec stores <code>via</code> values as <code>"binding_authority"</code> / <code>"persuasive_authority"</code> (no prefix); the UI layer renders them as the chips described in <code>current_state.html</code> ("⚖ B" / "⚖ P"); the contracts doc's <code>sub_flags</code> shape with the <code>"via_"</code> prefix is a paraphrase. The runtime emits the schema spec's bare names; the UI / Stream E does any prefixing for display.</li>
+    <li><strong>Performance.</strong> Reverse topological iteration is O(V); each node's check is O(degree) for foreclosure/active membership and O(|policy.all_of| + |policy.any_of|) for policy evaluation; total is O(V + E). At v1 frame sizes (low hundreds of nodes), recompute on every session edit is fast enough that the incremental strategy in Stream C is deferred to v2 (per Stream C "Incremental computation strategy"). The runtime exposes only the full-recompute path; an incremental cache layer can be added behind <code>compute</code>'s signature without changing it.</li>
+  </ul>
+
+  <div class="file-header">// src/runtime/output.ts</div>
+  <p>Phase 5 of the pipeline (Stream C1 + C4). Produces three artifacts that share a graph walk: the <code>active_path: NodeRef[]</code>, the <code>output: ConditionalOutput</code> (per the schema spec's <code>session.ts</code>), and the <code>open_gates: OpenGate[]</code> list. The output's <code>shape</code> field is determined by the precedence ladder <code>incomplete &gt; contested &gt; conditional &gt; determinate</code>; the prose summary is rendered deterministically from the active path or branch structure with no LLM in the routing path; the confidence breakdown is computed from the status map and the path. The G6 prose-rewrite override (per the F-002 register flag) does NOT enter the runtime — it lives on <code>ArgumentSessionVersion.output_overrides</code> and is consulted only by the Stream E prose tab; <code>compute</code> never reads or writes that field.</p>
+
+<pre><code>import type {
+  FrameVersion, ArgumentSession, NodeRef, NodeStatus,
+  ConditionalOutput, ConditionalBranch, BranchCondition, OpenGate,
+  ConfidenceBreakdown, Conclusion, Checkpoint, Term, LogicalGate,
+} from "@/schema";
+import type { Graph } from "./graph";
+
+/** Phase 5 entry point. Pure. */
+export function generateOutput(
+  frame: FrameVersion,
+  session: ArgumentSession,
+  graph: Graph,
+  foreclosed: ReadonlySet&lt;NodeRef&gt;,
+  active: ReadonlySet&lt;NodeRef&gt;,
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+  computed_at: string,
+): {
+  active_path: ReadonlyArray&lt;NodeRef&gt;;
+  output: ConditionalOutput;
+  open_gates: ReadonlyArray&lt;OpenGate&gt;;
+};
+
+/**
+ * Walk the active path from the RootQuestion. Internal to output.ts but
+ * exported for snapshot tests in `tests/runtime/output.test.ts`.
+ *
+ * Returns:
+ *   - `primary_path`: a single deterministic path from root to a Conclusion,
+ *     selected by the fixed tiebreaker (longest fully-satisfied; most
+ *     binding-authority via labels; lexicographic Conclusion id).
+ *   - `all_segments`: every path segment ending at a Conclusion (used for
+ *     branch generation in the conditional shape).
+ *   - `open_gates`: structural openings encountered during the walk.
+ *   - `branches`: ConditionalBranch entries from indeterminate gates and
+ *     unresolved Checkpoints (used for the conditional shape).
+ */
+export function traceActivePath(
+  frame: FrameVersion,
+  session: ArgumentSession,
+  graph: Graph,
+  foreclosed: ReadonlySet&lt;NodeRef&gt;,
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+): {
+  primary_path: ReadonlyArray&lt;NodeRef&gt;;
+  all_segments: ReadonlyArray&lt;ReadonlyArray&lt;NodeRef&gt;&gt;;
+  open_gates: ReadonlyArray&lt;OpenGate&gt;;
+  branches: ReadonlyArray&lt;ConditionalBranch&gt;;
+};
+
+/** Render a deterministic prose summary. Pure; byte-identical for identical inputs. */
+export function renderProse(
+  output: ConditionalOutput,
+  frame: FrameVersion,
+): string;
+
+/** Compute the confidence breakdown from status_map and primary_path. Pure. */
+export function computeConfidenceBreakdown(
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+  primary_path: ReadonlyArray&lt;NodeRef&gt;,
+  frame: FrameVersion,
+): ConfidenceBreakdown;
+</code></pre>
+
+  <h4>Output shape determination</h4>
+  <p>Apply the precedence ladder from Stream C "Output shape determination":</p>
+  <ol>
+    <li><strong>incomplete</strong> — phase 1 produced any error <code>ValidationResult</code>, OR no Conclusion is reachable from the active set. Output carries <code>open_gates</code> describing the structural gaps.</li>
+    <li><strong>contested</strong> — at least one Checkpoint on any path that reaches a Conclusion has status <code>contested</code>. Output carries <code>contested_nodes</code> (ids of contested Checkpoints on Conclusion-reaching paths, sorted lexicographically) and a <code>best_inference</code> Conclusion selected by the deterministic tiebreaker.</li>
+    <li><strong>conditional</strong> — at least one Term on the active path has no InterpretationSelection, or at least one Checkpoint on the active path has no CheckpointResponse, or at least one LogicalGate on the active path is indeterminate, AND alternative branches each lead to a different Conclusion. Output carries <code>branches: ConditionalBranch[]</code>.</li>
+    <li><strong>determinate</strong> — exactly one Conclusion is reachable through fully-satisfied (or decided-foreclosed) nodes; no open gates remain on the path. Output carries <code>conclusion</code> and <code>primary_path</code>.</li>
+  </ol>
+
+  <p>Implementation: compute the four shape predicates as booleans (<code>hasErrors</code>, <code>hasContestedOnPath</code>, <code>hasUnresolvedBranchPoint</code>, <code>hasSinglePathToOneConclusion</code>); apply the ladder. The first matching shape wins. Edge cases: a frame with no Conclusions reachable but no errors is still <code>incomplete</code> (the second clause of the rule). A frame with both contested and conditional features is <code>contested</code> (precedence). A frame with errors but also contested points is <code>incomplete</code> (errors win).</p>
+
+  <h4>Path walking</h4>
+  <p>The walker is a depth-first walk from the RootQuestion, branching at each node according to per-type rules. Multiple selected Interpretations under one Term produce a fork; the walk follows each fork and unions the resulting paths into <code>all_segments</code>. The per-node-type branching logic mirrors <code>branchIsFollowed</code> from <code>reachable-active.ts</code> but additionally records open gates and branches when a routing decision cannot be made.</p>
+
+<pre><code>// Pseudocode for traceActivePath. The actual implementation is iterative
+// (explicit stack) to avoid recursion depth on deep frames.
+
+function walk(node_id: NodeRef, prefix: NodeRef[],
+              acc: WalkAcc): void {
+  if (foreclosed.has(node_id)) return;            // foreclosed: cut here
+  const status = status_map.get(node_id);
+  if (status?.status === "not_applicable") return;
+  const newPrefix = [...prefix, node_id];
+  const node = graph.nodeById(node_id);
+
+  if (node.type === "Conclusion") {
+    acc.segments.push(newPrefix);
+    return;
+  }
+
+  const nextTargets: NodeRef[] = [];
+
+  switch (node.type) {
+    case "RootQuestion":
+    case "SubQuestion":
+      // Follow every structural outgoing edge in deterministic order.
+      for (const e of graph.outTraversal(node_id)) {
+        if (e.type === "DECOMPOSES_INTO" || e.type === "TURNS_ON" || e.type === "LEADS_TO") {
+          nextTargets.push(e.target);
+        }
+      }
+      break;
+
+    case "Term": {
+      const sel = selectedInterpretationsFor(node.id, session);
+      if (sel.size === 0) {
+        // Open gate: user has not picked an interpretation.
+        acc.open_gates.push({
+          node_id, reason: "structural",
+          prompt: `Pick an interpretation of '${node.name}'.`,
+        });
+        return;
+      }
+      for (const iid of sortedIter(sel)) {
+        if (!foreclosed.has(iid)) nextTargets.push(iid);
+      }
+      break;
+    }
+
+    case "Interpretation":
+      for (const e of graph.outTraversal(node_id)) {
+        if (e.type === "LEADS_TO") nextTargets.push(e.target);
+      }
+      break;
+
+    case "Checkpoint": {
+      const response = responseFor(node_id, session);
+      if (!response) {
+        if (status?.status === "contested") {
+          acc.branches.push(...branchesFromUnresolvedCheckpoint(
+            node, newPrefix, frame, session, graph, foreclosed, status_map,
+          ));
+        } else {
+          acc.open_gates.push({
+            node_id,
+            reason: hasContradictingPremise(node_id, session)
+                  ? "premise_contradicted"
+                  : "no_premise",
+            prompt: node.question,
+          });
+        }
+        return;
+      }
+      const opt = node.options.find(o =&gt; o.id === response.selected_option_id);
+      if (opt?.target_node_id &amp;&amp; !foreclosed.has(opt.target_node_id)) {
+        nextTargets.push(opt.target_node_id);
+      }
+      break;
+    }
+
+    case "LogicalGate": {
+      const result = evaluateGate(node, status_map);
+      if (result === "satisfied") {
+        // Walk via persisted GATES edge or synthetic from output_target,
+        // whichever produced the routing path. graph.outTraversal yields
+        // both; we follow each (typically there is only one).
+        for (const e of graph.outTraversal(node_id)) {
+          if (e.type === "GATES" &amp;&amp; !foreclosed.has(e.target)) nextTargets.push(e.target);
+        }
+      } else if (result === "indeterminate") {
+        acc.branches.push(...branchesFromIndeterminateGate(
+          node, newPrefix, frame, session, graph, foreclosed, status_map,
+        ));
+        return;
+      } else {
+        // not_satisfied: gate does not route. The path stops here.
+        return;
+      }
+      break;
+    }
+
+    default:
+      // Premise / Authority should never appear on a path being walked.
+      return;
+  }
+
+  // Walk targets in deterministic (sorted) order.
+  for (const t of sortedBy(nextTargets, x =&gt; x)) walk(t, newPrefix, acc);
+}
+</code></pre>
+
+  <h4>Primary-path selection</h4>
+  <p>From <code>all_segments</code>, pick a single primary path by the fixed tiebreaker:</p>
+  <ol>
+    <li><strong>Longest fully-satisfied path.</strong> Count the segments where every non-foreclosed node has status <code>satisfied</code>. Among these, the longest wins.</li>
+    <li><strong>Most binding-authority via labels.</strong> If two segments tie on length, count the number of nodes on each segment whose status's <code>via</code> array contains <code>"binding_authority"</code>; the higher count wins.</li>
+    <li><strong>Lexicographic Conclusion id.</strong> If still tied, the segment whose terminal Conclusion id sorts first wins.</li>
+  </ol>
+
+  <p>The same tiebreaker is used for <code>best_inference</code> in the contested shape. Centralized in a helper <code>pickPrimary(segments, status_map)</code> within <code>output.ts</code> (not exported).</p>
+
+  <h4>Branches from unresolved Checkpoints and indeterminate gates</h4>
+  <p>When a Checkpoint with status <code>contested</code> is encountered with no response, OR a LogicalGate with result <code>indeterminate</code> is encountered, the walker emits <code>ConditionalBranch</code> entries. Each branch enumerates a small set of choices at the unresolved point and walks forward hypothetically from each:</p>
+
+<pre><code>function branchesFromUnresolvedCheckpoint(
+  node: Checkpoint, prefix: NodeRef[],
+  frame, session, graph, foreclosed, status_map,
+): ConditionalBranch[] {
+  const out: ConditionalBranch[] = [];
+  for (const opt of sortedBy(node.options, x =&gt; x.id)) {
+    if (!opt.target_node_id || foreclosed.has(opt.target_node_id)) continue;
+    const subPath = walkAssuming(
+      opt.target_node_id, frame, session, graph, foreclosed, status_map,
+      { kind: "checkpoint", node_id: node.id, option_id: opt.id },
+    );
+    if (subPath.length === 0) continue;
+    const terminal = subPath[subPath.length - 1];
+    if (graph.nodeById(terminal).type !== "Conclusion") continue;
+    out.push({
+      id: branchIdFromConditions(node.id, opt.id),  // deterministic id derivation
+      conditions: [{
+        gate_node_id: node.id,
+        required_value: opt.id,
+        required_value_label: opt.label,
+      }],
+      resulting_conclusion: terminal,
+      intermediate_path: [...prefix, ...subPath],
+      prose: renderBranchProse(node, opt, subPath, frame),
+    });
+  }
+  return mergeConvergentBranches(out);
+}
+</code></pre>
+
+  <p>The analogous <code>branchesFromIndeterminateGate</code> enumerates the gate's input-satisfaction states that would each produce a definite routing decision, and walks forward from each. For an IF_THEN gate whose antecedent is indeterminate, the two branches are "if antecedent satisfied" and "if antecedent not satisfied"; for an UNLESS gate whose exception is indeterminate but main is satisfied, the two branches are "if exception not satisfied" (gate satisfies, routes) and "if exception satisfied" (gate fails, no route). For AND/OR gates with multiple indeterminate inputs, the enumeration covers only the conjunction-of-decisions space that reaches a Conclusion — the implementation enumerates each indeterminate input's two boolean states and prunes to the satisfying combinations; for v1 this is bounded by a small input fan-in (in practice 2–4 indeterminate inputs at most). A larger fan-in degrades gracefully to a single open gate entry rather than an explosion of branches.</p>
+
+  <p><code>walkAssuming</code> is a hypothetical walk: it temporarily treats the named assumption as if already in the session and walks forward. The walk is purely local — it does not re-run foreclosure or status determination for the rest of the frame. This is acceptable because the assumption is a single resolution at a single node, which only affects nodes downstream of that point. <code>walkAssuming</code> takes the same <code>foreclosed</code> and <code>status_map</code> from the outer compute call, plus an <code>assumption</code> object describing the local override; it returns a NodeRef[] that may or may not terminate at a Conclusion.</p>
+
+  <p>Convergent branches are merged by <code>mergeConvergentBranches</code>: when two branches end at the same Conclusion via different routes, their <code>conditions</code> arrays are combined into a disjunction (a single ConditionalBranch with both BranchCondition entries) and a single representative <code>intermediate_path</code> is chosen by the same primary-path tiebreaker. Merging keeps the conditional output compact for frames where multiple paths converge.</p>
+
+  <p>Branch ids: <code>branchIdFromConditions</code> derives a deterministic id from a stable hash of the sorted condition tuple (gate_node_id + required_value), so the same branch always has the same id across runs. The hash is SHA-256 of a canonical string form, truncated and prefixed with <code>"br_"</code>; SHA-256 is available in any modern JS runtime via <code>crypto.subtle</code>, but to keep the runtime free of async APIs, <code>crypto.createHash</code> from Node's built-in <code>node:crypto</code> module is used (the runtime is consumed in browser builds via Vite's polyfill). If the polyfill route proves brittle, the coding session may swap in a small synchronous SHA-256 implementation under <code>iteration-helpers.ts</code> rather than introduce a third-party dependency.</p>
+
+  <h4>Open gates</h4>
+  <p>Open gates are emitted by the walker when a structural opening is encountered (Term with no selection, Checkpoint with no response, etc.) AND when phase 4's status determiner produced an <code>open</code> NodeStatus on the active path with a meaningful <code>failed_conditions</code> entry. The output module collects both and merges by <code>node_id</code>, preferring the more specific <code>reason</code> when both sources fire for the same node. Reason mapping:</p>
+  <ul>
+    <li><code>"no_premise"</code> — Checkpoint with no ANSWERS edge.</li>
+    <li><code>"premise_contradicted"</code> — Checkpoint with both ANSWERS and CONTRADICTS edges; phase 4 already labeled it <code>contested</code> rather than <code>open</code>, so this reason fires only when contested-checkpoint branch generation produced no usable branches.</li>
+    <li><code>"burden_unmet"</code> — Checkpoint where <code>failed_conditions</code> includes <code>"burden_met"</code>.</li>
+    <li><code>"authority_missing"</code> — Checkpoint where <code>failed_conditions</code> includes <code>"authority_required"</code> or <code>"authority_binding"</code>.</li>
+    <li><code>"structural"</code> — everything else, including unresolved Terms, indeterminate gates, and dangling SubQuestions.</li>
+  </ul>
+
+  <p>The open-gates list is sorted by <code>node_id</code> for output stability.</p>
+
+  <h4>Prose summary generation</h4>
+  <p>Per A9 and Stream C, the default view is a deterministic prose summary. The implementation is a fixed template walk over the active path or branch structure. No LLM, no clock reads, no randomness. The prose is plain text; the UI may mark it up further (links to nodes, etc.) but the canonical prose is what gets exported and what tests pin against.</p>
+
+  <p>Pseudocode mirrors Stream C's <code>render_prose</code> directly; the coding session implements per-shape formatters (<code>renderDeterminateProse</code>, <code>renderConditionalProse</code>, <code>renderContestedProse</code>, <code>renderIncompleteProse</code>) plus the shared confidence-breakdown footer (<code>renderConfidenceBreakdown</code>). Format conventions:</p>
+  <ul>
+    <li>Sections are separated by single blank lines.</li>
+    <li>Lists use a leading <code>"  - "</code> (two spaces, dash, space).</li>
+    <li>Direction is rendered via <code>renderDirection(conclusion.direction, frame)</code>: legal-mode directions use the value verbatim (<code>"affirm"</code>, <code>"reverse"</code>, etc.) with <code>"custom"</code> using the Conclusion's <code>custom_label</code>; general-mode directions look up <code>frame.positions[].label</code> by <code>position_id</code>.</li>
+    <li>Node short forms come from <code>renderNodeShort(nid, frame)</code> which formats per-type: questions render as <code>statement</code>; Terms render as <code>name</code>; Interpretations render as <code>statement</code>; Checkpoints render as <code>question</code>; Gates render as <code>"&lt;gate_type&gt; gate"</code>; Conclusions render as <code>statement</code>. All are truncated at 80 characters with a trailing ellipsis when longer; truncation is at byte boundaries (no UTF-8 splitting).</li>
+    <li>The output never includes the date or the frame title; only the deterministic content. Determinism testing pins against the prose; including a date would defeat the snapshot test.</li>
+  </ul>
+
+  <h4>Confidence breakdown</h4>
+  <p>Per A1, confidence is computed at output time and never stored on the Conclusion. The breakdown counts integer occurrences from the status map filtered to Checkpoints on the primary path; it is order-stable because it iterates the path in its given order. Mapping:</p>
+
+<pre><code>function computeConfidenceBreakdown(
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;,
+  primary_path: ReadonlyArray&lt;NodeRef&gt;,
+  frame: FrameVersion,
+): ConfidenceBreakdown {
+  const checkpointsOnPath = primary_path.filter(
+    nid =&gt; frame.nodes.find(n =&gt; n.id === nid)?.type === "Checkpoint"
+  );
+  const out: ConfidenceBreakdown = {
+    total_checkpoints_on_path: checkpointsOnPath.length,
+    satisfied_via_binding: 0,
+    satisfied_via_persuasive: 0,
+    satisfied_via_stipulation: 0,
+    satisfied_via_structural: 0,
+    contested: 0,
+    open: 0,
+  };
+  for (const nid of checkpointsOnPath) {
+    const st = status_map.get(nid);
+    if (!st) continue;
+    if (st.status === "satisfied") {
+      const via = st.via ?? [];
+      // Precedence among via labels for counting: binding &gt; persuasive &gt;
+      // stipulation &gt; structural &gt; default. A satisfied Checkpoint counts in
+      // the highest category for which it has a via label; if it has none,
+      // it is counted as persuasive (the default for a satisfied node with
+      // no via labels is "we got here on argument, not authority").
+      if (via.includes("binding_authority"))           out.satisfied_via_binding++;
+      else if (via.includes("persuasive_authority"))   out.satisfied_via_persuasive++;
+      else if (via.includes("stipulation"))            out.satisfied_via_stipulation++;
+      else if (via.includes("structural_resolution"))  out.satisfied_via_structural++;
+      else                                              out.satisfied_via_persuasive++;
+    } else if (st.status === "contested") out.contested++;
+    else if (st.status === "open") out.open++;
+  }
+  return out;
+}
+</code></pre>
+
+  <p>The breakdown counts integers and is order-stable. The user-facing confidence display is rendered by Stream E; the breakdown itself is the canonical numeric record stored on <code>ConditionalOutput.confidence_breakdown</code>.</p>
+
+  <div class="file-header">// src/runtime/authority-binding.ts</div>
+  <p>C6 — authority-binding determination. Pure function. Determines whether a cited Authority is binding in a target jurisdiction, returning a structured result that names the source of the determination and the certainty level. Per <code>current_state.html</code> "Authority binding (C6)" and Stream F's F6-v1/F6-v2 split: v1 ships with manual override + string-match heuristic + no-jurisdiction terminal; F5 hierarchy-database lookup is stubbed in <code>src/runtime/f5/</code> and slotted between manual override and string match per Stream F's F6-v2 specification (additive widening of the result envelope, no signature change). The function is consumed inline by the <code>authority_binding</code> condition in <code>conditions.ts</code> (phase 4) and by the prose-summary generator in <code>output.ts</code> (phase 5); it is not a pipeline phase.</p>
+
+<pre><code>import type { Authority, Jurisdiction } from "@/schema";
+import { F5_AVAILABLE, queryF5Binding } from "./f5";
+
+export type BindingSource =
+  | "manual_override"
+  | "hierarchy_database"        // F5 wire-in lights this up; v1 always falls through
+  | "string_match"
+  | "no_jurisdiction";
+
+export type BindingCertainty = "exact" | "heuristic";
+
+export interface BindingResult {
+  binding: boolean;
+  source: BindingSource;
+  certainty: BindingCertainty;
+  /** Free-text rationale; populated by F6-v2 wire-in, optional in v1. */
+  reasoning?: string;
+  /** F5 database version stamp when source === "hierarchy_database"; absent otherwise. */
+  database_version?: string;
+}
+
+/**
+ * Determine whether `authority` is binding in `target_jurisdiction`.
+ * Pure. Implements Stream C "C6 — Authority binding determination" with
+ * the resolution order: manual_override → F5 → string_match → no_jurisdiction.
+ *
+ * v1 behavior: F5 is stubbed (queryF5Binding returns undefined), so the
+ * function falls through to string_match in v1. F6-v2 wire-in populates
+ * F5 without changing this function's signature.
+ */
+export function isBinding(
+  authority: Authority,
+  target_jurisdiction: Jurisdiction,
+): BindingResult;
+</code></pre>
+
+  <h4>Resolution order</h4>
+  <ol>
+    <li><strong>Manual override.</strong> If <code>authority.is_binding</code> is set explicitly (boolean, non-null), return <code>{ binding: authority.is_binding, source: "manual_override", certainty: "exact" }</code>. The user's explicit toggle wins over every algorithmic determination.</li>
+    <li><strong>F5 hierarchy database.</strong> If <code>F5_AVAILABLE</code> AND both <code>authority.jurisdiction?.hierarchy_node_id</code> AND <code>target_jurisdiction.hierarchy_node_id</code> are populated, dispatch to <code>queryF5Binding(authority.jurisdiction.hierarchy_node_id, target_jurisdiction.hierarchy_node_id)</code>. If the call returns a result, return <code>{ binding: result.binding, source: "hierarchy_database", certainty: "exact", reasoning: result.reasoning, database_version: result.database_version }</code>. In v1, <code>F5_AVAILABLE</code> is <code>false</code> and this branch is never taken; the F5 wire-in session sets it to <code>true</code> and populates the function body.</li>
+    <li><strong>String-match heuristic.</strong> If neither manual override nor F5 produced a result, fall back to:
+      <ul>
+        <li><strong>U.S. Supreme Court special case.</strong> If <code>authority.court</code> matches <code>"Supreme Court of the United States"</code> or <code>"United States Supreme Court"</code> or <code>"U.S. Supreme Court"</code> (case-insensitive, exact-form list — the string match is fixed in code as a constant), return <code>{ binding: true, source: "string_match", certainty: "heuristic", reasoning: "U.S. Supreme Court is binding everywhere in the U.S. system" }</code>. This special case exists because the F5 fallback would otherwise miss the rule; when F5 lands, the rule moves into the database and the special case is removed.</li>
+        <li><strong>Same-circuit federal match.</strong> If <code>authority.jurisdiction?.level === "federal"</code> AND <code>target_jurisdiction.level === "federal"</code> AND both have non-null <code>region</code> AND the regions are identical (case-insensitive string equality), return <code>{ binding: true, source: "string_match", certainty: "heuristic" }</code>.</li>
+        <li><strong>Same level + same region.</strong> If <code>authority.jurisdiction?.level === target_jurisdiction.level</code> AND both have non-null <code>region</code> AND regions are identical (case-insensitive), return <code>{ binding: true, source: "string_match", certainty: "heuristic" }</code>.</li>
+        <li><strong>Anything else.</strong> Return <code>{ binding: false, source: "string_match", certainty: "heuristic" }</code>.</li>
+      </ul>
+    </li>
+    <li><strong>No-jurisdiction terminal.</strong> If <code>authority.jurisdiction</code> is absent OR <code>target_jurisdiction</code>'s level/region are both absent, the string-match step has nothing to match on; return <code>{ binding: false, source: "no_jurisdiction", certainty: "exact" }</code>. The "exact" certainty here reflects that the answer is unambiguously "we cannot determine binding without jurisdiction information" — it is not a heuristic gap.</li>
+  </ol>
+
+  <p>The function is total: it always returns a <code>BindingResult</code>. It never throws (callers loop over many Authorities and would otherwise need to catch). Pure: identical inputs always produce identical outputs; no clock reads, no environment reads, no I/O.</p>
+
+  <h4>Stream F integration notes</h4>
+  <ul>
+    <li>The Stream F F6-v2 specification widens the result envelope additively with <code>kind</code> and <code>reasoning</code> and <code>database_version</code> fields. The v1 type already includes the optional <code>reasoning</code> and <code>database_version</code> fields; the F5 wire-in session does not need to change <code>BindingResult</code>'s shape.</li>
+    <li>The Stream F "carry-forward determinism mechanism" (current_state.html open question) is honored at the runtime layer by reading the F5 database version from a snapshot field on the FrameVersion when one is present (the F5 wire-in session decides which exact field to populate). The runtime treats the snapshot field as opaque input; the choice between bundled-pinned and snapshot-on-session caching is invisible to <code>isBinding</code>'s caller.</li>
+    <li>The <code>via</code> labels emitted by the <code>authority_binding</code> condition in <code>conditions.ts</code> (<code>"binding_authority"</code> / <code>"persuasive_authority"</code>) are independent of <code>BindingResult.source</code>; the condition emits the via label based on <code>BindingResult.binding</code> alone. The source is recorded at the audit layer (HookInvocationRecord-style) and surfaced in tooltips per Stream E, but does not affect routing.</li>
+  </ul>
+
+  <div class="file-header">// src/runtime/f5/index.ts</div>
+  <p>F5 stub for v1. Per current_state.html and Stream F: F5 (court hierarchy database) is a substantial sub-project deferred to a dedicated wire-in session; v1 ships F6-v1 (the manual-override + string-match heuristic in <code>authority-binding.ts</code>) with F5's module structure stubbed here so the wire-in session has a slot to fill without restructuring.</p>
+
+<pre><code>/** Whether F5 is available in this build. v1: false. */
+export const F5_AVAILABLE: boolean = false;
+
+/**
+ * Query the F5 hierarchy database for a binding determination.
+ *
+ * v1 stub: always returns `undefined` (caller falls through to string_match).
+ * F6-v2 wire-in: populated with the actual hierarchy lookup. Signature is
+ * fixed by F6-v2; the wire-in does not change it.
+ *
+ * Pure function (the database is loaded eagerly into the runtime as
+ * read-only data; lookups are deterministic given the database version).
+ */
+export function queryF5Binding(
+  authority_court_id: string,
+  target_court_id: string,
+): { binding: boolean; reasoning?: string; database_version?: string } | undefined;
+</code></pre>
+
+  <p>The stub is two declarations; the v1 implementation file is roughly five lines of code. No tests are required for the v1 stub beyond a single assertion that <code>F5_AVAILABLE === false</code> and <code>queryF5Binding</code> returns <code>undefined</code> for any input. The F5 wire-in session adds the actual database, the database-version stamping, and the per-court-id lookup; the file map for that session is documented in Stream F (out of scope here).</p>
+
+  <div class="file-header">// src/runtime/compute.ts</div>
+  <p>The orchestrator. Composes the five phases into the deterministic top-level <code>compute</code> function exported as the runtime's only cross-module entry point (per Contract 2). Both signatures (object form and convenience overload taking an ArgumentSession) are supported; the convenience overload is a thin destructure over the object form.</p>
+
+<pre><code>import type {
+  FrameVersion, ArgumentSession, NodeRef, ConditionalOutput,
+  CheckpointResponse, InterpretationSelection, Premise, Edge, Authority,
+  ValidationResult, NodeStatus, OpenGate,
+} from "@/schema";
+import { runValidation } from "@/schema";
+
+import { buildGraph, RuntimeStructuralError } from "./graph";
+import { resolveForeclosure } from "./foreclosure";
+import { computeReachableSet, computeActiveSet } from "./reachable-active";
+import { computeStatusMap } from "./status";
+import { generateOutput } from "./output";
+
+/**
+ * The full input shape. `computed_at` is the orchestrator-supplied
+ * logical timestamp threaded into every NodeStatus.evaluated_at and
+ * ConditionalOutput.computed_at; the runtime never reads the wall clock.
+ *
+ * Caller responsibility: supply `computed_at` from a deterministic source.
+ * Recommended sources, in order of preference:
+ *   1. ArgumentSessionVersion.created_at (when computing as part of
+ *      saving a new session version; this is the natural anchor).
+ *   2. ArgumentSession.updated_at (when computing on session edit).
+ *   3. A caller-pinned constant (in tests, almost always preferred).
+ *
+ * Reading the wall clock at the call site of compute() is permitted in
+ * application code (it is outside the runtime boundary). Reading the wall
+ * clock inside compute() — directly or transitively through any helper —
+ * violates Article II § 2 and is statically forbidden by the runtime's
+ * ESLint boundary.
+ */
+export interface ComputeInput {
+  frame_version_snapshot: FrameVersion;
+  checkpoint_responses: ReadonlyArray&lt;CheckpointResponse&gt;;
+  interpretation_selections: ReadonlyArray&lt;InterpretationSelection&gt;;
+  premises: ReadonlyArray&lt;Premise&gt;;
+  argument_edges: ReadonlyArray&lt;Edge&gt;;
+  session_authorities: ReadonlyArray&lt;Authority&gt;;
+  computed_at: string;                          // orchestrator-supplied; required
+}
+
+export interface ComputeResult {
+  validation_results: ReadonlyArray&lt;ValidationResult&gt;;
+  foreclosed_set: ReadonlySet&lt;NodeRef&gt;;
+  reachable_set: ReadonlySet&lt;NodeRef&gt;;
+  active_set: ReadonlySet&lt;NodeRef&gt;;
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;;
+  active_path: ReadonlyArray&lt;NodeRef&gt;;
+  output: ConditionalOutput;
+  open_gates: ReadonlyArray&lt;OpenGate&gt;;
+}
+
+/** Object-form signature; primary. */
+export function compute(input: ComputeInput): ComputeResult;
+/** Convenience overload: destructures an ArgumentSession. */
+export function compute(
+  frame_version: FrameVersion,
+  session: ArgumentSession,
+  computed_at?: string,
+): ComputeResult;
+</code></pre>
+
+  <h4>Pipeline composition</h4>
+
+<pre><code>export function compute(...args: unknown[]): ComputeResult {
+  const input: ComputeInput = normalizeArgs(args);
+  const { frame_version_snapshot: frame, computed_at } = input;
+
+  // Synthesize an ArgumentSession-shaped value for downstream phases
+  // that take a session-like argument. The runtime does not require the
+  // full ArgumentSession; it requires only the fields below.
+  const session = {
+    frame_version_snapshot: frame,
+    checkpoint_responses: input.checkpoint_responses,
+    interpretation_selections: input.interpretation_selections,
+    premises: input.premises,
+    argument_edges: input.argument_edges,
+    session_authorities: input.session_authorities,
+    status_map: {},                              // empty on first pass; see two-pass note below
+  } as unknown as ArgumentSession;
+
+  // Phase 1 — Validate.
+  let validation_results: ValidationResult[];
+  try {
+    validation_results = [...runValidation(frame, session)];
+  } catch (e) {
+    return incompleteResult(frame, [{
+      rule_id: "RUNTIME-INTERNAL", severity: "error",
+      message: `Validation failed unexpectedly: ${(e as Error).message}`,
+    }], computed_at);
+  }
+  if (validation_results.some(r =&gt; r.severity === "error")) {
+    return incompleteResult(frame, validation_results, computed_at);
+  }
+
+  // Build the graph projection. Cycle detection here catches anything
+  // V-FR-6 missed (defensive per Stream C decision #9).
+  let graph;
+  try {
+    graph = buildGraph(frame);
+  } catch (e) {
+    if (e instanceof RuntimeStructuralError) {
+      const synthetic: ValidationResult = {
+        rule_id: e.kind === "cycle" ? "V-FR-6"
+               : e.kind === "no_root" || e.kind === "multiple_roots" ? "V-FR-1"
+               : "RUNTIME-STRUCTURAL",
+        severity: "error",
+        message: e.message,
+      };
+      return incompleteResult(frame, [...validation_results, synthetic], computed_at);
+    }
+    throw e;
+  }
+
+  // Phase 2 — Foreclosure.
+  const foreclosed = resolveForeclosure(frame, session, graph);
+
+  // Phase 3 — Reachable and active. Active is computed against an empty
+  // status_map on this first pass; see the two-pass note in
+  // reachable-active.ts. Phase 5 re-walks with the populated status_map.
+  const reachable = computeReachableSet(frame, graph, foreclosed);
+  const active_pass1 = computeActiveSet(frame, session, graph, foreclosed);
+
+  // Phase 4 — Status. Walks reverse-topologically; threads computed_at
+  // into every NodeStatus.evaluated_at.
+  const status_map = computeStatusMap(
+    frame, session, graph, foreclosed, active_pass1, computed_at,
+  );
+
+  // Phase 3 redux — recompute active set with the now-populated status_map
+  // so gate-routing decisions during output generation see correct gate
+  // results. Cheap because it's the same algorithm, different inputs.
+  const active = computeActiveSet(
+    frame, { ...session, status_map: mapToObject(status_map) }, graph, foreclosed,
+  );
+
+  // Phase 5 — Output.
+  const { active_path, output, open_gates } = generateOutput(
+    frame, session, graph, foreclosed, active, status_map, computed_at,
+  );
+
+  return {
+    validation_results,
+    foreclosed_set: foreclosed,
+    reachable_set: reachable,
+    active_set: active,
+    status_map,
+    active_path,
+    output,
+    open_gates,
+  };
+}
+</code></pre>
+
+  <p>The orchestrator is the only place in the runtime where iteration over the input arrays for normalization happens; from that point onward, all internal iterations go through the iteration helpers. The orchestrator does not catch errors thrown by phases 2–5: those phases are required to be total over valid inputs, and any throw is a programmer error that should surface, not a contractual failure mode.</p>
+
+  <p><code>incompleteResult</code> is a small helper that constructs a <code>ComputeResult</code> with empty foreclosed/reachable/active sets, an empty status map, an empty active path, and an output with <code>shape: "incomplete"</code> and the supplied validation results listed as open gates with <code>reason: "structural"</code>. The prose summary is rendered through <code>renderProse</code> against the incomplete output for consistency. The <code>computed_at</code> stamp is honored.</p>
+
+  <p>The two-pass active-set computation is a deliberate choice over a single iterative-fixpoint version because (a) on most real inputs the two passes produce identical sets (gates are rare and resolve quickly when their inputs are settled), and (b) two-pass is straightforwardly deterministic without needing fixpoint-convergence proofs. If profiling shows a bottleneck, the iterative version can replace this without changing <code>compute</code>'s signature.</p>
+
+  <div class="file-header">// src/runtime/index.ts</div>
+  <p>Barrel re-exporting the public surface only.</p>
+
+<pre><code>// Public: the single deterministic top-level function.
+export { compute } from "./compute";
+export type { ComputeInput, ComputeResult } from "./compute";
+
+// Re-exported for tests in tests/runtime/. NOT for consumption outside src/runtime/
+// in application code; the runtime boundary intentionally hides the helpers
+// to discourage downstream modules from re-implementing the iteration discipline.
+export {
+  sortedIter, sortedKeys, sortedEntries, sortedBy,
+} from "./iteration-helpers";
+
+// Public for the F5 wire-in session: the BindingResult envelope is the
+// shape F6-v2 widens additively. Other authority-binding internals are
+// not re-exported.
+export type {
+  BindingResult, BindingSource, BindingCertainty,
+} from "./authority-binding";
+</code></pre>
+
+  <h2>Determinism implementation discipline</h2>
+  <p>The runtime is the determinism boundary of the application. Article II § 2 fixes the contract; this section restates the implementation discipline at the file level so the coding session knows where each gate fires.</p>
+
+  <h3>Module boundary (Stream H, ESLint <code>no-restricted-imports</code>)</h3>
+  <p>Files under <code>src/runtime/</code> may import only from <code>@/schema</code> and standard JavaScript built-ins. The skeleton's <code>eslint.config.js</code> wires the boundary; the CI typecheck + lint pass on every PR. Forbidden specifically: <code>@/persistence</code>, <code>@/ui</code>, <code>@/state</code>, <code>@/llm-hooks</code>, <code>@/modes</code>, <code>@/layout</code>, React, Dexie, Zustand, ELK, anything that reads the clock or DOM. The single permitted built-in that touches a non-deterministic surface is <code>node:crypto</code>'s <code>createHash</code> for SHA-256 of canonical strings (used in <code>output.ts</code>'s <code>branchIdFromConditions</code>); SHA-256 is a pure function.</p>
+
+  <h3>Sort before iterate (custom ESLint rule <code>argmap-determinism/no-unsorted-iteration</code>)</h3>
+  <p>Every <code>for (const x of set)</code> / <code>for (const k of map.keys())</code> / <code>for (const k in obj)</code> / <code>set.forEach(...)</code> / <code>map.entries()</code> in <code>src/runtime/</code> must go through <code>sortedIter</code>, <code>sortedKeys</code>, or <code>sortedEntries</code> from <code>iteration-helpers.ts</code>. The custom rule fires on the AST shapes the rule's documentation enumerates; the I.1 skeleton ships the rule and a self-test. Arrays whose order is already deterministic (e.g., <code>frame.nodes</code> sorted-by-id at construction time, <code>policy.all_of</code> as the policy's own ordered list) may be iterated directly.</p>
+
+  <h3>Frozen clock in tests (<code>vitest.config.ts</code>)</h3>
+  <p>Every test in <code>tests/runtime/</code> runs under <code>vi.useFakeTimers()</code> with the clock pinned to <code>2026-05-10T00:00:00Z</code> (the I.1 skeleton's default). Property tests (Vitest acceptance tests below) run each generated case twice with two different frozen times to surface incidental clock dependencies; both runs must produce byte-identical outputs.</p>
+
+  <h3>No clock reads in the body</h3>
+  <p>The runtime never calls <code>Date.now()</code>, <code>new Date()</code> with no arguments, <code>performance.now()</code>, or any equivalent. Timestamps come into the runtime via the <code>computed_at</code> input field; everywhere a NodeStatus, ConditionalOutput, or other shape requires an ISO-8601 string, the runtime threads <code>computed_at</code>. The ESLint <code>no-restricted-syntax</code> rule (added by the I.3 coding session as part of the runtime configuration block) flags any of these primitives in <code>src/runtime/</code> source. The custom rule needs one entry; the rule signature is documented in the skeleton's <code>eslint.config.js</code> comment block.</p>
+
+  <h3>No randomness, no environment branches</h3>
+  <p>The runtime never calls <code>Math.random()</code>, <code>crypto.getRandomValues</code>, <code>process.env</code> (Node), <code>import.meta.env</code> (Vite), <code>navigator.*</code>, or any other source of non-determinism. Branch ids derived in <code>output.ts</code> use SHA-256 of canonical input strings, never a random component.</p>
+
+  <h3>No LLM in the body</h3>
+  <p>Article II § 2 forbids LLM calls in the routing path. The runtime's import boundary makes this structurally impossible — <code>@/llm-hooks</code> is not importable. The G5 calibrated thresholds reach <code>compute</code> through <code>frame.llm_settings_snapshot.calibrated_thresholds</code> on the FrameVersion, which is a static projection populated at build time by the bake-and-commit hook flow. The G6 prose-rewrite override lives on <code>ArgumentSessionVersion.output_overrides</code> and is consulted only by Stream E's prose tab; <code>compute</code> never reads or writes it.</p>
+
+  <h2>F-001 wiring — calibrated thresholds in burden_met</h2>
+  <p>Per the F-001 register flag (resolved/APPROVED): G5 calibrates the burden thresholds at build time; the calibrated values are projected onto each FrameVersion as <code>llm_settings_snapshot.calibrated_thresholds: BurdenThresholdMap</code>. The runtime reads this projection from the FrameVersion snapshot it receives and uses the calibrated map in place of <code>DEFAULT_BURDEN_THRESHOLD</code> when present. The data flow:</p>
+
+  <ol>
+    <li><strong>Build time.</strong> The user invokes G5 in the Frame Builder editor; the hook calls the configured <code>LlmProvider</code>; the response (a <code>BurdenThresholdMap</code> with <code>source: "g5_calibrated"</code> and <code>calibrated_from</code> stamped) is reviewed by the user and committed via the three-button confirmation contract. The commit writes <code>frame.llm_settings.calibrated_thresholds</code>.</li>
+    <li><strong>Frame version save.</strong> When a new FrameVersion is saved (per Stream H autosave or milestone), the persistence layer projects <code>frame.llm_settings.calibrated_thresholds</code> onto the new FrameVersion's <code>llm_settings_snapshot.calibrated_thresholds</code>. This freezes the calibration for that version; later edits to <code>frame.llm_settings</code> do not retroactively change older versions.</li>
+    <li><strong>Compute.</strong> The runtime's <code>burden_met</code> condition reads <code>frame.llm_settings_snapshot?.calibrated_thresholds</code> and falls back to <code>DEFAULT_BURDEN_THRESHOLD</code> when absent. The choice is purely additive: legacy FrameVersions without the field resolve to default thresholds via the existing fallback.</li>
+  </ol>
+
+  <p>The runtime never invokes G5 or any other hook directly; the projection is the only contact point. The G5 wire-in is invisible to <code>compute</code>'s caller. Tests pin both branches: a frame fixture with <code>llm_settings_snapshot</code> populated produces a status map computed against the calibrated thresholds; the same fixture with the projection removed produces a status map computed against defaults; the difference is auditable in the snapshot test.</p>
+
+  <h2>F-002 NOT in the runtime</h2>
+  <p>Per the F-002 register flag (resolved/APPROVED with notes): G6's prose rewrite is a parallel field on <code>ArgumentSessionVersion.output_overrides</code>, never a replacement for <code>ConditionalOutput.prose_summary</code>. The runtime is unaware of <code>output_overrides</code>: <code>compute</code> does not read it; <code>renderProse</code> does not consult it; the canonical prose is the deterministic baseline. Stream E's prose tab reads both fields and presents the canonical prose as the primary surface with the rewritten prose clearly secondary and AI-attributed (per the F-002 NOTE in the original register flag). The runtime spec does not need to do anything for F-002; the boundary is upheld by the import direction (runtime never imports from <code>@/llm-hooks</code> or any module that touches <code>output_overrides</code>).</p>
+
+  <h2>Public surface — Contract 2 restated</h2>
+  <p>For convenience and to make the cross-module surface visible at a glance, Contract 2 from <code>stream_i_contracts_v1.html</code> is restated below with the schema-spec corrections from the cross-document resolution notes (NodeStatus and OpenGate live in <code>@/schema/session</code>, not <code>@/runtime</code>; the v1 NodeStatus uses <code>via</code> not <code>sub_flags</code>; <code>computed_at</code> is added to ComputeInput per this session's in-session-escalated flag).</p>
+
+<pre><code>// @/runtime
+import type {
+  FrameVersion, ArgumentSession, NodeRef, ConditionalOutput,
+  CheckpointResponse, InterpretationSelection, Premise, Edge, Authority,
+  ValidationResult, NodeStatus, OpenGate,
+} from "@/schema";
+
+export interface ComputeInput {
+  frame_version_snapshot: FrameVersion;
+  checkpoint_responses: ReadonlyArray&lt;CheckpointResponse&gt;;
+  interpretation_selections: ReadonlyArray&lt;InterpretationSelection&gt;;
+  premises: ReadonlyArray&lt;Premise&gt;;
+  argument_edges: ReadonlyArray&lt;Edge&gt;;
+  session_authorities: ReadonlyArray&lt;Authority&gt;;
+  computed_at: string;                          // ADDED relative to Contract 2 v1
+}
+
+export interface ComputeResult {
+  validation_results: ReadonlyArray&lt;ValidationResult&gt;;
+  foreclosed_set: ReadonlySet&lt;NodeRef&gt;;
+  reachable_set: ReadonlySet&lt;NodeRef&gt;;
+  active_set: ReadonlySet&lt;NodeRef&gt;;
+  status_map: ReadonlyMap&lt;NodeRef, NodeStatus&gt;;
+  active_path: ReadonlyArray&lt;NodeRef&gt;;
+  output: ConditionalOutput;
+  open_gates: ReadonlyArray&lt;OpenGate&gt;;
+}
+
+export function compute(input: ComputeInput): ComputeResult;
+export function compute(
+  frame_version: FrameVersion,
+  session: ArgumentSession,
+  computed_at?: string,
+): ComputeResult;
+
+// Iteration helpers re-exported for tests only.
+export { sortedIter, sortedKeys, sortedEntries, sortedBy } from "./iteration-helpers";
+
+// Public surface for the F5 wire-in session.
+export type { BindingResult, BindingSource, BindingCertainty } from "./authority-binding";
+</code></pre>
+
+  <p>The runtime never exposes mutable references. Callers receive <code>ReadonlySet</code> / <code>ReadonlyMap</code> / <code>ReadonlyArray</code> projections; mutating them is a programmer error and not contractually supported.</p>
+
+  <h2>Vitest acceptance tests</h2>
+  <p>The coding session implements-until-green against the tests below, organized under <code>tests/runtime/</code>. The I.1 skeleton already ships <code>tests/runtime/iteration-helpers.test.ts</code> covering the helpers' lexicographic-order guarantees; this section adds the rest. Tests use the schema-spec fixture interface (per <code>stream_i_schema_spec_v1.html</code>'s "Test fixtures"): <code>buildLegalFixture()</code>, <code>buildAcademicFixture()</code>, <code>buildPersonalFixture()</code>, each returning a <code>{ frame, session }</code> pair the coding session populates as needed. Frozen-clock setup is centralized in <code>tests/runtime/_setup.ts</code> (already shipped) and is the test file's first import.</p>
+
+  <h3><code>tests/runtime/compute.determinism.test.ts</code></h3>
+  <p>The keystone test. Covers Article II § 2's byte-identical guarantee. Three test groups:</p>
+
+<pre><code>// 1. Snapshot determinism: a curated fixture's compute output is pinned
+//    against an inline snapshot. Running the test on any machine, any
+//    Node version, any month, must produce the snapshot exactly.
+
+import { compute } from "@/runtime";
+import { buildLegalFixture } from "./_fixtures";
+
+describe("compute — snapshot determinism", () =&gt; {
+  it("legal-mode fixture: stable output across runs", () =&gt; {
+    const { frame, session } = buildLegalFixture("simple-2-step");
+    const result = compute({
+      frame_version_snapshot: frame,
+      checkpoint_responses: session.checkpoint_responses,
+      interpretation_selections: session.interpretation_selections,
+      premises: session.premises,
+      argument_edges: session.argument_edges,
+      session_authorities: session.session_authorities,
+      computed_at: "2026-05-10T00:00:00.000Z",
+    });
+    expect(serializeComputeResult(result)).toMatchInlineSnapshot(/* pinned */);
+  });
+
+  it("general-mode fixture: stable output across runs", () =&gt; {
+    const { frame, session } = buildAcademicFixture("dispute-with-branches");
+    const result = compute({ /* … */ computed_at: "2026-05-10T00:00:00.000Z" });
+    expect(serializeComputeResult(result)).toMatchInlineSnapshot(/* pinned */);
+  });
+});
+
+// 2. Property determinism: fast-check generates valid frame/session pairs;
+//    two compute() calls on structurally equal inputs produce structurally
+//    equal outputs. Order of arrays inside the input is permuted between
+//    the two calls to verify sort-before-iterate discipline.
+
+import fc from "fast-check";
+
+describe("compute — property determinism", () =&gt; {
+  it("two calls on structurally equal inputs produce equal outputs", () =&gt; {
+    fc.assert(fc.property(arbValidFrameAndSession(), ({ frame, session }) =&gt; {
+      const r1 = compute({ /* fields in declared order */, computed_at: "2026-05-10T00:00:00.000Z" });
+      const permuted = permuteInputArrays(frame, session);
+      const r2 = compute({ /* fields, but arrays permuted */, computed_at: "2026-05-10T00:00:00.000Z" });
+      expect(structuralEquals(r1, r2)).toBe(true);
+    }), { numRuns: 100 });
+  });
+});
+
+// 3. Frozen-clock independence: the same input computed at two pinned times
+//    differs ONLY in the evaluated_at / computed_at fields (which echo the
+//    input). Everything else byte-identical.
+
+describe("compute — frozen-clock independence", () =&gt; {
+  it("differs only in evaluated_at / computed_at fields", () =&gt; {
+    const { frame, session } = buildLegalFixture("simple-2-step");
+    const r1 = compute({ /* … */ computed_at: "2026-05-10T00:00:00.000Z" });
+    const r2 = compute({ /* … */ computed_at: "2026-12-31T23:59:59.000Z" });
+    const r1Normalized = stripTimestamps(r1);
+    const r2Normalized = stripTimestamps(r2);
+    expect(r1Normalized).toStrictEqual(r2Normalized);
+    // And the timestamps themselves echo the input:
+    for (const [, status] of r1.status_map) expect(status.evaluated_at).toBe("2026-05-10T00:00:00.000Z");
+    for (const [, status] of r2.status_map) expect(status.evaluated_at).toBe("2026-12-31T23:59:59.000Z");
+    expect(r1.output.computed_at).toBe("2026-05-10T00:00:00.000Z");
+    expect(r2.output.computed_at).toBe("2026-12-31T23:59:59.000Z");
+  });
+});
+</code></pre>
+
+  <p><code>serializeComputeResult</code>, <code>permuteInputArrays</code>, <code>structuralEquals</code>, and <code>stripTimestamps</code> are local test helpers; the coding session implements them as the tests are written. The <code>arbValidFrameAndSession</code> arbitrary is a fast-check generator — the coding session writes it to produce minimal-but-valid frames (root + one Term + one Interpretation + one Conclusion + one Checkpoint) with permuted input ordering. Generator complexity grows over time; v1 is a small generator covering structural soundness, not deep variation.</p>
+
+  <h3><code>tests/runtime/gates.test.ts</code></h3>
+  <p>Truth-table coverage for all five gate types. One <code>describe</code> per gate type; each enumerates the input-status combinations and asserts the gate result. Inputs are constructed as raw <code>NodeStatus</code> values in a fresh <code>status_map</code>; the gate itself is constructed inline per the schema spec's variant shapes (with named slots).</p>
+
+<pre><code>describe("evaluateGate — AndGate", () =&gt; {
+  // AND truth table over {satisfied, indeterminate} for 2-input gate.
+  // booleanizeStatus maps non-gate inputs to {satisfied, indeterminate} only;
+  // there is no "not_satisfied" projection in v1 except via gate marker.
+  it("all satisfied → satisfied", () =&gt; {
+    const gate: AndGate = { /* … */ inputs: ["n1", "n2"] };
+    const sm = mapOf({ n1: satisfiedStatus(), n2: satisfiedStatus() });
+    expect(evaluateGate(gate, sm)).toBe("satisfied");
+  });
+  it("one indeterminate → indeterminate", () =&gt; { /* … */ });
+  it("all indeterminate → indeterminate", () =&gt; { /* … */ });
+  it("input is a not_satisfied gate (marker present) → also indeterminate in v1", () =&gt; {
+    // booleanizeStatus collapses; AND v1 has no direct not_satisfied output.
+    // This test pins the conservative behavior; revisit if Stream C revises.
+  });
+});
+
+describe("evaluateGate — OrGate", () =&gt; { /* analogous coverage */ });
+describe("evaluateGate — NotGate", () =&gt; {
+  it("input satisfied → not_satisfied", () =&gt; { /* … */ });
+  it("input not_satisfied-via-marker → satisfied", () =&gt; { /* … */ });
+  it("input indeterminate → indeterminate", () =&gt; { /* … */ });
+});
+describe("evaluateGate — IfThenGate", () =&gt; {
+  it("antecedent satisfied, consequent satisfied → satisfied", () =&gt; { /* … */ });
+  it("antecedent satisfied, consequent not_satisfied-marker → not_satisfied", () =&gt; { /* … */ });
+  it("antecedent satisfied, consequent indeterminate → indeterminate", () =&gt; { /* … */ });
+  it("antecedent not_satisfied-marker → satisfied (vacuous)", () =&gt; { /* … */ });
+  it("antecedent indeterminate → indeterminate", () =&gt; { /* … */ });
+});
+describe("evaluateGate — UnlessGate", () =&gt; {
+  it("main satisfied, exception not_satisfied-marker → satisfied", () =&gt; { /* … */ });
+  it("main satisfied, exception satisfied → not_satisfied", () =&gt; { /* … */ });
+  it("main satisfied, exception indeterminate → indeterminate", () =&gt; { /* … */ });
+  it("main indeterminate → indeterminate", () =&gt; { /* … */ });
+  it("main not_satisfied-marker → not_satisfied", () =&gt; { /* … */ });
+});
+
+describe("booleanizeStatus", () =&gt; {
+  it.each([
+    ["satisfied", "satisfied"],
+    ["foreclosed (decided via via:structural_resolution)", "satisfied"],
+    ["foreclosed (moot)", "indeterminate"],
+    ["not_applicable", "indeterminate"],
+    ["open", "indeterminate"],
+    ["contested", "indeterminate"],
+    ["undefined input", "indeterminate"],
+  ])("maps %s → %s", (label, expected) =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/runtime/conditions.test.ts</code></h3>
+  <p>One <code>describe</code> per condition kind; for each, a small fixture exercises the pass and fail paths. <code>burden_met</code> gets dedicated coverage including the F-001 calibrated-thresholds branch:</p>
+
+<pre><code>describe("evaluateCondition — burden_met", () =&gt; {
+  it("preponderance threshold: defaults vs G5-calibrated", () =&gt; {
+    const { frame, session } = buildLegalFixture("preponderance-edge-case");
+    // Construct two premises whose weighted sum lands between the default
+    // threshold (50) and a hypothetical calibrated threshold (60). With
+    // defaults, burden_met passes; with calibration, it fails.
+    const defaultResult = evaluateCondition(
+      burdenCondition("preponderance"),
+      checkpointNode,
+      frame,                                  // no llm_settings_snapshot
+      session,
+      emptyStatusMap,
+    );
+    expect(defaultResult.passed).toBe(true);
+
+    const calibratedFrame = {
+      ...frame,
+      llm_settings_snapshot: {
+        calibrated_thresholds: {
+          scintilla: 25, preponderance: 60, substantial_evidence: 70,
+          clear_and_convincing: 85, beyond_reasonable_doubt: 95,
+        },
+      },
+    };
+    const calibratedResult = evaluateCondition(
+      burdenCondition("preponderance"),
+      checkpointNode,
+      calibratedFrame,
+      session,
+      emptyStatusMap,
+    );
+    expect(calibratedResult.passed).toBe(false);
+  });
+
+  it("kind-weight tables: legal mode vs academic mode", () =&gt; { /* … */ });
+  it("edge weight multiplier: strong vs weak", () =&gt; { /* … */ });
+  it("contradicting premises subtract from score", () =&gt; { /* … */ });
+  it("stipulated premise adds 'stipulation' via label", () =&gt; { /* … */ });
+});
+
+describe("evaluateCondition — premise_attached", () =&gt; { /* … */ });
+describe("evaluateCondition — interpretation_selected", () =&gt; { /* … */ });
+describe("evaluateCondition — all_children_resolved", () =&gt; {
+  it("foreclosed children do not block parent satisfaction", () =&gt; { /* … */ });
+  it("collects via labels from satisfied children", () =&gt; { /* … */ });
+});
+describe("evaluateCondition — path_complete", () =&gt; { /* … */ });
+describe("evaluateCondition — not_contradicted", () =&gt; { /* … */ });
+describe("evaluateCondition — premise_kind_in", () =&gt; { /* … */ });
+describe("evaluateCondition — authority_required", () =&gt; { /* … */ });
+describe("evaluateCondition — authority_binding", () =&gt; { /* … */ });
+describe("evaluateCondition — not_distinguished", () =&gt; { /* … */ });
+describe("evaluateCondition — standard_of_review_applied", () =&gt; { /* … */ });
+describe("evaluateCondition — not_foreclosed", () =&gt; { /* always-pass-when-reached */ });
+
+describe("evaluatePolicy", () =&gt; {
+  it("all_of: all pass → policy passes; failed array empty", () =&gt; { /* … */ });
+  it("all_of: one fails → policy fails; failed lists the kind", () =&gt; { /* … */ });
+  it("any_of: at least one passes → policy passes", () =&gt; { /* … */ });
+  it("any_of: none pass → failed contains 'any_of_group_unsatisfied'", () =&gt; { /* … */ });
+  it("via labels are sorted and deduplicated", () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/runtime/foreclosure.test.ts</code></h3>
+
+<pre><code>describe("resolveForeclosure", () =&gt; {
+  it("explicit FORECLOSES edges from selected Interpretations", () =&gt; { /* … */ });
+  it("dispositive Term auto-foreclosure: first dispositive wins, siblings foreclosed", () =&gt; { /* … */ });
+  it("dispositive Term auto-foreclosure: later dispositive Term also foreclosed", () =&gt; { /* … */ });
+  it("dispositive Term tied on order: lexicographic id tiebreaker", () =&gt; { /* … */ });
+  it("no winner among dispositive Terms → no auto-foreclosure", () =&gt; { /* … */ });
+  it("cascade: downstream of directly-foreclosed node is foreclosed", () =&gt; { /* … */ });
+  it("cascade: node reachable via live ancestor is NOT foreclosed", () =&gt; { /* … */ });
+  it("annotation edges (CITES, DISTINGUISHED_BY) do not propagate cascade", () =&gt; { /* … */ });
+});
+
+describe("foreclosureScopeFor", () =&gt; {
+  it("explicit FORECLOSES with scope:decided → 'decided'", () =&gt; { /* … */ });
+  it("explicit FORECLOSES with scope:moot → 'moot'", () =&gt; { /* … */ });
+  it("dispositive auto-foreclosure (no edge) → 'moot' by default", () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/runtime/reachable-active.test.ts</code></h3>
+
+<pre><code>describe("computeReachableSet", () =&gt; {
+  it("excludes foreclosed nodes", () =&gt; { /* … */ });
+  it("includes nodes reachable along STRUCTURAL_EDGE_TYPES only", () =&gt; { /* … */ });
+  it("excludes nodes only reachable via annotation edges (CITES, etc.)", () =&gt; { /* … */ });
+});
+
+describe("computeActiveSet", () =&gt; {
+  it("Term: only follows INTERPRETED_AS to selected interpretations", () =&gt; { /* … */ });
+  it("Term: multiple selected interpretations → all followed (alternative paths)", () =&gt; { /* … */ });
+  it("Checkpoint: only follows OPTION_LEADS_TO matching the response", () =&gt; { /* … */ });
+  it("Checkpoint with no response → no outgoing followed", () =&gt; { /* … */ });
+  it("LogicalGate: only follows GATES when gate evaluates satisfied", () =&gt; { /* … */ });
+  it("LogicalGate indeterminate (first pass, empty status_map) → no routing", () =&gt; {
+    // Documents the two-pass behavior; first pass produces a lower-bound
+    // active set when gates depend on yet-uncomputed status.
+  });
+  it("LogicalGate satisfied (second pass) → routes to GATES target", () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/runtime/status.test.ts</code></h3>
+
+<pre><code>describe("computeStatusMap", () =&gt; {
+  it("Premise and Authority receive no status (map omits them)", () =&gt; { /* … */ });
+  it("foreclosed with scope:moot → status:foreclosed", () =&gt; { /* … */ });
+  it("foreclosed with scope:decided → status:satisfied via 'structural_resolution'", () =&gt; { /* … */ });
+  it("not in active set → status:not_applicable", () =&gt; { /* … */ });
+  it("LogicalGate satisfied → status:satisfied", () =&gt; { /* … */ });
+  it("LogicalGate not_satisfied → status:open with GATE_NOT_SATISFIED_MARKER", () =&gt; { /* … */ });
+  it("LogicalGate indeterminate → status:open with 'inputs_indeterminate'", () =&gt; { /* … */ });
+  it("Checkpoint contested → status:contested with 'contradicting_premises'", () =&gt; { /* … */ });
+  it("policy pass → status:satisfied with collected via labels", () =&gt; { /* … */ });
+  it("policy fail → status:open with failed_conditions kinds", () =&gt; { /* … */ });
+  it("every NodeStatus carries evaluated_at === input computed_at", () =&gt; { /* … */ });
+  it("reverse-topological iteration: dependent gates see input statuses", () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/runtime/output.test.ts</code></h3>
+
+<pre><code>describe("generateOutput — shape determination", () =&gt; {
+  it("any error validation_result → shape:incomplete", () =&gt; { /* … */ });
+  it("no reachable Conclusion → shape:incomplete", () =&gt; { /* … */ });
+  it("contested Checkpoint on path → shape:contested", () =&gt; { /* … */ });
+  it("unresolved branch point with divergent Conclusions → shape:conditional", () =&gt; { /* … */ });
+  it("single fully-satisfied path → shape:determinate", () =&gt; { /* … */ });
+  it("errors + contested → incomplete wins (precedence)", () =&gt; { /* … */ });
+  it("contested + conditional → contested wins (precedence)", () =&gt; { /* … */ });
+});
+
+describe("traceActivePath — primary-path tiebreaker", () =&gt; {
+  it("longest fully-satisfied path wins", () =&gt; { /* … */ });
+  it("tied length: more binding_authority via labels wins", () =&gt; { /* … */ });
+  it("tied length + tied authority: lexicographic Conclusion id wins", () =&gt; { /* … */ });
+});
+
+describe("generateOutput — branches", () =&gt; {
+  it("unresolved contested Checkpoint emits one branch per option", () =&gt; { /* … */ });
+  it("indeterminate IF_THEN gate: antecedent-satisfied vs antecedent-not branches", () =&gt; { /* … */ });
+  it("indeterminate UNLESS gate: exception-satisfied vs exception-not branches", () =&gt; { /* … */ });
+  it("convergent branches merged (same Conclusion via different routes)", () =&gt; { /* … */ });
+  it("branch ids are deterministic across runs (SHA-256 derivation)", () =&gt; { /* … */ });
+});
+
+describe("generateOutput — open_gates", () =&gt; {
+  it("Term with no selection → reason:structural", () =&gt; { /* … */ });
+  it("Checkpoint with no ANSWERS → reason:no_premise", () =&gt; { /* … */ });
+  it("Checkpoint with burden unmet → reason:burden_unmet", () =&gt; { /* … */ });
+  it("Checkpoint with authority missing → reason:authority_missing", () =&gt; { /* … */ });
+  it("open_gates sorted by node_id", () =&gt; { /* … */ });
+});
+
+describe("renderProse — deterministic format", () =&gt; {
+  it("determinate output: pinned prose snapshot", () =&gt; { /* … */ });
+  it("conditional output: pinned prose snapshot", () =&gt; { /* … */ });
+  it("contested output: pinned prose snapshot", () =&gt; { /* … */ });
+  it("incomplete output: pinned prose snapshot", () =&gt; { /* … */ });
+  it("never includes wall-clock date or frame title", () =&gt; { /* … */ });
+  it("node short forms truncated at 80 chars with ellipsis", () =&gt; { /* … */ });
+});
+
+describe("computeConfidenceBreakdown", () =&gt; {
+  it("total_checkpoints_on_path counts only Checkpoint nodes on path", () =&gt; { /* … */ });
+  it("satisfied_via_binding counts Checkpoints with binding_authority via label", () =&gt; { /* … */ });
+  it("satisfied with no via labels falls into satisfied_via_persuasive", () =&gt; { /* … */ });
+  it("via-label precedence: binding > persuasive > stipulation > structural", () =&gt; { /* … */ });
+  it("contested and open counts are integer counts of those statuses", () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/runtime/authority-binding.test.ts</code></h3>
+
+<pre><code>describe("isBinding — resolution order", () =&gt; {
+  it("manual_override true → binding:true, source:'manual_override', certainty:'exact'", () =&gt; { /* … */ });
+  it("manual_override false → binding:false, source:'manual_override', certainty:'exact'", () =&gt; { /* … */ });
+  it("manual_override unset, F5 unavailable → string_match fallback", () =&gt; { /* … */ });
+  it("U.S. Supreme Court special case → binding:true, source:'string_match', certainty:'heuristic'", () =&gt; { /* … */ });
+  it("same-circuit federal match → binding:true, source:'string_match'", () =&gt; { /* … */ });
+  it("same level + same region → binding:true", () =&gt; { /* … */ });
+  it("different region → binding:false, source:'string_match'", () =&gt; { /* … */ });
+  it("authority has no jurisdiction → binding:false, source:'no_jurisdiction', certainty:'exact'", () =&gt; { /* … */ });
+  it("target has no jurisdiction → binding:false, source:'no_jurisdiction'", () =&gt; { /* … */ });
+});
+
+describe("isBinding — purity", () =&gt; {
+  it("identical inputs produce identical outputs across 1000 runs", () =&gt; { /* … */ });
+  it("never throws (total function)", () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/runtime/f5-stub.test.ts</code></h3>
+
+<pre><code>describe("F5 stub (v1)", () =&gt; {
+  it("F5_AVAILABLE is false", () =&gt; {
+    expect(F5_AVAILABLE).toBe(false);
+  });
+  it("queryF5Binding returns undefined for any input", () =&gt; {
+    expect(queryF5Binding("any-id", "any-other-id")).toBeUndefined();
+  });
+});
+</code></pre>
+
+  <h3>Test fixtures (<code>tests/runtime/_fixtures.ts</code>)</h3>
+  <p>Shared with <code>tests/schema/</code> per the schema spec's fixture interface. The coding session implements the named builders incrementally as tests require them; the initial set is the minimum to make the determinism keystone tests run:</p>
+  <ul>
+    <li><code>buildLegalFixture("simple-2-step")</code> — RootQuestion → Term → Interpretation → Checkpoint → Conclusion; one Premise, one Authority, fully satisfied.</li>
+    <li><code>buildLegalFixture("preponderance-edge-case")</code> — engineered to land between default and calibrated burden thresholds for the F-001 test.</li>
+    <li><code>buildAcademicFixture("dispute-with-branches")</code> — academic mode, two competing Interpretations, divergent Conclusions, conditional shape.</li>
+    <li><code>buildPersonalFixture("trivial")</code> — minimal personal-mode frame; smoke test for mode-table dispatch.</li>
+  </ul>
+
+  <h2>Self-review (Article VIII § 4)</h2>
+
+  <h3>Architectural commitments (Article II §§ 1–6)</h3>
+  <ul>
+    <li><strong>§ 1 (frame-vs-session separation).</strong> The spec keeps <code>FrameVersion</code> and <code>ArgumentSession</code> distinct at every signature; <code>compute</code> takes both. No file conflates them. ✓</li>
+    <li><strong>§ 2 (deterministic runtime).</strong> Module boundary, sort-before-iterate, frozen-clock tests, no-clock-reads, no-randomness, no-LLM are all itemized in the determinism section above with the specific gates that enforce each. The <code>computed_at</code> threading replaces the only would-be clock-read site (NodeStatus.evaluated_at). ✓</li>
+    <li><strong>§ 3 (policy-driven satisfaction).</strong> The 12-condition library is implemented in <code>conditions.ts</code>; <code>evaluatePolicy</code> walks <code>all_of</code> + at-most-one <code>any_of</code> group with no nesting; per-node-type override resolves through <code>@/schema</code>'s <code>resolveEffectivePolicy</code>. ✓</li>
+    <li><strong>§ 4 (versioning).</strong> The runtime never persists; it reads the <code>FrameVersion</code> snapshot the orchestrator hands it. Version-aware fields (e.g., <code>llm_settings_snapshot</code>) are read from the snapshot, not the live entity. ✓</li>
+    <li><strong>§ 5 (LLM as parametric augmentation).</strong> The runtime never invokes an LLM. F-001 calibration flows in as projected static data; F-002 prose-rewrite lives outside the runtime entirely. ✓</li>
+    <li><strong>§ 6 (mode-as-data).</strong> Mode discrimination happens at the data layer (<code>frame.mode</code>, <code>frame.flavor</code>); the runtime branches on mode only for kind-weight table selection in <code>burden_met</code> (a pure dispatch). No mode-specific code paths in the pipeline. ✓</li>
+  </ul>
+
+  <h3>Quality criteria (Article III §§ 1–6)</h3>
+  <ul>
+    <li><strong>§ 1 (testability).</strong> Vitest acceptance tests cover every phase, every gate type, every condition, the C6 resolution order, the determinism keystone, and frozen-clock independence. ✓</li>
+    <li><strong>§ 2 (auditability).</strong> Every status carries <code>evaluated_at</code> + <code>failed_conditions</code> + <code>via</code>; every output carries <code>active_path</code> + <code>open_gates</code> + <code>confidence_breakdown</code>; every binding determination carries <code>source</code> + <code>certainty</code>. ✓</li>
+    <li><strong>§ 3 (clarity over cleverness).</strong> The two-pass active-set computation is plainly described in prose with the rationale for not using an iterative fixpoint; the gate evaluator's named-slot variant code is straightforward switch-with-narrowing; the prose renderer is a fixed template, not a templating engine. ✓</li>
+    <li><strong>§ 4 (failure visibility).</strong> Defensive structural errors (<code>RuntimeStructuralError</code>) surface as <code>ValidationResult</code> entries with rule ids; the orchestrator never silently swallows. ✓</li>
+    <li><strong>§ 5 (graceful degradation).</strong> Missing fields fall back to defaults (calibrated thresholds → default thresholds; no <code>standard_of_review</code> on Conclusion → ascend to nearest ancestor); empty inputs produce <code>incomplete</code> output rather than throwing; F5 absence falls through to string-match. ✓</li>
+    <li><strong>§ 6 (incremental delivery).</strong> The F5 stub structure lets the runtime ship today and gain F5 capability later with no signature changes. The two-pass active-set arrangement leaves room for an incremental cache layer later. ✓</li>
+  </ul>
+
+  <h3>In-session flags escalated to register</h3>
+  <p>One flag escalated. Numbering will be assigned against the live register at Persistence; the rationale and constitutional grounding are stated here so the register entry can be terse.</p>
+
+  <p><strong>Flag (this session, runtime-spec).</strong> Contract 2 (in <code>stream_i_contracts_v1.html</code>) does not specify how the runtime supplies <code>NodeStatus.evaluated_at</code> (required string field per the schema spec). The constitutionally clean resolution is to add a required <code>computed_at: string</code> field to <code>ComputeInput</code>: the orchestrator threads it into every <code>NodeStatus.evaluated_at</code> and the top-level <code>ConditionalOutput.computed_at</code>, and the runtime never reads the wall clock. Constitutional grounding: Article II § 2 forbids clock reads in the runtime; the alternatives — making <code>evaluated_at</code> optional (a schema change) or having the runtime read the wall clock (a § 2 violation) — are both worse. This flag is in the same family as F-003 (additive correction to a paraphrased shape in the contracts doc that the canonical schema and runtime specs need to handle differently). The schema spec is unchanged; this spec is the new canonical shape; the contracts doc gets the additive bump at a future I.1 review. Status: APPROVED-IN-SPEC, pending register entry at Persistence. Severity: medium (additive, no breaking change to existing callers since I.3 is the first session to commit <code>ComputeInput</code>'s field set).</p>
+
+  <p><strong>Cross-document resolution items (not escalated — applied silently as schema-spec-canonical).</strong></p>
+  <ul>
+    <li>NodeStatus and OpenGate are imported from <code>@/schema</code>, not exported by <code>@/runtime</code>. The contracts doc's exports list is corrected per the existing F-003 flag; no new register entry.</li>
+    <li>NodeStatus uses <code>via: ConditionViaLabel[]</code>, not <code>sub_flags: string[]</code>. Schema-spec canonical; F-003 covers.</li>
+    <li>SatisfactionPolicy uses <code>all_of</code> / <code>any_of</code>, not <code>conditions</code>. Schema-spec canonical; F-003 covers.</li>
+    <li>OptionsBox uses <code>kinds: string[]</code> on <code>premise_kind_in</code>, not <code>allowed_kinds</code>. Schema-spec canonical; F-003 covers.</li>
+    <li>LogicalGate variants use named slots (<code>inputs</code> / <code>input</code> / <code>antecedent</code>+<code>consequent</code> / <code>main</code>+<code>exception</code>), not uniform <code>inputs[]</code>. Schema-spec canonical; F-003 covers.</li>
+  </ul>
+
+  <h3>Article V § 3 escalation recheck</h3>
+  <p>Reviewed each escalation trigger:</p>
+  <ol>
+    <li><strong>New architectural commitment outside Article II?</strong> No. Every commitment in this spec is a refinement of an existing Article II § 1–6 commitment.</li>
+    <li><strong>Cross-stream conflict?</strong> No. The cross-document resolutions are absorbed under F-003; the <code>computed_at</code> addition is a contained additive correction.</li>
+    <li><strong>Constitutional ambiguity?</strong> No. Article II § 2's "no clock reads in the runtime" rule clearly motivates the <code>computed_at</code> design; no clarification needed.</li>
+    <li><strong>Decision Zach would want to be aware of (conceptual, not technical)?</strong> No. <code>computed_at</code> is a wiring detail invisible to the user; default-vs-calibrated thresholds are an F-001-resolved data flow.</li>
+  </ol>
+  <p>No Zach-escalation triggers fire. Self-review concludes with the runtime spec ready for Persistence.</p>
+</div>

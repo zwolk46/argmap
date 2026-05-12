@@ -1,0 +1,1311 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 22px 0 6px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+<div class="doc">
+  <h1>stream_i_layout_spec_v1.html</h1>
+  <p class="subtitle">Per-module spec for <code>src/layout/</code> &nbsp;·&nbsp; Stream I session I.7 &nbsp;·&nbsp; May 11, 2026</p>
+
+  <div class="notice">
+    <p>This document is the implementation source of truth for <code>src/layout/</code>. It commits per-file TypeScript signatures and the concrete behavioral bodies of: the pure mapping from <code>FrameVersion</code> to an ELK layered-graph input (anchor handling, collapsed-subtree exclusion, per-node-type default dimensions, sorted iteration), the pure mapping from ELK's result back to the cross-module <code>LayoutResult</code> shape, the per-node-type dimensions table, the ELK algorithm-parameter constants (Sugiyama top-down with orthogonal routing), the Web Worker entry point (<code>elk-worker.ts</code>), the main-thread bridge that owns Worker lifecycle and exposes the public <code>layout()</code> function (<code>elk-bridge.ts</code>), and the test seam (<code>runLayoutSync</code>) that lets Vitest exercise the same logic without a Worker. The cross-module surface (what other modules import from <code>@/layout</code>) is pinned in <code>stream_i_contracts_v1.html</code> Contract 5; this spec refines that contract's <code>layout()</code> signature by adding an optional <code>deps</code> parameter for clock injection (logged as a single in-session-escalated flag in the F-003 family).</p>
+    <p style="margin-top:6px;">The layout module sits outside the runtime determinism boundary (Article II § 2 binds the runtime, not the layout module). <code>src/layout/</code> may read the clock for the <code>computed_at</code> field on <code>LayoutResult</code> and may use elkjs's internal Promise scheduling. What it must not do is leak any of those non-determinism sources <em>into</em> the runtime: the layout module is never imported by <code>@/runtime</code> (ESLint <code>no-restricted-imports</code> rule from the I.1 skeleton already pins this). The layout module imports only <code>@/schema</code> from the application codebase and <code>elkjs</code> as its sole third-party dependency. The implementing agent gives the module a clean test seam (the synchronous-in-spirit <code>runLayoutSync</code> helper, which is itself async only because elkjs is) so Vitest can exercise the full mapping logic without instantiating a Web Worker.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>The coding session implementing <code>src/layout/</code> reads, in order: Constitution and Protocol, <code>current_state.html</code>, <code>stream_i_buildkit_index_v1.html</code>, <code>stream_i_contracts_v1.html</code> Contract 5 (the layout cross-module surface) plus Contract 1 (the schema types this module consumes), <code>src/schema/README.md</code> (the cross-session compression artifact written by the I.2 coding session), and this document. No prior stream documents (A–H) are read; the consolidated state in <code>current_state.html</code> plus this per-module spec is the design surface for the layout module. Implement-until-green against the Vitest tests at the end of this document; write <code>src/layout/README.md</code> as the cross-session compression artifact for downstream sessions — most importantly <code>@/ui</code> (which calls <code>layout()</code> on frame open and after structural edits to feed React Flow's node positions).</p>
+
+  <h2>Module file map</h2>
+  <p>Seven files under <code>src/layout/</code>. Each is small and single-purpose; the public surface is the seven re-exports from <code>index.ts</code>. The split between <em>pure mapping</em> (<code>types.ts</code>, <code>dimensions.ts</code>, <code>elk-options.ts</code>, <code>elk-mapping.ts</code>), <em>core executor</em> (<code>run.ts</code>), and <em>I/O boundary</em> (<code>elk-worker.ts</code>, <code>elk-bridge.ts</code>) is the architectural spine: tests exercise the pure mapping and the core executor directly without crossing the Worker boundary; production routes through the bridge for off-main-thread layout on large frames.</p>
+  <table>
+    <tr><th>File</th><th>Purpose</th><th>Public exports</th></tr>
+    <tr><td><code>types.ts</code></td><td>The cross-module shapes <code>LayoutPosition</code>, <code>LayoutResult</code>, <code>LayoutOptions</code> from Contract 5, plus the internal <code>LayoutDeps</code> and <code>DEFAULT_LAYOUT_OPTIONS</code> constant.</td><td><code>LayoutPosition</code>, <code>LayoutResult</code>, <code>LayoutOptions</code>, <code>LayoutDeps</code>, <code>DEFAULT_LAYOUT_OPTIONS</code></td></tr>
+    <tr><td><code>dimensions.ts</code></td><td>Per-<code>NodeType</code> default box dimensions (width × height in layout units) keyed to the Stream E E1 shape table. The single source of truth for layout-time node sizing; the UI's React Flow node components consume the same constants to keep canvas geometry and layout geometry consistent.</td><td><code>NODE_DIMENSIONS</code>, <code>type NodeDimension</code>, <code>dimensionsFor(node_type)</code></td></tr>
+    <tr><td><code>elk-options.ts</code></td><td>The ELK algorithm-parameter constants. Commits the layered (Sugiyama) algorithm, the direction mapping (<code>"DOWN"</code> → <code>elk.direction = "DOWN"</code>, <code>"RIGHT"</code> → <code>"RIGHT"</code>), edge routing (<code>ORTHOGONAL</code>), node spacing, layer spacing, and the "consider model order" hint that anchors deterministic-tie-breaking when ELK's heuristics produce ties.</td><td><code>ELK_LAYERED_OPTIONS</code>, <code>elkDirectionOptions(direction)</code></td></tr>
+    <tr><td><code>elk-mapping.ts</code></td><td>The two pure transforms: <code>frameToElkGraph(frame, opts)</code> builds the ELK input JSON from a <code>FrameVersion</code> (excluding hidden descendants of collapsed SubQuestions when <code>opts.collapse_subquestions</code> is true; marking anchored nodes as fixed when <code>opts.honor_user_anchors</code> is true); <code>elkResultToLayoutResult(result, computed_at)</code> extracts the per-node positions and the overall width/height. Both are pure synchronous functions over sorted entity collections; they take and produce JSON-serializable values so the Worker boundary marshals them without custom serializers.</td><td><code>frameToElkGraph</code>, <code>elkResultToLayoutResult</code>, <code>type ElkGraph</code>, <code>type ElkResult</code></td></tr>
+    <tr><td><code>run.ts</code></td><td>The core executor: <code>runLayoutSync(frame, opts, deps)</code> wires <code>frameToElkGraph</code> → <code>new ELK().layout(graph, layoutOptions)</code> → <code>elkResultToLayoutResult</code>. Async because elkjs itself returns a Promise; otherwise synchronous-in-spirit (no clock reads inside the pipeline; <code>computed_at</code> is supplied by <code>deps.now()</code>). The Worker entry point and the bridge fallback both call this function; tests call it directly.</td><td><code>runLayoutSync</code></td></tr>
+    <tr><td><code>elk-worker.ts</code></td><td>The Web Worker entry point. Imports <code>runLayoutSync</code>. Listens on <code>self.onmessage</code>; for each request, calls <code>runLayoutSync</code> and posts back the result or an error. Owns no state; one Worker can service many sequential requests. Bundled by Vite per the <code>new Worker(new URL("./elk-worker.ts", import.meta.url), { type: "module" })</code> idiom.</td><td>(no named exports — entry point only)</td></tr>
+    <tr><td><code>elk-bridge.ts</code></td><td>The main-thread bridge. Lazy-constructs a single Worker on first call; routes each <code>layout()</code> invocation through a request-id keyed in-flight map; surfaces the Worker's posted result as a resolved Promise. Falls back to <code>runLayoutSync</code> on the main thread when <code>typeof Worker === "undefined"</code> (Vitest in node, or browsers without Worker support). Owns Worker termination on <code>terminate()</code>. This file exports the public <code>layout()</code> function the rest of the app sees.</td><td><code>layout</code>, <code>terminate</code> (test-only)</td></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel. Re-exports the public surface above.</td><td>Re-exports above</td></tr>
+  </table>
+
+  <p>Conventions throughout: every walk over <code>frame.nodes</code> or <code>frame.edges</code> sorts by lexicographic <code>id</code> first; the ELK input is constructed in sorted order so the Worker receives byte-identical input on byte-identical frames; <code>elkResultToLayoutResult</code> emits <code>positions[]</code> sorted by <code>node_id</code> for the same reason. The ESLint <code>no-unsorted-iteration</code> rule (currently scoped to <code>src/runtime/</code> per the I.1 skeleton) does not apply to <code>src/layout/</code> — layout is off the determinism boundary — but the spec recommends the rule be widened to <code>src/layout/</code> as well, on the same housekeeping grounds I.6 raised for <code>src/modes/</code>. Logged below as a recommendation, not a flag.</p>
+
+  <h2>Cross-document resolution notes (for self-review)</h2>
+  <p>While compiling this spec from <code>stream_i_contracts_v1.html</code> Contract 5, the Stream E E1 design source, and the persistence spec's clock-injection pattern, one precision item arose. It is resolved by this spec in the constitutionally clean direction. It joins the F-003 family (the same family as the I.3, I.4, I.5, and I.6 pending items) and is logged as a single in-session-escalated flag for a future I.1 review session to merge into a contracts-doc bump. Downstream coding is not gated on the merge; this spec is canonical for the layout module per Stream I conventions.</p>
+  <ol>
+    <li><strong><code>layout()</code> accepts an optional <code>deps</code> parameter for clock injection.</strong> Contract 5's <code>layout(frame: FrameVersion, opts?: Partial&lt;LayoutOptions&gt;): Promise&lt;LayoutResult&gt;</code> signature does not provide a way to inject <code>now()</code>. The <code>LayoutResult.computed_at</code> field that the same contract pins requires a clock read at some point. Two constitutional facts make a third parameter the cleanest resolution. <em>(a)</em> Layout is off the determinism boundary (Article II § 2 binds the runtime); the wall-clock read for <code>computed_at</code> is fine in production. <em>(b)</em> But Vitest tests want deterministic outputs (the persistence spec, the runtime spec, the modes spec, and the state spec all follow the same pattern: optional <code>deps</code> with a frozen-clock default in tests). The constitutionally clean resolution is for <code>layout()</code> to accept an optional third parameter <code>deps?: LayoutDeps</code> where <code>LayoutDeps = { now?: () =&gt; string }</code> defaults to wall-clock time. The signature becomes <code>layout(frame: FrameVersion, opts?: Partial&lt;LayoutOptions&gt;, deps?: LayoutDeps): Promise&lt;LayoutResult&gt;</code>; production callers omit <code>deps</code>; tests pass a frozen-clock stub. Identical to the <code>LayoutDeps</code> shape <code>runLayoutSync</code> takes internally — the bridge constructs <code>LayoutDeps</code> from its own arguments and threads it through. The dependency graph in Contract 5 is unchanged (layout still imports only <code>@/schema</code>).</li>
+  </ol>
+  <p>The Article V § 3 trigger-recheck for this refinement is in the self-review at the end of this document.</p>
+
+  <h2>Determinism inside the layout module (practical, not constitutional)</h2>
+  <p>Layout is off the Article II § 2 boundary, but the spec commits a practical determinism property anyway: <strong>given identical <code>FrameVersion</code> + identical <code>LayoutOptions</code> + identical <code>deps.now()</code>, two invocations of <code>layout()</code> produce identical <code>LayoutResult</code></strong>. This is not a constitutional guarantee — elkjs may produce non-identical results across versions, and a layout-engine swap is permitted — but it is a useful production property and a hard requirement for the Vitest snapshot tests below. The four mechanisms that make it hold:</p>
+  <ol>
+    <li><strong>Sorted input.</strong> <code>frameToElkGraph</code> sorts <code>frame.nodes</code> by <code>id</code> and <code>frame.edges</code> by <code>id</code> before building the ELK input. ELK's layered algorithm uses input order as a tiebreaker in two places (rank assignment ties and intra-rank ordering ties); sorted input pins these.</li>
+    <li><strong>Model-order tiebreaker.</strong> The <code>org.eclipse.elk.layered.considerModelOrder.strategy</code> option is set to <code>NODES_AND_EDGES</code> in <code>ELK_LAYERED_OPTIONS</code>, telling ELK to respect input order as the primary intra-rank ordering criterion when the crossing-minimization heuristic produces ties.</li>
+    <li><strong>Deterministic ELK algorithm.</strong> The <code>layered</code> algorithm in elkjs is deterministic given identical input and options. The <code>random</code> algorithm (which uses a seeded RNG) is not used.</li>
+    <li><strong>Injected clock.</strong> <code>deps.now()</code> is the only non-determinism source in the module; tests inject a frozen-clock stub.</li>
+  </ol>
+  <p>If a future elkjs release breaks property 3, the spec's Vitest snapshot tests will fail in CI before the version reaches production; the implementing agent investigates and either pins the prior elkjs version or updates snapshots. The cross-module contract (<code>LayoutResult</code> shape) is unaffected.</p>
+
+  <div class="file-header">// src/layout/types.ts</div>
+  <p>The cross-module shapes from Contract 5, plus the internal <code>LayoutDeps</code> shape introduced by the F-003-family refinement above and the <code>DEFAULT_LAYOUT_OPTIONS</code> constant. All five exports are values or types only — no behavior.</p>
+
+<pre><code>import type { NodeRef, FrameVersion } from "@/schema";
+
+/**
+ * One per-node position from a layout computation.
+ * `node_id` is a NodeRef; `x` and `y` are in layout units (1 layout unit == 1px
+ * for the React Flow consumer in v1; the unit is unspecified at the contract
+ * level so the layout module remains tech-stack-neutral).
+ */
+export interface LayoutPosition {
+  node_id: NodeRef;
+  x: number;
+  y: number;
+}
+
+/**
+ * Output of a layout computation. `positions` is sorted by `node_id`
+ * (lexicographic) for deterministic snapshot equality. `width` and `height`
+ * are the bounding box of the laid-out graph as reported by ELK; the UI uses
+ * them to set the React Flow viewport's content extent.
+ *
+ * Off the Article II § 2 boundary: `computed_at` is a wall-clock ISO-8601
+ * string in production and an injected frozen-clock value in tests.
+ */
+export interface LayoutResult {
+  positions: LayoutPosition[];
+  width: number;
+  height: number;
+  computed_at: string;
+}
+
+/**
+ * Caller-tunable layout options. Each field has a sane default; `Partial`
+ * is what `layout()` accepts at the call site.
+ *   direction: which way layers grow. "DOWN" is the Stream E E1 default
+ *     (Sugiyama top-down). "RIGHT" is reserved for v2 alternate views and
+ *     functions but is not the visual default for any v1 screen.
+ *   honor_user_anchors: when true, Node.x / Node.y (when both present)
+ *     are passed to ELK as fixed positions and ELK lays out around them.
+ *     Default true. The Stream E "auto-arrange" command runs layout() with
+ *     this false (one-shot fresh layout, no anchor effect, no persistence).
+ *   collapse_subquestions: when true, descendants of any SubQuestion with
+ *     `collapsed: true` are excluded from the layout (per the exclusion
+ *     rule in elk-mapping.ts). Default true.
+ */
+export interface LayoutOptions {
+  direction: "DOWN" | "RIGHT";
+  honor_user_anchors: boolean;
+  collapse_subquestions: boolean;
+}
+
+export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
+  direction: "DOWN",
+  honor_user_anchors: true,
+  collapse_subquestions: true,
+};
+
+/**
+ * Injected dependencies. Production omits this object; tests supply
+ * a frozen-clock stub for snapshot determinism.
+ *   now: returns an ISO-8601 timestamp string. Defaults to
+ *     () =&gt; new Date().toISOString().
+ */
+export interface LayoutDeps {
+  now?: () =&gt; string;
+}
+
+/**
+ * Internal helper: resolves `Partial&lt;LayoutOptions&gt;` against
+ * DEFAULT_LAYOUT_OPTIONS. Pure; not re-exported from index.ts.
+ */
+export function resolveLayoutOptions(
+  opts: Partial&lt;LayoutOptions&gt; | undefined
+): LayoutOptions {
+  return { ...DEFAULT_LAYOUT_OPTIONS, ...(opts ?? {}) };
+}
+
+/**
+ * Internal helper: resolves `LayoutDeps` against wall-clock defaults.
+ * Pure; not re-exported from index.ts.
+ */
+export function resolveLayoutDeps(deps: LayoutDeps | undefined): Required&lt;LayoutDeps&gt; {
+  return { now: deps?.now ?? (() =&gt; new Date().toISOString()) };
+}
+</code></pre>
+
+  <p>Behavioral contract: <code>resolveLayoutOptions(undefined)</code> equals <code>DEFAULT_LAYOUT_OPTIONS</code>; passing a partial overrides only the named fields. <code>resolveLayoutDeps(undefined).now</code> is a wall-clock function; passing <code>{ now: () =&gt; "2026-05-11T00:00:00.000Z" }</code> pins the result. Both helpers are pure and have unit tests in <code>tests/layout/types.test.ts</code>.</p>
+
+  <div class="file-header">// src/layout/dimensions.ts</div>
+  <p>Per-<code>NodeType</code> default dimensions, in layout units. The implementing agent treats these as the single source of truth for layout-time node sizing; the UI's React Flow node components (I.9) consume the same constants by importing this file, so the canvas geometry and the ELK-computed positions stay consistent. Values are chosen to match the Stream E E1 shape table: questions are wider than terms (room for prose), Conclusion is widest and tallest (it has the most field content), gates are square (diamond), Premise / Authority are not in this table because they are argument-layer or annotation surfaces and are not laid out by the main canvas (Stream E line 115: argument-layer overlays are surfaced by the argument inspector panel, not the main layout). Authority <em>is</em> present in <code>frame.nodes</code> in legal mode (per Stream B B1.8) and <em>is</em> laid out; its dimension is the "document-shaped" Stream E entry.</p>
+
+<pre><code>import type { Node, NodeType } from "@/schema";
+
+export interface NodeDimension {
+  width: number;
+  height: number;
+}
+
+/**
+ * Per-NodeType default dimensions. Keyed by NodeType discriminant.
+ * Stream E E1 shape table is the source; specific px values are agent-
+ * discretionary defaults that the visual-polish pass may revise without
+ * touching the layout algorithm (the algorithm reads only width / height).
+ *
+ * Premise is NOT in this map: Premise nodes live on ArgumentSessionVersion,
+ * not FrameVersion, and are never passed to layout(). If frameToElkGraph
+ * encounters a Premise (defensive only — frame validation prohibits it),
+ * it skips the node with a console.warn and a flagged advisory in tests.
+ */
+export const NODE_DIMENSIONS: Record&lt;NodeType, NodeDimension&gt; = {
+  RootQuestion:   { width: 280, height: 80 },
+  SubQuestion:    { width: 240, height: 64 },
+  Term:           { width: 200, height: 56 },
+  Interpretation: { width: 200, height: 56 },
+  Checkpoint:     { width: 220, height: 72 },
+  LogicalGate:    { width: 80,  height: 80 },
+  Conclusion:     { width: 300, height: 96 },
+  Authority:      { width: 220, height: 72 },
+};
+
+/**
+ * Lookup helper. Pure; returns the dimension or undefined for unknown
+ * NodeType discriminants (including "Premise"). The caller decides how
+ * to handle the undefined case; frameToElkGraph skips, tests assert
+ * the warning channel fired.
+ */
+export function dimensionsFor(node_type: NodeType): NodeDimension | undefined {
+  return NODE_DIMENSIONS[node_type];
+}
+</code></pre>
+
+  <p>Behavioral contract: every <code>NodeType</code> the schema discriminates (per <code>stream_i_schema_spec_v1.html</code> nodes.ts) has an entry except <code>Premise</code>; <code>dimensionsFor</code> is a total function over the discriminator string but returns <code>undefined</code> for <code>"Premise"</code> and any future-added discriminant the table has not been updated for. The implementing agent re-exports the map and the lookup; the UI's React Flow node component file imports <code>NODE_DIMENSIONS</code> by name and sets each node component's CSS dimensions from the same source.</p>
+
+  <p>If the visual-polish pass changes node sizing, the only file that changes is this one; the layout algorithm and the UI components both re-derive. The dimensions are intentionally kept agent-discretionary defaults so the user-direction visual-polish pass (per <code>current_state.html</code> open questions: "Visual polish of Stream E defaults") can revise them without touching anything else.</p>
+
+  <div class="file-header">// src/layout/elk-options.ts</div>
+  <p>The ELK algorithm-parameter constants. ELK's options are a flat string-keyed map; this file gives them named-constant treatment so the algorithm tuning lives in one place. The implementing agent reads the elkjs README and the ELK layered-algorithm options reference; the choices below are committed as the v1 defaults with rationale per the four-mechanism determinism list above.</p>
+
+<pre><code>import type { LayoutOptions } from "./types";
+
+/**
+ * Base ELK options for the layered (Sugiyama) algorithm. Stable across calls;
+ * the only per-call variation is direction, supplied by elkDirectionOptions().
+ *
+ * Rationale per choice (each can be tuned in the visual-polish pass without
+ * affecting the cross-module LayoutResult contract):
+ *
+ *   "elk.algorithm" = "layered"
+ *     The Sugiyama-style hierarchical algorithm Stream E E1 commits.
+ *
+ *   "elk.layered.considerModelOrder.strategy" = "NODES_AND_EDGES"
+ *     Asks ELK to break ties in intra-rank ordering and rank-assignment by
+ *     input order. Combined with sorted input from frameToElkGraph, this is
+ *     mechanism 2 of the four practical-determinism mechanisms above.
+ *
+ *   "elk.edgeRouting" = "ORTHOGONAL"
+ *     Stream E E1 commits "orthogonal or smoothed-bezier paths"; orthogonal
+ *     is the default. The UI's React Flow edge components may re-route to
+ *     smoothed bezier at render time (a UI concern); the layout's job is to
+ *     place nodes such that orthogonal routing reads well. The visual-polish
+ *     pass may swap to "POLYLINE" or "SPLINES" without touching this module.
+ *
+ *   "elk.layered.spacing.nodeNodeBetweenLayers" = 80
+ *   "elk.spacing.nodeNode" = 48
+ *   "elk.spacing.edgeNode" = 32
+ *   "elk.spacing.edgeEdge" = 16
+ *     Agent-discretionary spacing defaults. Chosen so the dimensions in
+ *     dimensions.ts produce a comfortable canvas at 1.0 zoom on the
+ *     three-pane editor's center column. The visual-polish pass may revise.
+ *
+ *   "elk.padding" = "[top=24,left=24,bottom=24,right=24]"
+ *     Outer padding around the graph. Aligns the laid-out content with the
+ *     canvas viewport's content extent.
+ *
+ *   "elk.hierarchyHandling" = "INCLUDE_CHILDREN"
+ *     The graph is flat in v1 (no ELK-level nested children — collapsed
+ *     subtrees are excluded at the mapping stage, not nested as ELK groups).
+ *     This setting is a no-op for flat graphs but documents the intent.
+ *
+ *   "elk.layered.thoroughness" = "7"
+ *     ELK's effort knob for crossing minimization; 7 is the elkjs default
+ *     for the layered algorithm. Stream E E1's frames (legal analysis,
+ *     typical sub-hundred-node frames) lay out in well under 200 ms at this
+ *     setting on a modern laptop; the visual-polish pass may revise.
+ */
+export const ELK_LAYERED_OPTIONS: Readonly&lt;Record&lt;string, string&gt;&gt; = Object.freeze({
+  "elk.algorithm": "layered",
+  "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+  "elk.edgeRouting": "ORTHOGONAL",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+  "elk.spacing.nodeNode": "48",
+  "elk.spacing.edgeNode": "32",
+  "elk.spacing.edgeEdge": "16",
+  "elk.padding": "[top=24,left=24,bottom=24,right=24]",
+  "elk.hierarchyHandling": "INCLUDE_CHILDREN",
+  "elk.layered.thoroughness": "7",
+});
+
+/**
+ * Per-call options. Currently only `elk.direction` varies. Returns a fresh
+ * object so callers can spread it into a merged options bag without
+ * mutating the frozen base.
+ */
+export function elkDirectionOptions(direction: LayoutOptions["direction"]): Record&lt;string, string&gt; {
+  return { "elk.direction": direction };
+}
+</code></pre>
+
+  <p>Behavioral contract: <code>ELK_LAYERED_OPTIONS</code> is frozen; mutation throws in strict mode. <code>elkDirectionOptions("DOWN")</code> and <code>elkDirectionOptions("RIGHT")</code> return objects with the corresponding <code>elk.direction</code> value and no other keys. The implementing agent does not add fields to <code>ELK_LAYERED_OPTIONS</code> at runtime; revisions are made in source. Tests verify both: the freeze (mutation attempt throws) and the per-direction shape.</p>
+
+  <div class="file-header">// src/layout/elk-mapping.ts</div>
+  <p>The two pure transforms that bracket the elkjs call. Both are synchronous, pure, sort their inputs, and produce JSON-serializable values (so the Worker boundary's <code>postMessage</code> structured-clone marshals them without custom serializers).</p>
+
+  <h4><code>frameToElkGraph(frame, opts)</code></h4>
+  <p>Maps a <code>FrameVersion</code> to the ELK input graph. Five steps in order:</p>
+  <ol>
+    <li><strong>Compute the visible-node set.</strong> If <code>opts.collapse_subquestions</code> is false, every node in <code>frame.nodes</code> is visible. If true, walk from RootQuestion via the BFS-traversal edge types (<code>DECOMPOSES_INTO</code>, <code>TURNS_ON</code>, <code>INTERPRETED_AS</code>, <code>LEADS_TO</code>, <code>GATES</code>, <code>FORECLOSES</code>) treating any SubQuestion with <code>collapsed: true</code> as a frontier: the collapsed SubQuestion itself is visible, but its outgoing structural edges are not traversed. Any node not reached by this BFS is hidden, with two exceptions added unconditionally: <code>Authority</code> nodes are always visible (they may be referenced by multiple SubQuestions, some collapsed, some not — keeping them visible matches the user expectation that citations remain reachable); <code>Premise</code> nodes, if present (defensive — they live on <code>ArgumentSessionVersion</code>, not <code>FrameVersion</code>), are also marked visible so they reach step 3 where the missing-dimension warning fires.</li>
+    <li><strong>Compute the visible-edge set.</strong> An edge is visible iff both its <code>source</code> and <code>target</code> are visible nodes <em>and</em> its type is in <code>LAID_OUT_EDGE_TYPES</code>: the six BFS-traversal types plus the annotation types <code>CITES</code>, <code>BINDING_IN</code>, <code>DISTINGUISHED_BY</code>. Argument-layer edges (<code>SUPPORTS</code>, <code>CONTRADICTS</code>, <code>ANSWERS</code>) do not exist in <code>frame.edges</code> — they live on <code>ArgumentSessionVersion.argument_edges</code>; the filter is defensive against schema drift.</li>
+    <li><strong>Build ELK nodes.</strong> For each visible node, in sorted-id order, construct an ELK child with <code>id</code> (the NodeRef as-is), <code>width</code> and <code>height</code> (from <code>dimensionsFor(node.type)</code>; nodes whose type yields <code>undefined</code> are skipped with a <code>console.warn</code> and an entry added to the test-only warnings array), and — when <code>opts.honor_user_anchors</code> is true and the node has both <code>x</code> and <code>y</code> set — an <code>x</code> and <code>y</code> field plus <code>layoutOptions: { "elk.position": "(x,y)", "elk.layered.fixed": "true" }</code>. ELK respects fixed positions during layered layout.</li>
+    <li><strong>Build ELK edges.</strong> For each visible edge, in sorted-id order, construct an ELK edge with <code>id</code> (the EdgeRef as-is), <code>sources: [edge.source]</code>, <code>targets: [edge.target]</code>. No edge labels are passed to ELK (label rendering is a UI concern; ELK does not need labels for routing).</li>
+    <li><strong>Assemble.</strong> Return <code>{ id: "root", children: nodes, edges: edges, layoutOptions: { ...ELK_LAYERED_OPTIONS, ...elkDirectionOptions(opts.direction) } }</code>. The graph is rooted at the literal string <code>"root"</code> (a constant; not derived from <code>frame.id</code>) so two frames with identical visible-node sets produce identical ELK input.</li>
+  </ol>
+
+<pre><code>import type { FrameVersion, Node, Edge, EdgeType, NodeRef } from "@/schema";
+import { dimensionsFor } from "./dimensions";
+import { ELK_LAYERED_OPTIONS, elkDirectionOptions } from "./elk-options";
+import { resolveLayoutOptions, type LayoutOptions } from "./types";
+
+/**
+ * Edge types that propagate visibility in the collapse BFS. Reaching a node
+ * via one of these from a visible non-collapsed predecessor marks that node
+ * visible. FORECLOSES is included so Conclusions reachable only as
+ * foreclosure targets remain visible.
+ */
+const BFS_TRAVERSAL_EDGES: ReadonlySet&lt;EdgeType&gt; = new Set([
+  "DECOMPOSES_INTO",
+  "TURNS_ON",
+  "INTERPRETED_AS",
+  "LEADS_TO",
+  "GATES",
+  "FORECLOSES",
+]);
+
+/**
+ * Edge types that are passed to ELK as part of the laid-out graph. The
+ * BFS-traversal set plus the annotation edges that connect frame-layer
+ * nodes (CITES from a SubQuestion / Conclusion / Term to an Authority,
+ * BINDING_IN from an Authority to a jurisdictional surface,
+ * DISTINGUISHED_BY between Authorities). Annotation edges do not propagate
+ * BFS visibility — they are followed by ELK for routing-quality purposes
+ * only, after visibility is decided.
+ *
+ * Notably NOT included: ANSWERS, SUPPORTS, CONTRADICTS. These are
+ * argument-layer edges living on ArgumentSessionVersion.argument_edges,
+ * not on FrameVersion.edges; they reach the canvas through the UI's
+ * argument-overlay rendering layer (Stream E E1 "Argument-layer overlay
+ * rendering"), not through ELK. If schema drift ever placed them on
+ * FrameVersion.edges, the filter below would drop them defensively.
+ */
+const LAID_OUT_EDGE_TYPES: ReadonlySet&lt;EdgeType&gt; = new Set([
+  ...BFS_TRAVERSAL_EDGES,
+  "CITES",
+  "BINDING_IN",
+  "DISTINGUISHED_BY",
+]);
+
+/** JSON-serializable shape elkjs accepts for `layout(graph)`. */
+export interface ElkGraph {
+  id: string;
+  children: ElkNode[];
+  edges: ElkEdge[];
+  layoutOptions: Record&lt;string, string&gt;;
+}
+
+export interface ElkNode {
+  id: string;
+  width: number;
+  height: number;
+  x?: number;
+  y?: number;
+  layoutOptions?: Record&lt;string, string&gt;;
+}
+
+export interface ElkEdge {
+  id: string;
+  sources: string[];
+  targets: string[];
+}
+
+/**
+ * Maps a FrameVersion to the ELK input graph. Pure; sorts inputs; ignores
+ * Premise nodes defensively (they should not appear in frame.nodes).
+ *
+ * `warnings` is a side-channel for the test harness: in tests, the caller
+ * passes a fresh array and asserts on its contents after the call. In
+ * production, the caller passes undefined and warnings are emitted via
+ * console.warn instead.
+ */
+export function frameToElkGraph(
+  frame: FrameVersion,
+  opts?: Partial&lt;LayoutOptions&gt;,
+  warnings?: string[]
+): ElkGraph {
+  const resolved = resolveLayoutOptions(opts);
+
+  // Step 0: sort node and edge collections by id once.
+  const sortedNodes = [...frame.nodes].sort((a, b) =&gt; a.id.localeCompare(b.id));
+  const sortedEdges = [...frame.edges].sort((a, b) =&gt; a.id.localeCompare(b.id));
+  const nodeById = new Map&lt;NodeRef, Node&gt;(sortedNodes.map((n) =&gt; [n.id, n]));
+
+  // Step 1: visible-node set.
+  const visible = computeVisibleNodes(sortedNodes, sortedEdges, resolved.collapse_subquestions);
+
+  // Step 2: visible-edge set (filter sortedEdges).
+  const visibleEdges = sortedEdges.filter(
+    (e) =&gt; visible.has(e.source) &amp;&amp; visible.has(e.target) &amp;&amp; LAID_OUT_EDGE_TYPES.has(e.type)
+  );
+
+  // Step 3: build ELK nodes.
+  const elkNodes: ElkNode[] = [];
+  for (const n of sortedNodes) {
+    if (!visible.has(n.id)) continue;
+    const dim = dimensionsFor(n.type);
+    if (!dim) {
+      pushWarning(warnings, `frameToElkGraph: skipping node with unhandled type "${n.type}" (id=${n.id})`);
+      continue;
+    }
+    const elkNode: ElkNode = { id: n.id, width: dim.width, height: dim.height };
+    if (resolved.honor_user_anchors &amp;&amp; typeof n.x === "number" &amp;&amp; typeof n.y === "number") {
+      elkNode.x = n.x;
+      elkNode.y = n.y;
+      elkNode.layoutOptions = {
+        "elk.position": `(${n.x},${n.y})`,
+        "elk.layered.fixed": "true",
+      };
+    }
+    elkNodes.push(elkNode);
+  }
+
+  // Step 4: build ELK edges.
+  const elkEdges: ElkEdge[] = visibleEdges.map((e) =&gt; ({
+    id: e.id,
+    sources: [e.source],
+    targets: [e.target],
+  }));
+
+  // Step 5: assemble.
+  return {
+    id: "root",
+    children: elkNodes,
+    edges: elkEdges,
+    layoutOptions: { ...ELK_LAYERED_OPTIONS, ...elkDirectionOptions(resolved.direction) },
+  };
+}
+
+/**
+ * BFS from RootQuestion; treats collapsed SubQuestions as frontier nodes
+ * (visible themselves, but their outgoing structural edges are not
+ * traversed). When collapse_subquestions is false, every node is visible.
+ *
+ * Traversal uses STRUCTURAL_EDGE_TYPES only — annotation edges (CITES /
+ * BINDING_IN / DISTINGUISHED_BY / FORECLOSES) do not propagate visibility
+ * because they are cross-cutting and would defeat the collapse semantic
+ * (e.g., a CITES edge from an Authority into a collapsed subtree's Term
+ * should not make the Term visible — the user expected the subtree
+ * hidden).
+ */
+function computeVisibleNodes(
+  sortedNodes: Node[],
+  sortedEdges: Edge[],
+  collapse: boolean
+): Set&lt;NodeRef&gt; {
+  const all = new Set&lt;NodeRef&gt;(sortedNodes.map((n) =&gt; n.id));
+  if (!collapse) return all;
+
+  // Authority and Premise nodes (Premise should not be here, but defensively):
+  // these are not reachable from RootQuestion via structural edges. Include
+  // them as visible iff they exist; the collapse semantic does not hide them.
+  const reachableViaStructure = new Set&lt;NodeRef&gt;();
+  const root = sortedNodes.find((n) =&gt; n.type === "RootQuestion");
+  if (root) {
+    const queue: NodeRef[] = [root.id];
+    reachableViaStructure.add(root.id);
+    const nodeById = new Map&lt;NodeRef, Node&gt;(sortedNodes.map((n) =&gt; [n.id, n]));
+    const outgoingByNode = new Map&lt;NodeRef, Edge[]&gt;();
+    for (const e of sortedEdges) {
+      if (!BFS_TRAVERSAL_EDGES.has(e.type)) continue;
+      const list = outgoingByNode.get(e.source) ?? [];
+      list.push(e);
+      outgoingByNode.set(e.source, list);
+    }
+    while (queue.length &gt; 0) {
+      const cur = queue.shift()!;
+      const curNode = nodeById.get(cur);
+      // Collapsed SubQuestion: visible but a frontier. Do not enqueue children.
+      if (curNode?.type === "SubQuestion" &amp;&amp; (curNode as { collapsed?: boolean }).collapsed) {
+        continue;
+      }
+      const outs = outgoingByNode.get(cur) ?? [];
+      // Sort outs by edge id for stable BFS order (already sorted at the
+      // sortedEdges level; the partition into outgoingByNode preserves
+      // that order because the map is built by iterating sortedEdges).
+      for (const e of outs) {
+        if (!reachableViaStructure.has(e.target)) {
+          reachableViaStructure.add(e.target);
+          queue.push(e.target);
+        }
+      }
+    }
+  }
+
+  // Authority and Premise: not reachable via structural edges. Include them
+  // unconditionally if they appear in frame.nodes; Premise should not appear
+  // but the union is harmless if it does (it will be skipped at step 3 with
+  // a warning anyway).
+  const visible = new Set&lt;NodeRef&gt;(reachableViaStructure);
+  for (const n of sortedNodes) {
+    if (n.type === "Authority" || n.type === "Premise") visible.add(n.id);
+  }
+  return visible;
+}
+
+function pushWarning(sink: string[] | undefined, message: string): void {
+  if (sink) sink.push(message);
+  else if (typeof console !== "undefined") console.warn(message);
+}
+</code></pre>
+
+  <h4><code>elkResultToLayoutResult(elk_result, computed_at)</code></h4>
+  <p>Maps elkjs's result object back to the cross-module <code>LayoutResult</code> shape. ELK's <code>layout()</code> resolves with a graph whose children carry <code>x</code>, <code>y</code>, <code>width</code>, <code>height</code> and whose top-level node carries an overall <code>width</code> and <code>height</code>. The mapping extracts per-node positions, sorts by <code>node_id</code> for stable snapshot equality, and emits the bounding box.</p>
+
+<pre><code>import type { LayoutPosition, LayoutResult } from "./types";
+
+/** JSON-serializable shape elkjs produces from `layout(graph)`. */
+export interface ElkResult {
+  id: string;
+  width: number;
+  height: number;
+  children: { id: string; x: number; y: number; width: number; height: number }[];
+}
+
+export function elkResultToLayoutResult(elk_result: ElkResult, computed_at: string): LayoutResult {
+  const positions: LayoutPosition[] = elk_result.children
+    .map((c) =&gt; ({ node_id: c.id, x: c.x, y: c.y }))
+    .sort((a, b) =&gt; a.node_id.localeCompare(b.node_id));
+  return {
+    positions,
+    width: elk_result.width,
+    height: elk_result.height,
+    computed_at,
+  };
+}
+</code></pre>
+
+  <p>Behavioral contracts for <code>elk-mapping.ts</code>:</p>
+  <ul>
+    <li><strong>Stable input → stable output.</strong> Two invocations of <code>frameToElkGraph(frame, opts)</code> with identical inputs produce structurally identical <code>ElkGraph</code> values (deep equality). The same property holds for <code>elkResultToLayoutResult</code>.</li>
+    <li><strong>Insensitive to input order.</strong> Reshuffling <code>frame.nodes</code> or <code>frame.edges</code> in the input has no effect on the output — the function sorts before building the ELK graph.</li>
+    <li><strong>Collapse semantics.</strong> A SubQuestion with <code>collapsed: true</code> appears in <code>children</code>; its descendants reachable only through it do not. Shared descendants (reachable from a non-collapsed ancestor) still appear. <code>collapse_subquestions: false</code> includes everything regardless of <code>collapsed</code> hints.</li>
+    <li><strong>Anchor semantics.</strong> With <code>honor_user_anchors: true</code>, every node with both <code>x</code> and <code>y</code> set carries the ELK fixed-position options; nodes with one of the two unset are not anchored (defensive: treat partial hints as no hint). With <code>honor_user_anchors: false</code>, no <code>x</code> / <code>y</code> / <code>elk.position</code> / <code>elk.layered.fixed</code> survives into the ELK input.</li>
+    <li><strong>Edge filtering.</strong> Only <code>LAID_OUT_EDGE_TYPES</code> reach ELK; argument-layer edges (<code>SUPPORTS</code>, <code>CONTRADICTS</code>) are skipped — they do not exist in <code>frame.edges</code> at all, but the filter is defensive against schema drift. Edges incident to a hidden node are dropped.</li>
+    <li><strong>Defensive against missing RootQuestion.</strong> A frame without a RootQuestion (mid-edit, transient V-FR-1 violation) returns an empty <code>children</code> array under <code>collapse_subquestions: true</code> (the BFS has no seed) plus Authority nodes. The implementing agent does not throw; the caller handles the degenerate result. Tests cover this case.</li>
+  </ul>
+
+  <div class="file-header">// src/layout/run.ts</div>
+  <p>The core executor. Wires <code>frameToElkGraph</code> → <code>new ELK().layout(graph, opts)</code> → <code>elkResultToLayoutResult</code>. Async because elkjs returns a Promise; otherwise synchronous-in-spirit. The Worker entry point and the bridge fallback both call this function; tests call it directly without instantiating a Worker.</p>
+
+<pre><code>import ELK from "elkjs/lib/elk.bundled.js";
+import type { FrameVersion } from "@/schema";
+import { frameToElkGraph } from "./elk-mapping";
+import { elkResultToLayoutResult, type ElkResult } from "./elk-mapping";
+import { resolveLayoutDeps, type LayoutDeps, type LayoutOptions, type LayoutResult } from "./types";
+
+/**
+ * Returns a LayoutResult for the given frame. Reads deps.now() exactly
+ * once at the start so the computed_at field is stable for tests.
+ *
+ * Used by:
+ *   - elk-worker.ts (in-Worker call path)
+ *   - elk-bridge.ts (fallback when Worker unavailable)
+ *   - tests/layout/*  (direct call without Worker indirection)
+ *
+ * The `warnings` parameter is the test-only side channel passed to
+ * frameToElkGraph; production callers omit it.
+ */
+export async function runLayoutSync(
+  frame: FrameVersion,
+  opts?: Partial&lt;LayoutOptions&gt;,
+  deps?: LayoutDeps,
+  warnings?: string[]
+): Promise&lt;LayoutResult&gt; {
+  const resolvedDeps = resolveLayoutDeps(deps);
+  const computed_at = resolvedDeps.now();
+  const elkGraph = frameToElkGraph(frame, opts, warnings);
+  const elk = new ELK();
+  const elkResult = (await elk.layout(elkGraph)) as ElkResult;
+  return elkResultToLayoutResult(elkResult, computed_at);
+}
+</code></pre>
+
+  <p>Behavioral contract: <code>runLayoutSync</code> is referentially transparent given identical inputs and identical <code>deps.now</code>; the elkjs <code>layered</code> algorithm is deterministic per the practical-determinism property above. One <code>ELK</code> instance is constructed per call; elkjs's instance is cheap to construct (it sets up internal worker-like scheduling in a way that does not start OS threads). Reusing a single instance across calls is not a correctness requirement; the implementing agent may add memoization later as a performance refinement, with care to preserve byte-identity of <code>LayoutResult</code> across calls.</p>
+
+  <p>Important: <code>elkjs/lib/elk.bundled.js</code> is the bundled distribution that includes the layered algorithm and ELK's worker-pool implementation (a JavaScript-level pool, not a Web Worker; orthogonal to <em>our</em> Worker). The bundled distribution works identically in node (Vitest) and the browser (production), which is what makes the test seam clean. The non-bundled <code>elkjs/lib/elk-api.js</code> + an external <code>elk-worker.min.js</code> URL is the alternative path; it has been considered and rejected for v1 — the bundled path keeps dependencies under one npm version, simplifies the Vite bundling story, and removes one production failure mode (worker-script fetch error).</p>
+
+  <div class="file-header">// src/layout/elk-worker.ts</div>
+  <p>The Web Worker entry point. Imports <code>runLayoutSync</code>; receives layout requests via <code>self.onmessage</code>; posts back the result or a serialized error. Owns no state across requests; one Worker can service many sequential requests safely.</p>
+
+<pre><code>/// &lt;reference lib="webworker" /&gt;
+import { runLayoutSync } from "./run";
+import type { FrameVersion } from "@/schema";
+import type { LayoutOptions, LayoutResult } from "./types";
+
+/**
+ * Request envelope sent main-thread → worker. `request_id` is the bridge's
+ * correlation handle; the worker echoes it back in the response so the
+ * bridge can route results to the right Promise resolver.
+ */
+export interface LayoutWorkerRequest {
+  kind: "layout_request";
+  request_id: string;
+  frame: FrameVersion;
+  opts?: Partial&lt;LayoutOptions&gt;;
+  computed_at: string;   // bridge-supplied so the Worker does not read the clock
+}
+
+/**
+ * Response envelope worker → main-thread. Exactly one of `result` or
+ * `error` is populated; never both.
+ */
+export interface LayoutWorkerResponse {
+  kind: "layout_response";
+  request_id: string;
+  result?: LayoutResult;
+  error?: { message: string; name: string };
+}
+
+const ctx: DedicatedWorkerGlobalScope = self as unknown as DedicatedWorkerGlobalScope;
+
+ctx.onmessage = async (event: MessageEvent&lt;LayoutWorkerRequest&gt;) =&gt; {
+  const req = event.data;
+  if (!req || req.kind !== "layout_request") return;
+  try {
+    const result = await runLayoutSync(req.frame, req.opts, { now: () =&gt; req.computed_at });
+    const response: LayoutWorkerResponse = {
+      kind: "layout_response",
+      request_id: req.request_id,
+      result,
+    };
+    ctx.postMessage(response);
+  } catch (err) {
+    const response: LayoutWorkerResponse = {
+      kind: "layout_response",
+      request_id: req.request_id,
+      error: {
+        message: err instanceof Error ? err.message : String(err),
+        name: err instanceof Error ? err.name : "UnknownError",
+      },
+    };
+    ctx.postMessage(response);
+  }
+};
+</code></pre>
+
+  <p>Behavioral contract: the Worker reads no clock — <code>computed_at</code> is supplied by the bridge so the value is consistent regardless of whether the layout ran in the Worker or via the synchronous fallback. The Worker swallows no exceptions; the response always arrives. The Worker imports only <code>./run</code> and the schema types it needs for the request envelope. <code>tsconfig.json</code> declares the WebWorker library at the file level via the triple-slash reference so <code>self</code> resolves as <code>DedicatedWorkerGlobalScope</code>.</p>
+
+  <p>The Vite bundler picks up this file by URL at the bridge's <code>new Worker(new URL("./elk-worker.ts", import.meta.url), { type: "module" })</code> call site. No <code>worker</code>-specific Vite configuration is needed; the default <code>{ type: "module" }</code> path uses native ES module workers in modern browsers.</p>
+
+  <div class="file-header">// src/layout/elk-bridge.ts</div>
+  <p>The main-thread bridge. Single Worker instance, lazily constructed on first call, reused for subsequent calls. Each <code>layout()</code> invocation:</p>
+  <ol>
+    <li>Resolves <code>deps</code> against the wall-clock default and computes <code>computed_at</code> on the main thread (so the value is identical whether the request runs in the Worker or the fallback).</li>
+    <li>Generates a unique <code>request_id</code> (a monotonic counter; sufficient because request lifetime is per-bridge-instance).</li>
+    <li>Registers a Promise resolver in the in-flight map keyed by <code>request_id</code>.</li>
+    <li>Posts the request envelope to the Worker (or, in the no-Worker fallback, calls <code>runLayoutSync</code> directly).</li>
+    <li>Returns the Promise.</li>
+  </ol>
+  <p>When the Worker's response arrives, the bridge looks up the resolver by <code>request_id</code>, removes the in-flight entry, and resolves (or rejects, on Worker-reported errors) the Promise.</p>
+
+<pre><code>import type { FrameVersion } from "@/schema";
+import { runLayoutSync } from "./run";
+import { resolveLayoutDeps, type LayoutDeps, type LayoutOptions, type LayoutResult } from "./types";
+import type { LayoutWorkerRequest, LayoutWorkerResponse } from "./elk-worker";
+
+let workerInstance: Worker | null = null;
+let nextRequestId = 1;
+const inFlight = new Map&lt;string, { resolve: (r: LayoutResult) =&gt; void; reject: (e: Error) =&gt; void }&gt;();
+
+function ensureWorker(): Worker | null {
+  if (typeof Worker === "undefined") return null;     // Vitest in node, no Worker fallback
+  if (workerInstance) return workerInstance;
+  const w = new Worker(new URL("./elk-worker.ts", import.meta.url), { type: "module" });
+  w.onmessage = (event: MessageEvent&lt;LayoutWorkerResponse&gt;) =&gt; {
+    const res = event.data;
+    if (!res || res.kind !== "layout_response") return;
+    const handler = inFlight.get(res.request_id);
+    if (!handler) return;                              // stale; bridge.terminate() may have cleared
+    inFlight.delete(res.request_id);
+    if (res.error) handler.reject(Object.assign(new Error(res.error.message), { name: res.error.name }));
+    else if (res.result) handler.resolve(res.result);
+    else handler.reject(new Error("layout_response missing both result and error"));
+  };
+  w.onerror = (event: ErrorEvent) =&gt; {
+    // Catastrophic Worker error (e.g., script load failure). Reject every
+    // pending request; clear the in-flight map; null out the instance so
+    // the next call reconstructs.
+    const err = new Error(event.message || "layout worker error");
+    for (const { reject } of inFlight.values()) reject(err);
+    inFlight.clear();
+    workerInstance = null;
+  };
+  workerInstance = w;
+  return w;
+}
+
+/**
+ * Public entry point (Contract 5, refined per the F-003-family flag for
+ * the optional `deps` parameter). Returns a Promise that resolves with the
+ * LayoutResult for `frame` under `opts`. Reads `deps.now()` exactly once
+ * on the main thread.
+ */
+export function layout(
+  frame: FrameVersion,
+  opts?: Partial&lt;LayoutOptions&gt;,
+  deps?: LayoutDeps
+): Promise&lt;LayoutResult&gt; {
+  const resolvedDeps = resolveLayoutDeps(deps);
+  const computed_at = resolvedDeps.now();
+
+  const w = ensureWorker();
+  if (!w) {
+    // Fallback: run on the main thread. We pass the computed_at-as-frozen-clock
+    // into runLayoutSync so the result is identical to the Worker path.
+    return runLayoutSync(frame, opts, { now: () =&gt; computed_at });
+  }
+
+  const request_id = String(nextRequestId++);
+  const promise = new Promise&lt;LayoutResult&gt;((resolve, reject) =&gt; {
+    inFlight.set(request_id, { resolve, reject });
+  });
+  const req: LayoutWorkerRequest = {
+    kind: "layout_request",
+    request_id,
+    frame,
+    opts,
+    computed_at,
+  };
+  w.postMessage(req);
+  return promise;
+}
+
+/**
+ * Test-only utility: terminates the Worker (if any), clears the in-flight
+ * map. Not part of the public surface in production code, but exported so
+ * test teardown can release resources. Subsequent layout() calls will
+ * reconstruct the Worker.
+ */
+export function terminate(): void {
+  if (workerInstance) {
+    workerInstance.terminate();
+    workerInstance = null;
+  }
+  for (const { reject } of inFlight.values()) {
+    reject(new Error("layout worker terminated"));
+  }
+  inFlight.clear();
+  nextRequestId = 1;
+}
+</code></pre>
+
+  <p>Behavioral contracts:</p>
+  <ul>
+    <li><strong>Lazy Worker construction.</strong> No Worker is created until the first <code>layout()</code> call. Apps that never lay out (unlikely, but defensible) pay no startup cost.</li>
+    <li><strong>Single Worker reuse.</strong> One Worker services all calls. Sequential <code>layout()</code> calls queue at the Worker (postMessage is buffered); the Worker processes them in order. Concurrent calls are <em>not</em> rejected — each gets its own Promise correlated by <code>request_id</code>.</li>
+    <li><strong>Identical results across paths.</strong> The Worker path and the fallback path produce byte-identical <code>LayoutResult</code> for the same input, because both call <code>runLayoutSync</code> with the same <code>computed_at</code>-as-frozen-clock and the same <code>opts</code>.</li>
+    <li><strong>Catastrophic-error recovery.</strong> If the Worker errors out (e.g., script load failure), all pending Promises reject with a single shared error message, and the next <code>layout()</code> call reconstructs the Worker. The bridge does not retry automatically; the caller decides whether to retry.</li>
+    <li><strong>Test-only termination.</strong> <code>terminate()</code> is exposed for Vitest teardown; tests that exercise the Worker path call it in <code>afterEach</code> to avoid hanging open Workers. Production code does not call it; the Worker lives until the page unloads.</li>
+    <li><strong>No request cancellation in v1.</strong> Cancellation would require a Worker-side per-request abort signal; not worth the v1 complexity. The UI debounces layout calls (only one in-flight at a time per FrameVersion); stale results that arrive after a newer call started are discarded at the UI layer by checking the FrameVersion id, not at the bridge. Logged as a v2 refinement candidate below.</li>
+  </ul>
+
+  <div class="file-header">// src/layout/index.ts</div>
+  <p>Barrel. Re-exports the public surface.</p>
+
+<pre><code>export type { LayoutPosition, LayoutResult, LayoutOptions, LayoutDeps } from "./types";
+export { DEFAULT_LAYOUT_OPTIONS } from "./types";
+export { layout, terminate } from "./elk-bridge";
+</code></pre>
+
+  <p>Behavioral contract: callers outside <code>src/layout/</code> import only from <code>@/layout</code> (the barrel); the internal files <code>elk-mapping.ts</code>, <code>elk-options.ts</code>, <code>dimensions.ts</code>, <code>run.ts</code>, <code>elk-worker.ts</code>, <code>elk-bridge.ts</code> are not re-exported and are not imported by any other module. This keeps the surface minimal and the migration path open (e.g., a future swap from ELK to dagre would touch <code>elk-*</code> files and <code>run.ts</code> without changing the barrel).</p>
+
+  <h2>Web Worker lifecycle and message protocol</h2>
+  <p>The Worker is a thin executor — it owns no state across requests, and the message protocol is a single request/response pair per layout.</p>
+
+<pre><code>main thread (bridge)                    worker thread
+─────────────────────                   ─────────────
+layout(frame, opts, deps)
+  │
+  │ computed_at = deps.now()
+  │ request_id  = String(nextRequestId++)
+  │ inFlight.set(request_id, { resolve, reject })
+  │ worker.postMessage({
+  │   kind: "layout_request",
+  │   request_id, frame, opts, computed_at
+  │ })
+  │                                       onmessage receives request
+  │                                       runLayoutSync(frame, opts,
+  │                                         { now: () =&gt; computed_at })
+  │                                       postMessage({
+  │                                         kind: "layout_response",
+  │                                         request_id,
+  │                                         result | error
+  │                                       })
+  │ onmessage receives response          ◄────────────────────────
+  │ handler = inFlight.get(request_id)
+  │ inFlight.delete(request_id)
+  │ handler.resolve(result) or handler.reject(error)
+  │
+  └─► Promise resolved to LayoutResult</code></pre>
+
+  <p>Lifecycle invariants:</p>
+  <ul>
+    <li><strong>Worker outlives individual requests.</strong> The Worker is constructed once (lazy) and reused for all subsequent layout calls in the page session.</li>
+    <li><strong>Message order is preserved.</strong> Browsers preserve <code>postMessage</code> ordering per channel; multiple concurrent requests posted before any response arrives are processed in send order by the Worker. This is not relied on for correctness — <code>request_id</code> correlation is the canonical mechanism — but it produces predictable timing for tests.</li>
+    <li><strong>No shared memory.</strong> The structured-clone serialization at <code>postMessage</code> ensures the Worker sees a fresh copy of <code>frame</code>; any in-Worker mutation would not affect the main thread (and no in-Worker mutation occurs anyway — <code>frameToElkGraph</code> is pure).</li>
+    <li><strong>No DOM or window access from the Worker.</strong> The Worker has access only to <code>elkjs</code> and the schema-type imports (which are erased at compile time). No DOM, no <code>localStorage</code>, no <code>fetch</code>, no <code>navigator</code> is used.</li>
+    <li><strong>Worker teardown.</strong> The Worker is not terminated automatically on idle in v1; it lives until the page unloads. The <code>terminate()</code> export is test-only. A v2 refinement candidate is idle-timeout termination — logged below.</li>
+  </ul>
+
+  <h2>Acceptance tests</h2>
+  <p>The coding session implements until every test below passes. The harness uses Vitest 3.x with <code>fast-check</code> available (already in <code>package.json</code> per the I.1 skeleton). The frozen-clock pattern matches I.3 / I.4 / I.5 / I.6: tests construct a <code>LayoutDeps</code> with a literal <code>now: () =&gt; "2026-05-11T00:00:00.000Z"</code> and assert on snapshots that include the resulting <code>computed_at</code>.</p>
+
+  <h3><code>tests/layout/types.test.ts</code></h3>
+<pre><code>import { describe, it, expect } from "vitest";
+import {
+  DEFAULT_LAYOUT_OPTIONS,
+  resolveLayoutOptions,
+  resolveLayoutDeps,
+} from "@/layout/types";
+
+describe("layout/types", () =&gt; {
+  it("DEFAULT_LAYOUT_OPTIONS is DOWN / honor / collapse", () =&gt; {
+    expect(DEFAULT_LAYOUT_OPTIONS).toEqual({
+      direction: "DOWN",
+      honor_user_anchors: true,
+      collapse_subquestions: true,
+    });
+  });
+
+  it("resolveLayoutOptions(undefined) equals DEFAULT_LAYOUT_OPTIONS", () =&gt; {
+    expect(resolveLayoutOptions(undefined)).toEqual(DEFAULT_LAYOUT_OPTIONS);
+  });
+
+  it("resolveLayoutOptions overrides only the named fields", () =&gt; {
+    expect(resolveLayoutOptions({ direction: "RIGHT" })).toEqual({
+      ...DEFAULT_LAYOUT_OPTIONS, direction: "RIGHT",
+    });
+  });
+
+  it("resolveLayoutDeps(undefined).now returns an ISO-8601-shaped string", () =&gt; {
+    const out = resolveLayoutDeps(undefined).now();
+    expect(out).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+  });
+
+  it("resolveLayoutDeps respects an injected now()", () =&gt; {
+    const out = resolveLayoutDeps({ now: () =&gt; "frozen" }).now();
+    expect(out).toBe("frozen");
+  });
+});
+</code></pre>
+
+  <h3><code>tests/layout/dimensions.test.ts</code></h3>
+<pre><code>import { describe, it, expect } from "vitest";
+import { NODE_DIMENSIONS, dimensionsFor } from "@/layout/dimensions";
+
+describe("layout/dimensions", () =&gt; {
+  it("has an entry for every laid-out NodeType", () =&gt; {
+    const required = [
+      "RootQuestion", "SubQuestion", "Term", "Interpretation",
+      "Checkpoint", "LogicalGate", "Conclusion", "Authority",
+    ] as const;
+    for (const t of required) {
+      expect(NODE_DIMENSIONS[t]).toBeDefined();
+      expect(NODE_DIMENSIONS[t].width).toBeGreaterThan(0);
+      expect(NODE_DIMENSIONS[t].height).toBeGreaterThan(0);
+    }
+  });
+
+  it("dimensionsFor returns the same value as NODE_DIMENSIONS lookup", () =&gt; {
+    expect(dimensionsFor("RootQuestion")).toEqual(NODE_DIMENSIONS.RootQuestion);
+  });
+
+  it("dimensionsFor returns undefined for Premise", () =&gt; {
+    // @ts-expect-error -- Premise is a NodeType but not in NODE_DIMENSIONS
+    expect(dimensionsFor("Premise")).toBeUndefined();
+  });
+});
+</code></pre>
+
+  <h3><code>tests/layout/elk-options.test.ts</code></h3>
+<pre><code>import { describe, it, expect } from "vitest";
+import { ELK_LAYERED_OPTIONS, elkDirectionOptions } from "@/layout/elk-options";
+
+describe("layout/elk-options", () =&gt; {
+  it("ELK_LAYERED_OPTIONS includes the algorithm key", () =&gt; {
+    expect(ELK_LAYERED_OPTIONS["elk.algorithm"]).toBe("layered");
+  });
+
+  it("ELK_LAYERED_OPTIONS is frozen", () =&gt; {
+    expect(Object.isFrozen(ELK_LAYERED_OPTIONS)).toBe(true);
+    expect(() =&gt; {
+      (ELK_LAYERED_OPTIONS as Record&lt;string, string&gt;)["elk.algorithm"] = "x";
+    }).toThrow(TypeError);
+  });
+
+  it("elkDirectionOptions emits a single elk.direction key", () =&gt; {
+    expect(elkDirectionOptions("DOWN")).toEqual({ "elk.direction": "DOWN" });
+    expect(elkDirectionOptions("RIGHT")).toEqual({ "elk.direction": "RIGHT" });
+  });
+
+  it("considerModelOrder is set to NODES_AND_EDGES (determinism mechanism 2)", () =&gt; {
+    expect(ELK_LAYERED_OPTIONS["elk.layered.considerModelOrder.strategy"])
+      .toBe("NODES_AND_EDGES");
+  });
+});
+</code></pre>
+
+  <h3><code>tests/layout/elk-mapping.test.ts</code></h3>
+<pre><code>import { describe, it, expect } from "vitest";
+import { frameToElkGraph, elkResultToLayoutResult } from "@/layout/elk-mapping";
+import {
+  buildSimpleFrame, buildFrameWithCollapsedSubQuestion, buildFrameWithAuthority,
+} from "./_fixtures";
+
+describe("layout/elk-mapping", () =&gt; {
+  describe("frameToElkGraph", () =&gt; {
+    it("includes every node when collapse_subquestions is false", () =&gt; {
+      const frame = buildFrameWithCollapsedSubQuestion();
+      const out = frameToElkGraph(frame, { collapse_subquestions: false });
+      expect(out.children.map((c) =&gt; c.id).sort()).toEqual(
+        frame.nodes.map((n) =&gt; n.id).sort()
+      );
+    });
+
+    it("excludes descendants of a collapsed SubQuestion", () =&gt; {
+      const frame = buildFrameWithCollapsedSubQuestion();
+      const out = frameToElkGraph(frame, { collapse_subquestions: true });
+      // The collapsed SQ itself is visible:
+      expect(out.children.find((c) =&gt; c.id === "sq_collapsed")).toBeDefined();
+      // Its descendants reachable only through it are not:
+      expect(out.children.find((c) =&gt; c.id === "term_a")).toBeUndefined();
+      expect(out.children.find((c) =&gt; c.id === "term_b")).toBeUndefined();
+      expect(out.children.find((c) =&gt; c.id === "concl_x")).toBeUndefined();
+    });
+
+    it("keeps shared descendants visible when reachable from a non-collapsed ancestor", () =&gt; {
+      const frame = buildFrameWithCollapsedSubQuestion();
+      // term_shared is referenced by both sq_collapsed and sq_open in the fixture.
+      const out = frameToElkGraph(frame, { collapse_subquestions: true });
+      expect(out.children.find((c) =&gt; c.id === "term_shared")).toBeDefined();
+    });
+
+    it("always includes Authority nodes regardless of collapse state", () =&gt; {
+      const frame = buildFrameWithAuthority();
+      const out = frameToElkGraph(frame, { collapse_subquestions: true });
+      expect(out.children.find((c) =&gt; c.id === "auth_1")).toBeDefined();
+    });
+
+    it("marks anchored nodes as fixed when honor_user_anchors is true", () =&gt; {
+      const frame = buildSimpleFrame({ anchorRoot: { x: 100, y: 200 } });
+      const out = frameToElkGraph(frame, { honor_user_anchors: true });
+      const root = out.children.find((c) =&gt; c.id === "root_q")!;
+      expect(root.x).toBe(100);
+      expect(root.y).toBe(200);
+      expect(root.layoutOptions?.["elk.position"]).toBe("(100,200)");
+      expect(root.layoutOptions?.["elk.layered.fixed"]).toBe("true");
+    });
+
+    it("does NOT mark anchors when honor_user_anchors is false", () =&gt; {
+      const frame = buildSimpleFrame({ anchorRoot: { x: 100, y: 200 } });
+      const out = frameToElkGraph(frame, { honor_user_anchors: false });
+      const root = out.children.find((c) =&gt; c.id === "root_q")!;
+      expect(root.x).toBeUndefined();
+      expect(root.y).toBeUndefined();
+      expect(root.layoutOptions).toBeUndefined();
+    });
+
+    it("does NOT anchor a node with only one of x or y set", () =&gt; {
+      const frame = buildSimpleFrame({ anchorRoot: { x: 100 } as { x: number } });
+      const out = frameToElkGraph(frame, { honor_user_anchors: true });
+      const root = out.children.find((c) =&gt; c.id === "root_q")!;
+      expect(root.x).toBeUndefined();
+      expect(root.layoutOptions).toBeUndefined();
+    });
+
+    it("emits children sorted by node id", () =&gt; {
+      const frame = buildSimpleFrame();
+      const out = frameToElkGraph(frame);
+      const ids = out.children.map((c) =&gt; c.id);
+      expect(ids).toEqual([...ids].sort());
+    });
+
+    it("emits edges sorted by edge id and filtered to LAID_OUT_EDGE_TYPES", () =&gt; {
+      const frame = buildSimpleFrame();
+      const out = frameToElkGraph(frame);
+      const ids = out.edges.map((e) =&gt; e.id);
+      expect(ids).toEqual([...ids].sort());
+      for (const e of out.edges) {
+        expect(["SUPPORTS", "CONTRADICTS", "ANSWERS"]).not.toContain(
+          frame.edges.find((fe) =&gt; fe.id === e.id)!.type
+        );
+      }
+    });
+
+    it("is insensitive to input order", () =&gt; {
+      const frame = buildSimpleFrame();
+      const out1 = frameToElkGraph(frame);
+      const shuffled = {
+        ...frame,
+        nodes: [...frame.nodes].reverse(),
+        edges: [...frame.edges].reverse(),
+      };
+      const out2 = frameToElkGraph(shuffled);
+      expect(out2).toEqual(out1);
+    });
+
+    it("returns an authority-only set when RootQuestion is missing and collapse is on", () =&gt; {
+      const frame = buildSimpleFrame({ omitRoot: true, withAuthority: true });
+      const out = frameToElkGraph(frame, { collapse_subquestions: true });
+      expect(out.children.map((c) =&gt; c.id)).toEqual(["auth_1"]);
+    });
+
+    it("writes a warning when a Premise node leaks into frame.nodes (defensive)", () =&gt; {
+      const frame = buildSimpleFrame({ withStrayPremise: true });
+      const warnings: string[] = [];
+      const out = frameToElkGraph(frame, undefined, warnings);
+      expect(out.children.find((c) =&gt; c.id === "stray_premise")).toBeUndefined();
+      expect(warnings.some((w) =&gt; w.includes("stray_premise"))).toBe(true);
+    });
+
+    it("attaches both ELK_LAYERED_OPTIONS and elk.direction at the graph level", () =&gt; {
+      const frame = buildSimpleFrame();
+      const out = frameToElkGraph(frame, { direction: "RIGHT" });
+      expect(out.layoutOptions["elk.algorithm"]).toBe("layered");
+      expect(out.layoutOptions["elk.direction"]).toBe("RIGHT");
+    });
+
+    it("uses the literal root id 'root' independent of frame.id", () =&gt; {
+      const a = buildSimpleFrame({ frameId: "frame_a" });
+      const b = buildSimpleFrame({ frameId: "frame_b" });
+      expect(frameToElkGraph(a).id).toBe("root");
+      expect(frameToElkGraph(b).id).toBe("root");
+    });
+  });
+
+  describe("elkResultToLayoutResult", () =&gt; {
+    it("returns positions sorted by node_id", () =&gt; {
+      const elk = {
+        id: "root", width: 800, height: 600,
+        children: [
+          { id: "z", x: 1, y: 2, width: 10, height: 10 },
+          { id: "a", x: 3, y: 4, width: 10, height: 10 },
+          { id: "m", x: 5, y: 6, width: 10, height: 10 },
+        ],
+      };
+      const out = elkResultToLayoutResult(elk, "2026-05-11T00:00:00.000Z");
+      expect(out.positions.map((p) =&gt; p.node_id)).toEqual(["a", "m", "z"]);
+    });
+
+    it("propagates width and height verbatim", () =&gt; {
+      const elk = { id: "root", width: 800, height: 600, children: [] };
+      const out = elkResultToLayoutResult(elk, "frozen");
+      expect(out.width).toBe(800);
+      expect(out.height).toBe(600);
+    });
+
+    it("propagates computed_at verbatim", () =&gt; {
+      const elk = { id: "root", width: 0, height: 0, children: [] };
+      const out = elkResultToLayoutResult(elk, "frozen-clock");
+      expect(out.computed_at).toBe("frozen-clock");
+    });
+  });
+});
+</code></pre>
+
+  <h3><code>tests/layout/run.test.ts</code></h3>
+<pre><code>import { describe, it, expect } from "vitest";
+import { runLayoutSync } from "@/layout/run";
+import { buildSimpleFrame, buildLargerFrame } from "./_fixtures";
+
+describe("layout/run", () =&gt; {
+  it("produces a LayoutResult with positions for every visible node", async () =&gt; {
+    const frame = buildSimpleFrame(); // 5 visible nodes
+    const out = await runLayoutSync(frame, undefined, { now: () =&gt; "frozen" });
+    expect(out.positions).toHaveLength(5);
+    expect(out.computed_at).toBe("frozen");
+  });
+
+  it("emits positions sorted by node_id", async () =&gt; {
+    const frame = buildSimpleFrame();
+    const out = await runLayoutSync(frame, undefined, { now: () =&gt; "frozen" });
+    const ids = out.positions.map((p) =&gt; p.node_id);
+    expect(ids).toEqual([...ids].sort());
+  });
+
+  it("produces byte-identical results for two invocations with identical inputs", async () =&gt; {
+    const frame = buildSimpleFrame();
+    const deps = { now: () =&gt; "frozen" };
+    const out1 = await runLayoutSync(frame, undefined, deps);
+    const out2 = await runLayoutSync(frame, undefined, deps);
+    expect(out2).toEqual(out1);
+  });
+
+  it("produces identical results regardless of input node/edge order", async () =&gt; {
+    const frame = buildSimpleFrame();
+    const shuffled = { ...frame, nodes: [...frame.nodes].reverse(), edges: [...frame.edges].reverse() };
+    const deps = { now: () =&gt; "frozen" };
+    const out1 = await runLayoutSync(frame, undefined, deps);
+    const out2 = await runLayoutSync(shuffled, undefined, deps);
+    expect(out2).toEqual(out1);
+  });
+
+  it("respects honor_user_anchors:true — anchored nodes appear at their anchor", async () =&gt; {
+    const frame = buildSimpleFrame({ anchorRoot: { x: 100, y: 200 } });
+    const out = await runLayoutSync(frame, { honor_user_anchors: true }, { now: () =&gt; "frozen" });
+    const root = out.positions.find((p) =&gt; p.node_id === "root_q")!;
+    expect(root.x).toBe(100);
+    expect(root.y).toBe(200);
+  });
+
+  it("ignores anchors when honor_user_anchors:false", async () =&gt; {
+    const frame = buildSimpleFrame({ anchorRoot: { x: 100, y: 200 } });
+    const out = await runLayoutSync(frame, { honor_user_anchors: false }, { now: () =&gt; "frozen" });
+    const root = out.positions.find((p) =&gt; p.node_id === "root_q")!;
+    // ELK chose a position; assert only that it is NOT the anchor.
+    expect(root.x === 100 &amp;&amp; root.y === 200).toBe(false);
+  });
+
+  it("lays out a 20-node frame in well under 500 ms (generous CI bound)", async () =&gt; {
+    const frame = buildLargerFrame(20);
+    const t0 = Date.now();
+    await runLayoutSync(frame, undefined, { now: () =&gt; "frozen" });
+    const elapsed = Date.now() - t0;
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it("matches snapshot for the simple-frame fixture", async () =&gt; {
+    const frame = buildSimpleFrame();
+    const out = await runLayoutSync(frame, undefined, { now: () =&gt; "2026-05-11T00:00:00.000Z" });
+    expect(out).toMatchSnapshot();
+  });
+});
+</code></pre>
+
+  <h3><code>tests/layout/elk-bridge.test.ts</code></h3>
+  <p>The bridge tests run under Vitest in node, where <code>Worker</code> is undefined; the bridge takes the synchronous-fallback path. The bridge's Worker-instantiation logic is exercised end-to-end by the I.10 Playwright acceptance plan.</p>
+
+<pre><code>import { describe, it, expect, afterEach } from "vitest";
+import { layout, terminate } from "@/layout/elk-bridge";
+import { runLayoutSync } from "@/layout/run";
+import { buildSimpleFrame } from "./_fixtures";
+
+afterEach(() =&gt; {
+  terminate();
+});
+
+describe("layout/elk-bridge", () =&gt; {
+  it("layout() returns the same LayoutResult as runLayoutSync (fallback path in node)", async () =&gt; {
+    const frame = buildSimpleFrame();
+    const a = await layout(frame, undefined, { now: () =&gt; "frozen" });
+    const b = await runLayoutSync(frame, undefined, { now: () =&gt; "frozen" });
+    expect(a).toEqual(b);
+  });
+
+  it("reads deps.now() exactly once on the main thread", async () =&gt; {
+    const frame = buildSimpleFrame();
+    let calls = 0;
+    const now = () =&gt; {
+      calls++;
+      return "frozen";
+    };
+    await layout(frame, undefined, { now });
+    expect(calls).toBe(1);
+  });
+
+  it("two concurrent layout() calls each receive their own result", async () =&gt; {
+    const frame = buildSimpleFrame();
+    const deps = { now: () =&gt; "frozen" };
+    const [a, b] = await Promise.all([
+      layout(frame, undefined, deps),
+      layout(frame, undefined, deps),
+    ]);
+    expect(a).toEqual(b);
+  });
+
+  it("uses wall-clock when deps is omitted", async () =&gt; {
+    const frame = buildSimpleFrame();
+    const out = await layout(frame);
+    expect(out.computed_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+  });
+});
+</code></pre>
+
+  <h3><code>tests/layout/_fixtures.ts</code></h3>
+<pre><code>import type { FrameVersion, Node, Edge } from "@/schema";
+
+/**
+ * Test fixtures for layout. Each builder returns a FrameVersion. All builders
+ * use stable ids (the strings below); the layout module is deterministic over
+ * these, so snapshots are stable.
+ *
+ * The actual schema construction (current_version_id, version_number,
+ * created_at, etc.) leans on the schema fixture-builder convention I.2
+ * pinned in src/schema/_fixtures.ts. Layout tests use the bare minimum
+ * Node and Edge shapes; the rest is filled with frozen-stub values.
+ */
+export interface SimpleFrameOpts {
+  frameId?: string;
+  anchorRoot?: { x?: number; y?: number };
+  omitRoot?: boolean;
+  withAuthority?: boolean;
+  withStrayPremise?: boolean;
+}
+
+export function buildSimpleFrame(opts: SimpleFrameOpts = {}): FrameVersion {
+  // 5-node frame:
+  //   root_q (RootQuestion)
+  //     --DECOMPOSES_INTO--&gt; sq_a (SubQuestion)
+  //                            --TURNS_ON--&gt; term_t (Term)
+  //                                            --GATES--&gt; gate_g (LogicalGate, AND)
+  //                                                         --LEADS_TO--&gt; concl_y (Conclusion)
+  // anchorRoot, omitRoot, withAuthority, withStrayPremise are toggles
+  // see test descriptions.
+  return /* ... */ {} as FrameVersion;
+}
+
+export function buildFrameWithCollapsedSubQuestion(): FrameVersion {
+  // Two SQs: sq_collapsed (collapsed:true) and sq_open. Both DECOMPOSES_INTO
+  // term_shared. sq_collapsed additionally DECOMPOSES_INTO term_a, term_b,
+  // and (via LEADS_TO from a downstream gate) concl_x. Authority auth_1 is
+  // CITES'd by sq_open.
+  // Expected visible set under collapse_subquestions:true:
+  //   { root_q, sq_collapsed, sq_open, term_shared, auth_1 }
+  // Hidden set:
+  //   { term_a, term_b, concl_x }
+  return /* ... */ {} as FrameVersion;
+}
+
+export function buildFrameWithAuthority(): FrameVersion {
+  // root_q -&gt; sq_a; auth_1 CITES'd by sq_a. Authority is laid out alongside.
+  return /* ... */ {} as FrameVersion;
+}
+
+export function buildLargerFrame(approxNodeCount: number): FrameVersion {
+  // Procedurally constructed: one root, ⌈approxNodeCount/4⌉ SubQuestions
+  // each with three children (Term, Interpretation, Checkpoint) and a
+  // Conclusion. Used for the perf-bound test in run.test.ts.
+  return /* ... */ {} as FrameVersion;
+}
+</code></pre>
+
+  <p>Four fixture builders. The implementations are mechanical and not reproduced in full — the coding session fills them in to match the field shapes the schema spec pinned. The behavioral assertions in the tests above pin every relevant property the fixtures must satisfy; the coding session iterates until the assertions pass.</p>
+
+  <h2><code>src/layout/README.md</code> outline</h2>
+  <p>Cross-session compression artifact for downstream sessions (chiefly <code>@/ui</code>). Short on purpose; the spec is the source of truth and the README only signals what to look at and what shapes the public surface.</p>
+  <ol>
+    <li><strong>Purpose (1 paragraph).</strong> ELK in a Web Worker. Pure-mapping core + Worker bridge. Imports schema only; imported by ui (canvas surfaces).</li>
+    <li><strong>Public API surface (list).</strong> The exports from <code>index.ts</code>: <code>layout()</code>, <code>terminate()</code>, <code>LayoutPosition</code>, <code>LayoutResult</code>, <code>LayoutOptions</code>, <code>LayoutDeps</code>, <code>DEFAULT_LAYOUT_OPTIONS</code>. One-line description each. No code; that lives in the spec.</li>
+    <li><strong>Signature deviation from <code>stream_i_contracts_v1.html</code> (1 bullet).</strong> The F-003-family addition of optional <code>deps</code> to <code>layout()</code>'s signature; one-sentence rationale (clock injection for test determinism) + "see in-session flag from I.7" for the constitutional justification.</li>
+    <li><strong>How the UI consumes this module (paragraph + small example).</strong> The canvas component imports <code>layout</code> and calls it in a <code>useEffect</code> keyed on <code>frameVersion.id</code> + <code>opts</code>. The Promise resolves with positions; the canvas patches React Flow's node positions in a single state update. Stale results (a newer layout request started after this one) are discarded at the UI layer by checking the FrameVersion id, not at the bridge. The Stream E "auto-arrange" command calls <code>layout(frame, { honor_user_anchors: false })</code> on demand; the UI does <em>not</em> persist the returned positions back to the frame — anchor persistence happens only on user drag (via a <code>node_updated</code> action in <code>@/modes</code> that sets <code>x</code> / <code>y</code>).</li>
+    <li><strong>Determinism contract (3 sentences).</strong> Off the Article II § 2 boundary, but practically deterministic: identical <code>FrameVersion</code> + identical <code>LayoutOptions</code> + identical <code>deps.now()</code> produce identical <code>LayoutResult</code>. The four mechanisms (sorted input, model-order tiebreaker, deterministic ELK algorithm, injected clock) are documented in the spec. Snapshot tests in <code>tests/layout/</code> pin the property.</li>
+    <li><strong>Tests (1 sentence + path).</strong> "Vitest acceptance tests live in <code>tests/layout/</code>; see <code>stream_i_layout_spec_v1.html</code> for the test plan and behavioral contracts."</li>
+  </ol>
+
+  <h2>Self-review (Article VIII § 4)</h2>
+
+  <h3>Architectural commitments (Constitution Article II § 1–6)</h3>
+  <ul>
+    <li><strong>§ 1 Frame / argument split.</strong> The layout module operates on <code>FrameVersion</code> exclusively. <code>ArgumentSessionVersion</code> is never imported, and argument-layer edges (<code>SUPPORTS</code>, <code>CONTRADICTS</code>, <code>ANSWERS</code>) are explicitly excluded from <code>LAID_OUT_EDGE_TYPES</code> with a defensive filter for schema drift. Premise nodes (argument-layer) are warned-and-skipped if encountered. ✓</li>
+    <li><strong>§ 2 Determinism.</strong> Layout is off the runtime determinism boundary (Article II § 2 binds <code>@/runtime</code>; ESLint <code>no-restricted-imports</code> in the I.1 skeleton already prevents <code>@/runtime</code> from importing <code>@/layout</code>). Within the layout module, the spec commits a practical-determinism property via four mechanisms (sorted input, model-order tiebreaker, deterministic ELK algorithm, injected clock); snapshot tests pin it. The injected clock matches the I.3 / I.4 / I.5 / I.6 pattern. ✓</li>
+    <li><strong>§ 3 Per-node satisfaction criteria.</strong> The layout module does not consult <code>options_box</code> or any satisfaction policy; it operates purely on graph structure plus presentation hints. The visual surfaces that <em>do</em> show satisfaction state — status badges, sub-flag chips — are UI concerns (Stream E E4) consumed from <code>@/runtime</code>'s <code>ComputeResult</code> by the React Flow node components, not by layout. ✓</li>
+    <li><strong>§ 4 Independent versioning.</strong> The layout module does not write to or version any entity; it reads a <code>FrameVersion</code> and returns positions. Persistence of user-drag x/y happens through the modes action surface (a <code>node_updated</code> action), not here. ✓</li>
+    <li><strong>§ 5 Human-readable structure.</strong> The seven small files map directly to the four-stage pipeline (types → mapping → executor → I/O boundary). Each file is independently testable. The Worker message protocol is one request/response with explicit envelope types; the wire shape is in the spec. ✓</li>
+    <li><strong>§ 6 Use-case commitment.</strong> Authority nodes (legal mode) are first-class in <code>NODE_DIMENSIONS</code> and in the always-visible exception in the BFS. Annotation edges (<code>CITES</code>, <code>BINDING_IN</code>, <code>DISTINGUISHED_BY</code>) are passed to ELK so legal-mode citation geometry reads naturally. The general/academic/personal use cases function identically — they simply have fewer Authority nodes and annotation edges to lay out. ✓</li>
+  </ul>
+
+  <h3>Quality criteria (Constitution Article III § 1–6)</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> Every Stream E E1 requirement has a corresponding spec section: top-down Sugiyama (<code>elk-options.ts</code> "layered" algorithm + DOWN direction), edge-crossing minimization (ELK layered's default behavior, with model-order tiebreaker for determinism), user x/y as fixed anchors (<code>frameToElkGraph</code> step 3 + the <code>elk.layered.fixed</code> option), auto-arrange (<code>opts.honor_user_anchors: false</code> + the UI invokes via a modes action that clears x/y), collapsed SubQuestion subtrees (<code>frameToElkGraph</code> step 1 BFS frontier + step 3 skip), node shapes' contribution to layout (per-NodeType <code>NODE_DIMENSIONS</code>). ✓</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> The Authority node's always-visible exception and the inclusion of annotation edges in the laid-out set produce a legal-mode canvas where citations remain geometrically near their citing questions even when surrounding sub-analyses are collapsed. The top-down direction (legal opinions are read top-down: facts → question → analysis → holding) is the default. The visual-polish pass's user-direction work, when it lands, will tune the spacing constants in <code>ELK_LAYERED_OPTIONS</code> and the dimensions in <code>NODE_DIMENSIONS</code> without touching the algorithm — those two files are the user-tunable surface. ✓</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> Practical-determinism property documented in the spec body with four mechanisms; snapshot tests pin it; the test seam (<code>runLayoutSync</code> callable without a Worker) makes the determinism property exercisable in CI on every PR. The Worker boundary does not introduce non-determinism because the bridge supplies <code>computed_at</code> at the main thread before <code>postMessage</code> serializes the request. ✓</li>
+    <li><strong>§ 4 Clarity.</strong> The seven files are individually small and single-purpose. The BFS-traversal vs. laid-out edge-type split is named explicitly with two constants. The Worker / bridge / fallback split is documented in a single message-protocol diagram. Each behavioral contract appears as a bulleted list under the file it governs. ✓</li>
+    <li><strong>§ 5 Reversibility.</strong> A future swap of layout engines (e.g., ELK → dagre) touches <code>elk-options.ts</code>, <code>elk-mapping.ts</code>, <code>run.ts</code>, <code>elk-worker.ts</code>; the public surface (<code>layout()</code>, <code>LayoutResult</code>) is unchanged because the contract abstracts over the engine. The Web Worker boundary is also reversible — disabling the Worker (e.g., for debugging) flips <code>typeof Worker</code> in the bridge; the fallback path is always available. ✓</li>
+    <li><strong>§ 6 Interface Fit.</strong> The coding session reads Constitution, current_state, buildkit index, contracts doc Contract 5 + Contract 1 (schema), one README (<code>src/schema/README.md</code>), and this spec — six docs to begin work, all small. Test fixtures cap at one shared module (re-exporting and extending the schema fixture). The seven-file structure maps directly to the implementation order: types → dimensions → elk-options → elk-mapping → run → elk-worker → elk-bridge → index. ✓</li>
+  </ul>
+
+  <h3>Article V § 3 escalation triggers — recheck</h3>
+  <p>Re-running the Article V § 3 checklist for the single signature refinement this spec commits (optional <code>deps</code> parameter on <code>layout()</code>):</p>
+  <ul>
+    <li><strong>(a) Reverses a user-stated strategy or directive.</strong> No. The user delegated technical decisions and the clock-injection pattern was established in earlier sessions (I.3 / I.4 / I.5 / I.6) without objection; this spec extends the pattern uniformly. ✓</li>
+    <li><strong>(b) Reverses or weakens an Article II commitment.</strong> No — it strengthens the auditability target in Article III § 3 by making the test seam fully clock-controlled. Layout is off the constitutional § 2 boundary, but the practical-determinism property described in the spec body is now testable in CI. ✓</li>
+    <li><strong>(c) Two Article II commitments conflict.</strong> No. The refinement is internally consistent with every other Article II commitment. ✓</li>
+    <li><strong>(d) Forecloses a use case under Article I.</strong> No. Both legal and general modes are served identically; Authority node handling and annotation-edge participation are first-class for legal mode. ✓</li>
+    <li><strong>(e) Anthropic safety policies require user input.</strong> No. ✓</li>
+    <li><strong>(f) Constitution is silent or contradictory on a substantially product-shaping question.</strong> No. The Constitution is silent on layout — Stream E E1 and Contract 5 are the only canonical sources, and they are unambiguous together. The signature refinement is a precision item under the F-003 family; the per-module spec is canonical for its module under Stream I conventions. ✓</li>
+  </ul>
+  <p>Escalation conclusion: agent-decidable per Article V § 2 (technical resolution; downstream coding not gated; logged in the F-003 family flag file for a future contracts-doc bump). No user consultation required for the refinement.</p>
+
+  <h3>In-session-escalated flags (Article X § 1)</h3>
+  <p>One in-session-escalated flag this session contributes to the F-003 family. Same disposition as I.3 / I.4 / I.5 / I.6: per-module spec is canonical for its module under Stream I conventions; downstream coding is not gated on a contracts-doc bump; a future I.1 review session merges this family of corrections into <code>stream_i_contracts_v2.html</code>. The layout-specific item added to the F-003 family:</p>
+  <ol>
+    <li><strong><code>layout()</code> accepts an optional <code>deps</code> parameter.</strong> Contract 5 declares <code>layout(frame: FrameVersion, opts?: Partial&lt;LayoutOptions&gt;): Promise&lt;LayoutResult&gt;</code> with no provision for clock injection, despite the <code>LayoutResult.computed_at</code> field requiring a clock read. This spec refines the signature to <code>layout(frame: FrameVersion, opts?: Partial&lt;LayoutOptions&gt;, deps?: LayoutDeps): Promise&lt;LayoutResult&gt;</code> where <code>LayoutDeps = { now?: () =&gt; string }</code>. Production callers omit <code>deps</code> (wall-clock default); Vitest snapshot tests pass <code>{ now: () =&gt; "frozen-clock" }</code>. The pattern matches the persistence (<code>now</code> / <code>generateId</code>), runtime (<code>computed_at</code>), modes (<code>deps</code> threading), and state (<code>compute_driver</code> clock single-read) module-spec refinements. The dependency-direction graph in Contract 5 is unchanged.</li>
+  </ol>
+  <p>This session writes <code>flag_pending_from_i7.html</code> at Phase 4 (Persistence) capturing the item above in the established format, mirroring the prior I.3 / I.4 / I.5 / I.6 pending-flag files.</p>
+
+  <h3>Stream I housekeeping recommendations (not flags)</h3>
+  <ul>
+    <li><strong>Widen the ESLint <code>no-unsorted-iteration</code> rule to <code>src/layout/</code>.</strong> Same rationale I.6 raised for <code>src/modes/</code>: every walk over <code>frame.nodes</code>, <code>frame.edges</code>, <code>Map</code> / <code>Set</code> in this module is sorted explicitly throughout the spec; the lint rule would catch any regression where a future edit drops the sort. Layout is not Article II § 2-binding, but the practical-determinism property in the spec body benefits from the same mechanical enforcement. Logged for the I.7 coding session to consider including in its widening pass; not blocking.</li>
+    <li><strong>Idle-timeout Worker termination — v2 candidate.</strong> The Worker lives until page unload in v1. A v2 refinement could terminate idle Workers after, say, 5 minutes of no <code>layout()</code> calls to free the (small) memory footprint. The bridge already supports reconstruction; only the timer wiring is missing. Logged for the v2 polish pass; not blocking for v1.</li>
+    <li><strong>Per-request cancellation — v2 candidate.</strong> Multiple concurrent layout requests resolve independently in v1; there is no abort signal. A v2 refinement could add an <code>AbortSignal</code> parameter to <code>layout()</code> that, when triggered, causes the bridge to drop the pending Promise (the Worker would still finish the in-flight computation, but the result is discarded). Useful if the UI starts a layout and the user immediately navigates away; not worth v1 complexity. Logged for the v2 polish pass; not blocking for v1.</li>
+    <li><strong>LayoutResult memoization on FrameVersion id — v2 candidate.</strong> Two calls to <code>layout()</code> with the same <code>frame.id</code> + <code>opts</code> currently re-run ELK. A v2 refinement could memoize keyed on <code>frame.id</code> + a stable hash of <code>opts</code>; the cache cleared on FrameVersion change. Small win for the typical Argument Running flow where the frame is frozen and the user is just answering items, but adds cache-invalidation surface. Logged for v2; not blocking for v1.</li>
+  </ul>
+
+  <h2>Handoff to the I.7 coding session</h2>
+  <p>The coding session reads, in this order:</p>
+  <ol>
+    <li>Constitution and Protocol (project instructions, automatic via <code>.claude/CLAUDE.md</code>).</li>
+    <li><code>current_state.html</code> (consolidated state).</li>
+    <li><code>stream_i_buildkit_index_v1.html</code> (entry point).</li>
+    <li><code>stream_i_contracts_v1.html</code> Contract 5 (the layout cross-module surface) and Contract 1 (the schema types this module consumes).</li>
+    <li><code>src/schema/README.md</code> (the cross-session compression artifact written by I.2).</li>
+    <li>This document.</li>
+  </ol>
+  <p>The coding session writes:</p>
+  <ul>
+    <li>Seven files under <code>src/layout/</code> matching the file map.</li>
+    <li>Six test files under <code>tests/layout/</code> matching the test plan plus the fixture module.</li>
+    <li><code>src/layout/README.md</code> per the outline above.</li>
+    <li>(Recommended, per the housekeeping list) Widening of the <code>no-unsorted-iteration</code> rule to <code>src/layout/</code> in <code>eslint.config.js</code>.</li>
+  </ul>
+  <p>Implementation order: <code>types.ts</code> → <code>dimensions.ts</code> → <code>elk-options.ts</code> → <code>elk-mapping.ts</code> → <code>run.ts</code> → <code>elk-worker.ts</code> → <code>elk-bridge.ts</code> → <code>index.ts</code>, then the test files in the same order. Implement-until-green against the Vitest assertions; the snapshot test in <code>run.test.ts</code> regenerates on first run and is committed.</p>
+  <p>Expected coding session duration: one session, comparable in scope to the I.4 persistence coding session minus the Dexie complexity.</p>
+
+</div>

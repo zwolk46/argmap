@@ -1,0 +1,959 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 20px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 4px; font-weight: 500; }
+  .doc .tag-locked { background: var(--color-background-success); color: var(--color-text-success); }
+  .doc .tag-defer { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .doc .tag-flag { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .field-list { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.65; color: var(--color-text-primary); white-space: pre-wrap; overflow-x: auto; }
+  .doc .field-list .cm { color: var(--color-text-secondary); }
+  .doc .ascii { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--color-text-primary); white-space: pre; overflow-x: auto; }
+  .doc .hook-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 14px 16px; margin: 14px 0; }
+  .doc .hook-card h3 { margin-top: 0; }
+  .doc .hook-meta { font-size: 11px; color: var(--color-text-secondary); margin: 0 0 10px; font-family: var(--font-mono); }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+</style>
+<div class="doc">
+  <h1>Stream G — LLM Hook Design</h1>
+  <p class="subtitle">Companion to stream_a_resolutions_v1.html, stream_b_schema_v1.html, stream_c_runtime_v1.html, stream_d_modes_v1.html, stream_e_uiux_v1.html, and stream_h_persistence_v1.html &nbsp;·&nbsp; Session date: May 10, 2026 &nbsp;·&nbsp; Version 1</p>
+
+  <div class="notice">
+    <p>This document specifies the application's LLM hook system end-to-end: the hook taxonomy and per-hook contracts, the common interfaces that every hook implements, the prompt-file format and storage path, the activation strategy (when each hook becomes live, opt-in defaults, mode/flavor visibility, graceful degradation), the determinism guarantees that govern how hooks coexist with Article II § 2, the user-confirmation contract for build-time hooks, and the testing strategy. It compiles directly against Stream A's A2 AI strategy decision (build-time AI suggestion-only / runtime LLM-free), Stream B's <code>LlmSettings</code> reservation on Frame and the LLM_HOOK candidate fields it identifies, Stream C's "LLM hook integration points" table fixing G1–G6, Stream D's candidate-surface additions (Premise reuse ranking, Conclusion direction suggestion, Position-table suggestion, frame-template selection ranking), Stream E's UI placement of suggestions and the "user always confirms" affordance, and Stream H's commitment of <code>src/llm-hooks/prompts/</code> as the prompt-file storage path and the stub <code>prompts</code> IndexedDB store. Visual styling and key management are out of scope here.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>Conventions match the prior stream documents. TypeScript-flavored notation describes shapes and APIs; the actual implementation is plain TypeScript at the source level. Prompt bodies are markdown with YAML frontmatter; representative full prompts are written for two hooks (G1 and G3), and the remaining prompts are sketched at the same template level so an implementing agent can flesh them out without rediscovering structure. Hook ids G1–G6 are inherited from Stream C; G7–G10 number the Stream D candidate surfaces; G11–G12 number the Stream A runtime sidecar surfaces; G13 numbers the version <code>change_summary</code> hook flagged in Stream B.</p>
+
+  <h2>Decisions made in this session</h2>
+  <p>The following decisions are committed by this document. Each is a technical choice within agent discretion under Article V § 2(a)–(g); none reverses an architectural commitment under Article II or a prior stream's decision (verified in self-review below).</p>
+  <ol>
+    <li><strong>Hook taxonomy: thirteen hooks across three activation modes.</strong> Build-time bake-and-commit (G1, G2, G3, G4, G5, G7, G8, G9, G10, G13), output-time opt-in (G6), and runtime sidecar (G11, G12). Build-time hooks bake their committed output into the FrameVersion at confirmation, after which subsequent runtime calls are LLM-free. Output-time produces a separate field while preserving the deterministic baseline. Runtime sidecar hooks are off by default in v1 per Stream B's <code>runtime_hooks_enabled</code> default and never touch routing.</li>
+    <li><strong>Uniform <code>HookContract&lt;TIn, TOut&gt;</code> interface.</strong> Every hook implements one shape: a typed input it consumes from frame/session state, a typed output it produces, a parser that validates the LLM response against the output schema, a fallback for parse failures and provider errors, and a commit function that bakes the user-confirmed output into the appropriate frame field(s). The contract makes hooks substitutable, testable in isolation, and trivially rewireable to new providers.</li>
+    <li><strong>Provider abstraction: <code>LlmProvider</code> interface, agnostic to vendor.</strong> A single interface (<code>complete(prompt, schema): Promise&lt;ParsedResponse&gt;</code>) sits between hooks and any LLM API. The v1 default implementation is Anthropic's Claude API (consistent with the user's working environment); an OpenAI implementation, a local-model implementation, and a deterministic mock implementation are all conformant. Hooks never import a vendor SDK directly.</li>
+    <li><strong>Prompt files are markdown with YAML frontmatter, stored at <code>src/llm-hooks/prompts/&lt;hook_name&gt;/&lt;version&gt;.md</code>.</strong> Frontmatter declares <code>id</code>, <code>version</code>, <code>schema_in</code>, <code>schema_out</code>, <code>model_hint</code>, and <code>provider_hints</code>; the body is the prompt template using <code>{{variable}}</code> Mustache-style interpolation. Versions are immutable filenames (<code>v1.md</code>, <code>v2.md</code>) so older FrameVersions whose <code>HookInvocationRecord</code>s reference an old prompt remain reproducible. The <code>prompts</code> IndexedDB store from Stream H is the runtime cache, keyed by <code>[hook_name+version]</code> per H1.</li>
+    <li><strong><code>LlmSettings</code> on Frame is refined from "opaque" to a concrete shape covering enabled-flags, prompt-version pinning per hook, calibrated thresholds (G5), and an append-only <code>invocations: HookInvocationRecord[]</code> log for provenance.</strong> This refines but does not amend Stream B B3, which explicitly reserved <code>LlmSettings</code> for Stream G ("opaque object in v1"). The shape is documented here; an implementing agent treats it as the canonical TypeScript definition.</li>
+    <li><strong>Provenance: every hook commit records a <code>HookInvocationRecord</code> on <code>LlmSettings.invocations</code>.</strong> Each record carries the hook id, prompt name+version, provider+model identifiers, input hash (for replay), the LLM's raw response, the parsed output, the user's commit decision (accepted / edited / rejected), the final committed value, and timestamps. The log is append-only; entries are never rewritten or removed in v1. This makes every AI-influenced field on a Frame auditably attributable.</li>
+    <li><strong>User-confirmation contract: every build-time hook produces a <code>SuggestionResult</code> the user must explicitly accept (optionally after editing) or reject before any frame field is written.</strong> The UI affordance (Stream E) is a three-button surface (Accept / Edit / Reject) with a visible AI-attribution chip; the contract is that no hook output reaches the FrameVersion without an explicit user act. Automatic-trigger hooks (G4, G7, G12, G13) still surface their output as a confirmable suggestion when the output writes to a versioned field; non-versioned outputs (e.g., G4 advisory warnings, G7 ranking) bypass confirmation because they do not modify the frame.</li>
+    <li><strong>Activation defaults: build-time hooks ON, runtime hooks OFF, output-time hooks ON-but-opt-in-per-invocation.</strong> Per Stream B's <code>LlmSettings</code> defaults (<code>build_time_hooks_enabled: true</code>, <code>runtime_hooks_enabled: false</code>). The user can disable all hooks per-frame and pin specific prompt versions for replay. Without an LLM provider configured, all hooks degrade silently: their UI affordances render disabled with a tooltip pointing to Settings.</li>
+    <li><strong>Determinism contract: build-time hooks are bake-and-commit, output-time hook (G6) preserves the deterministic baseline as a separate field, runtime sidecar hooks (G11, G12) are forbidden from writing to any field consumed by the Stream C compute pipeline.</strong> This is an enforcement of Article II § 2, not an addition to it. The runtime-module import boundary committed in Stream H (no <code>src/runtime/</code> import from <code>src/llm-hooks/</code>) provides the structural guarantee; this document specifies the per-hook discipline.</li>
+    <li><strong>Testing strategy: every hook ships with a deterministic <code>MockLlmProvider</code> fixture that returns a hand-authored response per input; parse-failure tests assert the fallback path; round-trip tests assert that committing a hook output never makes the runtime pipeline non-deterministic.</strong> Hook tests live under <code>tests/llm-hooks/</code>; the iteration-order audit and frozen-clock discipline from Stream H apply to any code in <code>src/llm-hooks/</code> that touches sorted iteration over frame data.</li>
+  </ol>
+
+  <h2>Hook taxonomy</h2>
+
+  <p>Thirteen hooks. Each is described in its own card later in this document; the table here is the full inventory and the v1 ship status.</p>
+
+  <table>
+    <tr><th>Id</th><th>Name</th><th>Activation</th><th>Trigger</th><th>Mode/flavor</th><th>v1 ship</th></tr>
+    <tr><td>G1</td><td>Checkpoint question generation</td><td>build-time</td><td>manual button in Checkpoint editor</td><td>all</td><td>yes</td></tr>
+    <tr><td>G2</td><td>Interpretation suggestion</td><td>build-time</td><td>manual button in Term editor</td><td>all</td><td>yes</td></tr>
+    <tr><td>G3</td><td>Conclusion <code>reasoning_summary</code></td><td>build-time</td><td>manual button on Conclusion editor; auto-offer on Conclusion save</td><td>all</td><td>yes</td></tr>
+    <tr><td>G4</td><td>Gap detection (compound Checkpoints, missing branches)</td><td>build-time</td><td>automatic on every C5 validation pass</td><td>all</td><td>yes</td></tr>
+    <tr><td>G5</td><td>Standard-of-review threshold calibration</td><td>build-time (calibration baked into Frame)</td><td>manual in Frame settings; automatic offer on first <code>standard_of_review</code> set</td><td>legal only</td><td>yes</td></tr>
+    <tr><td>G6</td><td>Prose rewrite (fluency)</td><td>output-time</td><td>manual button in prose tab of output viewer</td><td>all</td><td>yes</td></tr>
+    <tr><td>G7</td><td>Premise reuse ranking</td><td>build-time of session</td><td>automatic during Premise authoring</td><td>all</td><td>v1.5 (v1 ships heuristic; LLM ranking layered later)</td></tr>
+    <tr><td>G8</td><td>Conclusion direction suggestion</td><td>build-time</td><td>manual chip on Conclusion direction picker</td><td>all (legal direction enum / general positions)</td><td>yes</td></tr>
+    <tr><td>G9</td><td>Position-table suggestion</td><td>build-time</td><td>manual button in Frame settings (general mode only)</td><td>general only</td><td>yes</td></tr>
+    <tr><td>G10</td><td>Frame-template ranking</td><td>build-time</td><td>automatic in new-frame wizard, given a topic prompt</td><td>all</td><td>v1.5</td></tr>
+    <tr><td>G11</td><td>Premise drafting from fact pattern</td><td>runtime sidecar</td><td>manual button in Premise authoring drawer</td><td>all</td><td>yes (off by default)</td></tr>
+    <tr><td>G12</td><td>Cross-implication advisory notes</td><td>runtime sidecar</td><td>automatic during Argument Running, advisory only</td><td>all</td><td>v1.5 (off by default)</td></tr>
+    <tr><td>G13</td><td>Version <code>change_summary</code> generation</td><td>build-time</td><td>automatic on milestone save and on auto-saves passing a non-trivial-edit threshold</td><td>all</td><td>yes</td></tr>
+  </table>
+
+  <p>"v1.5" means the contract ships in v1 (so the surface exists and is not a breaking change to add later) but the active implementation defaults to a deterministic non-LLM fallback (G7's text-similarity-and-recency ranking, G10's tag-and-recents ranking). The LLM body of each is implemented when the implementing agent prioritizes it; the code path is reserved.</p>
+
+  <h2>Common contracts</h2>
+
+  <h3>HookContract&lt;TIn, TOut&gt;</h3>
+  <p>The single interface every hook implements. <code>TIn</code> is the typed input the hook consumes from frame/session state; <code>TOut</code> is the typed output the hook produces. The contract decouples the hook's role from any specific provider, prompt, or UI surface.</p>
+  <div class="field-list">interface HookContract&lt;TIn, TOut&gt; {
+  id: HookId                                    <span class="cm">// "G1" | "G2" | ... | "G13"</span>
+  name: string                                  <span class="cm">// "checkpoint_question_generation" etc.</span>
+  activation: "build_time" | "output_time" | "runtime_sidecar"
+  trigger: "manual" | "automatic" | "manual_with_auto_offer"
+  mode_visibility: ModeVisibility               <span class="cm">// see below</span>
+
+  buildInput(ctx: HookContext): TIn             <span class="cm">// pure: collects from frame/session</span>
+  renderPrompt(input: TIn, prompt: PromptFile): string
+  parseOutput(raw: string, schema: JsonSchema): ParseResult&lt;TOut&gt;
+  fallback(input: TIn, error: ParseError | ProviderError): FallbackResult&lt;TOut&gt;
+  commit(output: TOut, ctx: HookContext): CommitPlan
+}
+
+interface HookContext {
+  repository: Repository                        <span class="cm">// Stream H</span>
+  frame_version: FrameVersion
+  session?: ArgumentSession                     <span class="cm">// only for argument-layer hooks</span>
+  selection?: NodeRef | EdgeRef                 <span class="cm">// what the user has focused</span>
+  user_input?: unknown                          <span class="cm">// e.g. pasted fact pattern for G11</span>
+}
+
+type ModeVisibility = {
+  legal: boolean
+  general: { personal: boolean; academic: boolean }
+}
+
+type ParseResult&lt;T&gt; =
+  | { kind: "ok"; value: T }
+  | { kind: "parse_error"; error: ParseError; raw: string }
+
+type FallbackResult&lt;T&gt; =
+  | { kind: "deterministic_fallback"; value: T }    <span class="cm">// e.g., G7 default ranking</span>
+  | { kind: "advise_user"; message: string }        <span class="cm">// surface a non-blocking notice</span>
+  | { kind: "no_op" }                                <span class="cm">// silently abort</span>
+
+interface CommitPlan {
+  writes: FrameFieldWrite[]                     <span class="cm">// what fields to update on accept</span>
+  versioned: boolean                            <span class="cm">// true if writes create a new FrameVersion</span>
+}</div>
+
+  <h3>LlmProvider interface</h3>
+  <p>Hooks call out through this single interface. The implementer wires Anthropic Claude as the v1 default; OpenAI, Azure, local models, and the deterministic mock are all drop-in replacements.</p>
+  <div class="field-list">interface LlmProvider {
+  id: string                                    <span class="cm">// "anthropic" | "openai" | "mock" | ...</span>
+  complete(req: CompletionRequest): Promise&lt;CompletionResponse&gt;
+  capabilities: ProviderCapabilities
+}
+
+interface CompletionRequest {
+  prompt: string
+  output_schema: JsonSchema                     <span class="cm">// for providers supporting structured output</span>
+  model_hint?: string                           <span class="cm">// from PromptFile frontmatter</span>
+  max_tokens?: number
+  temperature?: number                          <span class="cm">// default low (0.2) for build-time hooks</span>
+}
+
+interface CompletionResponse {
+  raw_text: string
+  model_id: string                              <span class="cm">// e.g. "claude-3.7-sonnet-2026-02"</span>
+  finish_reason: "stop" | "length" | "error"
+  token_usage?: { input: number; output: number }
+}
+
+interface ProviderCapabilities {
+  structured_output: boolean                    <span class="cm">// schema-enforced; if false, hooks parse-then-validate</span>
+  streaming: boolean
+  tool_use: boolean                             <span class="cm">// reserved; v1 hooks do not use tools</span>
+}</div>
+
+  <p>Build-time hooks default to <code>temperature: 0.2</code> for stability. The mock provider is constructed with a per-test response map keyed by prompt-hash and is the testing harness for deterministic hook tests.</p>
+
+  <h3>SuggestionResult and the confirmation flow</h3>
+  <p>Every build-time hook produces a <code>SuggestionResult&lt;TOut&gt;</code> that the UI surface consumes. The UI affordance (Stream E) renders the suggestion with three actions; until one is taken, no frame field is written.</p>
+  <div class="field-list">type SuggestionResult&lt;TOut&gt; = {
+  hook_id: HookId
+  prompt_version: string
+  provider_id: string
+  model_id: string
+  input_hash: string                            <span class="cm">// SHA-256 of the canonicalized input</span>
+  raw_response: string                          <span class="cm">// retained for audit</span>
+  parsed: TOut                                  <span class="cm">// or fallback's value</span>
+  parse_status: "ok" | "fallback" | "error"
+  generated_at: timestamp
+}
+
+type ConfirmationDecision&lt;TOut&gt; =
+  | { kind: "accepted"; final: TOut }
+  | { kind: "edited"; final: TOut; original: TOut }
+  | { kind: "rejected" }</div>
+
+  <h3>HookInvocationRecord</h3>
+  <p>Every commit produces an audit record that lives on <code>LlmSettings.invocations</code> on the Frame. The record is the audit trail referenced in Article III § 3.</p>
+  <div class="field-list">interface HookInvocationRecord {
+  id: string                                    <span class="cm">// UUID v4</span>
+  hook_id: HookId
+  prompt_name: string
+  prompt_version: string
+  provider_id: string
+  model_id: string
+  input_hash: string
+  raw_response?: string                         <span class="cm">// optional; large responses may be omitted by config</span>
+  decision: "accepted" | "edited" | "rejected"
+  final_value?: unknown                         <span class="cm">// what was actually written; absent if rejected</span>
+  target_node_ids?: NodeRef[]                   <span class="cm">// which nodes were affected</span>
+  target_field_paths?: string[]                 <span class="cm">// e.g. ["question", "options[0].label"]</span>
+  invoked_at: timestamp
+  committed_at?: timestamp                      <span class="cm">// absent if rejected</span>
+}</div>
+
+  <h3>PromptFile schema</h3>
+  <p>The on-disk and in-IndexedDB shape of a prompt. Filesystem files at <code>src/llm-hooks/prompts/&lt;hook_name&gt;/&lt;version&gt;.md</code> are parsed into this shape on app start (or on first hook invocation) and cached in the <code>prompts</code> IndexedDB store from Stream H1, keyed by <code>[hook_name+version]</code>.</p>
+  <div class="field-list">interface PromptFile {
+  hook_name: string                             <span class="cm">// must match the hook's contract.name</span>
+  version: string                               <span class="cm">// e.g. "v1", "v2"; immutable once published</span>
+  schema_in: JsonSchema                         <span class="cm">// describes TIn</span>
+  schema_out: JsonSchema                        <span class="cm">// describes TOut</span>
+  model_hint?: string                           <span class="cm">// e.g. "claude-3.7-sonnet" or "any"</span>
+  provider_hints?: { [provider_id: string]: object }
+  body: string                                  <span class="cm">// markdown template with {{variable}} interpolation</span>
+  created_at: timestamp
+  notes?: string                                <span class="cm">// human-readable changelog vs. prior version</span>
+}</div>
+
+  <h3>Prompt file format</h3>
+  <p>A prompt file is markdown with YAML frontmatter. Variable interpolation is Mustache-style (<code>{{variable_name}}</code>). The body addresses the LLM directly; structured output is requested explicitly with the JSON schema embedded in the prompt body for providers without native schema support.</p>
+
+  <div class="ascii">---
+hook_name: checkpoint_question_generation
+version: v1
+schema_in:
+  type: object
+  required: [parent_subquestion, sibling_checkpoints, frame_mode]
+  properties:
+    parent_subquestion: { type: object }
+    sibling_checkpoints: { type: array }
+    frame_mode: { enum: ["legal", "general"] }
+    frame_flavor: { enum: ["personal", "academic", null] }
+    frame_jurisdiction: { type: ["string", "null"] }
+schema_out:
+  type: object
+  required: [question, options]
+  properties:
+    question: { type: string, minLength: 5 }
+    options:
+      type: array
+      minItems: 2
+      maxItems: 6
+      items:
+        type: object
+        required: [label]
+        properties:
+          label: { type: string, minLength: 1 }
+          target_hint: { type: ["string", "null"] }
+model_hint: claude-3.7-sonnet
+---
+
+You are helping a {{frame_mode}} argument-mapper draft a Checkpoint
+question that resolves under the parent SubQuestion below. A Checkpoint
+is a single yes/no, multiple-choice, or graded question whose answer
+routes the argument forward.
+
+Parent SubQuestion: {{parent_subquestion.statement}}
+
+{{#if sibling_checkpoints.length}}
+Sibling Checkpoints under the same SubQuestion:
+{{#each sibling_checkpoints}}
+- {{this.question}}
+{{/each}}
+{{/if}}
+
+{{#if frame_jurisdiction}}
+Jurisdiction: {{frame_jurisdiction}}.
+{{/if}}
+
+Constraints:
+- The question must ask exactly ONE thing. If you find yourself wanting
+  to write "X and Y" or "X, including Y," propose two Checkpoints
+  instead and pick the most central one for this slot.
+- Phrase the question in the idiom of the {{frame_mode}} domain.
+- Each option must be a short label (a few words at most).
+- Do not invent target node ids; leave target_hint as null unless a
+  sibling Checkpoint's question is structurally an answer to a specific
+  option, in which case use that sibling's id.
+
+Return ONLY a JSON object matching this shape:
+{ "question": string, "options": [ { "label": string, "target_hint": string | null }, ... ] }
+</div>
+
+  <p>The same template structure (frontmatter + addressed-to-LLM body + structured-output instruction) applies to every hook. The remaining hooks' bodies are sketched in their cards below; an implementing agent fleshes them out by following the same pattern.</p>
+
+  <h3>LlmSettings refinement (refines Stream B B3's "opaque object")</h3>
+  <p>Stream B B3 reserves <code>LlmSettings</code> on Frame as an opaque object pending Stream G. This document fixes its shape. The refinement is non-amending: the field's existence, optionality, and v1 default behavior are unchanged from Stream B; only its internal structure is now defined.</p>
+  <div class="field-list">interface LlmSettings {
+  build_time_hooks_enabled: boolean             <span class="cm">// default true (per Stream B)</span>
+  runtime_hooks_enabled: boolean                <span class="cm">// default false (per Stream B)</span>
+  output_time_hooks_enabled: boolean            <span class="cm">// default true; G6 still requires user click</span>
+
+  prompt_versions?: { [hook_name: string]: string }   <span class="cm">// pin a specific prompt version per hook</span>
+  per_hook_enabled?: { [hook_name: string]: boolean } <span class="cm">// per-hook override of category default</span>
+
+  calibrated_thresholds?: BurdenThresholdMap    <span class="cm">// G5 output: baked numeric thresholds</span>
+
+  invocations: HookInvocationRecord[]           <span class="cm">// append-only audit log</span>
+
+  provider_id?: string                          <span class="cm">// "anthropic" | "openai" | "mock" | ...</span>
+}
+
+interface BurdenThresholdMap {
+  preponderance: number
+  clear_and_convincing: number
+  beyond_reasonable_doubt: number
+  scintilla: number
+  substantial_evidence: number
+  source: "default" | "g5_calibrated"           <span class="cm">// audit which table is in effect</span>
+  calibrated_from?: { standard_of_review: string; calibrated_at: timestamp }
+}</div>
+
+  <p>Defaults: when <code>LlmSettings</code> is absent on a Frame, the system behaves as if <code>build_time_hooks_enabled: true</code>, <code>runtime_hooks_enabled: false</code>, <code>output_time_hooks_enabled: true</code>, <code>invocations: []</code>, no version pins, no calibration override, and <code>provider_id</code> read from an app-level default in <code>app_state</code>. The Frame settings UI (Stream E E2) exposes per-frame overrides under "AI Settings."</p>
+
+  <h2>Per-hook specifications</h2>
+
+  <p>Each hook below is specified with the same fields: surface (where it lives in the UI), trigger, mode/flavor visibility, input shape, output shape, parser rules, fallback behavior, and commit semantics. Two prompt bodies (G1 above, G3 below) are written in full as exemplars; the rest specify the prompt's intent and key constraints, and the implementing agent writes the body following the same pattern.</p>
+
+  <div class="hook-card">
+    <h3>G1 — Checkpoint question generation</h3>
+    <p class="hook-meta">build-time · manual · all modes/flavors · ships v1</p>
+    <p>Helps the user draft a Checkpoint's <code>question</code> text and answer <code>options</code> when adding a new Checkpoint or refining an existing one. Covers the three sub-surfaces named in A2 ("Checkpoint question wording, answer-option suggestions, routing suggestions") in a single hook because they share an input and produce a coherent output.</p>
+    <h4>Surface and trigger</h4>
+    <p>An "✦ Suggest Checkpoint" button in the Checkpoint inspector (Stream E E2). The button is disabled if the Checkpoint has no parent SubQuestion (a structural prerequisite). Clicking opens a SuggestionResult drawer with the three-button affordance.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G1Input = {
+  parent_subquestion: { id: string; statement: string }
+  sibling_checkpoints: { id: string; question: string }[]
+  frame_mode: "legal" | "general"
+  frame_flavor: "personal" | "academic" | null
+  frame_jurisdiction: string | null
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G1Output = {
+  question: string
+  options: { label: string; target_hint: NodeRef | null }[]
+}</div>
+    <h4>Parser rules</h4>
+    <p>JSON parse, then schema validation. Reject if <code>question</code> is empty, contains the conjunctions <code>" and "</code>/<code>" plus "</code> at top level (compound-question heuristic from Stream C C5), or if <code>options.length &lt; 2</code> or <code>&gt; 6</code>. <code>target_hint</code>, when present, must reference a sibling Checkpoint id from the input (otherwise null).</p>
+    <h4>Fallback</h4>
+    <p>On parse failure: return <code>{ kind: "advise_user", message: "AI suggestion was malformed; try again or write the question directly." }</code>. The drawer surfaces the message and remains open. On provider error: same advice with provider-specific detail.</p>
+    <h4>Commit</h4>
+    <p>On accept (or edit-then-accept), writes <code>question</code> and <code>options</code> on the Checkpoint and creates a new FrameVersion via the standard auto-save path. <code>target_hint</code> values are written to the corresponding <code>options[i].target_node_id</code>; null hints leave the option's target unset (the user resolves later via the canvas connector). Records a <code>HookInvocationRecord</code> on <code>LlmSettings.invocations</code>.</p>
+    <h4>Prompt</h4>
+    <p>See the full body in "Prompt file format" above; G1 is the exemplar.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G2 — Interpretation suggestion</h3>
+    <p class="hook-meta">build-time · manual · all modes/flavors · ships v1</p>
+    <p>Helps the user populate Interpretations under a Term, with citation hints in legal mode. The hook proposes Interpretation statements; the user accepts, edits, or rejects each candidate independently (so a single suggestion may produce multiple Interpretation creations).</p>
+    <h4>Surface and trigger</h4>
+    <p>An "✦ Suggest Interpretations" button in the Term editor's Interpretation list (Stream E E2). Disabled if the Term has no name. The drawer shows a checklist of N candidates; the user selects which to commit (defaulting to all).</p>
+    <h4>Input</h4>
+    <div class="field-list">type G2Input = {
+  term: { id: string; name: string }
+  root_question: { statement: string }
+  ancestor_subquestions: { statement: string }[]   <span class="cm">// path from root to this Term's parent</span>
+  existing_interpretations: { id: string; statement: string }[]
+  frame_mode: "legal" | "general"
+  frame_flavor: "personal" | "academic" | null
+  frame_jurisdiction: string | null
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G2Output = {
+  interpretations: {
+    statement: string
+    citation_hint?: { authority_label: string; citation_string: string } <span class="cm">// legal mode only</span>
+    rationale?: string                            <span class="cm">// short explanation, shown in drawer; not committed</span>
+  }[]
+}</div>
+    <h4>Parser rules</h4>
+    <p>JSON parse + schema. Each <code>statement</code> must be non-empty and must not duplicate an existing Interpretation's statement (case-insensitive equality). At most 6 candidates. In legal mode, <code>citation_hint</code> is permitted; the prompt instructs the model to use only well-known case/statute citations and to omit the hint rather than invent one. Reject any candidate whose <code>citation_hint.citation_string</code> contains placeholder markers like <code>"[citation needed]"</code>, <code>"e.g."</code>, or unbalanced brackets.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure: <code>advise_user</code>. On provider error: same. The hook does not have a deterministic fallback because the input space is too open.</p>
+    <h4>Commit</h4>
+    <p>For each accepted candidate: create a new Interpretation node and an INTERPRETED_AS edge from the Term to it; if a <code>citation_hint</code> is present and the user accepts it, create a new Authority node (or reuse a matching existing one by case-insensitive label match) and a CITES edge from the Interpretation to it. All node and edge creations are written in a single FrameVersion auto-save tick.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: legal/academic argument mapper drafting Interpretations. Inputs interpolated as the parent path (root → ancestor SubQuestions → Term). Constraints: each Interpretation must be a candidate <em>reading</em> of the Term, not a description of the Term; must be distinct from existing Interpretations; in legal mode, citations only when the model has high confidence in their accuracy; in personal flavor, no citations expected (Authority is hidden by default per Stream A A8/A4).</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G3 — Conclusion <code>reasoning_summary</code></h3>
+    <p class="hook-meta">build-time · manual_with_auto_offer · all modes/flavors · ships v1</p>
+    <p>Drafts the optional <code>reasoning_summary</code> field on a Conclusion (Stream B B1.7). The summary is a short paragraph explaining how the active path arrives at the Conclusion's <code>direction</code>; it complements but does not replace the deterministic prose summary from C4.</p>
+    <h4>Surface and trigger</h4>
+    <p>Two activation paths. (1) Manual: an "✦ Suggest summary" button on the <code>reasoning_summary</code> field in the Conclusion inspector. (2) Auto-offer: when a Conclusion is saved with <code>reasoning_summary</code> empty and the user has <code>build_time_hooks_enabled</code>, a non-blocking toast offers to draft one. The user clicks once to invoke; the suggestion still requires explicit accept/edit/reject.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G3Input = {
+  conclusion: { id: string; statement: string; direction: ConclusionDirection }
+  incoming_path: PathNode[]                     <span class="cm">// from RootQuestion to this Conclusion via active selections</span>
+  frame_mode: "legal" | "general"
+  frame_flavor: "personal" | "academic" | null
+  frame_jurisdiction: string | null
+  positions?: Position[]                        <span class="cm">// general mode</span>
+}
+
+type PathNode = {
+  type: "RootQuestion" | "SubQuestion" | "Term" | "Interpretation" | "Checkpoint" | "LogicalGate"
+  text: string                                  <span class="cm">// statement / question / name / interpretation, as appropriate</span>
+  resolution?: string                           <span class="cm">// e.g. selected Interpretation, Checkpoint answer</span>
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G3Output = {
+  reasoning_summary: string                     <span class="cm">// 1-3 sentences typical, max 120 words</span>
+}</div>
+    <h4>Parser rules</h4>
+    <p>JSON parse + schema. Reject if empty, longer than 120 words, or if it contains a future-tense legal predictive claim (heuristic: "will likely," "is expected to") in legal mode (predictions are out of scope for a reasoning summary).</p>
+    <h4>Fallback</h4>
+    <p>On parse failure: <code>advise_user</code>. On provider error: <code>no_op</code> with a quiet console log; the auto-offer toast is suppressed for the rest of the session.</p>
+    <h4>Commit</h4>
+    <p>On accept, writes <code>conclusion.reasoning_summary</code>. Single-field write; auto-save tick advances the FrameVersion. Provenance recorded as usual.</p>
+    <h4>Prompt</h4>
+    <div class="ascii">---
+hook_name: conclusion_reasoning_summary
+version: v1
+schema_in: { ... see G3Input above ... }
+schema_out:
+  type: object
+  required: [reasoning_summary]
+  properties:
+    reasoning_summary: { type: string, minLength: 10, maxLength: 800 }
+model_hint: claude-3.7-sonnet
+---
+
+You are summarizing the reasoning that links a chain of resolved
+questions to a Conclusion in a {{frame_mode}} argument map.
+
+Conclusion statement: {{conclusion.statement}}
+Conclusion direction: {{conclusion.direction.value}}{{#if conclusion.direction.custom_label}} ({{conclusion.direction.custom_label}}){{/if}}
+
+Path from the root question to this Conclusion (in order):
+{{#each incoming_path}}
+- [{{this.type}}] {{this.text}}{{#if this.resolution}} → {{this.resolution}}{{/if}}
+{{/each}}
+
+Constraints:
+- Write 1 to 3 sentences (max 120 words).
+- Describe the path, not the validity of the path. The structural
+  validity is verified separately by the application.
+- Use the {{frame_mode}} idiom. In legal mode, follow IRAC-adjacent
+  prose; do not predict outcomes ("the court will likely") and do not
+  hedge with confidence statements ("with high probability") — confidence
+  is computed and displayed separately by the application.
+- Do not introduce facts not in the path.
+
+Return ONLY a JSON object: { "reasoning_summary": string }
+</div>
+  </div>
+
+  <div class="hook-card">
+    <h3>G4 — Gap detection</h3>
+    <p class="hook-meta">build-time · automatic · all modes/flavors · ships v1</p>
+    <p>Stream C C5's compound-checkpoint warning is intentionally fuzzy ("a language judgment, not a structural one") and a precision upgrade was reserved as G4. The hook also extends to other gap-detection-flavored cases: missing branches under multi-option Checkpoints, missing Interpretations under Terms, Conclusions whose <code>direction</code> doesn't match the apparent thrust of the path. Outputs are advisory <code>ValidationResult[]</code> with severity <code>"warning"</code>; no field on the frame is rewritten.</p>
+    <h4>Surface and trigger</h4>
+    <p>Runs automatically as part of every C5 validation pass when <code>build_time_hooks_enabled</code> is true. Its outputs append to the validation drawer (Stream E E2) under a labeled "AI advisories" section so the user can distinguish them from structural rules.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G4Input = {
+  frame_version: FrameVersion                   <span class="cm">// full snapshot</span>
+  structural_validation_results: ValidationResult[]   <span class="cm">// from C5 deterministic rules</span>
+  frame_mode: "legal" | "general"
+  frame_flavor: "personal" | "academic" | null
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G4Output = {
+  advisories: ValidationResult[]                <span class="cm">// each with severity: "warning"</span>
+}</div>
+    <p>Each advisory carries the same shape as Stream C's <code>ValidationResult</code>: <code>rule_id</code> (prefixed <code>"AI-"</code>, e.g., <code>"AI-COMPOUND-CHECKPOINT"</code>), <code>severity: "warning"</code>, <code>node_ids</code>, <code>message</code>, optional <code>suggested_fix</code>.</p>
+    <h4>Parser rules</h4>
+    <p>JSON parse + schema. Each advisory's <code>node_ids</code> must reference nodes that exist in the FrameVersion (else discard). The hook caps at 8 advisories per pass to bound noise.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>no_op</code>. The deterministic structural rules continue to surface unaffected. A single subdued console line records the failure for debugging.</p>
+    <h4>Commit</h4>
+    <p>None — advisories are not stored on the frame; they are recomputed each validation pass. The hook still records a <code>HookInvocationRecord</code> on <code>LlmSettings.invocations</code> with <code>final_value: undefined</code> and <code>decision: "accepted"</code> (the user implicitly accepts by viewing) so audit trails can show "AI ran on FrameVersion N and produced these advisories." For storage economy, the <code>raw_response</code> field may be omitted from G4 records by configuration.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: reviewer of a draft argument map looking for compound questions, missing branches, dangling Terms, and direction mismatches. Inputs: the full FrameVersion (or a structural digest for very large frames; the digest format is a v1.5 optimization). Output: an array of structured advisories with the AI- rule_id prefix, capped at 8.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G5 — Standard-of-review threshold calibration</h3>
+    <p class="hook-meta">build-time (calibration baked) · manual (with auto-offer) · legal only · ships v1</p>
+    <p>Per Stream C, the burden_met evaluation is categorical with a fixed scoring table; G5 is reserved as a calibration override. The hook reads the Frame's <code>standard_of_review</code> (e.g., "de novo," "abuse of discretion," "clear error") and proposes adjusted <code>BURDEN_THRESHOLD</code> values appropriate to that standard. The output is committed as <code>LlmSettings.calibrated_thresholds</code>; subsequent runtime calls read these as fixed inputs to Phase 4 (the runtime never invokes G5).</p>
+    <h4>Surface and trigger</h4>
+    <p>Manual: a "Calibrate from standard of review" button in Frame settings under "Burden thresholds." Auto-offer: when the user first sets a non-default <code>standard_of_review</code> on a Question/SubQuestion, a single inline coachmark suggests calibrating; dismissible per usual rules.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G5Input = {
+  standard_of_review: string                    <span class="cm">// e.g. "de_novo", "abuse_of_discretion"</span>
+  current_thresholds: BurdenThresholdMap        <span class="cm">// the table currently in effect (default or prior G5)</span>
+  frame_jurisdiction: string | null
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G5Output = {
+  thresholds: BurdenThresholdMap                <span class="cm">// proposed; "source" set to "g5_calibrated"</span>
+  rationale: string                             <span class="cm">// short paragraph for the confirmation drawer</span>
+}</div>
+    <h4>Parser rules</h4>
+    <p>Each numeric threshold must be in range [0, 100] (the scoring table's units, per Stream C). The five named burden levels must all be present. Reject if any value is outside range or any level is missing.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure: <code>advise_user</code>. On provider error: <code>no_op</code>; the user can still hand-edit thresholds in the same Frame-settings panel as a deterministic fallback.</p>
+    <h4>Commit</h4>
+    <p>Writes <code>LlmSettings.calibrated_thresholds</code> on the Frame. This <strong>does</strong> create a new FrameVersion (because <code>LlmSettings</code> sits on Frame, not on FrameVersion — but for runtime determinism the calibrated thresholds must be visible to <code>compute</code>). Resolution: the FrameVersion includes a <code>llm_settings_snapshot</code> projection that copies <code>calibrated_thresholds</code> at version-creation time. <strong>This is a small extension to Stream B's FrameVersion shape</strong>; see "Persistence and schema updates" at the end of this document for the precise change and its review-flag.</p>
+    <p>After commit, every subsequent Phase 4 status determination reads the calibrated thresholds via the FrameVersion snapshot. The runtime pipeline does not invoke any LLM and does not re-call G5; the hook's effect is fully baked.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: a legal-domain expert mapping appellate review standards to relative weight thresholds for the application's burden_met scoring. Inputs interpolated. Constraints: outputs must respect ordinal monotonicity (<code>scintilla &lt; preponderance &lt; clear_and_convincing &lt; beyond_reasonable_doubt</code> on threshold magnitude); <code>substantial_evidence</code> calibrated against the named standard of review when a literature consensus exists, otherwise left at the default.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G6 — Prose rewrite (fluency)</h3>
+    <p class="hook-meta">output-time · manual · all modes/flavors · ships v1</p>
+    <p>The deterministic prose summary from C4 is a template walk and reads as such. G6 rewrites it for fluency, opt-in per invocation. The deterministic baseline is preserved on the session so audits and replays remain stable.</p>
+    <h4>Surface and trigger</h4>
+    <p>An "✦ Rewrite for fluency" button in the prose tab of the Argument Running output viewer (Stream E E3). Each click invokes a fresh rewrite; the user can keep, copy, or discard the rewrite. The deterministic version is always one click away (a "Show baseline" toggle).</p>
+    <h4>Input</h4>
+    <div class="field-list">type G6Input = {
+  baseline_prose: string                        <span class="cm">// the deterministic ConditionalOutput.prose_summary</span>
+  conclusion_direction?: ConclusionDirection
+  frame_mode: "legal" | "general"
+  frame_flavor: "personal" | "academic" | null
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G6Output = {
+  rewritten_prose: string
+}</div>
+    <h4>Parser rules</h4>
+    <p>JSON parse + schema. Reject if the rewrite is more than 1.5× the baseline length (catches expansion that introduces material), or if it contains conditional-introduction phrases the baseline does not (catches reasoning hallucinations).</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>advise_user</code>; the baseline remains visible. The hook does not modify session state on failure.</p>
+    <h4>Commit</h4>
+    <p>On accept, writes <code>session.output_overrides.rewritten_prose</code> on the ArgumentSessionVersion (this is a session-level field, not a frame-level one — the rewrite is session-scoped because it derives from the session's specific Premises). Stream B B4's <code>ArgumentSessionVersion</code> schema is extended with an optional <code>output_overrides: { rewritten_prose?: string; rewritten_at?: timestamp; rewritten_by_hook?: HookInvocationRecord["id"] }</code> field; see "Persistence and schema updates" below.</p>
+    <p>The deterministic baseline is always available as the canonical <code>ConditionalOutput.prose_summary</code>; the rewrite is a parallel field.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: legal/academic editor rewriting a deterministic prose summary for fluency. Constraints: do not add reasoning, conditions, citations, or claims not in the baseline; preserve every conditional ("if/then") structure; preserve the conclusion direction; output only the rewritten paragraph(s).</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G7 — Premise reuse ranking</h3>
+    <p class="hook-meta">build-time of session · automatic · all modes/flavors · ships v1.5 (v1 ships heuristic)</p>
+    <p>Stream D D2 specifies that Premise reuse is supported and suggested; v1 ranks suggestions by text similarity and recency (deterministic). G7 layers an LLM-based relevance ranking that considers Premise <code>kind</code>, the target Checkpoint's question, and the frame's path context.</p>
+    <h4>Surface and trigger</h4>
+    <p>Inline reuse suggestions in the Premise authoring field (Stream E E3, line 269). Triggered automatically when the user begins typing a Premise. The hook's output is a re-ordered candidate list; the user picks one or continues typing to author a new Premise.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G7Input = {
+  draft_text: string                            <span class="cm">// what the user has typed so far</span>
+  target_checkpoint: { id: string; question: string; answer_type: string }
+  candidate_premises: { id: string; statement: string; kind: string }[]   <span class="cm">// pre-filtered by similarity</span>
+  active_path_context: PathNode[]
+  frame_mode: "legal" | "general"
+  frame_flavor: "personal" | "academic" | null
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G7Output = {
+  ranking: { premise_id: string; score: number }[]   <span class="cm">// score in [0, 1]</span>
+}</div>
+    <h4>Parser rules</h4>
+    <p>JSON parse + schema. Every <code>premise_id</code> must come from the input <code>candidate_premises</code>. Scores must be numeric. Re-ordering does not require all candidates to be returned; missing ids are appended at the end of the displayed list at score 0.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>deterministic_fallback</code> returns the input ordering (i.e., the v1 text-similarity-and-recency ordering). Failure is silent; the user sees suggestions ordered by the v1 heuristic without knowing the LLM was attempted.</p>
+    <h4>Commit</h4>
+    <p>None — ranking is a presentation effect. No frame field is written. A <code>HookInvocationRecord</code> is logged with <code>decision: "accepted"</code> and <code>final_value: undefined</code>; <code>raw_response</code> may be omitted by configuration.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: legal/academic argument-mapper assistant choosing which existing premises are most relevant to the user's draft. Inputs interpolated. Constraints: rank by relevance to the target Checkpoint's question, with kind-vocabulary fit and active-path coherence as secondary factors; never fabricate premise ids; ties broken by input order.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G8 — Conclusion direction suggestion</h3>
+    <p class="hook-meta">build-time · manual · all modes/flavors · ships v1</p>
+    <p>Suggestion chips on the Conclusion direction picker (Stream E E2). Given the Conclusion's <code>statement</code> and the path leading to it, suggest a direction value (legal mode: from the fixed enum; general mode: from the Frame's <code>positions</code> table or a "custom" value).</p>
+    <h4>Surface and trigger</h4>
+    <p>Manual: clicking the "✦ Suggest" chip on the direction picker. Available only when the Conclusion has a <code>statement</code> set and (in general mode) the Frame has at least one Position defined.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G8Input = {
+  conclusion_statement: string
+  incoming_path: PathNode[]
+  frame_mode: "legal" | "general"
+  positions?: Position[]                        <span class="cm">// general mode</span>
+  frame_jurisdiction: string | null
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G8Output = {
+  direction: ConclusionDirection                <span class="cm">// per Stream B B1.7's discriminated union</span>
+  rationale?: string                            <span class="cm">// shown in chip tooltip; not committed</span>
+}</div>
+    <h4>Parser rules</h4>
+    <p>The output's <code>direction</code> shape must match the Frame's mode. Legal mode: <code>kind: "legal"</code> with <code>value</code> from the fixed enum (or <code>"custom"</code> with <code>custom_label</code>). General mode: <code>kind: "general"</code> with <code>position_id</code> referencing the input <code>positions[]</code> (or <code>"custom"</code>). Reject if the shape mismatches.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>advise_user</code>. The picker remains untouched.</p>
+    <h4>Commit</h4>
+    <p>On accept, writes <code>conclusion.direction</code>. Standard auto-save tick.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: legal/academic reviewer suggesting a Conclusion direction. Inputs interpolated. Constraints: output must be one of the allowed shapes for the mode; if no clear best fit exists, return <code>"custom"</code> with a label that names the apparent direction in plain words; do not invent legal direction values outside the fixed enum.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G9 — Position-table suggestion</h3>
+    <p class="hook-meta">build-time · manual · general only · ships v1</p>
+    <p>General-mode Frames require a <code>positions</code> table (Stream B; Stream D D2). G9 helps populate it given a topic prompt. Particularly useful at frame creation when the user types a topic and gets back a suggested set of Positions like "for X" / "against X" / "alternative" / etc.</p>
+    <h4>Surface and trigger</h4>
+    <p>A "✦ Suggest positions" button in the new-frame wizard (Stream E E7) and in Frame settings under "Positions" for existing frames.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G9Input = {
+  topic: string                                 <span class="cm">// from the wizard's title/description, or user-entered</span>
+  frame_flavor: "personal" | "academic"
+  existing_positions: Position[]                <span class="cm">// for the in-settings case</span>
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G9Output = {
+  positions: { label: string; description?: string }[]   <span class="cm">// 2-6 suggestions</span>
+}</div>
+    <h4>Parser rules</h4>
+    <p>2 ≤ <code>positions.length</code> ≤ 6. Each <code>label</code> must be non-empty and not duplicate an existing position's label (case-insensitive).</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>advise_user</code>. The wizard's manual entry path remains available.</p>
+    <h4>Commit</h4>
+    <p>For each accepted candidate: append a Position to the Frame's <code>positions</code> table with a freshly generated <code>id</code>. Standard auto-save tick.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: academic-or-personal argument-mapper suggesting positions for a topic. Constraints: 2–6 positions, mutually distinguishable, written as short noun phrases, neutral framing where possible.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G10 — Frame-template ranking</h3>
+    <p class="hook-meta">build-time · automatic · all modes/flavors · ships v1.5 (v1 ships tag/recents heuristic)</p>
+    <p>Frame templates substitute for the deferred A6 cross-frame references (Stream A A6). The new-frame wizard offers "start from existing frame" with a list of template candidates. G10 ranks the candidates given the user's topic input.</p>
+    <h4>Surface and trigger</h4>
+    <p>Automatic on the new-frame wizard's "start from template" panel (Stream E E7), once the user has entered a topic or title. Output is a re-ordered list; the user clicks one to deep-copy it (per Stream D D1 / Stream H atomicity contract).</p>
+    <h4>Input</h4>
+    <div class="field-list">type G10Input = {
+  topic: string
+  candidate_frames: { id: string; title: string; description?: string; tags?: string[] }[]
+  frame_mode: "legal" | "general"
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G10Output = {
+  ranking: { frame_id: string; score: number }[]
+}</div>
+    <h4>Parser rules</h4>
+    <p>Same as G7: ids must come from input candidates, scores must be numeric.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>deterministic_fallback</code> returns ranking by tag overlap then recency. Silent.</p>
+    <h4>Commit</h4>
+    <p>None — ranking is presentational.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G11 — Premise drafting from fact pattern</h3>
+    <p class="hook-meta">runtime sidecar · manual · all modes/flavors · ships v1, OFF by default</p>
+    <p>Stream A A2 explicitly authorized this surface: "drafting Premise text from a fact pattern the user pastes." The user pastes a passage of facts (case excerpt, statute language, deposition fragment, news clip), the hook drafts candidate Premises grounded in the passage; the user accepts, edits, or rejects each.</p>
+    <h4>Surface and trigger</h4>
+    <p>A "✦ Draft from text" button in the Premise authoring drawer during Argument Running (Stream E E3). Disabled when <code>runtime_hooks_enabled</code> is false (the v1 default). The button is also gated behind a per-frame opt-in confirmation the first time it is used (a single dialog explaining that the hook reads the user's pasted text and that the runtime routing remains LLM-free regardless of this hook's output).</p>
+    <h4>Input</h4>
+    <div class="field-list">type G11Input = {
+  fact_pattern_text: string                     <span class="cm">// what the user pasted</span>
+  target_checkpoint: { id: string; question: string }
+  frame_mode: "legal" | "general"
+  frame_flavor: "personal" | "academic" | null
+  premise_kind_vocabulary: string[]             <span class="cm">// per A11, mode/flavor-aware</span>
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G11Output = {
+  draft_premises: {
+    statement: string
+    kind: string                                <span class="cm">// must be in premise_kind_vocabulary</span>
+    source_quote?: string                       <span class="cm">// short verbatim excerpt from the input, optional</span>
+  }[]
+}</div>
+    <h4>Parser rules</h4>
+    <p>Each <code>kind</code> must come from the input vocabulary. Each <code>source_quote</code>, if present, must be a substring of the input <code>fact_pattern_text</code> (verbatim; this is checked deterministically, not heuristically). Reject any candidate whose source_quote is not a substring.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>advise_user</code>. The drawer remains open; the user can author manually.</p>
+    <h4>Commit</h4>
+    <p>For each accepted candidate: create a Premise with the given <code>statement</code> and <code>kind</code> on the ArgumentSession; the <code>source_quote</code>, if accepted, is stored on the Premise's <code>source</code> field (Stream B's <code>Premise.source</code>) prefixed with "Excerpt:". <strong>The Premise's eventual contribution to routing flows through the deterministic Stream C pipeline; the LLM does not affect routing in any way.</strong></p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: legal/academic researcher drafting Premises from a passage. Constraints: each Premise must be supportable by the passage; no claims beyond what the passage says; <code>kind</code> from the supplied vocabulary; <code>source_quote</code> only when a single short verbatim segment grounds the Premise.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G12 — Cross-implication advisory notes</h3>
+    <p class="hook-meta">runtime sidecar · automatic · all modes/flavors · ships v1.5, OFF by default</p>
+    <p>Stream A A2 also authorized "flagging cross-implications as advisory notes." During Argument Running, given the active path and the Premises attached so far, the hook surfaces non-blocking notes when a Premise might cut against a Checkpoint elsewhere in the frame, when a selected Interpretation has analogues in another path with conflicting weight, or similar. The notes are advisory — they never alter routing or status.</p>
+    <h4>Surface and trigger</h4>
+    <p>Automatic during Argument Running, gated by <code>runtime_hooks_enabled</code>. Notes render as small "ⓘ AI advisory" chips on the implicated nodes in the canvas and as entries in a "Cross-implications" tab in the bottom panel of the Argument Running screen.</p>
+    <h4>Input</h4>
+    <div class="field-list">type G12Input = {
+  frame_version: FrameVersion                   <span class="cm">// or a digest projection for large frames (v1.5)</span>
+  session_state: ArgumentSessionVersion
+  recent_change: { kind: "premise_added" | "interpretation_selected" | "checkpoint_answered"; node_id: string }
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G12Output = {
+  advisories: {
+    implicated_node_ids: NodeRef[]
+    message: string
+    severity: "info" | "warning"                <span class="cm">// always "info" or "warning"; never blocks</span>
+  }[]
+}</div>
+    <h4>Parser rules</h4>
+    <p><code>implicated_node_ids</code> must reference nodes in the FrameVersion. Severity must be one of the two allowed values. Cap at 3 advisories per invocation.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>no_op</code>.</p>
+    <h4>Commit</h4>
+    <p>None — advisories are session-scoped and ephemeral; they re-derive on each invocation. <strong>Critically: nothing G12 produces is consumed by the Stream C compute pipeline.</strong> The runtime-module import boundary (Stream H determinism contract) makes this enforceable in CI.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: assistant flagging cross-implications in an active argument map. Constraints: only advisory; severity capped at "warning"; do not produce advisories that would change routing decisions if the user acted on them; do not invent node ids.</p>
+  </div>
+
+  <div class="hook-card">
+    <h3>G13 — Version <code>change_summary</code> generation</h3>
+    <p class="hook-meta">build-time · automatic · all modes/flavors · ships v1</p>
+    <p>Stream B B4 marks <code>FrameVersion.change_summary</code> as an LLM_HOOK candidate. G13 fills it for non-trivial saves (milestone saves and auto-saves whose structural diff exceeds a small-edit threshold). The deterministic alternative — the structural diff from Stream H H3 — is always available; G13's value is producing a one-line natural-language gloss like "Added two Interpretations under <em>Negligence</em> and connected them to the duty Checkpoint."</p>
+    <h4>Surface and trigger</h4>
+    <p>Fully automatic when <code>build_time_hooks_enabled</code>. Triggered on milestone saves and on any auto-save whose <code>StructuralDiff</code> (Stream H H3) shows ≥3 non-layout entries. Produces a string written directly to the FrameVersion's <code>change_summary</code> field; no user confirmation drawer (the field is otherwise empty by default and free-form, so AI-generated content is non-destructive).</p>
+    <h4>Input</h4>
+    <div class="field-list">type G13Input = {
+  diff: StructuralDiff                          <span class="cm">// from H3</span>
+  parent_version_change_summary?: string        <span class="cm">// for chronological context</span>
+  frame_mode: "legal" | "general"
+}</div>
+    <h4>Output</h4>
+    <div class="field-list">type G13Output = {
+  change_summary: string                        <span class="cm">// 1 sentence, max 30 words</span>
+}</div>
+    <h4>Parser rules</h4>
+    <p>Length ≤ 30 words. Reject if it contains a node id (heuristic: substring match against any id in the diff) — IDs in summaries are noise.</p>
+    <h4>Fallback</h4>
+    <p>On parse failure or provider error: <code>deterministic_fallback</code> returns the StructuralDiff's first-line summary verbatim ("Added 2 nodes, removed 1 edge.") so the field is never empty. Silent.</p>
+    <h4>Commit</h4>
+    <p>Writes <code>frame_version.change_summary</code>. The write happens inside the same Dexie transaction as the FrameVersion save itself (Stream H atomicity), so the summary is never out of sync. Provenance recorded as usual.</p>
+    <h4>Prompt sketch</h4>
+    <p>System framing: assistant writing a one-sentence summary of a structural diff. Constraints: 1 sentence, max 30 words, no ids, plain language, named entities (Term names, Checkpoint questions) from the diff are fine.</p>
+  </div>
+
+  <h2>Activation strategy</h2>
+
+  <h3>v1 ship list</h3>
+  <p>Hooks tagged "ships v1" in the taxonomy table are part of the v1 implementation: G1, G2, G3, G4, G5, G6, G8, G9, G11, G13. Hooks tagged "v1.5" (G7, G10, G12) ship their interfaces and deterministic fallbacks in v1; the LLM body is implemented when the implementing agent prioritizes it. The v1 ship list represents roughly 80% of the hooks' direct user value with substantially less implementation cost than the full set, since several v1.5 hooks (G7 ranking, G10 ranking) are improvements over already-acceptable deterministic baselines.</p>
+
+  <h3>Opt-in defaults</h3>
+  <p>From Stream B B3, refined here:</p>
+  <ul>
+    <li><strong>Build-time hooks: enabled by default.</strong> The user encounters them as opt-in moments at the suggestion drawer. Per-frame override is available in Frame settings → AI Settings.</li>
+    <li><strong>Output-time hooks (G6 only): enabled by default, but each invocation requires a user click.</strong> The hook never produces unsolicited output.</li>
+    <li><strong>Runtime sidecar hooks (G11, G12): disabled by default in v1.</strong> The user opts in per-frame in Frame settings; G11 also has a one-time per-frame confirmation dialog the first time the user invokes it (because the hook reads pasted user text).</li>
+  </ul>
+  <p>Without an LLM provider configured, all hooks degrade silently: their UI affordances render disabled with a tooltip linking to Settings → AI Provider. The application is fully usable without any LLM provider.</p>
+
+  <h3>Mode and flavor visibility</h3>
+  <p>Per Stream D D4/D5, certain surfaces are mode- or flavor-restricted:</p>
+  <ul>
+    <li><strong>G5</strong> (standard-of-review calibration): legal only. Hidden in general mode.</li>
+    <li><strong>G9</strong> (position-table suggestion): general only. Hidden in legal mode.</li>
+    <li><strong>G2</strong> (Interpretation suggestion): citation_hint output is gated on legal mode; in personal flavor (where Authority is hidden by default per A8/A4), the hook does not produce <code>citation_hint</code> entries.</li>
+    <li>All other hooks: all modes and flavors.</li>
+  </ul>
+
+  <h3>Per-hook enablement and version pinning</h3>
+  <p><code>LlmSettings.per_hook_enabled</code> and <code>LlmSettings.prompt_versions</code> let the user override the category default per hook and pin a specific prompt version per hook, respectively. The Frame-settings UI surfaces these as a per-hook table (hook name, enabled toggle, prompt version dropdown). Pinning is most useful for replay: when an old FrameVersion's <code>HookInvocationRecord</code> references prompt v1 but the application is now shipping v2, the user can pin the Frame to v1 to reproduce the historical behavior.</p>
+
+  <h3>Provider configuration</h3>
+  <p>The provider is selected at the app level (in the global Settings panel; not per-frame for v1). The default is Anthropic Claude; OpenAI is the second supported implementation. Mock is the test-only provider, never selectable at runtime by users. Provider selection is stored on <code>app_state</code> (singleton record per Stream H1). API keys are stored separately, by browser-native means appropriate to the host (e.g., the implementing agent picks between IndexedDB, browser keychain integration, or a small in-memory paste-on-each-session pattern; the choice is out of scope for Stream G).</p>
+
+  <h3>Graceful degradation matrix</h3>
+  <table>
+    <tr><th>Condition</th><th>Build-time hooks</th><th>G6 (output-time)</th><th>Runtime sidecar (G11, G12)</th></tr>
+    <tr><td>No provider configured</td><td>UI affordances disabled with tooltip</td><td>Button disabled</td><td>Button/feature hidden</td></tr>
+    <tr><td>Provider returns error</td><td>Drawer shows "advise_user" message</td><td>Toast with retry option</td><td>Silent (no_op)</td></tr>
+    <tr><td>Output fails parser</td><td>Drawer shows "advise_user" message</td><td>Toast with manual fallback</td><td>Silent (no_op)</td></tr>
+    <tr><td>Hook disabled by user</td><td>Affordance hidden</td><td>Button hidden</td><td>Feature hidden</td></tr>
+    <tr><td>Mode/flavor mismatch</td><td>Affordance hidden</td><td>n/a</td><td>n/a</td></tr>
+  </table>
+
+  <h2>Determinism guarantees</h2>
+
+  <p>Article II § 2 controls. The contract is honored at three levels:</p>
+
+  <h3>Module boundary (structural)</h3>
+  <p>Per Stream H's determinism implementation contract, <code>src/runtime/</code> imports nothing from <code>src/llm-hooks/</code>. ESLint <code>no-restricted-imports</code> enforces this in CI. Therefore no LLM, no provider call, no prompt loader can run from inside the runtime pipeline. This is a structural guarantee — independent of any hook author's discipline — that the routing computation is LLM-free.</p>
+
+  <h3>Per-hook discipline</h3>
+  <ul>
+    <li><strong>Build-time bake-and-commit hooks (G1, G2, G3, G5, G8, G9, G13):</strong> on accept, the hook's output becomes a fixed field on the FrameVersion (or, for G5, on the FrameVersion's <code>llm_settings_snapshot</code> projection). Subsequent runtime calls read these fields as ordinary inputs. The hook is not invoked at runtime; the hook's prior output cannot vary across runtime calls because the FrameVersion is immutable.</li>
+    <li><strong>Build-time hooks that don't write to FrameVersion (G4, G7, G10):</strong> outputs are presentational only (validation drawer entries, ranking orders). They do not feed the runtime pipeline. A change in their output between two invocations does not change <code>compute()</code>'s result for any FrameVersion + ArgumentSession pair.</li>
+    <li><strong>Output-time hook (G6):</strong> writes to <code>session.output_overrides.rewritten_prose</code>, a session-level field that is never read by <code>compute()</code>. The deterministic <code>ConditionalOutput.prose_summary</code> is the canonical output; the rewrite is a parallel field surfaced only at the prose tab.</li>
+    <li><strong>Runtime sidecar hooks (G11, G12):</strong> G11 writes to <code>Premise.source</code> only when the user accepts a draft; the Premise itself flows through Stream C's deterministic pipeline as any other Premise. The LLM does not influence which routing the Premise causes. G12 produces only ephemeral session-scoped advisories that nothing in the compute pipeline reads.</li>
+  </ul>
+
+  <h3>Audit (provenance)</h3>
+  <p>Every hook commit produces a <code>HookInvocationRecord</code> on <code>LlmSettings.invocations</code> with <code>input_hash</code> and <code>raw_response</code>. A FrameVersion can be replayed: load the FrameVersion's <code>llm_settings_snapshot</code>, fetch the matching <code>PromptFile</code> from the <code>prompts</code> store by [hook_name+prompt_version], hash the recorded input, and compare. If anyone disputes whether a given Conclusion's <code>reasoning_summary</code> was AI-generated and which prompt produced it, the record gives a definitive answer. Article III § 3 (auditability) is satisfied.</p>
+
+  <h2>UI confirmation contract</h2>
+
+  <p>Stream E E2 and E3 specify the UI placement of suggestion affordances. Stream G specifies the contract those affordances must honor.</p>
+
+  <h3>The three-button affordance</h3>
+  <p>Every build-time hook that writes to a FrameVersion field exposes a <code>SuggestionResult</code> in a drawer with three actions:</p>
+  <ul>
+    <li><strong>Accept</strong> — commits the suggestion verbatim. Records <code>HookInvocationRecord</code> with <code>decision: "accepted"</code>.</li>
+    <li><strong>Edit</strong> — opens the field for inline editing pre-filled with the suggestion. The user's edited value is what gets committed. Records <code>HookInvocationRecord</code> with <code>decision: "edited"</code> and both <code>final_value</code> (committed) and the original parsed output (in the record's audit projection).</li>
+    <li><strong>Reject</strong> — closes the drawer, no field is written. Records <code>HookInvocationRecord</code> with <code>decision: "rejected"</code> and no <code>final_value</code>.</li>
+  </ul>
+
+  <h3>AI attribution</h3>
+  <p>Fields whose current value was committed via a hook show a small "✦" attribution chip in the inspector when selected, with a tooltip showing the hook id, prompt version, and timestamp. The chip is informational and does not constrain editing — the user can hand-edit the field as usual after committing AI output, which records a separate provenance entry (a <code>HookInvocationRecord</code> with <code>decision: "edited"</code> on the next accept, or simply the user's manual edit in the FrameVersion diff with no hook record at all).</p>
+
+  <h3>Bypassing confirmation (auto-trigger hooks)</h3>
+  <p>Hooks that don't modify a versioned field (G4 advisories, G7/G10 ranking, G12 advisories) bypass the confirmation drawer because there is nothing to commit. Their outputs render directly in their UI placement (validation drawer, ranking lists, advisory tabs). G13 also bypasses confirmation, but for a different reason: it writes to <code>change_summary</code>, a field whose default value is empty and whose human alternative is also empty for the vast majority of saves; an automatic AI fill is non-destructive and the user can always overwrite it later in the version-history UI (Stream E E5 reserves the affordance).</p>
+
+  <h2>Testing strategy</h2>
+
+  <h3>MockLlmProvider</h3>
+  <p>A test-only provider implementing <code>LlmProvider</code>. Constructed with a <code>Map&lt;promptHash, response&gt;</code>. Returns the matching response for a given prompt hash; throws "unexpected prompt" for any unmatched call. Sufficient to make every hook test deterministic.</p>
+
+  <h3>Per-hook tests</h3>
+  <p>Every hook ships with these tests under <code>tests/llm-hooks/&lt;hook_name&gt;/</code>:</p>
+  <ul>
+    <li><strong>Happy-path test:</strong> input fixture → mocked LLM response → expected parsed output → expected <code>CommitPlan</code>. One per hook.</li>
+    <li><strong>Parser-rejection tests:</strong> for each parser rule (e.g., G1's compound-question heuristic, G11's source_quote-must-be-substring rule), a fixture that violates the rule and asserts the hook returns the appropriate fallback.</li>
+    <li><strong>Provider-error test:</strong> mocked provider returns an error; assert the hook produces the documented fallback.</li>
+    <li><strong>Round-trip determinism test:</strong> run the hook on a fixture, accept the suggestion, then run <code>compute()</code> on the resulting FrameVersion under <code>vi.useFakeTimers()</code> with two different frozen times. Assert byte-identical compute outputs. This guards against any hook accidentally introducing time-dependent state into the FrameVersion.</li>
+    <li><strong>Provenance test:</strong> assert that after each hook decision, <code>LlmSettings.invocations</code> contains exactly one new entry with the expected fields populated.</li>
+  </ul>
+
+  <h3>Cross-hook tests</h3>
+  <ul>
+    <li><strong>Iteration-order test:</strong> runtime-pipeline tests already verify deterministic iteration in <code>src/runtime/</code>. A complementary test in <code>tests/llm-hooks/</code> verifies that any hook code iterating over frame data uses <code>sortedIter</code>/<code>sortedKeys</code> from <code>iteration-helpers.ts</code> (Stream H). The custom <code>no-unsorted-iteration</code> ESLint rule is configured to apply to <code>src/llm-hooks/</code> as well — even though the runtime ban is the only structural requirement, sorted iteration in hooks is a code-hygiene rule that prevents hooks from producing different prompts on different runs purely because of <code>Map</code> iteration order.</li>
+    <li><strong>Module-boundary test:</strong> a CI assertion that <code>src/runtime/</code> compiles without any reference to <code>src/llm-hooks/</code>. Implemented as an ESLint <code>no-restricted-imports</code> rule plus a Vitest smoke test that imports the runtime entry and verifies the bundle does not include any provider SDK.</li>
+    <li><strong>Schema-conformance test:</strong> for each hook, the prompt file's <code>schema_in</code> and <code>schema_out</code> are validated against the TypeScript types <code>TIn</code> and <code>TOut</code> declared in <code>contracts.ts</code> at build time, using a JSON-schema-to-TS or TS-to-JSON-schema cross-check. Drift is a build error.</li>
+  </ul>
+
+  <h3>Provider integration tests</h3>
+  <p>Out of v1 unit-test scope: end-to-end tests against a live Anthropic or OpenAI endpoint. The implementing agent may add these as smoke tests behind an env-flag for manual runs. The test suite that gates CI uses <code>MockLlmProvider</code> exclusively so tests are deterministic and offline.</p>
+
+  <h2>Persistence and schema updates</h2>
+
+  <p>Two small extensions to fields touched by Stream G are required. Both are below the threshold of an Article XI § 1 stream amendment because the field they touch was either reserved-as-opaque pending Stream G (LlmSettings) or introduced by Stream G itself (output_overrides). However, to be transparent in self-review:</p>
+
+  <h3>LlmSettings shape (Stream B B3 refinement)</h3>
+  <p>Stream B B3 reserves <code>LlmSettings</code> on Frame as an opaque object explicitly for Stream G to define ("opaque object in v1"). This document defines its shape. Refining a field that was reserved-pending-this-stream is the expected lifecycle, not an amendment. No flag.</p>
+
+  <h3>FrameVersion <code>llm_settings_snapshot</code> projection</h3>
+  <p>For G5 (calibrated thresholds) to be visible to <code>compute()</code> deterministically, the FrameVersion needs to carry a fixed snapshot of the relevant LlmSettings fields at version-creation time, because LlmSettings lives on Frame and Frame is mutable while FrameVersion is immutable. The snapshot is a small projection:</p>
+  <div class="field-list">interface FrameVersion {
+  <span class="cm">// ... existing fields per Stream B B3 ...</span>
+  llm_settings_snapshot?: {
+    calibrated_thresholds?: BurdenThresholdMap   <span class="cm">// the only field compute() reads</span>
+  }
+}</div>
+  <p>This is a small extension to <code>FrameVersion</code>. It does not break any existing read path: legacy FrameVersions without the field fall back to the default <code>BURDEN_THRESHOLD</code> table from Stream C. <strong>This is logged as an in-session escalated flag</strong> because it adds a field to a Stream B-defined entity, even though the addition is purely additive and Stream B's schema is forward-compatible (the JSON envelope per B7 ignores unknown fields). See "In-session flags" in the self-review below.</p>
+
+  <h3>ArgumentSessionVersion <code>output_overrides</code> field</h3>
+  <p>For G6 (prose rewrite) to attach to a session without polluting the canonical <code>ConditionalOutput</code> object, a session-level field is added:</p>
+  <div class="field-list">interface ArgumentSessionVersion {
+  <span class="cm">// ... existing fields per Stream B B4 ...</span>
+  output_overrides?: {
+    rewritten_prose?: string
+    rewritten_at?: timestamp
+    rewritten_by_hook?: string                  <span class="cm">// HookInvocationRecord.id</span>
+  }
+}</div>
+  <p>Same logging rationale as FrameVersion above; logged as an in-session escalated flag.</p>
+
+  <h3>Stream H IndexedDB store layout</h3>
+  <p>Stream H's <code>prompts</code> store is the only Stream G-related store. Its key is <code>[hook_name+version]</code> per H1; its value is a <code>PromptFile</code> per the schema in this document. The store is populated lazily on first hook invocation by reading from <code>src/llm-hooks/prompts/&lt;hook_name&gt;/&lt;version&gt;.md</code>, parsing into <code>PromptFile</code>, and writing to the store. Subsequent invocations read from the store directly.</p>
+
+  <p>No new IndexedDB store is added by Stream G. <code>HookInvocationRecord</code>s live on <code>LlmSettings.invocations</code> on the Frame, which already persists through the existing <code>frames</code> store. This was a deliberate choice during this session's design work to minimize Stream H surface change; the alternative (a dedicated <code>hook_invocations</code> store) was considered and rejected as over-engineering for v1, since invocation rates are bounded by user actions and the per-Frame storage cost is negligible.</p>
+
+  <h2>Reserved / deferred design space</h2>
+  <ul>
+    <li><strong>Provider abstraction layer beyond the four implementations.</strong> Anthropic, OpenAI, mock, and a "local model" implementer-defined extension cover v1. Adding Cohere, Google Gemini, etc. is mechanical once <code>LlmProvider</code> is in place. <span class="tag tag-defer">v2-as-needed</span></li>
+    <li><strong>Streaming completions.</strong> v1 hooks are request/response. Streaming would let the suggestion drawer fill incrementally; a UX improvement for long outputs (G3, G6). Provider interface already includes a <code>capabilities.streaming</code> hint. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Tool-use hooks.</strong> v1 hooks are pure prompt-response. A future hook (e.g., "fetch a citation from Westlaw given a partial reference") would use tool-use. The <code>LlmProvider.capabilities.tool_use</code> hint reserves the surface. <span class="tag tag-defer">v2+</span></li>
+    <li><strong>Per-hook learning from user edits.</strong> If users repeatedly edit G1's output in a similar way, a future system could learn the edit pattern and adjust the prompt. v1's invocation log captures edit deltas in principle (parsed output vs. final value), enabling this work later. <span class="tag tag-defer">v2+</span></li>
+    <li><strong>Cross-frame Premise drafting.</strong> G11 operates within a single session. A future hook could consult Premises from related frames (predicated on A6 cross-frame references shipping in v2). <span class="tag tag-defer">v2 (with A6)</span></li>
+    <li><strong>Frame-wide structural critique hook.</strong> A G14-style hook reviewing the entire frame for structural quality (not just gaps in C5's territory): "this frame would benefit from splitting <em>Negligence</em> into separate Subquestions for each element." Distinct from G4 (which is per-validation-pass). Out of v1 scope. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Configurable temperature per hook.</strong> v1 uses temperature 0.2 for all build-time hooks. Per-hook tuning is a small change (one PromptFile field) but not currently a felt need. <span class="tag tag-defer">v2-as-needed</span></li>
+    <li><strong>Background pre-fetching.</strong> A future system could pre-fetch G1's suggestion when the user creates a Checkpoint, making the drawer feel instant. v1 fetches on click. <span class="tag tag-defer">v2-if-needed</span></li>
+  </ul>
+
+  <h2>Self-review against the Constitution and Protocol</h2>
+
+  <h3>Article II architectural commitments — line-by-line check</h3>
+  <ul>
+    <li><strong>§ 1 Frame/Argument Split.</strong> Honored. Build-time hooks operate on Frame fields; runtime sidecar hooks operate on ArgumentSession fields; G6 operates on ArgumentSessionVersion. The split is preserved at every commit boundary. No hook crosses the boundary in either direction (a build-time hook cannot read session state; a runtime hook cannot write Frame fields).</li>
+    <li><strong>§ 2 Determinism.</strong> Honored at three levels: structural (runtime-module import boundary forbids any LLM call from <code>src/runtime/</code>), per-hook (every committable output bakes into an immutable FrameVersion or non-routing-consumed session field, with G5's threshold calibration explicitly snapshot into FrameVersion to guarantee visibility), and audit (every commit records a HookInvocationRecord with input_hash and raw_response so any compute result can be reproduced from the FrameVersion alone). The "Determinism guarantees" section above details each layer.</li>
+    <li><strong>§ 3 Per-Node Satisfaction Criteria.</strong> Honored. No hook reaches into the SatisfactionPolicy structure or its evaluation. G5's calibrated_thresholds modify the BurdenThresholdMap that the <code>burden_met</code> condition consumes; the condition's signature, the SatisfactionPolicy schema, and the per-node satisfaction-criteria framework are unchanged.</li>
+    <li><strong>§ 4 Independent Versioning.</strong> Honored. Build-time hooks write to FrameVersion and follow Stream H's auto-save versioning rules without exception. G6 writes to ArgumentSessionVersion via output_overrides and follows the session-versioning rules. Every save is preserved per the existing infrastructure; no hook deletes versions or mutates ancestors.</li>
+    <li><strong>§ 5 Human-Readable Structure.</strong> Honored. Hook outputs commit to existing schema fields (Checkpoint.question, Conclusion.reasoning_summary, etc.); a reader of the JSON envelope sees plain content with no AI-special encoding. Provenance lives separately on LlmSettings.invocations and is opt-in to read; the frame's logic remains readable from the graph.</li>
+    <li><strong>§ 6 Use-Case Commitment.</strong> Honored. Mode/flavor visibility is honored per-hook (G5 legal-only, G9 general-only, G2 citation_hint legal-only-and-academic-acceptable-but-personal-suppressed, all others all-modes). No hook is exclusive to one use case; every hook respects the existing mode/flavor surfaces.</li>
+  </ul>
+
+  <h3>Article III quality criteria — score</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> Each hook is specified against a known surface (Stream B, C, D, E identifying it) with a typed input drawn from those streams' schemas, a typed output that maps to a defined frame field or to a presentational artifact, and a parser whose rules are implementable. The hooks model what they claim to model: G1 drafts a single Checkpoint's content; G2 proposes Interpretations under a Term; G5 calibrates thresholds within the existing fixed-table structure; etc. None claims to do something outside its scope.</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> The hooks model how lawyers actually work with AI assistants today: paste a passage, get a draft, review and commit; click "suggest" on a field, edit, accept; never let the AI silently alter routing or status. The hooks that touch legal-flavored content (G1 with jurisdiction context, G2 with citation_hint, G5 with standard-of-review calibration) are scoped to the cases where AI assistance is plausibly useful to a practicing lawyer; the constraints in each prompt body (no fabricated citations, no future-tense predictive claims, no ID-leaking summaries) reflect known LLM failure modes that lawyers are increasingly sensitive to. The "user always confirms" affordance is consistent with model rules of professional conduct on AI-assisted output.</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> Maximally satisfied. The structural import boundary is checkable in CI. Per-hook bake-and-commit is the dominant pattern. Provenance is recorded per-commit with input hash + raw response, enabling exact replay. Every FrameVersion and ArgumentSessionVersion still computes deterministically because no hook output influences <code>compute()</code> beyond writing fixed fields onto the version snapshot.</li>
+    <li><strong>§ 4 Clarity.</strong> The hook system is debuggable and inspectable: open the Frame's <code>llm_settings.invocations</code> array and you see every AI commit ever made; click the ✦ chip on a field and you see which hook produced it. The contract is one interface implemented thirteen times; the prompt-file format is one schema with one parsing path. The cheat sheet at the end indexes by hook id.</li>
+    <li><strong>§ 5 Reversibility.</strong> Locked-in choices: the HookContract interface, the PromptFile schema, the LlmProvider interface, the LlmSettings shape, the bake-and-commit discipline. Each is structurally decoupled from any specific provider, prompt, or hook. Adding hooks is mechanical (write a HookContract implementation, write a prompt file, register in the contracts module). Removing hooks is mechanical (rejection in LlmSettings.per_hook_enabled hides the surface; existing FrameVersions still resolve via their snapshot data and stored prompt versions). Replacing the provider is contained behind <code>LlmProvider</code>. Replacing the prompt file format is contained behind <code>PromptFile</code> parsing. The provider abstraction was selected partly for this reason.</li>
+    <li><strong>§ 6 Interface Fit.</strong> A future session needing only the hook taxonomy reads the table at the top of this document; a session implementing G1 specifically reads the G1 card; a session changing the prompt-file format reads the "Prompt file format" section; a session adjusting determinism guarantees reads "Determinism guarantees." Cross-references to Streams A, B, C, D, E, H are explicit at every point of contact. The cheat sheet indexes by hook id.</li>
+  </ul>
+
+  <h3>Autonomous decisions — Article V § 3 trigger re-check</h3>
+  <p>Each numbered decision in "Decisions made in this session" checked against the escalation triggers:</p>
+  <ul>
+    <li>All ten decisions are agent-discretionary technical choices under Article V § 2(a)–(g): Decision #1 inventories surfaces already identified by Streams A, C, D, and B; Decision #2 selects an interface pattern (subordinate to Article II § 2 determinism); Decision #3 selects a provider abstraction (a quality-criterion-driven choice under Article III § 5); Decisions #4–#5 implement Stream B B3's "opaque object reserved for Stream G" by giving it a concrete shape; Decisions #6–#7 specify provenance and confirmation contracts that are direct implementations of Article III § 3 (auditability) and Article IV § 5 / Article II § 2; Decision #8 implements Stream B B3's existing default values; Decisions #9–#10 codify the determinism and testing discipline.</li>
+    <li>None reverses a prior stream decision. Every hook surface in the taxonomy was identified upstream: G1–G6 in Stream C's "LLM hook integration points" table; G7–G10 in Stream D's "What's unblocked next" + Stream A's A2 surface inventory; G11–G12 in Stream A A2's runtime sidecar mention; G13 in Stream B B4's <code>change_summary</code> LLM_HOOK marker. The activation defaults (build-time on, runtime off) come directly from Stream B B3.</li>
+    <li>None forecloses a use case. All hooks operate identically across legal/general modes except where mode-or-flavor scoping was explicitly inherited from Stream D D4/D5.</li>
+    <li>None requires Anthropic safety input.</li>
+    <li>The Constitution speaks directly to determinism (Article II § 2) and the design respects it explicitly. No clear two-commitment conflict requiring escalation.</li>
+    <li>Article V § 3(c) check on the FrameVersion <code>llm_settings_snapshot</code> field: this addition is required to make G5's calibrated thresholds visible to <code>compute()</code> deterministically. The alternative — invoking G5 at runtime — would violate Article II § 2. The alternative — making LlmSettings live on FrameVersion instead of Frame — would force a new FrameVersion on every settings change including non-G5 changes, conflicting with Stream H's debounce-versioning model. The chosen alternative (snapshot projection at version-creation time) is the unique solution that respects both Article II § 2 and Stream H's versioning model. This is a clear resolution under good-faith application of the Constitution and prior streams; no escalation trigger fires.</li>
+  </ul>
+
+  <h3>Mid-session self-review under Article XII § 2</h3>
+  <ul>
+    <li><strong>(a) Reverses a stream decision</strong>: no. Verified above.</li>
+    <li><strong>(b) Introduces a new architectural commitment or strong technical default</strong>: yes — the <code>HookContract</code> interface, the <code>LlmProvider</code> interface, the prompt-file format and storage discipline, the bake-and-commit determinism pattern, and the provenance-on-LlmSettings choice are all strong technical defaults. Each is documented above with rationale and reversibility analysis. Each is checked against Article II commitments (the bake-and-commit discipline implements Article II § 2 directly) and against prior stream contracts (no prior stream's commitment is weakened). None requires user escalation.</li>
+    <li><strong>(c) Changes a current_state field from a different stream</strong>: this session updates current_state for Stream G completion. It also adjusts H's "Stream G" row in the open-questions section, which is a Stream H field. The adjustment is a status update (Stream G moves from open to resolved), not a content reversal. Additionally, the FrameVersion shape extension and ArgumentSessionVersion shape extension touch fields originally introduced by Stream B; these are flagged as in-session escalated flags below.</li>
+    <li><strong>(d) Article V § 3 trigger</strong>: none, per the autonomous-decision check above.</li>
+  </ul>
+
+  <h3>In-session escalated flags</h3>
+  <p>Two small additive extensions to Stream B-defined entities. Each is escalated to the flag register because it adds a field to a prior stream's schema, even though both are purely additive, optional, and forward-compatible under Stream B B7's JSON envelope (which ignores unknown fields).</p>
+  <ul>
+    <li><strong>Flag (in-session, escalated to register).</strong> Add optional <code>llm_settings_snapshot: { calibrated_thresholds?: BurdenThresholdMap }</code> field to <code>FrameVersion</code> (Stream B B3). Required for G5's calibrated thresholds to be visible to <code>compute()</code> deterministically without invoking G5 at runtime. Streams affected: B, C, G. Prior decision reversed: no — Stream B's FrameVersion shape is extended additively; the field is optional; legacy FrameVersions without the field resolve to default thresholds via the existing Stream C fallback. Resolution: documented in this Stream G doc; future Stream B amendment doc will mirror the field if needed for the consolidated coding spec (Stream I).</li>
+    <li><strong>Flag (in-session, escalated to register).</strong> Add optional <code>output_overrides: { rewritten_prose?, rewritten_at?, rewritten_by_hook? }</code> field to <code>ArgumentSessionVersion</code> (Stream B B4). Required for G6's prose rewrite to attach to a session without polluting the deterministic <code>ConditionalOutput</code>. Streams affected: B, G. Prior decision reversed: no — the canonical <code>ConditionalOutput.prose_summary</code> is unchanged; this is a parallel field. Resolution: documented in this Stream G doc.</li>
+  </ul>
+
+  <h3>Items deferred</h3>
+  <ul>
+    <li><strong>API key management UX.</strong> Out of Stream G scope. The implementing agent picks the storage approach; any of (a) IndexedDB-on-app_state, (b) browser-keychain (where supported), (c) paste-on-each-session is conformant with the LlmProvider interface.</li>
+    <li><strong>Provider rate-limiting and cost telemetry.</strong> v1 makes one request per hook invocation; rate-limiting falls back to provider-side error responses, which the hook fallback layer handles. Cost telemetry deferred.</li>
+    <li><strong>Full prompt bodies for G2, G4, G5, G7, G8, G9, G10, G11, G12, G13.</strong> Prompt sketches in the per-hook cards specify intent, inputs, constraints, and output shape; the implementing agent writes the bodies following the G1 and G3 exemplars. This is a deliberate choice: the contracts are spec; the prompt-text-craft is implementation, expected to evolve through iterative testing.</li>
+    <li><strong>Streaming completions, tool-use hooks, learning-from-edits, frame-wide critique hook.</strong> Reserved per the deferred design space above.</li>
+    <li><strong>v1.5 hooks' LLM bodies.</strong> G7, G10, G12 ship interfaces and deterministic fallbacks in v1; LLM bodies layered when prioritized.</li>
+  </ul>
+
+  <h2>What's unblocked next</h2>
+  <p>With Stream G specified end-to-end:</p>
+  <ul>
+    <li><strong>Stream I (final coding spec)</strong> — fully unblocked. Streams A through E, G, and H are now resolved. Stream F is partial (F1–F4 carried by B/C/D, F6 has v1 in C6 with E surface, F5 outstanding); the coding spec can ship v1 without F5 since F5 is the v2 upgrade for C6's authority binding (C6 v1 is implementable with the string-match heuristic). Stream I now has a complete v1 substrate and can compile a self-contained spec for a coding agent.</li>
+    <li><strong>Stream F5 (court hierarchy database)</strong> — independent and ready. Sourcing strategy still open. Can run before, alongside, or after Stream I depending on user priority.</li>
+    <li><strong>Visual polish for Stream E.</strong> Specific color values, typography, animation curves; deferred from Stream E. Now compileable against React Flow's styling primitives (Stream H4) and the AI-attribution chip styling introduced here.</li>
+    <li><strong>Hook prompt-body iteration.</strong> Once the implementing agent has the v1 system live, prompt bodies for G2, G4, G5, G7-G13 are written and iterated against real frames. This is implementation work, not planning, and runs as part of Stream I's coding work or its successor maintenance work.</li>
+  </ul>
+
+  <h2>Cheat sheet — Stream G items and decisions</h2>
+  <table>
+    <tr><th>Id</th><th>Subject</th><th>Section</th></tr>
+    <tr><td>Taxonomy</td><td>Thirteen hooks across three activation modes; v1 ship list</td><td>Hook taxonomy</td></tr>
+    <tr><td>HookContract</td><td>Uniform interface for every hook (input, output, parser, fallback, commit)</td><td>Common contracts</td></tr>
+    <tr><td>LlmProvider</td><td>Provider abstraction; v1 default Anthropic Claude; OpenAI / mock conformant</td><td>Common contracts</td></tr>
+    <tr><td>PromptFile</td><td>Markdown + YAML frontmatter at <code>src/llm-hooks/prompts/&lt;hook&gt;/&lt;version&gt;.md</code>; cached in IndexedDB <code>prompts</code> store</td><td>Prompt file format</td></tr>
+    <tr><td>LlmSettings</td><td>Refinement of Stream B B3's "opaque object" with enabled-flags, version pins, calibrated thresholds, invocations log</td><td>LlmSettings refinement</td></tr>
+    <tr><td>HookInvocationRecord</td><td>Per-commit audit record on <code>LlmSettings.invocations</code>; provenance for every AI-influenced field</td><td>Common contracts</td></tr>
+    <tr><td>SuggestionResult</td><td>Confirmation drawer payload; Accept / Edit / Reject affordance</td><td>UI confirmation contract</td></tr>
+    <tr><td>G1</td><td>Checkpoint question + options + routing</td><td>G1 card; full prompt body in Prompt file format</td></tr>
+    <tr><td>G2</td><td>Interpretation suggestion (with citation_hint in legal mode)</td><td>G2 card</td></tr>
+    <tr><td>G3</td><td>Conclusion reasoning_summary; full prompt body</td><td>G3 card</td></tr>
+    <tr><td>G4</td><td>Gap detection advisories (compound Checkpoints, missing branches)</td><td>G4 card</td></tr>
+    <tr><td>G5</td><td>Standard-of-review threshold calibration; calibrated thresholds baked into FrameVersion via llm_settings_snapshot</td><td>G5 card; Persistence and schema updates</td></tr>
+    <tr><td>G6</td><td>Output-time prose rewrite; baseline preserved on session</td><td>G6 card</td></tr>
+    <tr><td>G7</td><td>Premise reuse ranking (v1.5; v1 ships heuristic fallback)</td><td>G7 card</td></tr>
+    <tr><td>G8</td><td>Conclusion direction suggestion (mode-aware enum/positions)</td><td>G8 card</td></tr>
+    <tr><td>G9</td><td>Position-table suggestion (general mode only)</td><td>G9 card</td></tr>
+    <tr><td>G10</td><td>Frame-template ranking (v1.5; v1 ships heuristic fallback)</td><td>G10 card</td></tr>
+    <tr><td>G11</td><td>Premise drafting from pasted fact pattern (runtime sidecar; off by default)</td><td>G11 card</td></tr>
+    <tr><td>G12</td><td>Cross-implication advisory notes (runtime sidecar; off by default; v1.5)</td><td>G12 card</td></tr>
+    <tr><td>G13</td><td>Auto-generated FrameVersion change_summary on milestone and non-trivial saves</td><td>G13 card</td></tr>
+    <tr><td>Determinism</td><td>Three-layer guarantee (module boundary, per-hook discipline, audit)</td><td>Determinism guarantees</td></tr>
+    <tr><td>Testing</td><td>MockLlmProvider, per-hook tests, cross-hook invariants, schema-conformance check</td><td>Testing strategy</td></tr>
+    <tr><td>Schema extensions</td><td>FrameVersion.llm_settings_snapshot (G5); ArgumentSessionVersion.output_overrides (G6); two in-session register flags</td><td>Persistence and schema updates</td></tr>
+  </table>
+
+</div>

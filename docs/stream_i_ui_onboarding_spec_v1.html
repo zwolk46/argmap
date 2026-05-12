@@ -1,0 +1,779 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 22px 0 6px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+<div class="doc">
+  <h1>stream_i_ui_onboarding_spec_v1.html</h1>
+  <p class="subtitle">Per-module spec for <code>src/ui/onboarding/</code> &nbsp;·&nbsp; Stream I session I.9d4 &nbsp;·&nbsp; May 11, 2026</p>
+
+  <div class="notice">
+    <p>Implementation source of truth for <code>src/ui/onboarding/</code>. Replaces the I.9a <code>OnboardingWizard</code> placeholder with the real module: the first-time welcome screen, the guided five-step new-frame wizard, the <code>Coachmark</code> popover primitive, the <code>useCoachmark</code> hook, the five named coachmarks from Stream E E7 with attachment points at existing I.9a / I.9b / I.9c / I.9d1 surfaces, the reset-coachmarks affordance (composed into the I.9a <code>HelpGlossaryPane</code>), and the one-time new-feature notice mechanism. Last UI sub-session before I.10 (integration + v1 acceptance test plan). The F-009 register flag below consolidates eleven cross-spec refinements in the same F-003 / F-004 / F-005 / F-006 / F-007 / F-008 family pattern.</p>
+  </div>
+
+  <h2>Scope and reading list</h2>
+
+  <p>The I.9d4 coding session implements the files below under <code>src/ui/onboarding/</code> plus three small refinements: the App-level mount in <code>src/ui/app-routes.tsx</code> (I.9a-owned), the bottom-of-pane composition in <code>src/ui/chrome/help-glossary-pane.tsx</code> (I.9a-owned), and one-line coachmark anchoring inserts at five consuming surfaces (I.9a / I.9b / I.9c / I.9d1). The barrel <code>index.ts</code> re-exports <code>OnboardingWizard</code> + <code>Coachmark</code> + <code>useCoachmark</code> + <code>useNewFeatureNotice</code> + the named id constants as the public surface, replacing the I.9a placeholder export of <code>OnboardingWizard</code> (the placeholder file is removed by this session).</p>
+
+  <p>The implementing session reads, in this order: the Constitution + Protocol (auto), <code>current_state.html</code>, <code>flags.html</code> (F-001 through F-009), <code>stream_i_buildkit_index_v1.html</code>, this spec, <code>stream_i_ui_chrome_canvas_spec_v1.html</code> (the I.9a substrate: <code>Dialog</code> + <code>Drawer</code> + <code>Tooltip</code> + <code>SegmentedToggle</code> + <code>HelpGlossaryPane</code> + <code>OperatingModeToggle</code> + <code>FrameCanvas</code> + the routing primitive + <code>app-routes.tsx</code> + the module-import boundary + <code>GLOSSARY_DICTIONARY</code>), <code>stream_i_ui_frame_building_spec_v1.html</code> (the <code>Inspector</code> attachment point), <code>stream_i_ui_argument_running_spec_v1.html</code> (the <code>InterviewPane</code> attachment point), <code>stream_i_ui_version_history_spec_v1.html</code> (the <code>VersionHistoryPane</code> attachment point and the F-006 App-level mount precedent), <code>stream_i_ui_session_settings_spec_v1.html</code> (the I.9d3 deferral note at its line 38, lifting the reset-coachmarks placement decision to this session), <code>stream_i_state_spec_v1.html</code> (the existing <code>AppStateStore.dismissCoachmark</code> + <code>selectCoachmarkDismissed</code> surfaces), <code>stream_i_schema_spec_v1.html</code> (the additive-field forward-compatibility pattern of B7), <code>stream_i_persistence_spec_v1.html</code> (the canonical <code>AppState</code> definition at line 129; <code>coachmark_dismissals</code> at line 137; <code>createFrameFromTemplate</code> orchestration at line 229 and § 1 of Atomicity contracts at line 1736; <code>Repository.loadAppState</code> / <code>saveAppState</code> at lines 245–246), and <code>stream_e_uiux_v1.html</code> E7 (the authoritative design — welcome-screen content, wizard step list, five coachmark messages, returning-user new-feature notice mechanism).</p>
+
+  <h2>Conceptual questions resolved autonomously <span class="anchor">(Article V § 1 / § 2(c))</span></h2>
+
+  <p>The prior <code>current_state.html</code> I.9d4 reading-list paragraph flagged three technical questions for this session to verify or resolve, with the instruction that each is within agent-autonomous scope unless substantial hesitation under Article IV § 4 fires. None fires; all three resolve below.</p>
+
+  <h3>Q1 — Does <code>dismissed_coachmarks</code> already exist on <code>AppState</code>?</h3>
+  <p><strong>Yes, as <code>coachmark_dismissals</code>.</strong> The canonical <code>AppState</code> definition lives in <code>stream_i_persistence_spec_v1.html</code> at line 129; line 137 reads <code>coachmark_dismissals: { [coachmark_id: string]: boolean };</code>. The state spec's <code>AppStateStore.dismissCoachmark(coachmark_id, dismissed?)</code> (line 377) and <code>selectCoachmarkDismissed(state, coachmark_id)</code> (line 740) are already pinned. The reading-list paragraph used the name <code>dismissed_coachmarks</code> informally; the canonical name is <code>coachmark_dismissals</code> and is in place from I.4 onward (it predates F-004, which added the parallel-but-distinct <code>dismissed_warnings</code> array). The <code>useCoachmark</code> hook in this spec consumes the existing surfaces unchanged; no schema work is required for coachmark dismissal itself.</p>
+
+  <h3>Q2 — Does the one-time new-feature notice mechanism need schema work?</h3>
+  <p><strong>Yes, minimally: a new <code>seen_new_feature_notices</code> field on <code>AppState</code>.</strong> Two defensible designs.</p>
+  <ul>
+    <li><em>Option Reuse.</em> Use the existing <code>coachmark_dismissals</code> map with an id-prefix convention (e.g., <code>"new_feature:options_box_override_v1"</code>). Pro: zero schema change. Con: <strong>conflates reset semantics.</strong> E7's "reset coachmarks" affordance is designed to "restore them for testing or for users who want a refresher" — re-surfacing tutorial coachmarks. A user wanting a refresher of the coachmarks does <em>not</em> want to re-see new-feature notices announcing features that have been live for months; those should remain one-time per user per feature.</li>
+    <li><em>Option Separate.</em> Add <code>seen_new_feature_notices: { [notice_id: string]: boolean }</code> to <code>AppState</code> alongside <code>coachmark_dismissals</code>. Pro: clean reset semantics — <code>resetCoachmarks()</code> clears <code>coachmark_dismissals</code> only, leaving notices untouched. Con: one additional additive field.</li>
+  </ul>
+  <p><strong>Decision: Option Separate.</strong> The semantic distinction E7 implicitly carries (coachmarks are first-encounter contextual hints; new-feature notices are one-time-per-user feature announcements) compiles into different reset rules; preserving the distinction in the schema lets the reset affordance behave correctly without prefix-string heuristics. Article III § 4 (Clarity) and § 5 (Reversibility) both favor the separate field. The substantial-hesitation test does not fire: both options are reasonable, the choice is reversible, and the difference is purely technical. Recorded as F-009 refinement #4 below.</p>
+
+  <h3>Q3 — Where does the reset-coachmarks affordance live?</h3>
+  <p><strong>Inside the I.9a <code>HelpGlossaryPane</code>, as a composed section at the bottom.</strong> Four candidates considered.</p>
+  <ul>
+    <li><em>FrameSettingsPanel (I.9b).</em> Rejected. The panel is per-frame; coachmark dismissals are per-user (AppState-resident, per I.9b line 142: "Cross-page state (recents, pinned, coachmark dismissals, default output view) lives in <code>app_state</code>"). Placing a per-user reset inside a per-frame panel mixes scopes.</li>
+    <li><em>SessionSettingsPanel (I.9d3).</em> Rejected by I.9d3 itself (<code>stream_i_ui_session_settings_spec_v1.html</code> line 38: "The session-settings panel does not host a 'reset coachmarks for this session' affordance; coachmark dismissals are AppState-scoped (per F-007's read of <code>selectCoachmarkDismissed</code>), so resetting is a frame-or-app-level concern that I.9d4 places elsewhere"). The deferral is honored here.</li>
+    <li><em>New user-preferences surface.</em> Rejected as scope creep. v1 has no other user-preferences-scoped UI fields beyond <code>default_output_view</code> (already exposed elsewhere) and <code>app_provider_default</code> (a hidden field not surfaced in v1 UI per Stream G). Building a new top-level surface for a single toggle is not justified; if a real user-preferences surface emerges later, the affordance migrates there.</li>
+    <li><em>HelpGlossaryPane (I.9a).</em> <strong>Chosen.</strong> The pane is the only existing user-level surface (opened from the chrome's <code>HelpButton</code>, not scoped to any Frame or Session). E7's onboarding ladder — welcome screen → coachmarks → help/glossary → returning-user new-feature notices — places the help/glossary surface in the same semantic neighborhood as the onboarding system; locating the reset toggle there matches user expectations ("I want to see the help and tutorials again"). Implementation is small: <code>OnboardingPreferencesSection</code> (this module) renders as a composed child below the existing two glossary sections.</li>
+  </ul>
+  <p>Article III § 6 (Interface Fit) and § 5 (Reversibility) both favor the HelpGlossaryPane placement. Substantial-hesitation test does not fire: reversible, reachable from constitutional principles, not user-personal. Recorded as F-009 refinement #11 below.</p>
+
+  <h2>Cross-document resolution notes <span class="anchor">(for self-review)</span></h2>
+
+  <p>Eleven refinements relative to prior I.9 sibling specs and to the I.5 state spec, I.6 modes spec, I.4 persistence spec, and I.9a UI substrate spec. Each is technical, additive (or callback-wiring promotion of placeholders prior specs reserved), and within agent-autonomous scope per Article V § 2(c). All eleven are held in the consolidated F-009 register flag below in the same F-003 / F-004 / F-005 / F-006 / F-007 / F-008 family pattern.</p>
+
+  <ol>
+    <li><strong>Reaffirm existing surfaces for coachmark dismissal.</strong> <code>AppState.coachmark_dismissals</code> (persistence spec line 137), <code>AppStateStore.dismissCoachmark</code> (state spec line 377), and <code>selectCoachmarkDismissed</code> (state spec line 740) are consumed unchanged by the <code>useCoachmark</code> hook. No edit required; flagged here so the F-003-family review covers this consumption explicitly.</li>
+
+    <li><strong>New <code>AppStateStore.resetCoachmarks(): void</code> method in the state spec.</strong> Clears <code>coachmark_dismissals</code> to <code>{}</code> in one set-and-schedule pass via the existing <code>set(patch)</code> wrapper. Does not touch <code>seen_new_feature_notices</code> (the separate-field decision under Q2 is what makes this work). Single dispatch; idempotent (calling on an already-empty map is a no-op write that still schedules a save, which the 1-second AppState debouncer per Stream H H2 absorbs). Backs the <code>OnboardingPreferencesSection</code>'s "Reset coachmarks" button.</li>
+
+    <li><strong>New <code>selectFirstLaunchDismissed(state: AppState): boolean</code> selector in the state spec.</strong> Returns <code>state.coachmark_dismissals[FIRST_LAUNCH_COACHMARK_ID] === true</code>. The first-launch welcome screen is treated as a coachmark with the reserved id <code>"welcome_screen"</code> exported from <code>coachmark-registry.ts</code> as <code>FIRST_LAUNCH_COACHMARK_ID</code>; this is the one case where the coachmark surface is not a small popover but a full-screen <code>Dialog</code>, and the rationale is that E7 frames the welcome screen as part of the same dismissal mechanism: "Each coachmark is dismissed by clicking 'got it' or by acting on the affordance" — both apply to the welcome screen ("Skip introduction" is the dismiss; "Start guided first frame" is the act). Storing first-launch dismissal in <code>coachmark_dismissals</code> means <code>resetCoachmarks()</code> also re-shows the welcome screen, which matches user expectation for a refresher.</li>
+
+    <li><strong>New <code>AppState.seen_new_feature_notices: { [notice_id: string]: boolean }</code> field in the persistence spec.</strong> Additive; default value is <code>{}</code> initialized in the persistence layer's <code>openOrUpgrade</code> (parallel to the existing <code>coachmark_dismissals: {}</code> initialization at line 661). Stream B B7's forward-compatible JSON envelope handles legacy <code>AppState</code> records that lack the field — the persistence layer reads it as <code>state.seen_new_feature_notices ?? {}</code> in the same defensive-read pattern as the existing <code>coachmark_dismissals</code>. <code>CURRENT_SCHEMA_VERSION</code> remains 1 (the default is the legacy-equivalent state, so no migration is required).</li>
+
+    <li><strong>New <code>AppStateStore.markNewFeatureNoticeSeen(notice_id: string): void</code> method in the state spec.</strong> Direct field update through the existing <code>set(patch)</code> wrapper: <code>set({ seen_new_feature_notices: { ...current.seen_new_feature_notices, [notice_id]: true } })</code>. Single dispatch, set-and-schedule; debounced through the 1-second AppState save per H2. Backs the <code>useNewFeatureNotice</code> hook's <code>dismiss</code> action.</li>
+
+    <li><strong>New <code>selectNewFeatureNoticeSeen(state: AppState, notice_id: string): boolean</code> selector in the state spec.</strong> Returns <code>state.seen_new_feature_notices?.[notice_id] === true</code> (the optional-chain handles the legacy-undefined case before refinement #4's initialization runs). Backs the hook's <code>visible</code> derivation.</li>
+    <li><strong>New <code>Repository.createBlankFrame(args: CreateBlankFrameArgs): Promise&lt;{ frame: Frame; frame_version: FrameVersion }&gt;</code> method in the persistence spec.</strong> Parallel to <code>createFrameFromTemplate</code> (line 229). The composite operation constructs a new <code>Frame</code> with fresh UUID, the supplied <code>title</code> / <code>description</code> / <code>mode</code> / <code>flavor</code> / <code>jurisdiction_default</code>, empty <code>tags</code>, empty <code>positions</code> (general mode only — legal-mode <code>Frame.positions</code> is absent per Stream B B3), <code>created_at = updated_at = now()</code>, <code>archived: false</code>, <code>llm_settings: { invocations: [] }</code>, and <code>current_version_id</code> pointing at a new <code>FrameVersion</code> with one stub <code>RootQuestion</code> node (per E7 step 6 — "the user lands in Frame Building with a stub RootQuestion ready to be filled in"). The FrameVersion has <code>version_number: 1</code>, no <code>parent_version_id</code>, <code>created_at = now()</code>, <code>is_milestone: true</code>, <code>change_summary: "Initial frame"</code>, <code>nodes: [{ id, kind: "root_question", question: "", x: undefined, y: undefined, options_box: undefined, notes: undefined }]</code>, <code>edges: []</code>. Persisted in one <code>"rw"</code> transaction over <code>frames</code>, <code>frame_versions</code>, and <code>search_index</code>, parallel to Atomicity contract § 1 at line 1736. Added as Atomicity contract § 4 in the persistence spec. The arg shape <code>CreateBlankFrameArgs</code> is pinned in <code>repository.ts</code> alongside <code>OrphanResolution</code>: <code>{ title: string; description?: string; mode: Mode; flavor?: Flavor; jurisdiction_default?: Jurisdiction }</code>.</li>
+
+    <li><strong>New <code>createBlankFrame</code> orchestration wrapper in the modes spec's <code>orchestration.ts</code>.</strong> Parallel to <code>createFrameFromTemplate</code> at line 44. Async signature: <code>createBlankFrame(args: CreateBlankFrameArgs, deps: OrchestrationDeps): Promise&lt;{ frame: Frame; frame_version: FrameVersion }&gt;</code>. Body: validates the args (title nonempty after trim; mode is a known kind; flavor is present iff mode === "general"; jurisdiction_default is present only when mode === "legal"), then calls <code>deps.repository.createBlankFrame(args)</code>, returns the result unchanged. Validation errors are thrown as <code>CreateFrameValidationError</code> (a new error class in <code>orchestration.ts</code> parallel to <code>OrphanResolutionInvalidError</code>); the wizard catches and surfaces them in-form. Modes consumes Repository as before per its existing dependency on <code>@/persistence</code>; no new module boundaries are crossed.</li>
+
+    <li><strong>New <code>AppStateStore.createFrame(args: CreateBlankFrameArgs | CreateFromTemplateArgs): Promise&lt;FrameId&gt;</code> method in the state spec.</strong> Orchestrates the new-frame wizard's commit. Discriminator: <code>"start_from_template_id" in args ? "template" : "blank"</code>. For "template", calls <code>modes.createFrameFromTemplate(args.start_from_template_id, args.title, deps)</code>; for "blank", calls <code>modes.createBlankFrame(args, deps)</code>. On resolve: calls <code>app_state_store.recordRecent(new_frame.id)</code> (using the existing method from line 376 of the state spec); returns <code>new_frame.id</code> for the caller to navigate. Errors propagate. The method does not seed <code>frame_store</code>; navigation to <code>{ kind: "frame_building", frame_id: new_frame.id }</code> triggers the frame-store load via the existing route-mount discipline. <code>CreateFromTemplateArgs</code> shape: <code>{ start_from_template_id: FrameId; title: string }</code>. Both arg types are re-exported through <code>@/state</code> for the wizard to consume at the state-layer boundary.</li>
+
+    <li><strong>Refine <code>app-routes.tsx</code> (I.9a-owned) to mount <code>OnboardingWizard</code> at the App level.</strong> Parallel to F-006's App-level <code>VersionHistoryPane</code> mount pattern. Reads <code>selectFirstLaunchDismissed</code> via <code>useAppStateStore</code>; passes the negated value as the wizard's <code>open</code> prop (open when <em>not</em> dismissed); <code>onSkip</code> dispatches <code>dismissCoachmark(FIRST_LAUNCH_COACHMARK_ID, true)</code>; <code>onSubmit</code> awaits <code>app_state_store.createFrame(args)</code>, then dismisses first-launch, then navigates to the new frame. The wizard renders as a sibling of the active page component (above the page in z-order via the I.9a <code>Dialog</code> portal). The route does not change while the wizard is open; the user remains on whatever route they landed on (typically the unrecognized-hash default <code>{ kind: "home" }</code>). Refinement local to <code>app-routes.tsx</code>; no other I.9a file is touched. The <code>OnboardingWizard</code> export from the I.9a public barrel (<code>src/ui/index.ts</code>) is preserved; its source changes from the placeholder file (deleted by this session) to the onboarding module's barrel.</li>
+
+    <li><strong>Refine <code>src/ui/chrome/help-glossary-pane.tsx</code> (I.9a-owned) to render <code>OnboardingPreferencesSection</code> at the bottom of the pane, and to accept an additive <code>scroll_to_term?: GlossaryTerm</code> prop.</strong> Composition, not coupling: the help-pane file gains a value import of <code>OnboardingPreferencesSection</code> from <code>@/ui/onboarding</code> and renders it as a third section below the existing Frame concepts and Legal-mode concepts sections. The section ships with its own internal heading ("Onboarding"), a light separator above, and the "Reset coachmarks" affordance. The <code>scroll_to_term</code> prop is additive (default undefined; legacy callers omit it); when set, the pane scrolls the corresponding glossary entry into view on open — consumed by the <code>Coachmark</code>'s "Learn more" affordance and the <code>NewFeatureNotice</code>'s "Tell me more" affordance. The module-import boundary is preserved: <code>@/ui/chrome</code> may import from <code>@/ui/onboarding</code> at the value level (both within <code>src/ui/</code>; UI-internal cross-cutting imports are permitted under the existing discipline). Refinement local to <code>help-glossary-pane.tsx</code>; no other I.9a file is touched.</li>
+  </ol>
+
+  <h2>Coachmark attachments — one-line anchoring refinements at consuming surfaces</h2>
+
+  <p>Each of the five named coachmarks from E7 attaches to a specific existing surface. The integration shape is: the consuming component calls <code>useCoachmark(COACHMARK_ID)</code>, receives <code>{ visible, dismiss, dismiss_on_act, ref }</code>, attaches <code>ref</code> to its anchor DOM element, and conditionally renders <code>&lt;Coachmark anchor_ref={ref} message={COACHMARK_MESSAGES[id]} on_dismiss={dismiss} /&gt;</code> when <code>visible</code> is true. All five per-site edits are recorded together as the per-site sub-items of F-009 refinement #12 below (#12 is the consolidated attachment item; structurally part of the F-009 record).</p>
+
+  <table>
+    <tr><th>Coachmark id</th><th>Consuming file</th><th>Anchor surface</th><th>E7 copy (verbatim)</th></tr>
+    <tr><td><code>"inspector_open"</code></td><td><code>src/ui/frame-building/right-pane/inspector.tsx</code> (I.9b)</td><td>The inspector pane container (first transition of <code>InspectorProps.selection</code> from <code>{ kind: "empty" }</code> to anything else)</td><td>"This panel shows the fields for whatever you've selected. Mode-specific fields appear or hide automatically."</td></tr>
+    <tr><td><code>"edge_create"</code></td><td><code>src/ui/canvas/nodes/node-frame.tsx</code> (I.9a)</td><td>The connector handle of the first node the user hovers; hook fires on first mount of a node-frame instance with a non-suppressed handle</td><td>"Drag from this handle to another node to create an edge. Only valid edge types will be offered."</td></tr>
+    <tr><td><code>"switch_to_argument"</code></td><td><code>src/ui/chrome/operating-mode-toggle.tsx</code> (I.9a)</td><td>The validation indicator inside the toggle's argument-side click handler; coachmark fires on first click attempt to switch (whether or not the switch succeeds)</td><td>"If your frame has errors, the switch is blocked. Warnings let you proceed."</td></tr>
+    <tr><td><code>"version_history_open"</code></td><td><code>src/ui/version-history/version-history-pane.tsx</code> (I.9d1)</td><td>The pane's <code>Drawer</code> container, anchored to the milestone-filter row at the top of the pane</td><td>"Every save is preserved. Star icons mark milestones you've named."</td></tr>
+    <tr><td><code>"argument_pane_open"</code></td><td><code>src/ui/argument-running/interview-pane/interview-pane.tsx</code> (I.9c)</td><td>The interview pane's list container, anchored to the topmost rendered row (recommended-next when present, otherwise the first row)</td><td>"These are the open items. Top is recommended next, but you can address any of them."</td></tr>
+  </table>
+
+  <p>Each per-site change is a single import (<code>import { useCoachmark, Coachmark, COACHMARK_MESSAGES } from "@/ui/onboarding"</code>), a single hook call, and a single conditional render. The <code>MESSAGES</code> table is exported from <code>coachmark-registry.ts</code>; consuming components do not hand-author copy.</p>
+
+  <p><strong>"Act on the affordance" auto-dismissal.</strong> E7: "Each coachmark is dismissed by clicking 'got it' or by acting on the affordance." Acting on the affordance auto-dismisses. The hook returns a <code>dismiss_on_act</code> the consuming site calls when the underlying affordance fires. Per-site auto-dismiss triggers:</p>
+
+  <ul>
+    <li><code>"inspector_open"</code>: auto-dismisses when the inspector renders with a non-empty selection (the visible-conditional render is mounted only then, so the auto-dismiss is implicit and the consumer calls <code>dismiss_on_act</code> on first mount of the popover; no separate event wiring required).</li>
+    <li><code>"edge_create"</code>: auto-dismisses on the first <code>onEdgeStart</code> callback invocation (user has begun dragging from the handle).</li>
+    <li><code>"switch_to_argument"</code>: auto-dismisses on the first OperatingModeToggle argument-side click whose outcome is either a successful transition or a successful warnings-acknowledgment confirm; not on a blocked-by-errors click (the user hasn't engaged with the validation surface yet in that case).</li>
+    <li><code>"version_history_open"</code>: auto-dismisses on the first selection of a row in the version tree.</li>
+    <li><code>"argument_pane_open"</code>: auto-dismisses on the first <code>on_select_item</code> dispatch from the interview pane.</li>
+  </ul>
+
+  <h2>File map — <code>src/ui/onboarding/</code></h2>
+
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel. Re-exports the wizard, the primitives, the hooks, the named id constants and message tables, the reset section (the I.9a help-pane refinement imports it as a value), and the wizard-arg types re-exported from <code>@/state</code> for consumer ergonomics</td><td><code>OnboardingWizard</code>, <code>OnboardingWizardProps</code>, <code>Coachmark</code>, <code>CoachmarkProps</code>, <code>NewFeatureNotice</code>, <code>NewFeatureNoticeProps</code>, <code>useCoachmark</code>, <code>UseCoachmarkReturn</code>, <code>useNewFeatureNotice</code>, <code>UseNewFeatureNoticeReturn</code>, <code>OnboardingPreferencesSection</code>, <code>CoachmarkId</code>, <code>COACHMARK_IDS</code>, <code>COACHMARK_MESSAGES</code>, <code>FIRST_LAUNCH_COACHMARK_ID</code>, <code>NewFeatureNoticeId</code>, <code>NEW_FEATURE_NOTICE_IDS</code>, <code>NEW_FEATURE_NOTICE_DEFINITIONS</code>, plus the re-exported <code>CreateBlankFrameArgs</code> + <code>CreateFromTemplateArgs</code></td></tr>
+    <tr><td><code>onboarding-wizard.tsx</code></td><td>The top-level component replacing the I.9a placeholder. Composes <code>WelcomeScreen</code> and <code>NewFrameWizard</code> as two stages; reads <code>open</code> from props; wraps staged content in the I.9a <code>Dialog</code> primitive. Owns one piece of local state (the stage <code>"welcome" | "wizard"</code>); seeds to <code>"welcome"</code>; transitions to <code>"wizard"</code> when the welcome screen's "Start guided first frame" fires</td><td><code>OnboardingWizard</code>, <code>OnboardingWizardProps</code></td></tr>
+    <tr><td><code>welcome-screen.tsx</code></td><td>First-time welcome screen. Pure presentational. Renders the E7 title verbatim, three short labeled sections (Build a frame / Run a session / Reuse and refine), and two buttons (primary "Start guided first frame" / secondary "Skip introduction"). The body content is exported as <code>WELCOME_SCREEN_COPY</code> (a typed const) so test snapshots assert verbatim E7 copy</td><td><code>WelcomeScreen</code>, <code>WelcomeScreenProps</code>, <code>WELCOME_SCREEN_COPY</code></td></tr>
+    <tr><td><code>new-frame-wizard.tsx</code></td><td>The five-step new-frame wizard. Composes the step components conditionally per E7: (1) <code>WizardStepMode</code> always; (2) <code>WizardStepFlavor</code> when mode === "general"; (3) <code>WizardStepJurisdiction</code> when mode === "legal" (with "skip for now"); (4) <code>WizardStepTitleDescription</code> always; (5) <code>WizardStepTemplate</code> always. Owns wizard working state via a single reducer. On the last step's "Create frame" click, calls <code>onSubmit(args)</code> with the derived <code>CreateBlankFrameArgs | CreateFromTemplateArgs</code> (the F-009 #9 discriminator). Reusable for any new-frame creation, not only first-launch</td><td><code>NewFrameWizard</code>, <code>NewFrameWizardProps</code>, <code>WizardState</code>, <code>WIZARD_STEP_TITLES</code></td></tr>
+    <tr><td><code>wizard-steps/wizard-step-mode.tsx</code></td><td>Step 1. Two mode-choice cards (Legal, General) with E7 captions. Click commits via <code>onSetMode</code>; the parent advances stage. Keyboard navigation (arrow keys cycle, Enter activates focused)</td><td><code>WizardStepMode</code>, <code>WizardStepModeProps</code>, <code>MODE_CAPTIONS</code></td></tr>
+    <tr><td><code>wizard-steps/wizard-step-flavor.tsx</code></td><td>Step 2 (general only). Two flavor cards (Personal, Academic) with E7 captions. Click commits via <code>onSetFlavor</code></td><td><code>WizardStepFlavor</code>, <code>WizardStepFlavorProps</code>, <code>FLAVOR_CAPTIONS</code></td></tr>
+    <tr><td><code>wizard-steps/wizard-step-jurisdiction.tsx</code></td><td>Step 3 (legal only). Small jurisdiction picker (level: federal/state; region: state name or federal-circuit number). v1 minimal per Stream A A8; Stream F's F5 court-hierarchy database is not consumed here. "Skip" advances without commit; "Set" commits via <code>onSet</code></td><td><code>WizardStepJurisdiction</code>, <code>WizardStepJurisdictionProps</code></td></tr>
+    <tr><td><code>wizard-steps/wizard-step-title-description.tsx</code></td><td>Step 4. Title input (required; trim-nonempty validation) and description textarea (optional, multiline). Title autofocuses; Continue gated on title.trim() nonempty</td><td><code>WizardStepTitleDescription</code>, <code>WizardStepTitleDescriptionProps</code></td></tr>
+    <tr><td><code>wizard-steps/wizard-step-template.tsx</code></td><td>Step 5. Optional pick from existing frames as templates per A6. Loads frame summaries on mount via injected <code>load_summaries</code> (production: <code>useRepository().listFrameSummaries</code>). Empty-summaries state renders "no frames yet" with single "Create frame" action. v1 ships no starter templates</td><td><code>WizardStepTemplate</code>, <code>WizardStepTemplateProps</code></td></tr>
+    <tr><td><code>wizard-steps/index.ts</code></td><td>Barrel</td><td>Re-exports</td></tr>
+    <tr><td><code>primitives/coachmark.tsx</code></td><td>The coachmark popover primitive. New to the I.9 module set (the I.9a substrate did not pin a generic <code>Popover</code>). Renders a small overlay positioned relative to <code>anchor_ref.current</code> with a 12px gap and a preferred-placement fallback rule (largest-area side when preferred placement is constrained). Content: <code>message</code> body, "Got it" button (calls <code>on_dismiss</code>), optional "Learn more" affordance (opens HelpGlossaryPane with <code>scroll_to_term</code>). Escape and click-outside dismiss. Respects <code>useReduceMotion</code> (fade-in suppressed under reduced motion)</td><td><code>Coachmark</code>, <code>CoachmarkProps</code></td></tr>
+    <tr><td><code>primitives/new-feature-notice.tsx</code></td><td>The one-time new-feature notice primitive. Same shape as <code>Coachmark</code> with one visual difference ("New" pill in header) and a renamed link ("Tell me more"). Hook is separate to preserve reset semantics</td><td><code>NewFeatureNotice</code>, <code>NewFeatureNoticeProps</code></td></tr>
+    <tr><td><code>primitives/index.ts</code></td><td>Barrel</td><td>Re-exports</td></tr>
+    <tr><td><code>hooks/use-coachmark.ts</code></td><td>The <code>useCoachmark(id: CoachmarkId)</code> hook. Returns <code>{ visible, dismiss, dismiss_on_act, ref }</code>. <code>visible</code> derives from <code>useAppStateStore((s) =&gt; !selectCoachmarkDismissed(s, id))</code>. Dev-mode validates id against <code>COACHMARK_IDS</code></td><td><code>useCoachmark</code>, <code>UseCoachmarkReturn</code>, <code>UnknownCoachmarkIdError</code></td></tr>
+    <tr><td><code>hooks/use-new-feature-notice.ts</code></td><td>The <code>useNewFeatureNotice(notice_id: NewFeatureNoticeId)</code> hook. Mirror of <code>useCoachmark</code>; <code>visible</code> derives from <code>!selectNewFeatureNoticeSeen</code>; <code>dismiss</code> calls <code>markNewFeatureNoticeSeen</code></td><td><code>useNewFeatureNotice</code>, <code>UseNewFeatureNoticeReturn</code>, <code>UnknownNewFeatureNoticeIdError</code></td></tr>
+    <tr><td><code>hooks/index.ts</code></td><td>Barrel</td><td>Re-exports</td></tr>
+    <tr><td><code>coachmark-registry.ts</code></td><td>The typed registry. <code>CoachmarkId</code> is a string-literal union of the six ids (the five E7 coachmarks plus the reserved <code>"welcome_screen"</code>). <code>COACHMARK_MESSAGES</code> is a typed record mapping each id to its E7 copy verbatim. <code>NewFeatureNoticeId</code> is <code>never</code> in v1; <code>NEW_FEATURE_NOTICE_IDS</code> is <code>readonly []</code>; <code>NEW_FEATURE_NOTICE_DEFINITIONS</code> is empty. The mechanism is built; the first real notice lands in v1.x</td><td><code>CoachmarkId</code>, <code>COACHMARK_IDS</code>, <code>FIRST_LAUNCH_COACHMARK_ID</code>, <code>COACHMARK_MESSAGES</code>, <code>NewFeatureNoticeId</code>, <code>NEW_FEATURE_NOTICE_IDS</code>, <code>NEW_FEATURE_NOTICE_DEFINITIONS</code>, <code>NewFeatureNoticeDefinition</code></td></tr>
+    <tr><td><code>onboarding-preferences-section.tsx</code></td><td>The "Onboarding" section composed at the bottom of <code>HelpGlossaryPane</code> per refinement #11. Renders a heading ("Onboarding"), an explanatory paragraph, and a "Reset coachmarks" button that opens a <code>ConfirmDialog</code>. Confirm dispatches <code>app_state_store.resetCoachmarks()</code></td><td><code>OnboardingPreferencesSection</code></td></tr>
+  </table>
+
+  <h2>Detailed file specs</h2>
+
+  <div class="file-header">// src/ui/onboarding/onboarding-wizard.tsx</div>
+  <p>The top-level component. Replaces the I.9a placeholder. Returns null when <code>open</code> is false. When <code>open</code> is true, renders a non-dismissible I.9a <code>Dialog</code>; Escape and click-outside route through the same dismiss path as the explicit "Skip introduction" button so the AppState dismissal is recorded uniformly. The wizard does not own AppState or store dispatches; it receives <code>onSkip</code> and <code>onSubmit</code> as props from <code>app-routes.tsx</code>, which wires them to <code>app_state_store.dismissCoachmark</code> and <code>app_state_store.createFrame</code> per refinement #10.</p>
+<pre><code>import * as React from "react";
+import type { ReactElement } from "react";
+import { Dialog } from "@/ui";
+import type { CreateBlankFrameArgs, CreateFromTemplateArgs } from "@/state";
+import { WelcomeScreen } from "./welcome-screen";
+import { NewFrameWizard } from "./new-frame-wizard";
+
+export interface OnboardingWizardProps {
+  /** When true, the wizard is mounted and visible. Driven by selectFirstLaunchDismissed. */
+  open: boolean;
+  /** Fires when the user chooses "Skip introduction" on the welcome screen, or
+      Escape / click-outside the dialog. The wrapper in app-routes.tsx dispatches
+      app_state_store.dismissCoachmark(FIRST_LAUNCH_COACHMARK_ID, true). */
+  onSkip: () =&gt; void;
+  /** Fires from the wizard's final step. The wrapper in app-routes.tsx awaits
+      app_state_store.createFrame(args), then dismisses first-launch, then
+      navigates to the new frame. */
+  onSubmit: (args: CreateBlankFrameArgs | CreateFromTemplateArgs) =&gt; Promise&lt;void&gt;;
+}
+
+export function OnboardingWizard(props: OnboardingWizardProps): ReactElement | null;
+</code></pre>
+  <p>Behavioral contract. <code>open</code> false → returns null. <code>open</code> true → mounts <code>Dialog</code>, seeds local <code>stage</code> to <code>"welcome"</code>. <code>WelcomeScreen.onStartGuided</code> transitions stage to <code>"wizard"</code>. <code>NewFrameWizard.onSubmit</code> calls <code>props.onSubmit(args)</code> and awaits; while pending, the wizard's internal <code>submitting</code> flag is true (managed by the <code>NewFrameWizard</code>'s reducer and gated at its submit button). On resolve, the parent's dismissal flow flips <code>props.open</code> to false on the next render — the wizard unmounts naturally; no internal stage reset is required. The Dialog's <code>dismiss_on_outside_click</code> and <code>dismiss_on_escape</code> are both true; both route to a shared dismiss handler that calls <code>props.onSkip</code> (so dismissal records AppState consistently regardless of which gesture the user uses). <strong>Route-change does not dismiss.</strong> If the user navigates away mid-wizard (e.g., by hand-editing the URL hash), the wizard remains mounted because <code>open</code> is route-independent.</p>
+
+  <div class="file-header">// src/ui/onboarding/welcome-screen.tsx</div>
+  <p>The first-time welcome screen. Pure presentational. Renders E7 content verbatim.</p>
+<pre><code>import * as React from "react";
+import type { ReactElement } from "react";
+
+export interface WelcomeScreenProps {
+  onStartGuided: () =&gt; void;
+  onSkip: () =&gt; void;
+}
+
+export const WELCOME_SCREEN_COPY: Readonly&lt;{
+  title: string;
+  sections: ReadonlyArray&lt;{ heading: string; body: string }&gt;;
+  primary_button_label: string;
+  secondary_button_label: string;
+}&gt;;
+
+export function WelcomeScreen(props: WelcomeScreenProps): ReactElement;
+</code></pre>
+  <p>Behavioral contract. Renders <code>WELCOME_SCREEN_COPY.title</code> as the screen heading, iterates <code>WELCOME_SCREEN_COPY.sections</code> in document order, renders two buttons (primary calls <code>onStartGuided</code>; secondary calls <code>onSkip</code>). Reads no stores. <code>WELCOME_SCREEN_COPY</code> carries the verbatim E7 content: title = "Argument mapping that separates structure from substance."; sections = the three (a)/(b)/(c) entries from E7 ("Build a frame — the logical skeleton of an argument"; "Run a session — apply premises to reach a conclusion"; "Reuse and refine — frames are independent of any single argument"); primary label = "Start guided first frame"; secondary label = "Skip introduction". Tests assert character-for-character match against E7. Visual layout (single-column vs. three-card; vertical vs. horizontal sections) is left to the implementing session within the visual-polish doc's restraint constraints.</p>
+
+  <div class="file-header">// src/ui/onboarding/new-frame-wizard.tsx</div>
+  <p>The five-step wizard. Composes the step components conditionally, owns the reducer-backed wizard state, dispatches the final submit through <code>onSubmit</code>.</p>
+<pre><code>import * as React from "react";
+import type { ReactElement } from "react";
+import type { Mode, Flavor, Jurisdiction, FrameId } from "@/schema";
+import type { CreateBlankFrameArgs, CreateFromTemplateArgs } from "@/state";
+import {
+  WizardStepMode, WizardStepFlavor, WizardStepJurisdiction,
+  WizardStepTitleDescription, WizardStepTemplate,
+} from "./wizard-steps";
+
+export interface NewFrameWizardProps {
+  onSubmit: (args: CreateBlankFrameArgs | CreateFromTemplateArgs) =&gt; Promise&lt;void&gt;;
+  /** Back from step 1 or Escape from any step routes here. In the OnboardingWizard
+      composition, this routes to the parent's onSkip. */
+  onCancel: () =&gt; void;
+}
+
+export interface WizardState {
+  stage: 1 | 2 | 3 | 4 | 5;
+  mode?: Mode;
+  flavor?: Flavor;
+  jurisdiction_default?: Jurisdiction;
+  title: string;
+  description?: string;
+  start_from_template_id?: FrameId;
+  submitting: boolean;
+  submit_error?: string;
+}
+
+export const WIZARD_STEP_TITLES: Readonly&lt;Record&lt;1 | 2 | 3 | 4 | 5, string&gt;&gt;;
+
+export function NewFrameWizard(props: NewFrameWizardProps): ReactElement;
+</code></pre>
+  <p>Behavioral contract. The reducer handles: <code>set_mode</code>, <code>set_flavor</code>, <code>set_jurisdiction</code> (with a <code>{ skip: true }</code> variant), <code>set_title_description</code>, <code>set_template</code>, <code>begin_submit</code>, <code>submit_error</code>, <code>go_back</code>. Step transitions: stage 1 with legal mode → 3 (skipping flavor); with general → 2. Stage 2 → 4. Stage 3 → 4 (regardless of skip vs. set). Stage 4 → 5. Stage 5 submit calls <code>onSubmit</code>. Back from stage <em>n</em> returns to the prior stage in the reverse of the forward path (back from 4 in general-mode → 2; in legal-mode → 3); back from stage 1 calls <code>onCancel</code>. The reducer never mutates; each action produces a new <code>WizardState</code>. <em>Args derivation at submit time</em>: <code>start_from_template_id</code> set → <code>{ start_from_template_id, title }</code>; absent → <code>{ title, description, mode, flavor, jurisdiction_default }</code>; the discriminator picks the right F-009 #9 dispatch path automatically. <em>Submitting state</em>: while <code>submitting</code> is true, the "Create frame" button is disabled and a small progress indicator appears; on error, the reducer sets <code>submit_error</code> and the error message renders inline; on resolve, the parent's dismissal flow takes over. <em>Validation</em>: title trim-nonempty required; mode required (reducer cannot reach stage 4+ without it); flavor required when mode === "general" (enforced by the stage 2 transition rule); jurisdiction optional in legal mode (skip is valid).</p>
+
+  <div class="file-header">// src/ui/onboarding/wizard-steps/*</div>
+  <p>Each step receives the relevant slice of <code>WizardState</code> plus a small callback for committing the slice. Shapes:</p>
+<pre><code>// wizard-step-mode.tsx
+export interface WizardStepModeProps {
+  current_mode?: Mode;
+  onSetMode: (mode: Mode) =&gt; void;
+  onCancel: () =&gt; void;
+}
+export const MODE_CAPTIONS: Readonly&lt;Record&lt;Mode, string&gt;&gt;;
+export function WizardStepMode(props: WizardStepModeProps): ReactElement;
+
+// wizard-step-flavor.tsx
+export interface WizardStepFlavorProps {
+  current_flavor?: Flavor;
+  onSetFlavor: (flavor: Flavor) =&gt; void;
+  onBack: () =&gt; void;
+}
+export const FLAVOR_CAPTIONS: Readonly&lt;Record&lt;Flavor, string&gt;&gt;;
+export function WizardStepFlavor(props: WizardStepFlavorProps): ReactElement;
+
+// wizard-step-jurisdiction.tsx
+export interface WizardStepJurisdictionProps {
+  current_jurisdiction?: Jurisdiction;
+  onSet: (j: Jurisdiction) =&gt; void;
+  onSkip: () =&gt; void;
+  onBack: () =&gt; void;
+}
+export function WizardStepJurisdiction(props: WizardStepJurisdictionProps): ReactElement;
+
+// wizard-step-title-description.tsx
+export interface WizardStepTitleDescriptionProps {
+  title: string;
+  description?: string;
+  onChangeTitle: (title: string) =&gt; void;
+  onChangeDescription: (description: string) =&gt; void;
+  onContinue: () =&gt; void;
+  onBack: () =&gt; void;
+}
+export function WizardStepTitleDescription(props: WizardStepTitleDescriptionProps): ReactElement;
+
+// wizard-step-template.tsx
+export interface WizardStepTemplateProps {
+  current_selection_id?: FrameId;
+  onSetTemplate: (frame_id: FrameId | null) =&gt; void;
+  onSubmit: () =&gt; void;
+  onBack: () =&gt; void;
+  /** Injected for tests; production reads via useRepository().listFrameSummaries(). */
+  load_summaries?: () =&gt; Promise&lt;ReadonlyArray&lt;{ id: FrameId; title: string; updated_at: number }&gt;&gt;;
+}
+export function WizardStepTemplate(props: WizardStepTemplateProps): ReactElement;
+</code></pre>
+  <p>Step behavioral notes. <em>WizardStepMode</em>: arrow keys cycle between cards; Enter commits focused. <em>WizardStepFlavor</em>: same. <em>WizardStepJurisdiction</em>: two-tier selector (Level: federal/state → Region: state name when state-level; circuit identifier when federal-level — Supreme Court / Circuit 1-11 / D.C. / Federal / District). Skip leaves <code>jurisdiction_default</code> undefined. <em>WizardStepTitleDescription</em>: title autofocuses; Continue disabled while <code>title.trim()</code> empty. <em>WizardStepTemplate</em>: on mount calls <code>load_summaries()</code>, renders loading / loaded / loaded-empty / failed states; "Continue with blank" (when no selection) and "Create from template" (when selected) are the two submit affordances; "Back" always present.</p>
+
+  <div class="file-header">// src/ui/onboarding/primitives/coachmark.tsx</div>
+  <p>The coachmark popover primitive.</p>
+<pre><code>import * as React from "react";
+import type { ReactElement, ReactNode } from "react";
+import type { GlossaryTerm } from "@/ui";
+
+export interface CoachmarkProps {
+  /** Ref to the DOM element this coachmark anchors to. */
+  anchor_ref: React.RefObject&lt;HTMLElement&gt;;
+  /** The message body. */
+  message: string | ReactNode;
+  /** Optional glossary-link affordance. */
+  learn_more_glossary_term?: GlossaryTerm;
+  /** Fires on Got-it click, Escape, click-outside, or programmatic dismissal. */
+  on_dismiss: () =&gt; void;
+  /** Visual placement preference; falls back to whichever side has the most viewport room. */
+  preferred_placement?: "top" | "right" | "bottom" | "left";
+}
+
+export function Coachmark(props: CoachmarkProps): ReactElement | null;
+</code></pre>
+  <p>Behavioral contract. Returns null when <code>anchor_ref.current</code> is null (the popover waits for anchor mount). Once anchored, computes position from the anchor's bounding rect plus a 12px gap on the chosen side; uses <code>preferred_placement</code> if it fits the viewport, otherwise picks the largest-area side via a fallback rule (the implementing session pins the exact algorithm; the spec requires deterministic output for a given (anchor-rect, viewport-rect, preference) triple). Renders into a React portal sibling to the I.9a Dialog portal — z-indexed above canvas / drawer surfaces. Body content: <code>message</code>, "Got it" button (calls <code>on_dismiss</code>), and optional "Learn more" link (when <code>learn_more_glossary_term</code> set: opens HelpGlossaryPane with <code>scroll_to_term={learn_more_glossary_term}</code>). Escape and click-outside both call <code>on_dismiss</code>. Respects <code>useReduceMotion</code>: fade-in suppressed; popover appears instantly.</p>
+
+  <div class="file-header">// src/ui/onboarding/primitives/new-feature-notice.tsx</div>
+<pre><code>import * as React from "react";
+import type { ReactElement } from "react";
+import type { GlossaryTerm } from "@/ui";
+
+export interface NewFeatureNoticeProps {
+  anchor_ref: React.RefObject&lt;HTMLElement&gt;;
+  short_message: string;
+  tell_me_more_glossary_term?: GlossaryTerm;
+  on_dismiss: () =&gt; void;
+  preferred_placement?: "top" | "right" | "bottom" | "left";
+}
+
+export function NewFeatureNotice(props: NewFeatureNoticeProps): ReactElement | null;
+</code></pre>
+  <p>Behavioral contract. Identical positioning, portal, focus, and reduce-motion semantics to <code>Coachmark</code>. Visual differences: a small "New" pill at the top of the body, and the optional link labeled "Tell me more" instead of "Learn more". The v1 build surfaces no notices (<code>NEW_FEATURE_NOTICE_DEFINITIONS</code> is empty); the primitive is implemented and tested for v1.x readiness.</p>
+
+  <div class="file-header">// src/ui/onboarding/hooks/use-coachmark.ts</div>
+<pre><code>import * as React from "react";
+import { useAppStateStore, selectCoachmarkDismissed } from "@/state";
+import type { CoachmarkId } from "../coachmark-registry";
+import { COACHMARK_IDS } from "../coachmark-registry";
+
+export interface UseCoachmarkReturn {
+  visible: boolean;
+  dismiss: () =&gt; void;
+  dismiss_on_act: () =&gt; void;
+  ref: React.RefObject&lt;HTMLElement&gt;;
+}
+
+export class UnknownCoachmarkIdError extends Error {
+  constructor(id: string) {
+    super(`Unknown coachmark id: ${id}. Known: ${COACHMARK_IDS.join(", ")}`);
+    this.name = "UnknownCoachmarkIdError";
+  }
+}
+
+export function useCoachmark(id: CoachmarkId): UseCoachmarkReturn;
+</code></pre>
+  <p>Behavioral contract. Subscribes via <code>useAppStateStore</code> to the boolean projection <code>!selectCoachmarkDismissed(state, id)</code>; selector-based, so the consuming component re-renders only when the relevant boolean flips. <code>dismiss</code> calls <code>app_state_store.dismissCoachmark(id, true)</code>; the in-memory snapshot updates synchronously through the existing <code>set(patch)</code> pattern (per Stream H H2's 1-second debouncer), so <code>visible</code> flips to false on the very next render. <code>dismiss_on_act</code> is a behavioral alias for <code>dismiss</code> exposed for call-site clarity. <code>ref</code> is created with <code>useRef&lt;HTMLElement&gt;(null)</code> on mount; the same ref instance is returned on every render. <em>Dev-mode argument check</em>: <code>import.meta.env.DEV</code> validates <code>id</code> against <code>COACHMARK_IDS</code>; throws <code>UnknownCoachmarkIdError</code> if absent. Production strips the check. The hook does not render the <code>Coachmark</code> popover; the consumer renders it conditionally on <code>visible</code> with <code>ref</code> attached and <code>dismiss</code> wired to <code>on_dismiss</code>. Idempotent under React strict-mode double-mount.</p>
+
+  <div class="file-header">// src/ui/onboarding/hooks/use-new-feature-notice.ts</div>
+<pre><code>import * as React from "react";
+import { useAppStateStore, selectNewFeatureNoticeSeen } from "@/state";
+import type { NewFeatureNoticeId } from "../coachmark-registry";
+
+export interface UseNewFeatureNoticeReturn {
+  visible: boolean;
+  dismiss: () =&gt; void;
+  dismiss_on_act: () =&gt; void;
+  ref: React.RefObject&lt;HTMLElement&gt;;
+}
+
+export class UnknownNewFeatureNoticeIdError extends Error {
+  constructor(id: string) {
+    super(`Unknown new-feature notice id: ${id}.`);
+    this.name = "UnknownNewFeatureNoticeIdError";
+  }
+}
+
+export function useNewFeatureNotice(notice_id: NewFeatureNoticeId): UseNewFeatureNoticeReturn;
+</code></pre>
+  <p>Behavioral contract. Mirror of <code>useCoachmark</code>. <code>visible</code> derives from <code>!selectNewFeatureNoticeSeen(state, notice_id)</code>; <code>dismiss</code> calls <code>app_state_store.markNewFeatureNoticeSeen(notice_id)</code>; dev-mode validation throws <code>UnknownNewFeatureNoticeIdError</code> for unknown ids. v1 has <code>NEW_FEATURE_NOTICE_IDS</code> empty, so TypeScript callers cannot reach the runtime check until a notice id is added to the registry; the hook is implemented for v1.x readiness.</p>
+
+  <div class="file-header">// src/ui/onboarding/coachmark-registry.ts</div>
+<pre><code>import type { GlossaryTerm } from "@/ui";
+
+export type CoachmarkId =
+  | "welcome_screen"
+  | "inspector_open"
+  | "edge_create"
+  | "switch_to_argument"
+  | "version_history_open"
+  | "argument_pane_open";
+
+export const COACHMARK_IDS: ReadonlyArray&lt;CoachmarkId&gt; = [
+  "welcome_screen",
+  "inspector_open",
+  "edge_create",
+  "switch_to_argument",
+  "version_history_open",
+  "argument_pane_open",
+] as const;
+
+export const FIRST_LAUNCH_COACHMARK_ID: "welcome_screen" = "welcome_screen";
+
+/** Verbatim E7 copy. The "welcome_screen" entry is a placeholder string; the
+    WelcomeScreen renders its own structured content via WELCOME_SCREEN_COPY. */
+export const COACHMARK_MESSAGES: Readonly&lt;Record&lt;CoachmarkId, string&gt;&gt;;
+
+export type NewFeatureNoticeId = never;
+
+export const NEW_FEATURE_NOTICE_IDS: ReadonlyArray&lt;NewFeatureNoticeId&gt; = [] as const;
+
+export interface NewFeatureNoticeDefinition {
+  short_message: string;
+  tell_me_more_glossary_term?: GlossaryTerm;
+}
+
+export const NEW_FEATURE_NOTICE_DEFINITIONS:
+  Readonly&lt;Record&lt;NewFeatureNoticeId, NewFeatureNoticeDefinition&gt;&gt;;
+</code></pre>
+  <p>The empty-in-v1 <code>NewFeatureNoticeId</code> union (<code>never</code>) is intentional: the type makes the registry exhaustive, so the first v1.x notice addition is a single-line edit. <code>COACHMARK_MESSAGES</code> carries the verbatim E7 strings (the welcome_screen entry holds a placeholder note like "(rendered via WELCOME_SCREEN_COPY)").</p>
+
+  <div class="file-header">// src/ui/onboarding/onboarding-preferences-section.tsx</div>
+<pre><code>import * as React from "react";
+import type { ReactElement } from "react";
+import { ConfirmDialog, useAppStateStore } from "@/ui";
+
+export function OnboardingPreferencesSection(): ReactElement;
+</code></pre>
+  <p>Behavioral contract. Renders a heading ("Onboarding"), an explanatory paragraph ("Coachmarks appear the first time you encounter a new affordance. Reset to see them again."), and a button ("Reset coachmarks"). Click opens a <code>ConfirmDialog</code> with title "Reset coachmark dismissals?" and body "You'll see introductory hints again the next time you interact with the relevant surfaces, and the welcome screen will reappear on next app open. New-feature notices are not affected." The second body sentence is deliberately included so users understand the scope of the reset given F-009 #4's separate-field decision. Confirm calls <code>app_state_store.resetCoachmarks()</code>; cancel closes. The button is <em>not</em> destructive-styled per the I.9a <code>ConfirmDialog destructive: true</code> convention (reserved for data-loss); this is a soft reset.</p>
+
+  <h2>Refinement to <code>src/ui/app-routes.tsx</code> <span class="anchor">(I.9a-owned)</span> — App-level <code>OnboardingWizard</code> mount</h2>
+
+  <p>The I.9a-owned routing dispatcher gains the App-level <code>OnboardingWizard</code> mount parallel to F-006's <code>VersionHistoryPane</code> mount. Refinement local to <code>app-routes.tsx</code>; no other I.9a file is touched. The placeholder import of <code>OnboardingWizard</code> is replaced with the real one from the onboarding module's barrel.</p>
+<pre><code>// src/ui/app-routes.tsx (refined)
+import * as React from "react";
+import { useState } from "react";
+import { useRoute, useNavigate } from "./routing";
+import {
+  useAppStateStore,
+  selectFirstLaunchDismissed,                              // F-009 #3
+  type CreateBlankFrameArgs,                                // F-009 #9
+  type CreateFromTemplateArgs,                              // F-009 #9
+} from "@/state";
+import { OnboardingWizard, FIRST_LAUNCH_COACHMARK_ID } from "@/ui/onboarding"; // F-009 #10
+import { FrameBuildingPage } from "@/ui/frame-building";   // I.9b real implementation
+import { ArgumentRunningPage } from "@/ui/argument-running"; // I.9c real implementation
+import { VersionHistoryPane, VersionHistoryPreviewProvider } from "@/ui/version-history"; // I.9d1
+
+export function AppRoutes(): React.ReactElement {
+  const route = useRoute();
+  const navigate = useNavigate();
+  const app_state_store = useAppStateStore();
+  const first_launch_dismissed = useAppStateStore(selectFirstLaunchDismissed);
+
+  const [version_history_open, setVersionHistoryOpen] = useState(false); // F-006
+
+  const handleSkipOnboarding = React.useCallback(() =&gt; {
+    app_state_store.dismissCoachmark(FIRST_LAUNCH_COACHMARK_ID, true);
+  }, [app_state_store]);
+
+  const handleSubmitOnboarding = React.useCallback(
+    async (args: CreateBlankFrameArgs | CreateFromTemplateArgs) =&gt; {
+      const new_frame_id = await app_state_store.createFrame(args);   // F-009 #9
+      app_state_store.dismissCoachmark(FIRST_LAUNCH_COACHMARK_ID, true);
+      navigate({ kind: "frame_building", frame_id: new_frame_id });
+    },
+    [app_state_store, navigate],
+  );
+
+  return (
+    &lt;VersionHistoryPreviewProvider&gt;
+      &lt;OnboardingWizard
+        open={!first_launch_dismissed}
+        onSkip={handleSkipOnboarding}
+        onSubmit={handleSubmitOnboarding}
+      /&gt;
+      &lt;VersionHistoryPane
+        open={version_history_open}
+        onClose={() =&gt; setVersionHistoryOpen(false)}
+      /&gt;
+      {/* active page render — switch on route.kind unchanged */}
+    &lt;/VersionHistoryPreviewProvider&gt;
+  );
+}
+</code></pre>
+  <p>Behavioral contract. The wizard mounts whenever <code>!first_launch_dismissed</code>, regardless of route. Skip → <code>handleSkipOnboarding</code> flips <code>first_launch_dismissed</code> to true on next render → wizard unmounts. Submit → <code>handleSubmitOnboarding</code> creates the frame, dismisses first-launch, navigates to the new frame; the wizard unmounts after the dismissal. Mount order: the wizard renders above the version-history pane (which is above the active page) in z-order, so on first launch the wizard occludes everything else. The I.9a App-boots-end-to-end property is preserved: the v1 placeholder Home page (a one-line "Welcome — this is the home page placeholder" panel; itself unspecified in this session — see "What this spec does not commit") renders behind the wizard until the user completes or skips.</p>
+
+  <h2>Refinement to <code>src/ui/chrome/help-glossary-pane.tsx</code> <span class="anchor">(I.9a-owned)</span> — <code>OnboardingPreferencesSection</code> composition + <code>scroll_to_term</code> prop</h2>
+
+  <p>The help-pane composition gains a third section below the existing Frame concepts and Legal-mode concepts sections. <code>HelpGlossaryPaneProps</code> gains one additive optional field: <code>scroll_to_term?: GlossaryTerm</code>. When set, the pane scrolls the corresponding glossary entry into view on open; the "Learn more" affordance on <code>Coachmark</code> and the "Tell me more" affordance on <code>NewFeatureNotice</code> consume this prop via the chrome's existing help-pane open mechanism. The pane's existing API surface (the <code>open</code> + <code>onClose</code> pair) is unchanged.</p>
+<pre><code>// src/ui/chrome/help-glossary-pane.tsx (refined; additive only)
+import { OnboardingPreferencesSection } from "@/ui/onboarding";  // F-009 #11
+import type { GlossaryTerm } from "../primitives/glossary-tooltip";
+
+export interface HelpGlossaryPaneProps {
+  open: boolean;
+  onClose: () =&gt; void;
+  /** Additive: when set, the pane scrolls to the named glossary entry on open. */
+  scroll_to_term?: GlossaryTerm;
+}
+
+export function HelpGlossaryPane(props: HelpGlossaryPaneProps): React.ReactElement {
+  // ... existing Frame concepts and Legal-mode concepts sections ...
+  // New: OnboardingPreferencesSection rendered at the bottom with a small spacer above.
+  // ... scroll-to-term handling on mount when prop is set ...
+}
+</code></pre>
+
+  <h2>UI-layer determinism discipline <span class="anchor">(I.9a four obligations)</span></h2>
+
+  <p>The onboarding module is not on the Article II § 2 determinism boundary. The four UI-layer obligations restated for I.9d4's surfaces:</p>
+  <ol>
+    <li><strong>D1 — Canonical surface verbatim.</strong> The welcome screen renders <code>WELCOME_SCREEN_COPY</code> verbatim from a static constant; each coachmark renders <code>COACHMARK_MESSAGES[id]</code> verbatim; new-feature notices render <code>NEW_FEATURE_NOTICE_DEFINITIONS[id].short_message</code> verbatim. The wizard's step captions (<code>MODE_CAPTIONS</code>, <code>FLAVOR_CAPTIONS</code>) are static. No client-side string interpolation derives content from runtime data.</li>
+    <li><strong>D2 — Single-clock-read per dispatch.</strong> <code>resetCoachmarks</code> and <code>markNewFeatureNoticeSeen</code> route through the existing <code>set(patch)</code> wrapper (one autosave-schedule). <code>createFrame</code> awaits <code>modes.createBlankFrame</code> or <code>modes.createFrameFromTemplate</code>, each reading <code>deps.now()</code> exactly once for the new-version timestamp per F-003 family discipline. The wizard reads no clock; the wizard's reducer has no time-derived fields.</li>
+    <li><strong>D3 — Deterministic order.</strong> The wizard's step sequence is fixed by reducer rules. The coachmark anchor positioning is deterministic for a given (anchor-rect, viewport-rect, preference) triple. The <code>OnboardingPreferencesSection</code> renders one button — no ordered list. The wizard's template-step list of frame summaries is rendered in the canonical order returned by <code>Repository.listFrameSummaries</code> (already deterministic per Stream H H1); the UI does not re-sort.</li>
+    <li><strong>D4 — Stable identity across renders.</strong> The <code>useCoachmark</code> hook returns the same <code>ref</code> instance across renders. <code>WIZARD_STEP_TITLES</code> and the caption tables are frozen constants. The wizard's reducer produces new state objects (no in-place mutation). The <code>useAppStateStore</code> selector subscriptions use the existing <code>useSyncExternalStoreWithSelector</code> identity discipline per the state spec.</li>
+  </ol>
+  <p>The implementing session adds these obligations to <code>src/ui/onboarding/README.md</code> in the I.9a "what we do not do" pattern.</p>
+
+  <h2>Vitest acceptance tests</h2>
+
+  <p>The I.9d4 coding session implements until the tests below pass. Tests live in <code>tests/ui/onboarding/</code>; integration additions land in <code>tests/ui/app-routes-onboarding.test.tsx</code> and the existing per-page test files.</p>
+
+  <h3>Onboarding module tests</h3>
+
+  <table>
+    <tr><th>File</th><th>Coverage</th></tr>
+    <tr><td><code>tests/ui/onboarding/onboarding-wizard.test.tsx</code></td><td>Mounts with <code>open=false</code> → returns null. Mounts with <code>open=true</code> → renders the welcome stage. "Start guided first frame" → transitions to wizard stage; "Skip introduction" → calls <code>onSkip</code>. Wizard's final submit → calls <code>onSubmit</code> with the derived args; while pending, the submit button is disabled. Escape on the dialog → calls <code>onSkip</code> (the same path as the explicit Skip button). The Dialog's <code>dismiss_on_outside_click</code> and <code>dismiss_on_escape</code> both route to the shared dismiss handler.</td></tr>
+    <tr><td><code>tests/ui/onboarding/welcome-screen.test.tsx</code></td><td>Renders <code>WELCOME_SCREEN_COPY.title</code> and each section's heading and body verbatim. Primary button dispatches <code>onStartGuided</code>; secondary dispatches <code>onSkip</code>. <code>WELCOME_SCREEN_COPY</code> exposes the E7 copy character-for-character: title = "Argument mapping that separates structure from substance."; three sections with the (a)/(b)/(c) bodies from E7; primary label = "Start guided first frame"; secondary label = "Skip introduction".</td></tr>
+    <tr><td><code>tests/ui/onboarding/new-frame-wizard.test.tsx</code></td><td>Reducer transitions: <code>set_mode("legal")</code> from stage 1 advances to stage 3 (skipping flavor); <code>set_mode("general")</code> advances to stage 2; <code>set_flavor</code> from stage 2 advances to stage 4; <code>set_jurisdiction({ skip: true })</code> from stage 3 advances to stage 4 with <code>jurisdiction_default</code> undefined; <code>set_title_description</code> from stage 4 advances to stage 5; <code>begin_submit</code> sets <code>submitting: true</code>; <code>submit_error("...")</code> clears submitting and sets the error; <code>go_back</code> from each stage returns to the prior stage in the reverse forward path. Args derivation: with template selected → <code>{ start_from_template_id, title }</code>; without → <code>{ title, description, mode, flavor, jurisdiction_default }</code>; missing flavor in general-mode is unreachable by the reducer. Validation: title trim-empty blocks Continue on step 4.</td></tr>
+    <tr><td><code>tests/ui/onboarding/wizard-step-mode.test.tsx</code></td><td>Renders both mode cards with their <code>MODE_CAPTIONS</code> entries; click on each calls <code>onSetMode</code> with the matching <code>Mode</code>; arrow keys cycle focus; Enter activates focused card.</td></tr>
+    <tr><td><code>tests/ui/onboarding/wizard-step-flavor.test.tsx</code></td><td>Parallel to mode-step coverage.</td></tr>
+    <tr><td><code>tests/ui/onboarding/wizard-step-jurisdiction.test.tsx</code></td><td>Federal level → circuit options render (Supreme / 1-11 / D.C. / Federal / District); State level → 50-state list; Set → <code>onSet(j)</code>; Skip → <code>onSkip</code> without commit; Back → <code>onBack</code>.</td></tr>
+    <tr><td><code>tests/ui/onboarding/wizard-step-title-description.test.tsx</code></td><td>Title autofocuses on mount; trim-empty title disables Continue; non-empty title enables Continue; Continue commits both fields.</td></tr>
+    <tr><td><code>tests/ui/onboarding/wizard-step-template.test.tsx</code></td><td>On mount calls injected <code>load_summaries</code>; renders loading → loaded; empty-summaries renders the "no frames yet" message and only "Create frame" action; selecting a row + Create → <code>onSetTemplate(frame_id)</code> + <code>onSubmit</code>; "Continue with blank" → <code>onSetTemplate(null)</code> + <code>onSubmit</code>; load failure renders an error message and retry.</td></tr>
+    <tr><td><code>tests/ui/onboarding/primitives/coachmark.test.tsx</code></td><td>Renders null when <code>anchor_ref.current</code> is null. After anchor mounts, renders the popover at a deterministic position for the (anchor-rect, viewport-rect, preferred_placement) tuple — snapshot the placement decision for three viewport sizes and four preferences. "Got it" click → <code>on_dismiss</code>; Escape → <code>on_dismiss</code>; click-outside → <code>on_dismiss</code>. "Learn more" link (when <code>learn_more_glossary_term</code> set) opens the help-pane with <code>scroll_to_term</code> set. Under <code>matchMedia("(prefers-reduced-motion: reduce)")</code> the fade-in is suppressed.</td></tr>
+    <tr><td><code>tests/ui/onboarding/primitives/new-feature-notice.test.tsx</code></td><td>Parallel to coachmark, with the "New" pill present and the "Tell me more" affordance variant.</td></tr>
+    <tr><td><code>tests/ui/onboarding/hooks/use-coachmark.test.tsx</code></td><td><code>visible</code> reads <code>!selectCoachmarkDismissed</code> from the store; on store update flipping the dismissal to true, the hook re-renders with <code>visible: false</code>. <code>dismiss</code> calls <code>app_state_store.dismissCoachmark(id, true)</code>; <code>dismiss_on_act</code> is the same function reference. <code>ref</code> is stable across renders. Dev mode: passing an unknown id throws <code>UnknownCoachmarkIdError</code>; production mode strips the check. Strict-mode double-mount is idempotent.</td></tr>
+    <tr><td><code>tests/ui/onboarding/hooks/use-new-feature-notice.test.tsx</code></td><td>Parallel to use-coachmark coverage, against <code>selectNewFeatureNoticeSeen</code> and <code>markNewFeatureNoticeSeen</code>. Empty <code>NEW_FEATURE_NOTICE_IDS</code> in v1 means the runtime test uses a hand-rolled stub id via <code>as any</code> in the test fixture, exercising the dev-mode unknown-id throw and the visible/dismiss state-update path independently.</td></tr>
+    <tr><td><code>tests/ui/onboarding/coachmark-registry.test.ts</code></td><td>Asserts: <code>COACHMARK_IDS.length === 6</code>; every member of the <code>CoachmarkId</code> union has a corresponding entry in <code>COACHMARK_MESSAGES</code> (exhaustiveness check via type-level <code>Record</code>); each non-welcome-screen entry's text matches the E7 verbatim string (character-for-character). <code>NEW_FEATURE_NOTICE_IDS</code> is empty and <code>NEW_FEATURE_NOTICE_DEFINITIONS</code> is an empty record in v1.</td></tr>
+    <tr><td><code>tests/ui/onboarding/onboarding-preferences-section.test.tsx</code></td><td>Renders the heading, explanatory paragraph, and "Reset coachmarks" button. Click opens <code>ConfirmDialog</code> with the spec'd title and body strings (verbatim). Confirm calls <code>app_state_store.resetCoachmarks()</code>; cancel closes the dialog without dispatching. The button is not destructive-styled (the <code>ConfirmDialog</code> consumer does not pass <code>destructive: true</code>).</td></tr>
+  </table>
+
+  <h3>Integration tests on existing files</h3>
+
+  <table>
+    <tr><th>File</th><th>Coverage</th></tr>
+    <tr><td><code>tests/ui/app-routes-onboarding.test.tsx</code></td><td>App-level integration: <code>useAppStateStore(selectFirstLaunchDismissed)</code> seeded false → wizard mounts with <code>open=true</code>. <code>handleSkipOnboarding</code> dispatches <code>dismissCoachmark(FIRST_LAUNCH_COACHMARK_ID, true)</code>; on the next render <code>open</code> is false. <code>handleSubmitOnboarding</code> awaits <code>createFrame(args)</code>, dispatches <code>dismissCoachmark(FIRST_LAUNCH_COACHMARK_ID, true)</code>, then calls <code>navigate({ kind: "frame_building", frame_id })</code> in that order. The wizard renders above the version-history pane and above the active page (DOM order check). Route change does not unmount the wizard while <code>open</code> remains true.</td></tr>
+    <tr><td><code>tests/ui/chrome/help-glossary-pane.test.tsx</code> (extended)</td><td>Existing coverage preserved (open/close, legal-section gating). New: <code>OnboardingPreferencesSection</code> renders at the bottom of the pane. The <code>scroll_to_term</code> prop, when set, causes the named glossary entry to scroll into view on open (jsdom <code>scrollIntoView</code> mocked; assertion is that the right element receives the call).</td></tr>
+    <tr><td><code>tests/ui/frame-building/right-pane/inspector.test.tsx</code> (extended)</td><td>Existing coverage preserved. New: when <code>useCoachmark("inspector_open")</code> returns <code>visible: true</code> and the selection becomes non-empty for the first time, the <code>Coachmark</code> popover renders attached to the inspector container; on the popover's <code>on_dismiss</code>, the next render shows <code>visible: false</code>.</td></tr>
+    <tr><td><code>tests/ui/canvas/nodes/node-frame.test.tsx</code> (extended)</td><td>Existing coverage preserved. New: a single canvas with multiple nodes renders one <code>Coachmark</code> for the first-mounted node's connector handle when <code>useCoachmark("edge_create")</code> is <code>visible</code>; on the first <code>onEdgeStart</code>, <code>dismiss_on_act</code> fires.</td></tr>
+    <tr><td><code>tests/ui/chrome/operating-mode-toggle.test.tsx</code> (extended)</td><td>Existing coverage preserved. New: with clean validation, clicking the Argument side fires <code>dismiss_on_act</code> for the <code>"switch_to_argument"</code> coachmark; with errors blocking, the <code>dismiss_on_act</code> does <em>not</em> fire (the user hasn't engaged with the validation surface).</td></tr>
+    <tr><td><code>tests/ui/version-history/version-history-pane.test.tsx</code> (extended)</td><td>Existing coverage preserved. New: opening the pane while <code>useCoachmark("version_history_open")</code> is <code>visible</code> renders the popover; the first row-selection fires <code>dismiss_on_act</code>.</td></tr>
+    <tr><td><code>tests/ui/argument-running/interview-pane/interview-pane.test.tsx</code> (extended)</td><td>Existing coverage preserved. New: opening the argument-running page while <code>useCoachmark("argument_pane_open")</code> is <code>visible</code> renders the popover anchored to the topmost row; the first <code>on_select_item</code> dispatch fires <code>dismiss_on_act</code>.</td></tr>
+  </table>
+
+  <h2>What this spec does not commit</h2>
+  <ul>
+    <li><strong>The Home page.</strong> The I.9a chrome-canvas spec defines a <code>{ kind: "home" }</code> route but no <code>HomePage</code> component anywhere in the I.9a/b/c/d1/d2/d3 specs. The v1 Home page is a one-line placeholder ("Welcome — this is the home page placeholder"; itself unspecified beyond this minimal shape) that renders behind the wizard on first launch. A real Home page (recents + pinned + tags + "New frame" / "New frame from template" buttons + the I.9a glossary access via the chrome's HelpButton — per E2 line 207 "From Home, the user enters Frame Building by ... clicking 'New frame' (which runs the new-frame wizard from E7)") is a separate work item, naturally landing in I.10 (integration + v1 acceptance test plan) or a polish session before v1 ships. This gap is named here rather than glossed; the implementing session adds a small placeholder file that satisfies the App-boots-end-to-end property and the future Home-page session imports the <code>NewFrameWizard</code> from this module directly (the wizard is implemented as a reusable component, not tightly coupled to the onboarding flow).</li>
+    <li><strong>The specific popover positioning algorithm.</strong> The <code>Coachmark</code> primitive's positioning is deterministic for a given input triple, but the choice between hand-rolled positioning and a small floating-element library (FloatingUI, Popper) is left to the implementing session. The spec pins behavior, not implementation; the deterministic-output test is the contract.</li>
+    <li><strong>Visual treatment of the welcome screen.</strong> Color, motion, layout (single-column vs. three-card), illustration, typography sizing — the visual-polish doc owns. The spec pins copy and structure.</li>
+    <li><strong>Cross-tab coachmark dismissal sync.</strong> AppState is per-user but writes flow through the 1-second debouncer per Stream H H2 and broadcast through the cross-tab bus. The coachmark dismissals propagate the same way as any other AppState field — last-write-wins; the user dismissing in one tab will see the dismissal reflected in another tab within ~1-2 seconds. v1 ships with this default; no UI affordance signals the cross-tab propagation. Same behavior as <code>recents</code>, <code>pinned</code>, and <code>default_output_view</code>.</li>
+    <li><strong>Per-coachmark "show me again" affordance.</strong> E7 does not call for per-coachmark replay; reset is all-or-nothing. v1 ships the all-or-nothing reset only. A future polish pass may add per-coachmark replay if usage data shows demand.</li>
+    <li><strong>Animation curves and motion polish.</strong> The fade-in transition for the popover, the welcome-screen entrance, and the wizard-step transitions all default to the I.9a substrate's tokenized durations + easings; specific curves are visual-polish-doc territory.</li>
+    <li><strong>Search-within-glossary on the help pane.</strong> Per the I.9a spec ("Search-within-glossary is reserved for a polish pass; v1 is a static list"), out of scope. I.9d4 does not change this; the <code>scroll_to_term</code> affordance is the precise-jump mechanism that suffices for v1.</li>
+    <li><strong>Starter frame templates shipping with v1.</strong> Per A6 and E7, none ship in v1. The wizard's step 5 renders an empty starter-list with the "no frames yet" copy until the user has created at least one frame. Adding starter templates is a content-curation work item, not an implementation one.</li>
+    <li><strong>The new-frame wizard's invocation from non-first-launch contexts.</strong> Per E2 line 207, the new-frame wizard is also reachable from the Home page's "New frame" button. That invocation is the Home page's responsibility; the <code>NewFrameWizard</code> component this spec implements is the reusable wizard the Home page will mount (likely as a dialog body, the same way the <code>OnboardingWizard</code> mounts it here). No coupling to first-launch is built into the wizard itself.</li>
+    <li><strong>Onboarding for in-existing-frame coachmarks fired before the user has dismissed first-launch.</strong> Edge case: a user could in principle reach a frame (e.g., via URL deep-link) before completing the welcome wizard. v1 behavior: the wizard occludes the canvas (rendered above in z-order), so the user must complete or skip before reaching the affordances. Per-affordance coachmarks fire only after the user reaches them; the ordering is naturally correct.</li>
+  </ul>
+
+  <h2>I.9d4 self-review <span class="anchor">(Article VIII § 4)</span></h2>
+
+  <h3>Article II commitments — compliance check</h3>
+  <ul>
+    <li><strong>§ 1 Frame/Argument Split.</strong> Honored. The new-frame wizard produces a <code>Frame</code> + a <code>FrameVersion</code> with a stub <code>RootQuestion</code>; no <code>ArgumentSession</code> is created (sessions are created later, in Frame Building → Argument Running transitions). The coachmark mechanism is per-user AppState, never coupling to Frame or Session state. The OnboardingWizard reads no Frame or Session state.</li>
+    <li><strong>§ 2 Determinism.</strong> Honored. The new dispatch-table-style integrations (the <code>createBlankFrame</code> orchestration, the <code>createFrame</code> state-store method) follow the F-003 family's single-clock-read property. The UI surfaces this spec adds read no clock. <code>resetCoachmarks</code>, <code>markNewFeatureNoticeSeen</code>, and <code>dismissCoachmark</code> are pure set-and-schedule operations; they do not affect Article II § 2's runtime-output guarantee, which concerns frame-version-to-conditional-output determinism. The <code>llm_settings_snapshot</code> (F-001) is initialized as <code>{ invocations: [] }</code> on the new frame, matching the cold-start behavior of <code>createFrameFromTemplate</code> documented in the persistence spec.</li>
+    <li><strong>§ 3 Per-Node Satisfaction Criteria.</strong> Honored. The stub <code>RootQuestion</code> the new frame ships with carries no <code>options_box</code> override; it inherits the frame-default policy for <code>root_question</code>. The wizard does not commit any per-node satisfaction policy; that is a Frame Building responsibility post-creation.</li>
+    <li><strong>§ 4 Independent Versioning.</strong> Honored. The new <code>FrameVersion</code> from <code>createBlankFrame</code> is version 1, is_milestone true, parent_version_id null — the canonical initial-version shape. No <code>ArgumentSessionVersion</code> is created in this flow.</li>
+    <li><strong>§ 5 Human-Readable Structure.</strong> Honored. The change_summary "Initial frame" is a canonical English string surfaced verbatim in version history. The wizard's deterministic step order is human-readable (the implementing session names each step in the UI header). The coachmark messages are E7 verbatim.</li>
+    <li><strong>§ 6 Use-Case Commitment.</strong> Honored. The wizard treats Legal and General modes as first-class equals (both are top-level cards in step 1). Personal and academic flavors are both first-class within general (both are top-level cards in step 2). The jurisdiction step is gated to legal mode per Stream A A8 and Stream D D5 — the right level of mode-aware specialization, not a privilege of either mode. The coachmark mechanism is mode-agnostic; the messages are mode-neutral.</li>
+  </ul>
+
+  <h3>Article III quality criteria — evaluation</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> Every E7 surface is mapped to a component (welcome screen → <code>WelcomeScreen</code>; guided five-step wizard → <code>NewFrameWizard</code> with its step components; coachmarks → <code>Coachmark</code> + <code>useCoachmark</code> + the five attachment refinements; reset toggle → <code>OnboardingPreferencesSection</code>; new-feature notices → <code>NewFeatureNotice</code> + <code>useNewFeatureNotice</code> + registry + AppState field). The empty-state guidance E7 also mentions is already covered by I.9b's validation-drawer empty state, I.9c's interview-empty-state, and the home-page placeholder (gap noted). The help/glossary surface is in I.9a and unchanged in shape.</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> Honored. The wizard treats Legal mode as a first-class top-level choice; the jurisdiction step uses legal-practitioner vocabulary (federal/state, circuit, district); the welcome screen's framing of "structure from substance" is the legal-analysis idiom carried in. Mode-aware step gating matches how a practitioner would expect a mode-specific setup to work — irrelevant questions are skipped, not greyed out.</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> Honored. The <code>createBlankFrame</code> orchestration is pure modulo Repository (which is itself deterministic given inputs); the FrameVersion's <code>created_at</code> is the only clock read. The wizard's reducer is pure; its actions are auditable through TypeScript exhaustiveness. The coachmark dismissals are persisted in <code>coachmark_dismissals</code> with the same audit trail as any AppState field.</li>
+    <li><strong>§ 4 Clarity.</strong> Honored. Each file has one responsibility; the wizard's reducer is a single-source-of-truth for wizard state; the registry is a single source of truth for coachmark ids and copy. The reset semantics are made explicit in the ConfirmDialog body so users understand what is and is not affected.</li>
+    <li><strong>§ 5 Reversibility.</strong> Honored. The new-frame wizard's commit creates a fresh Frame in a single atomic transaction; the user can delete it from Frame Building (the I.9b delete affordance). The first-launch dismissal is reversible via the reset-coachmarks affordance. New-feature notices, by design, are not reset by the affordance — but a future session could add a "reset new-feature notices" toggle additively. Option Reuse for Q2 is reachable later if Option Separate proves wrong.</li>
+    <li><strong>§ 6 Interface Fit.</strong> Honored. The spec is bounded to <code>src/ui/onboarding/</code> plus three small refinements at named neighbor files. A single coding session implementing I.9d4 reads the documents listed in the Reading list above; the chain is bounded and reasonable. The cross-spec refinements (F-009) are catalogued for the future contracts-doc bump that will consolidate the F-003 family.</li>
+  </ul>
+
+  <h3>Article V § 3 escalation triggers — re-check</h3>
+  <ul>
+    <li><strong>(a) Reversal of a Zach-personal strategy or directive.</strong> No. Three places where this could fire were checked: (i) the Q3 placement of the reset affordance on <code>HelpGlossaryPane</code> — the candidate analysis is purely technical-design, no Zach personal commitment exists on this; (ii) the Q2 separate-field decision — same; (iii) the Home-page deferral — the Home page is unspecified, not user-directed, so deferring its full spec to I.10 or a polish session does not reverse any directive.</li>
+    <li><strong>(b) Reversal or weakening of an Article II commitment.</strong> No. Each commitment is rechecked above.</li>
+    <li><strong>(c) Two Article II commitments in unresolvable conflict.</strong> No. § 2 and § 6 jointly govern the new-frame creation path; the createBlankFrame orchestration honors both (deterministic + use-case-flexible).</li>
+    <li><strong>(d) Foreclosure of an Article I use case.</strong> No. The wizard treats Legal, General+Personal, and General+Academic as first-class peers.</li>
+    <li><strong>(e) Anthropic safety policies require user input.</strong> No.</li>
+    <li><strong>(f) Constitution silent or genuinely contradictory on a substantive question.</strong> No. The three conceptual questions Q1–Q3 are technical-design within agent autonomy; the Constitution + canonical state document + prior-stream commitments resolve each. The substantial-hesitation test under Article IV § 4 did not fire on any of the three.</li>
+  </ul>
+
+  <h2>F-009 register flag — full record <span class="anchor">(for merge into flags.html)</span></h2>
+
+  <p>The eleven refinements above are consolidated as F-009 in the same in-session-escalated-flag family as F-003 / F-004 / F-005 / F-006 / F-007 / F-008. The merged record below is the verbatim text to append to <code>flags.html</code>.</p>
+
+<pre><code>id: F-009
+raised_at: 2026-05-11
+raised_by: 2026-05-11 / Stream I session I.9d4 (onboarding wizard + coachmark machinery)
+subject: I.9d4 consolidated refinements (eleven items) on the state spec,
+         persistence spec, modes spec, the I.9a UI substrate spec
+         (app-routes.tsx + help-glossary-pane.tsx), and one-line coachmark
+         anchoring inserts at five existing consuming surfaces (I.9a / I.9b /
+         I.9c / I.9d1)
+
+description: The I.9d4 spec stream_i_ui_onboarding_spec_v1.html surfaced eleven
+small refinements relative to the I.5 state spec, the I.6 modes spec, the I.4
+persistence spec, and the I.9a UI substrate spec. None is constitutionally
+novel; all are technical and within agent-autonomous scope per Article V § 1 /
+§ 2(c).
+
+  (1) Reaffirm existing surfaces for coachmark dismissal: AppState.coachmark_
+      dismissals (persistence spec line 137), AppStateStore.dismissCoachmark
+      (state spec line 377), and selectCoachmarkDismissed (state spec line
+      740) are consumed unchanged by useCoachmark; no edit, flagged for
+      F-003-family review explicitness.
+
+  (2) New AppStateStore.resetCoachmarks(): void in the state spec; clears
+      coachmark_dismissals to {} via the existing set(patch) wrapper. Does
+      not touch seen_new_feature_notices. Backs the OnboardingPreferences-
+      Section button.
+
+  (3) New selectFirstLaunchDismissed(state: AppState): boolean selector in
+      the state spec; reads state.coachmark_dismissals[FIRST_LAUNCH_COACHMARK_
+      ID]. The first-launch welcome is treated as a coachmark with the
+      reserved id "welcome_screen"; storing first-launch dismissal in
+      coachmark_dismissals means resetCoachmarks() also re-shows the welcome
+      screen, matching user expectation for a refresher.
+
+  (4) New AppState.seen_new_feature_notices: { [notice_id: string]: boolean }
+      field in the persistence spec; additive, default {}, initialized in
+      openOrUpgrade parallel to coachmark_dismissals at line 661. B7
+      forward-compat handles legacy records.
+
+  (5) New AppStateStore.markNewFeatureNoticeSeen(notice_id: string): void in
+      the state spec; direct field update via set(patch). Backs
+      useNewFeatureNotice's dismiss action.
+
+  (6) New selectNewFeatureNoticeSeen(state, notice_id): boolean selector in
+      the state spec; reads state.seen_new_feature_notices?.[notice_id] ===
+      true.
+
+  (7) New Repository.createBlankFrame(args): Promise&lt;{ frame, frame_version }&gt;
+      in the persistence spec; parallel to createFrameFromTemplate. Builds a
+      new Frame plus FrameVersion v1 with one stub RootQuestion in one
+      transaction across frames + frame_versions + search_index. Added as
+      Atomicity contract § 4. CreateBlankFrameArgs shape pinned in
+      repository.ts: { title, description?, mode, flavor?,
+      jurisdiction_default? }.
+
+  (8) New createBlankFrame orchestration wrapper in the modes spec's
+      orchestration.ts; parallel to createFrameFromTemplate at line 44.
+      Validates args (title trim-nonempty, mode known, flavor iff
+      mode==="general", jurisdiction_default only when mode==="legal"),
+      then delegates to Repository.createBlankFrame. New
+      CreateFrameValidationError parallel to OrphanResolutionInvalidError.
+
+  (9) New AppStateStore.createFrame(args: CreateBlankFrameArgs |
+      CreateFromTemplateArgs): Promise&lt;FrameId&gt; in the state spec;
+      discriminates on "start_from_template_id" in args. On resolve calls
+      app_state_store.recordRecent(new_frame.id); returns new_frame.id for
+      navigation. CreateFromTemplateArgs shape:
+      { start_from_template_id, title }. Both arg types re-exported through
+      @/state.
+
+  (10) Refine src/ui/app-routes.tsx (I.9a-owned) to mount OnboardingWizard at
+       the App level, parallel to F-006's VersionHistoryPane mount pattern.
+       Reads selectFirstLaunchDismissed; passes !dismissed as wizard's open;
+       onSkip dispatches dismissCoachmark(FIRST_LAUNCH_COACHMARK_ID, true);
+       onSubmit awaits createFrame(args), dismisses, then navigates. Local
+       to app-routes.tsx; no other I.9a file touched.
+
+  (11) Refine src/ui/chrome/help-glossary-pane.tsx (I.9a-owned) to render
+       OnboardingPreferencesSection at the bottom of the pane, and add an
+       additive HelpGlossaryPaneProps.scroll_to_term?: GlossaryTerm prop
+       consumed by Coachmark's "Learn more" and NewFeatureNotice's "Tell me
+       more" affordances. Local to help-glossary-pane.tsx; no other I.9a
+       file touched. Cross-cutting UI value-import @/ui/onboarding from
+       @/ui/chrome is permitted under the existing UI-internal discipline.
+
+  In addition, five per-site one-line coachmark anchoring inserts at:
+  src/ui/frame-building/right-pane/inspector.tsx (I.9b);
+  src/ui/canvas/nodes/node-frame.tsx (I.9a);
+  src/ui/chrome/operating-mode-toggle.tsx (I.9a);
+  src/ui/version-history/version-history-pane.tsx (I.9d1);
+  src/ui/argument-running/interview-pane/interview-pane.tsx (I.9c).
+  Each is one import + one hook call + one conditional render; the copy
+  comes from COACHMARK_MESSAGES. Recorded as the per-site sub-items of
+  this F-009 entry; the table in the spec under "Coachmark attachments"
+  enumerates anchor surface, copy, and auto-dismiss trigger.
+
+streams_affected: I (state spec adds new AppStateStore methods, new
+selectors, new arg types; modes spec adds new orchestration wrapper; schema/
+persistence spec adds new AppState field, new Repository method, new
+Atomicity contract; UI substrate spec gains the app-routes mount + the
+help-pane composition + scroll_to_term prop; five UI consumer files gain
+one-line coachmark anchoring; contracts doc absorbs the union/method/type/
+field additions in a future bump)
+
+prior_decision_reversed: no — items 1, 4, 5, 6 are additive extensions;
+items 2, 3, 7, 8, 9 are net-new entry points (no prior surface is reshaped);
+items 10, 11 are wiring-promotion of placeholders the I.9a spec explicitly
+reserved with the "I.9d replaces this placeholder" comment. The five
+coachmark anchoring inserts are additive at each consuming site. The Article
+V § 3 escalation triggers were rechecked in the I.9d4 self-review and none
+fires; the placeholder reversals are within agent-autonomous technical-
+architecture scope per Article V § 1. Three discretionary calls under
+Article V § 2(c) are recorded inside the spec: (a) resolution of Q1 — the
+canonical name is coachmark_dismissals, not dismissed_coachmarks; (b)
+resolution of Q2 — separate seen_new_feature_notices field rather than
+id-prefix reuse of coachmark_dismissals (Article III § 4 Clarity and § 5
+Reversibility favor; substantial-hesitation test did not fire; reversible);
+(c) resolution of Q3 — placement of reset-coachmarks on HelpGlossaryPane
+(rejected FrameSettingsPanel as scope-mismatch, SessionSettingsPanel as
+expressly deferred by I.9d3 line 38, new-user-preferences-surface as scope
+creep; HelpGlossaryPane is the only existing user-level surface and
+semantically aligned with the onboarding ladder). One bounded scope-gap
+recorded: a real Home page is not specified by this session; v1 ships with
+a one-line placeholder Home behind the wizard. The NewFrameWizard is
+implemented as a reusable component, so the future Home-page session
+(I.10 or polish) consumes it without coupling.
+
+resolution: Documented in stream_i_ui_onboarding_spec_v1.html. The I.9d4
+spec documents the eleven items in its "Cross-document resolution notes"
+section, the conceptual-question resolutions in its "Conceptual questions
+resolved autonomously" section, the five coachmark anchoring inserts in its
+"Coachmark attachments" section, and the Home-page deferral in "What this
+spec does not commit." The consolidated record re-confirms in the
+"In-session-escalated flags" section of the spec's Article VIII § 4
+self-review. The state spec, modes spec, schema/persistence spec, UI
+substrate spec, and contracts doc are scheduled for amendment in a future
+review session that consolidates the F-003 / F-004 / F-005 / F-006 / F-007 /
+F-008 / F-009 family of contracts-doc bumps; downstream coding sessions are
+not gated on the bump (the per-module specs are canonical per Stream I
+conventions).
+
+status: resolved-by-spec
+
+review_outcome: pending review session for the F-003 family contracts-doc
+bump. Constitutional citations:
+
+Article II § 1 (Frame/Argument split) — honored; the createBlankFrame
+orchestration produces Frame + FrameVersion only; no ArgumentSession or
+ArgumentSessionVersion is created. The coachmark mechanism is per-user
+AppState, never coupled to Frame or Session.
+
+Article II § 2 (Determinism) — honored; the new orchestration wrapper reads
+deps.now() once per dispatch (F-003 family discipline); the wizard reads no
+clock; the panel reads no clock; resetCoachmarks / markNewFeatureNoticeSeen
+/ dismissCoachmark are pure set-and-schedule. The UI-layer determinism
+discipline (D1–D4) is restated in the spec's dedicated section.
+
+Article II § 3 (Per-node satisfaction) — honored; the stub RootQuestion
+carries no options_box override (inherits the frame-default policy for
+root_question). The wizard does not commit per-node satisfaction policies.
+
+Article II § 4 (Independent versioning) — honored; the new FrameVersion is
+version 1, is_milestone true, parent_version_id null — the canonical
+initial-version shape. No ArgumentSessionVersion is created in this flow.
+
+Article II § 5 (Human-Readable Structure) — honored; change_summary
+"Initial frame" is a canonical English string surfaced verbatim in version
+history. The deterministic step order is human-readable. Coachmark
+messages are E7 verbatim.
+
+Article II § 6 (Use-Case Commitment) — strongly honored; the wizard treats
+Legal, General+Personal, and General+Academic as first-class peers.
+Jurisdiction is mode-gated per Stream A A8 / Stream D D5; coachmark and
+new-feature-notice mechanisms are mode-agnostic.
+
+Article III § 1–6 — honored; each refinement is implementable, testable
+(Vitest acceptance tests pinned across the onboarding module's test files
+plus seven integration-test additions on existing files), cross-document
+coherent, reversible (the OnboardingWizard placeholder-to-real swap; the
+schema field addition is additive; the orchestration wrappers and store
+methods are new entry points; the help-pane composition is additive), and
+within bounded interface fit.
+
+Article V § 3 — no escalation trigger fires; all eleven refinements are
+technical resolutions within agent-autonomous scope per Article V § 1 / §
+2(c). Each was specifically checked against trigger (a) (reversal of
+Zach-personal decision) and trigger (c) (multiple Article II commitments
+in unresolvable conflict); all are negative. The Q1/Q2/Q3 resolutions and
+the Home-page deferral were rechecked under Article IV § 4's
+substantial-hesitation standard; none fires.
+</code></pre>
+
+</div>

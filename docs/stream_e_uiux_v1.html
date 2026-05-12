@@ -1,0 +1,577 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 20px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 4px; font-weight: 500; }
+  .doc .tag-locked { background: var(--color-background-success); color: var(--color-text-success); }
+  .doc .tag-defer { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .doc .tag-flag { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .ascii { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--color-text-primary); white-space: pre; overflow-x: auto; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+</style>
+<div class="doc">
+  <h1>Stream E — UI / UX Design</h1>
+  <p class="subtitle">Companion to stream_a_resolutions_v1.html, stream_b_schema_v1.html, stream_c_runtime_v1.html, and stream_d_modes_v1.html &nbsp;·&nbsp; Session date: May 10, 2026 &nbsp;·&nbsp; Version 1</p>
+
+  <div class="notice">
+    <p>This document specifies the user-facing surface of the application at the wireframe and interaction-flow level. It covers Stream E end-to-end: graph layout strategy (E1), Frame Building editor (E2), Argument Running interface (E3), status visualization (E4), version history (E5), mode toggles (E6), and onboarding (E7). It is the bridge between Stream D's action inventories and Stream H's eventual tech-stack selection. Visual aesthetics — exact color values, typography, animation curves — are agent-discretionary defaults here, intended to be revised by user direction in subsequent design work without affecting downstream streams. What this document does fix is the structural layout of every primary screen, the interaction model for every action surfaced by Stream D, and the visual semantics of the runtime status output from Stream C.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>This document is screen-and-flow oriented. Each section can be read in isolation: a future session needing only the version-history flow can skip to E5; one needing only the status palette can jump to E4. References to other streams use section ids: D1 = Frame Building actions, C5 = frame completeness checker, A9 = conditional output presentation. Where a behavior is fully specified by an upstream stream, this document specifies its UI surface only — which control invokes it, where the control lives, what feedback the user gets — without restating the underlying logic.</p>
+  <p>Conventions:</p>
+  <ul>
+    <li><strong>Screen</strong> = a primary application view occupying the main content area (e.g., Home, Frame Building editor, Argument Running session).</li>
+    <li><strong>Pane</strong> = a major region within a screen (left, center, right, top bar, footer).</li>
+    <li><strong>Surface</strong> = a localized UI feature within a pane (inspector field, validation chip, version-history tree).</li>
+    <li><strong>Wireframe</strong> = a structural sketch of a screen using ASCII layout. Pixel dimensions are illustrative; actual sizing is a downstream concern.</li>
+    <li><strong>Affordance</strong> = the visible cue that an action is available (a button, a drag handle, a hover state).</li>
+  </ul>
+
+  <h2>Decisions made in this session</h2>
+  <p>The decisions below are agent-discretionary under Article V § 2(c) (implementation choices, framework selections at the UI level). Each is justified against Article III and Article II where applicable. None reverses a prior stream decision; none weakens an architectural commitment; none forecloses a use case.</p>
+  <ol>
+    <li><strong>Top-down hierarchical (Sugiyama-style) graph layout is the default.</strong> Frames are DAGs rooted at a RootQuestion; legal and academic readers move top-down through a logical decomposition. Top-down layout matches that mental model and reads naturally on a wide screen. The frame's <code>x</code>, <code>y</code> presentation hints (B1) override the auto-layout per node when set, allowing the user to fine-tune.</li>
+    <li><strong>Frame Building uses a three-pane editor; Argument Running uses a two-pane session.</strong> Frame Building needs a node palette, a graph canvas, and an inspector — three regions of work. Argument Running uses only the frozen frame for context, so a wider output pane and a focused interview pane suffice. Distinct layouts also reinforce the operating-mode distinction visually (Article II § 1).</li>
+    <li><strong>The graph canvas is the canonical view in both modes.</strong> Other views (decision tree, prose summary, version history, validation panel) are toggleable overlays, drawers, or tabs that sit alongside or atop the graph. The graph never disappears as the spatial anchor for the user's understanding of the frame.</li>
+    <li><strong>Status colors are paired with status icons in every rendering.</strong> Color alone is insufficient (color-blindness, monochrome printouts, screen-reader contexts). The five statuses each get a distinct icon as well as a distinct hue.</li>
+    <li><strong>Every node's status is visible at a glance from the graph; details are one click away.</strong> Status badges sit on every node in both modes. Hovering reveals the failed_conditions list. Clicking opens the inspector with full status detail. This honors Article III § 3 (auditability): the runtime output is never hidden behind a separate "compute results" screen.</li>
+    <li><strong>Inline text editing for statement-like fields; inspector for everything else.</strong> RootQuestion <code>statement</code>, SubQuestion <code>statement</code>, Term <code>name</code>, Interpretation <code>statement</code>, Checkpoint <code>question</code>, Conclusion <code>statement</code> — all editable by double-clicking the node text. Other fields (mode-aware, enum-typed, structured) live in the inspector. This shortens the path for the most common edit (rephrasing) without making the inspector irrelevant.</li>
+    <li><strong>Edge creation is drag-from-source-to-target, with a type picker offering only valid types.</strong> Hover over a node, a small connector handle appears; drag from the handle to another node; on release a popup shows the edge types valid for that source/target pair per B2. This avoids guessing at compatibility and surfaces the schema's connection rules implicitly.</li>
+    <li><strong>The interview pane lists open items; the path overlay highlights them on the graph.</strong> The interview pane (E3) and the path overlay view (A9 third view) are coupled. Selecting an item in the list highlights its node on the graph; clicking the highlighted node opens the same item editor. The list and the graph reflect the same underlying state.</li>
+    <li><strong>Validation surfaces in three places, with consistent severity icons.</strong> (a) Per-node chips on the graph for node-scoped rules; (b) a validation panel listing all current rule firings; (c) the inspector for whichever node is selected. Errors and warnings use the same icons and language across all three.</li>
+    <li><strong>Version history is a side pane, not a modal.</strong> Modals interrupt; users frequently want to compare a draft state to an earlier one while continuing to think. A right-side pane preserves the working canvas while showing the history tree alongside.</li>
+    <li><strong>Operating-mode toggle is the leftmost top-bar control; architectural-mode change is in frame metadata.</strong> Operating-mode toggling (Frame Building ↔ Argument Running) is frequent; architectural-mode change (legal ↔ general) is rare and structural. Their placement reflects their frequency and weight.</li>
+    <li><strong>Onboarding is opt-out, not opt-in.</strong> A first-time user is enrolled in a guided first-frame walkthrough by default. The walkthrough is dismissible at any point and never blocks. Users who want to skip click a single "skip introduction" link.</li>
+  </ol>
+
+  <h2 id="e1">E1 — Graph layout strategy</h2>
+
+  <p>The frame is a directed acyclic graph rooted at a single RootQuestion (per V-FR-1). The layout strategy is the visual translation of that graph into something legal and academic readers can scan, navigate, and edit.</p>
+
+  <h3>Layout algorithm</h3>
+  <p>The default is a <strong>top-down hierarchical (Sugiyama-style) layout</strong>: ranks assigned by topological depth from RootQuestion, nodes within a rank ordered to minimize edge crossings, edges drawn as orthogonal or smoothed-bezier paths. Frame templates and freshly imported frames receive an auto-layout pass on first open. Each node carries optional <code>x</code> and <code>y</code> presentation hints (B1); when set, they override the auto-layout for that node. The user can drag any node to reposition it; the drag persists the new <code>x</code>, <code>y</code> values to that node's presentation hints, which causes that node to be respected on subsequent auto-layouts (the layout engine treats user-positioned nodes as fixed anchors).</p>
+  <p>An "auto-arrange" command in the canvas toolbar discards the user's <code>x</code>, <code>y</code> overrides for all nodes (with confirmation) and reruns the layout from scratch.</p>
+  <p>For very large frames (hundreds of nodes), the layout supports <strong>collapsing</strong> a SubQuestion's subtree via the <code>collapsed</code> presentation hint. A collapsed SubQuestion renders as a single node with a "+N nodes" badge; expanding restores full layout. Collapse state is per-user, persisted on the SubQuestion's presentation hint.</p>
+
+  <h3>Node shapes by type</h3>
+  <p>Each node type has a distinct shape so the user reads the frame's structure without consulting a legend. Shapes are chosen to reinforce the type's semantic role — questions are open (rounded), terms are operative (rectangular), conclusions are closed (double-bordered terminals), gates are diamond/special, authorities are document-shaped.</p>
+  <table>
+    <tr><th>Node type</th><th>Shape</th><th>Mnemonic</th></tr>
+    <tr><td>RootQuestion</td><td>Rounded rectangle, thicker border, larger</td><td>Origin of the analysis; visually weighty</td></tr>
+    <tr><td>SubQuestion</td><td>Rounded rectangle, normal weight</td><td>Same family as RootQuestion, smaller</td></tr>
+    <tr><td>Term</td><td>Rectangle, square corners</td><td>Operative concept; "blocks" of the analysis</td></tr>
+    <tr><td>Interpretation</td><td>Rectangle with notched left edge (tag shape)</td><td>A tag attached to a Term</td></tr>
+    <tr><td>Checkpoint</td><td>Hexagon</td><td>Decision point; non-rectangular signals "answer required"</td></tr>
+    <tr><td>LogicalGate</td><td>Diamond with gate-type glyph (∧ ∨ ¬ → ⊘)</td><td>Standard logic-circuit conventions</td></tr>
+    <tr><td>Conclusion</td><td>Rounded rectangle with double border</td><td>Terminal node; visual "stop"</td></tr>
+    <tr><td>Authority</td><td>Document icon (page with folded corner) + chip styling</td><td>Citation-shaped; reads as "source"</td></tr>
+    <tr><td>Premise</td><td>Small chip / pill (argument-layer overlay)</td><td>Small, attachable, lightweight</td></tr>
+  </table>
+  <p>Each node displays its primary text (statement / name / question / citation / etc.), its type icon (small, top-left), and its status badge (top-right). Long text wraps to a configurable maximum (default three lines) with an ellipsis and full-text tooltip on hover.</p>
+
+  <h3>Edge styling by type</h3>
+  <p>Edges are typed by relation; styling encodes the relation visually.</p>
+  <table>
+    <tr><th>Edge type</th><th>Style</th><th>Color family</th><th>Layer</th></tr>
+    <tr><td>DECOMPOSES_INTO</td><td>Solid arrow, medium weight</td><td>Neutral / dark</td><td>Structural</td></tr>
+    <tr><td>TURNS_ON</td><td>Solid arrow, medium weight</td><td>Neutral / dark</td><td>Structural</td></tr>
+    <tr><td>INTERPRETED_AS</td><td>Solid arrow, medium weight</td><td>Neutral / dark</td><td>Structural</td></tr>
+    <tr><td>LEADS_TO</td><td>Solid arrow, medium weight</td><td>Neutral / dark</td><td>Structural</td></tr>
+    <tr><td>FORECLOSES</td><td>Dashed arrow with stop-cap terminal</td><td>Muted red / warning</td><td>Structural (negative)</td></tr>
+    <tr><td>GATES</td><td>Solid arrow with gate-type glyph midpoint</td><td>Neutral / dark</td><td>Structural</td></tr>
+    <tr><td>CheckpointOption (virtual)</td><td>Solid arrow with option-label midpoint</td><td>Neutral / dark</td><td>Structural — rendered virtually per D decision #3</td></tr>
+    <tr><td>ANSWERS</td><td>Dotted line</td><td>Argument-layer accent</td><td>Argument overlay</td></tr>
+    <tr><td>SUPPORTS</td><td>Dotted line, weight = strength tier</td><td>Positive (e.g., teal)</td><td>Argument overlay</td></tr>
+    <tr><td>CONTRADICTS</td><td>Dotted line, weight = strength tier</td><td>Negative (e.g., orange-red)</td><td>Argument overlay</td></tr>
+    <tr><td>CITES</td><td>Thin gray line with citation glyph</td><td>Subdued</td><td>Annotation</td></tr>
+    <tr><td>DISTINGUISHED_BY</td><td>Thin gray line with strikethrough glyph</td><td>Subdued</td><td>Annotation</td></tr>
+  </table>
+  <p>The argument overlay (ANSWERS, SUPPORTS, CONTRADICTS) is hidden in Frame Building and visible in Argument Running. Annotation edges (CITES, DISTINGUISHED_BY) are visible in both, subject to mode/flavor visibility rules from D4/D5 (DISTINGUISHED_BY hidden in personal flavor, etc.).</p>
+
+  <h3>Edge labels and direction</h3>
+  <p>Every edge type carries an inherent meaning shown by an icon at its midpoint (small, monochrome, only on hover for the most common types to reduce visual noise). User-set <code>label</code> fields (B2) render alongside the type icon when present. Direction is shown by the arrowhead at the target end. For CheckpointOption virtual edges, the option's user-facing label is always shown ("yes" / "no" / "unclear" / etc.).</p>
+
+  <h3>Selection, hover, focus</h3>
+  <p>Hovering a node lightly emphasizes it (background tint shift), surfaces the connector handle for edge creation, and shows the failed_conditions tooltip if status is open or contested. Hovering an edge brightens the line and shows its type tooltip. Selecting a node (click) outlines it, opens the inspector to that node's details, and dims the rest of the canvas slightly. Multi-select via shift-click or rubber-band drag; multi-select shows a bulk action toolbar (delete, edit shared fields).</p>
+
+  <h3>Zoom, pan, minimap</h3>
+  <p>Standard canvas affordances: pinch / scroll-wheel zoom, drag-to-pan, fit-to-screen button, 100% zoom button, minimap in the bottom-right corner showing the full frame at scale with the current viewport boxed. Keyboard shortcuts: <code>+</code>/<code>-</code> zoom, arrow keys pan, <code>F</code> fit-to-screen, <code>0</code> 100%.</p>
+
+  <h3>Argument-layer overlay rendering (Argument Running only)</h3>
+  <p>In Argument Running, the frame canvas is the same hierarchical layout, but the argument-layer overlay activates: ANSWERS edges from Premises to Checkpoints, SUPPORTS / CONTRADICTS from Premises to Interpretations or Conclusions, and any session Authorities sit alongside their attached Premises. To prevent visual overload, argument-layer overlays use the <strong>argument inspector</strong> (a panel) as their primary surface; on the canvas, argument-layer attachment is signaled by a small "premise count" chip on each Checkpoint, Interpretation, or Conclusion. Clicking the chip filters the canvas to just that node's argument-layer attachments.</p>
+
+  <h2 id="e2">E2 — Frame Building editor UI</h2>
+
+  <h3>Screen layout</h3>
+  <p>Three-pane layout under a top bar, with an optional bottom validation drawer.</p>
+  <div class="ascii">+--------------------------------------------------------------------------+
+| TOP BAR : [Mode toggle: Frame] [Title] [Mode chip: legal] [Validation: ✓] |
+|           [Version history] [Settings] [Argument Running →]              |
++----------+---------------------------------------------+-----------------+
+| LEFT     |                                             |  RIGHT          |
+| (palette |          GRAPH CANVAS                       |  (inspector)    |
+|  +       |         (auto-layout DAG)                   |                 |
+|  outline |          + minimap (bottom-right)           |  selected node: |
+|  tree)   |                                             |  RootQuestion   |
+|          |                                             |  ┌────────────┐ |
+|  Nodes:  |                                             |  │ statement  │ |
+|  ◉ Sub Q |                                             |  │ ...        │ |
+|  ▢ Term  |                                             |  │ options_box│ |
+|  ▰ Inter |                                             |  │ notes      │ |
+|  ⬡ Check |                                             |  └────────────┘ |
+|  ⬗ Gate  |                                             |                 |
+|  ◎ Concl |                                             |                 |
+|  📄 Auth |                                             |                 |
+|          |                                             |                 |
++----------+---------------------------------------------+-----------------+
+| VALIDATION DRAWER (collapsed by default; click to expand)                |
+|   • V-FR-3 (warning) Term "Reasonableness" has only 1 Interpretation     |
+|   • V-FR-7 (warning) No jurisdictional SubQuestion in legal frame        |
++--------------------------------------------------------------------------+</div>
+
+  <h3>Top bar (Frame Building)</h3>
+  <table>
+    <tr><th>Element</th><th>Behavior</th></tr>
+    <tr><td>Operating-mode toggle</td><td>Two-position control showing "Frame" (active) and "Argument" (inactive). Clicking Argument runs the C5 strict gate per D3; on success transitions to Argument Running. On error, opens the validation drawer with errors listed and links to implicated nodes.</td></tr>
+    <tr><td>Frame title</td><td>Inline editable. Click to enter edit mode; Enter or blur to commit. Persists via auto-save.</td></tr>
+    <tr><td>Mode + flavor chip</td><td>"legal" or "general · personal" or "general · academic". Clicking opens the architectural-mode change panel (E6).</td></tr>
+    <tr><td>Validation indicator</td><td>Single icon summarizing current C5 editing-strictness state: ✓ pass, ⚠ warnings only, ✕ errors. Click to expand the validation drawer.</td></tr>
+    <tr><td>Version history</td><td>Clock-rewind icon. Opens the version-history side pane (E5).</td></tr>
+    <tr><td>Frame settings</td><td>Gear icon. Opens frame metadata panel: title, description, tags, jurisdiction_default (legal), positions table (general), default_satisfaction_policies, mode + flavor change. Pin / archive / delete actions live here as well.</td></tr>
+  </table>
+
+  <h3>Left pane — node palette + outline tree</h3>
+  <p>Two stacked sections. The <strong>palette</strong> on top: one button per node type, visibility filtered by mode/flavor (e.g., Authority hidden in personal flavor unless opted in). Buttons are draggable: drag onto the canvas to create a node at the drop location. Clicking instead of dragging creates a node at the canvas center with default fields, ready to be connected.</p>
+  <p>The <strong>outline tree</strong> below the palette: a hierarchical text tree of the frame, rooted at the RootQuestion, descending by structural edges (DECOMPOSES_INTO, TURNS_ON, LEADS_TO). Each row shows: node-type icon, statement preview, status badge (matching graph). Clicking a row selects the node on the canvas and scrolls it into view. The outline tree is the keyboard-accessible alternative to graph navigation for users who prefer linear reading.</p>
+
+  <h3>Center pane — graph canvas</h3>
+  <p>The canvas hosts E1's graph rendering. The canvas has its own toolbar at the top edge:</p>
+  <ul>
+    <li><strong>Zoom controls</strong> (zoom in, zoom out, fit-to-screen, 100%).</li>
+    <li><strong>Auto-arrange</strong> button: discards <code>x</code>, <code>y</code> overrides and reruns layout (with confirmation).</li>
+    <li><strong>Layer toggle</strong> for FORECLOSES edges (visible / dimmed / hidden) — useful for working on the structural skeleton without foreclosure noise.</li>
+    <li><strong>Search box</strong>: full-text across node statements, names, citations, tags. Matches highlight on the canvas; clicking a result selects.</li>
+  </ul>
+  <p>Right-clicking the canvas opens a context menu with "create node here" entries for each valid node type (filtered by mode/flavor). Right-clicking a node opens a node-specific menu (edit, duplicate, delete, edit notes, edit options_box, ...). Right-clicking an edge opens an edge-specific menu (edit fields, edit label, edit notes, delete).</p>
+
+  <h3>Right pane — inspector</h3>
+  <p>Context-sensitive. Default state (nothing selected): shows frame-level information — title, description, mode + flavor, default_satisfaction_policies, tag list. When a node is selected: shows that node's full editable field set, organized in sections (statement / structural fields / mode-aware fields / options_box / notes). When an edge is selected: shows the edge's type, source/target (read-only — they are immutable per D edge actions), label, type-specific fields (e.g., FORECLOSES <code>scope</code>, SUPPORTS <code>weight</code>), and notes. When multiple items are selected: shows shared fields where defined (e.g., bulk tag edit) and a count of items.</p>
+  <p>Mode-aware visibility (D4/D5) governs which fields appear. A field hidden by the current mode is not rendered; the schema's value persists silently. When the user changes mode, the previously hidden fields reappear (and may surface in the mode-change scan if they conflict).</p>
+
+  <h3>Edge creation flow</h3>
+  <ol>
+    <li>User hovers a node; a small connector handle appears on the node's edge (one handle that follows the cursor around the node's perimeter).</li>
+    <li>User drags from the handle. A live edge previews from the source to the cursor.</li>
+    <li>On hover over a candidate target, the target highlights green if at least one edge type is valid (per B2); red if none is valid (with tooltip explaining why).</li>
+    <li>On release over a valid target, a popup appears showing the valid edge types as buttons. The user clicks one.</li>
+    <li>On release over an invalid target or empty space, the preview cancels.</li>
+  </ol>
+  <p>For LogicalGate slot connections (which are not edges but field assignments per B1.6), the same gesture is used; the popup offers the gate's slots ("set as antecedent" / "set as consequent" / "add to inputs[]" depending on gate_type) instead of edge types. For CheckpointOption routing (which is a field, not an edge), the same gesture is used from a Checkpoint to a target node; the popup offers "wire option X to this target," with one option per existing CheckpointOption.</p>
+
+  <h3>Validation surface</h3>
+  <p>Three coordinated places per decision #9 above:</p>
+  <ul>
+    <li><strong>Per-node chips</strong>: a small badge on any node implicated in a validation rule firing. Hover to read; click to open inspector with the field implicated highlighted.</li>
+    <li><strong>Validation drawer</strong> at the bottom of the editor: collapsed by default, expanded by clicking the top-bar validation indicator. Lists every current rule firing with severity, rule id (e.g., V-FR-3), affected nodes (linked), and suggested fix.</li>
+    <li><strong>Inspector validation block</strong>: when a node is selected, any rules firing on that node show in a "validation" section of the inspector with the same content.</li>
+  </ul>
+  <p>Validation runs continuously in <em>editing</em> strictness (per D1). The pre-mode-transition strict pass runs only when the user clicks Switch to Argument Running; on failure, errors block transition and show in the validation drawer.</p>
+
+  <h3>Bulk actions and deletion</h3>
+  <p>Multi-select via shift-click in the outline tree, shift-click on the canvas, or rubber-band drag on the canvas. Selected items show in a floating action bar at the top of the canvas: delete, group-edit-options-box, set-shared-tag (where applicable). Deletion always opens a confirmation dialog summarizing the cascade set per D1's cascade-with-confirmation rule (decision #2). The dialog is structured: "Deleting <em>SubQuestion: Duty</em> will also remove 4 Terms, 11 Interpretations, 3 Checkpoints, and 2 Conclusions" with an expandable list of every node and edge that will be removed.</p>
+
+  <h3>Editing options_box (SatisfactionPolicy)</h3>
+  <p>The options_box is per-node-type-default, frame-overridable, and per-instance-overridable for Checkpoint, Question, and Interpretation (per A3). The inspector exposes it as an "options_box" section with three tiers shown:</p>
+  <ul>
+    <li><strong>Effective policy</strong>: the policy that actually applies to this node, computed from the override chain.</li>
+    <li><strong>Source</strong>: where the effective policy comes from (per-instance override / frame default / library default).</li>
+    <li><strong>Edit</strong>: the user can edit at this instance level (creating a per-instance override) or at the frame default level (changing the frame default for this node type).</li>
+  </ul>
+  <p>The condition library renders as a multi-select picker with the conditions valid for the current mode/flavor (per D4/D5 — legal-only conditions hidden in general; <code>authority_required</code> opt-in for academic). Selected conditions show as a vertical AND list with at most one explicit AnyOf group permitted (per A3 composition rules: AND default, no nesting, no NOT). The user adds/removes/configures conditions through the picker; the visual structure of the policy is always linearly readable.</p>
+
+  <h3>Frame Building entry surface</h3>
+  <p>From Home, the user enters Frame Building by: opening an existing frame, clicking "New frame" (which runs the new-frame wizard from E7), or clicking "New frame from template." Once entered, the user remains in Frame Building until explicitly transitioning to Argument Running or navigating away.</p>
+
+  <h2 id="e3">E3 — Argument Running UI</h2>
+
+  <h3>Screen layout</h3>
+  <p>Two-pane layout under a top bar. The graph canvas is consolidated with the output viewer in the right pane; the interview pane occupies the left.</p>
+  <div class="ascii">+--------------------------------------------------------------------------+
+| TOP BAR : [Mode toggle: Argument] [Session title] [Frame v3 (drift!)]    |
+|           [Status: 4/9 resolved · tentative: Affirm] [Settings] [Exit]   |
++----------+---------------------------------------------------------------+
+| LEFT     |  RIGHT (output viewer with three tabs)                        |
+| INTERVIEW|  ┌── Prose ── Decision tree ── Path overlay ──┐                |
+| PANE     |  │                                            │                |
+|          |  │   PATH OVERLAY (default if path active):   │                |
+| Recommend|  │   the frame canvas, dimmed, with active    │                |
+| -ed:     |  │   path highlighted; current open item      │                |
+| ◐ Term:  |  │   pulsing softly; foreclosed branches      │                |
+|  Reason- |  │   faded with strikethrough.                │                |
+|  ableness|  │                                            │                |
+|          |  │   PROSE (alt tab):                         │                |
+| Open:    |  │   "If Reasonableness is interpreted as     │                |
+| ⬡ Check: |  │    objective, then... If subjective,       │                |
+|  Cause   |  │    then..."                                │                |
+| ⬡ Check: |  │                                            │                |
+|  Damages |  │   DECISION TREE (alt tab): collapsed       │                |
+|          |  │   tree of unresolved branch points and     │                |
+|  + filter|  │   each branch's terminal Conclusion.       │                |
+|          |  │                                            │                |
+|          |  └────────────────────────────────────────────┘                |
++----------+---------------------------------------------------------------+
+| BOTTOM PANEL (collapsed by default): Premise pool · Session Authorities  |
++--------------------------------------------------------------------------+</div>
+
+  <h3>Top bar (Argument Running)</h3>
+  <table>
+    <tr><th>Element</th><th>Behavior</th></tr>
+    <tr><td>Operating-mode toggle</td><td>"Frame" (inactive) / "Argument" (active). Clicking Frame is always allowed (D3, free direction). Returns to Frame Building.</td></tr>
+    <tr><td>Session title</td><td>Inline editable.</td></tr>
+    <tr><td>FrameVersion indicator</td><td>"Frame v3" if at current; "Frame v3 (drift! · v5 available)" if drift exists. Clicking opens the migration dialog (D2 migrate action). The drift indicator uses warning styling to draw attention but does not block use.</td></tr>
+    <tr><td>Status summary</td><td>"N/M resolved · tentative: <i>Conclusion</i>" or "complete · <i>Conclusion</i>" or "indeterminate." Updates live as the user resolves items. The "tentative" / "complete" / "indeterminate" tier comes from the ConditionalOutput shape (B5).</td></tr>
+    <tr><td>Session settings</td><td>Migration, save milestone, version history (clock-rewind), archive, delete, exit.</td></tr>
+    <tr><td>Exit</td><td>Returns to Home; mutations are already saved.</td></tr>
+  </table>
+
+  <h3>Left pane — interview pane</h3>
+  <p>The interview pane is the open-items list as derived by D2's algorithm. The list is rendered top-to-bottom, with the recommended-next item highlighted (background tint + larger weight + a "recommended next" label). Each row shows: status badge, node-type icon, statement preview, parent-context breadcrumb (e.g., "Negligence → Duty → Reasonableness").</p>
+  <p>Above the list, two affordances:</p>
+  <ul>
+    <li><strong>Filter</strong> (multi-select chips): by node type (Checkpoint / Term / Interpretation), by jurisdictional priority, by status. Default: all types and priorities, status open only.</li>
+    <li><strong>Search</strong>: full-text across the open-items list for fast keyboard navigation.</li>
+  </ul>
+  <p>The jurisdictional priority bubble (D2) renders as a section header above the rest of the list — "Jurisdictional questions" — with the jurisdictional items grouped under it. Non-jurisdictional items follow under "Merits." If no jurisdictional items exist (e.g., none in the frame, or all resolved), the section header is omitted and the list flows from the top.</p>
+  <p>Clicking a row opens the <strong>item editor</strong> (right side, drawer-style or in-place modal — see next section).</p>
+  <p>As the user resolves items, the list refreshes (instantly; recompute is automatic per D decision #6). A small "recompute" indicator pulses briefly to acknowledge the change, then settles. The recommended-next item updates accordingly.</p>
+
+  <h3>Item editor — per node type</h3>
+  <p>Each open-item type opens a focused editor specific to that type. The editor occupies the right portion of the screen, narrowing the output viewer; the user can dismiss it (Esc, click outside, X button) and reopen by clicking the item again.</p>
+
+  <h4>Checkpoint editor</h4>
+  <ol>
+    <li>Header: the Checkpoint's <code>question</code>, with parent-context breadcrumb. Editable in Frame Building only; here read-only.</li>
+    <li>Answer selector: boolean / multiple_choice / graded as configured. Clicking selects an option; the selection highlights.</li>
+    <li>Premise authoring: a text field for Premise <code>statement</code>, a <code>kind</code> picker (mode/flavor-aware vocabulary per A11), optional <code>source</code>, optional Authority attachment. The text field offers reuse suggestions inline as the user types, ranked by similarity and recency (per D D2 reuse rule). Selecting a suggestion attaches the existing Premise instead of creating a new one.</li>
+    <li>Authority attachment (legal mode + Checkpoint.<code>requires_authority</code> = true): an Authority picker showing frame-layer Authorities first, then session-layer Authorities, then "create new session Authority" inline.</li>
+    <li>Save / cancel. Save creates the ANSWERS edge and CheckpointResponse and closes the editor; the interview list refreshes.</li>
+  </ol>
+
+  <h4>Term editor (Interpretation selection)</h4>
+  <ol>
+    <li>Header: Term name, parent-context breadcrumb. Editable in Frame Building only.</li>
+    <li>Linked-target redirect: if the Term has <code>linked_to</code> set and the target is reachable, the editor displays a notice ("This Term inherits its selection from <em>target Term</em>") and a "go to target" button. Saving a selection here raises V-ARG-8 (warning) per Stream C.</li>
+    <li>Interpretation picker: list of the Term's Interpretations (children via INTERPRETED_AS), each with statement, attached Authorities (CITES) and Premise count. Multi-select permitted (recording alternative paths).</li>
+    <li>Optional supporting evidence: SUPPORTS / CONTRADICTS attachments for each selected Interpretation (per Stream C InterpretationSelection schema). Same Premise authoring affordances as the Checkpoint editor.</li>
+    <li>Optional notes (free text per A12).</li>
+    <li>Save / cancel. Save creates or updates the InterpretationSelection record; if any selected Interpretation carries FORECLOSES edges or the Term is dispositive, the foreclosure resolver runs and the user is shown a brief "these branches were foreclosed" summary.</li>
+  </ol>
+
+  <h4>Interpretation evidence editor</h4>
+  <p>Reached when an Interpretation is in the open-items list (its options_box requires authority/premise support that's missing). Same Premise authoring + Authority attachment affordances as above, scoped to SUPPORTS/CONTRADICTS edges from new or reused Premises to this Interpretation.</p>
+
+  <h3>Right pane — output viewer (three views)</h3>
+  <p>Per A9, three tabs render the same underlying ConditionalOutput object (B5):</p>
+  <ul>
+    <li><strong>Path overlay</strong> (default if any path is at least partly active): the frame canvas, dimmed; the active path is rendered at full opacity with status colors; foreclosed branches are faded and strike-through; not_applicable nodes are dimmed further; the recommended-next node pulses softly. Clicking any node opens its editor (if open) or its inspector (if not). Hovering shows the node's status detail.</li>
+    <li><strong>Decision tree</strong>: a collapsed view rooted at the recommended-next branch point, showing only nodes at unresolved branches and the terminal Conclusion under each branch. Each branch terminates in a Conclusion preview (statement + direction). Useful for "where could this go from here."</li>
+    <li><strong>Prose</strong>: a deterministic prose summary generated by templating (no LLM). Reads "If <em>Term X</em> is interpreted as <em>A</em>, the conclusion is <em>Y</em>. If <em>B</em>, then conditional on <em>Checkpoint Z</em>: ..." For complete sessions, reads as a single conclusion paragraph. For incomplete sessions, reads conditionally with explicit "if/then" structure. Exportable (copy to clipboard, copy as Markdown).</li>
+  </ul>
+  <p>Tab choice is per-user (A9) with per-frame override; the user's choice is preserved across sessions.</p>
+
+  <h3>Bottom panel — Premise pool and Session Authorities</h3>
+  <p>Collapsed by default; expandable by clicking the bottom edge. When expanded, two side-by-side lists:</p>
+  <ul>
+    <li><strong>Premise pool</strong>: every Premise in the session (the <code>premises[]</code> array). Each row: statement, <code>kind</code> chip, attached-edges count (e.g., "answers 1, supports 2"). Clicking a Premise opens its inline editor and highlights its attachments on the canvas. Useful for triaging orphaned Premises after a frame migration.</li>
+    <li><strong>Session Authorities</strong>: every session-layer Authority (the <code>session_authorities[]</code> array). Same row pattern: citation, attached-edges count. Clicking opens the Authority editor.</li>
+  </ul>
+  <p>"Add Premise" and "Add Authority" buttons in the bottom panel allow the user to create entries here proactively (e.g., paste in a fact pattern's worth of Premises to draw on later); these are unattached Premises until linked through an answer or evidence action.</p>
+
+  <h3>Argument Running entry surface</h3>
+  <p>From Frame Building's "Switch to Argument Running" button (subject to C5 strict gate), or from Home's session list, or by creating a new session against a frame. New-session entry: title required; description optional; opens immediately into the empty session with the interview pane populated by all currently-open items.</p>
+
+  <h2 id="e4">E4 — Status visualization</h2>
+
+  <p>Status is the single most important runtime output: every node's status communicates whether the user has more work to do, whether a path is closed, and what the conclusion-so-far is. The visualization treats this with care.</p>
+
+  <h3>Status palette</h3>
+  <p>The five statuses (per Stream C) get a distinct color and a distinct icon, paired everywhere.</p>
+  <table>
+    <tr><th>Status</th><th>Color (default)</th><th>Icon</th><th>Meaning</th></tr>
+    <tr><td><code>satisfied</code></td><td>Green (medium saturation)</td><td>Checkmark in circle</td><td>All conditions met; the node contributes to a determinate path.</td></tr>
+    <tr><td><code>open</code></td><td>Neutral gray</td><td>Empty circle</td><td>One or more conditions unmet; user input pending.</td></tr>
+    <tr><td><code>contested</code></td><td>Amber</td><td>Two arrows clashing</td><td>Premises on both sides, neither dispositive.</td></tr>
+    <tr><td><code>foreclosed</code></td><td>Dark gray with red accent</td><td>X with strikethrough</td><td>Path is closed by FORECLOSES or dispositive Term.</td></tr>
+    <tr><td><code>not_applicable</code></td><td>Light gray (faded)</td><td>Dimmed circle</td><td>Node lives on a path never reached.</td></tr>
+  </table>
+  <p>Color values are agent-discretionary defaults; they may be revised in a subsequent visual-design pass without affecting downstream streams. The pairing rule (every color paired with an icon) is fixed.</p>
+
+  <h3>Sub-flag display (legal mode)</h3>
+  <p>Per Stream C, a <code>satisfied</code> NodeStatus carries a <code>via</code> sub-flag of <code>via_binding_authority</code> or <code>via_persuasive_authority</code> in legal mode. The visualization:</p>
+  <ul>
+    <li><code>via_binding_authority</code>: a small "⚖ B" chip on the node's status badge.</li>
+    <li><code>via_persuasive_authority</code>: a small "⚖ P" chip.</li>
+    <li>In non-legal mode, no chip; the sub-flag is computed but not surfaced.</li>
+  </ul>
+
+  <h3>Indeterminate gates</h3>
+  <p>A LogicalGate whose inputs are partly unresolved produces an indeterminate result (per Stream C). Its own NodeStatus is <code>open</code> with <code>failed_conditions: ["inputs_indeterminate"]</code>. Visualization: a dashed border on the gate node + the open status badge. The gate's output edge (GATES) is rendered with a dashed style to signal "this output is conditional on unresolved inputs." Hovering the gate shows: "Inputs indeterminate: <em>Term X</em> unselected, <em>Checkpoint Y</em> unanswered."</p>
+
+  <h3>failed_conditions tooltip</h3>
+  <p>Every <code>open</code> or <code>contested</code> node, on hover, shows a tooltip listing the conditions that failed:</p>
+  <ul>
+    <li><code>premise_attached</code>: "No Premise attached."</li>
+    <li><code>authority_required</code>: "Authority required but not provided."</li>
+    <li><code>burden_met(preponderance)</code>: "Burden of proof not met (current: scintilla)."</li>
+    <li><code>not_distinguished</code>: "Cited Authority is distinguished by another Authority."</li>
+    <li>...and so on for the full library.</li>
+  </ul>
+  <p>The tooltip text is generated by deterministic templating from the condition id and parameters. The same text appears in the inspector's status section when the node is selected.</p>
+
+  <h3>Status transitions</h3>
+  <p>When a recompute changes a node's status, the badge animates briefly: a soft fade-and-scale on the status icon (~150ms), to give feedback that something updated. No celebration animations on satisfaction; the application is for serious analysis. The animation is dismissable via a "reduce motion" accessibility preference.</p>
+
+  <h3>Status legend</h3>
+  <p>A "legend" affordance in the canvas toolbar opens a small popover showing every status icon and its meaning, plus the legal-mode sub-flags. Available in both modes. Useful for first-time users and as a printed reference.</p>
+
+  <h3>Status in non-canvas contexts</h3>
+  <p>The same status palette is reused everywhere status is shown: the outline tree, the interview pane, the validation drawer, the version-history diff view. Consistent visual semantics across surfaces is the rule.</p>
+
+  <h2 id="e5">E5 — Version history UI</h2>
+
+  <p>Every save is preserved (Article II § 4). The version-history UI exposes the full history per Frame and per ArgumentSession, with milestone markers, preview, restore, and diff.</p>
+
+  <h3>Entry point</h3>
+  <p>A clock-rewind icon in the top bar of both Frame Building and Argument Running. Clicking opens the version-history side pane (decision #10 — pane, not modal).</p>
+
+  <h3>Side pane layout</h3>
+  <p>The side pane occupies the right ~30% of the screen, pushing the inspector aside (Frame Building) or narrowing the output viewer (Argument Running).</p>
+  <div class="ascii">+----------------------------------------+
+| Version history · Frame: Negligence    |
++----------------------------------------+
+| [filter: milestones only / all]        |
++----------------------------------------+
+| ● v8 · current · 2 min ago             |
+| ● v7 · 12 min ago · auto-save          |
+| ★ v6 · "Added causation branch" · 1d   |
+| ● v5 · 2d ago · auto-save              |
+| ● v4 · 2d ago · auto-save              |
+| ★ v3 · "Initial complete frame" · 5d   |
+| ● v2 · 5d ago · auto-save              |
+| ● v1 · 5d ago · created                |
+|                                        |
+| (branches show as indented children    |
+|  under the version they forked from)   |
+|                                        |
++----------------------------------------+
+| [Selected: v6]                         |
+| [Preview] [Restore] [Compare to v8]    |
++----------------------------------------+</div>
+  <p>Each row: version number, timestamp (relative + absolute on hover), milestone star (if <code>is_milestone: true</code>), <code>change_summary</code> (if present, otherwise "auto-save"). The current version is marked. Branches (created by restoring an older version, which forks per A4 Article II § 4) render as indented children of the version they forked from.</p>
+
+  <h3>Milestones vs. auto-saves</h3>
+  <p>Milestones (★) are visually prominent. A "milestones only" filter chip at the top hides auto-saves so the user sees only the meaningful waypoints. Default view is "all" so the full history is visible.</p>
+
+  <h3>Preview</h3>
+  <p>Selecting a version and clicking Preview opens that version in a read-only canvas overlay. The current canvas dims and a banner reads "Previewing version 6 (read-only)." Clicking "Exit preview" returns to the working version. No state changes during preview.</p>
+
+  <h3>Restore</h3>
+  <p>Restoring an ancestor creates a new FrameVersion (or ArgumentSessionVersion) whose contents equal the chosen ancestor, with <code>parent_version_id</code> pointing at the ancestor and a <code>change_summary</code> noting "restored from version N." The new version becomes current. The history pane updates to show the branch. Per Article II § 4, no version is deleted by this operation.</p>
+  <p>Confirmation dialog: "Restoring version 6 will create a new version (v9) and switch to it. The current version (v8) and all later versions are preserved." Single OK button (the operation is reversible by restoring back).</p>
+
+  <h3>Compare</h3>
+  <p>Selecting a version and clicking "Compare to vX" opens a diff view in the side pane (replacing the version list temporarily). The diff is structured:</p>
+  <ul>
+    <li><strong>Nodes added / removed / edited</strong>: each node listed with its statement and a short summary of what changed.</li>
+    <li><strong>Edges added / removed / edited</strong>: same.</li>
+    <li><strong>Frame metadata changes</strong>: title, mode, flavor, default policies, jurisdiction_default, etc.</li>
+  </ul>
+  <p>Clicking a diff entry navigates the canvas to the implicated node (highlighting it in both versions). The diff view does not show pixel-level visual diffs; it shows structural and field-level changes. A "back to history" button returns to the version list.</p>
+
+  <h3>Per-mode scope</h3>
+  <p>In Frame Building, the version history shows FrameVersions. In Argument Running, the history shows ArgumentSessionVersions; a second tab in the side pane shows the FrameVersion history (read-only, since frame edits don't happen in Argument Running). This second tab is how the user inspects what version of the frame the session was created against and what's changed since.</p>
+
+  <h3>No deletion affordance</h3>
+  <p>The version-history UI has no "delete version" action. Per Article II § 4, no save is deleted within a Frame's lifetime. The only path to losing version data is deleting the entire Frame itself (D1, gated on no live sessions). This is by design.</p>
+
+  <h2 id="e6">E6 — Mode toggles</h2>
+
+  <p>Two distinct kinds of mode change with different visual weight: <strong>operating mode</strong> (Frame Building ↔ Argument Running, frequent, top-bar) and <strong>architectural mode</strong> (legal ↔ general, with flavor as a sub-choice within general; rare, in frame settings).</p>
+
+  <h3>Operating-mode toggle</h3>
+  <p>Top-bar leftmost control. A two-position segmented toggle: <code>[Frame] [Argument]</code>. The active mode is highlighted; clicking the inactive label triggers the transition.</p>
+  <table>
+    <tr><th>Direction</th><th>Behavior</th></tr>
+    <tr><td>Frame → Argument</td><td>Runs C5 strict (D3). On pass: prompts for session choice (open existing on current FrameVersion / open existing on older / create new); transitions to Argument Running. On warning: acknowledgment dialog, then proceeds. On error: blocks; opens validation drawer with errors and links.</td></tr>
+    <tr><td>Argument → Frame</td><td>Always allowed. Returns to Frame Building. The session is preserved; on return, drift behavior applies if the underlying Frame has advanced.</td></tr>
+  </table>
+  <p>Visual differentiation between operating modes: a subtle chrome accent shift. Frame Building uses one accent hue (e.g., neutral / build-ish); Argument Running uses a slightly distinct accent (e.g., focused / session-ish). The shift is minimal — enough to confirm the mode at a glance, not enough to feel like two different applications. Specific hues are agent-discretionary defaults.</p>
+
+  <h3>Architectural-mode change</h3>
+  <p>Surfaced through the frame settings panel (gear icon → "Frame settings" → "Mode"). Not surfaced in the top bar; it is rare and consequential.</p>
+  <p>The settings panel shows the current mode (and flavor if general) and a "change mode" button. Clicking opens the mode-change dialog, which:</p>
+  <ol>
+    <li>Asks the user to confirm the target mode (legal ↔ general; if general, also flavor).</li>
+    <li>Runs the D3 mode-change scan in the background.</li>
+    <li>Presents the results: a list of items grouped into <strong>blocking</strong> (Conclusion direction mismatches, per D3) and <strong>advisory</strong> (other field changes, persisted as inactive metadata).</li>
+    <li>Each blocking item has an inline editor: e.g., a Conclusion direction picker for the new mode. The user resolves blocking items inline.</li>
+    <li>When all blocking items are resolved (or there are none), the "Commit mode change" button enables. Advisory items are listed for awareness; the user does not need to address them.</li>
+    <li>On commit, the frame's mode field updates, all advisory items become inactive metadata, the editor refreshes with new mode-aware visibility, and a new FrameVersion is saved with <code>change_summary</code> "mode changed: legal → general."</li>
+  </ol>
+  <p>The user can cancel at any point during the dialog; no changes are committed until "Commit mode change" is clicked.</p>
+
+  <h3>Flavor change (within general)</h3>
+  <p>Same surface (frame settings → "Flavor") with lighter mechanics: the change commits immediately (per D3), an advisory list shows what's affected, and the editor refreshes with the new flavor's visibility/labeling. No blocking step. Per A4, flavor is metadata, not schema.</p>
+
+  <h3>Mode + flavor chip in top bar</h3>
+  <p>For at-a-glance awareness, the top bar shows a chip: "legal" or "general · personal" or "general · academic". The chip is non-interactive in v1 (clicks open the frame settings panel rather than offering a quick toggle); a quick-toggle gesture is reserved for v2 once usage patterns clarify.</p>
+
+  <h2 id="e7">E7 — Onboarding and first-frame experience</h2>
+
+  <p>Per decision #12, onboarding is opt-out, dismissible at any point, never blocks. It is the first thing a new user encounters and the source of conceptual context (frame/argument split, the flavor/mode system, the per-node satisfaction model).</p>
+
+  <h3>First-time welcome screen</h3>
+  <p>A single-screen introduction, shown the first time a user opens the application.</p>
+  <ul>
+    <li><strong>Title</strong>: "Argument mapping that separates structure from substance."</li>
+    <li><strong>Three short sections</strong>: (a) "Build a frame" — the logical skeleton of an argument; (b) "Run a session" — apply premises to reach a conclusion; (c) "Reuse and refine" — frames are independent of any single argument.</li>
+    <li><strong>Two buttons</strong>: "Start guided first frame" (default) and "Skip introduction."</li>
+  </ul>
+
+  <h3>Guided first-frame walkthrough</h3>
+  <p>If the user starts the guided flow, a wizard walks through frame creation with explanatory captions:</p>
+  <ol>
+    <li><strong>Pick a mode</strong>: Legal or General. Caption explains what each is for. Defaults to General if the user is uncertain.</li>
+    <li><strong>If General, pick a flavor</strong>: Personal or Academic. Caption explains the distinction.</li>
+    <li><strong>If Legal, set a default jurisdiction</strong>: simple picker (level + region) with a "skip for now" option.</li>
+    <li><strong>Title and description</strong>: required title, optional description.</li>
+    <li><strong>Optional: start from a template</strong>: a list of available frame templates (the user's own frames available as templates per A6, plus any starter templates we ship — none ship in v1 unless we add them). User can skip.</li>
+    <li><strong>Frame created</strong>: the user lands in Frame Building with a stub RootQuestion ready to be filled in. A coachmark on the RootQuestion explains: "Every frame starts with a Root Question. Click to edit; this is the question your analysis answers."</li>
+  </ol>
+
+  <h3>Coachmarks</h3>
+  <p>Coachmarks are small overlays appearing the first time a user encounters a primary affordance:</p>
+  <ul>
+    <li>The first time the user opens the inspector — coachmark on it: "This panel shows the fields for whatever you've selected. Mode-specific fields appear or hide automatically."</li>
+    <li>The first time the user creates an edge — coachmark on the connector handle: "Drag from this handle to another node to create an edge. Only valid edge types will be offered."</li>
+    <li>The first time the user clicks "Switch to Argument Running" — coachmark on validation: "If your frame has errors, the switch is blocked. Warnings let you proceed."</li>
+    <li>The first time the user opens version history — coachmark: "Every save is preserved. Star icons mark milestones you've named."</li>
+    <li>The first time the user enters Argument Running — coachmark on the interview pane: "These are the open items. Top is recommended next, but you can address any of them."</li>
+  </ul>
+  <p>Each coachmark is dismissed by clicking "got it" or by acting on the affordance. Coachmarks are tracked per-user and never repeat. A "reset coachmarks" toggle in user settings restores them for testing or for users who want a refresher.</p>
+
+  <h3>Empty-state guidance</h3>
+  <p>Empty states throughout the application carry instructional copy:</p>
+  <ul>
+    <li><strong>Empty Home</strong>: "No frames yet. Create your first frame, or start from a template."</li>
+    <li><strong>Empty session list (on a frame)</strong>: "No sessions yet against this frame. Create one to start running premises."</li>
+    <li><strong>Empty interview pane (a complete session)</strong>: "All items resolved. Conclusion: <em>X</em>." with a "save milestone" button to mark the completion.</li>
+    <li><strong>Empty validation drawer</strong>: "No issues. The frame is ready." (in editing strictness; pre-mode-transition strictness shows the same message when zero errors and zero warnings.)</li>
+  </ul>
+
+  <h3>Help and glossary surface</h3>
+  <p>A help icon (?) in the top-right of every screen opens a slide-in glossary pane with two sections:</p>
+  <ul>
+    <li><strong>Frame concepts</strong>: definitions for RootQuestion, SubQuestion, Term, Interpretation, Checkpoint, LogicalGate, Conclusion, Authority, Premise. Each entry is one short paragraph.</li>
+    <li><strong>Legal-mode concepts</strong> (visible only when mode is legal): jurisdiction, binding vs. persuasive authority, standard of review, burden of proof, holding vs. dictum.</li>
+  </ul>
+  <p>Glossary entries are also reachable inline: hovering over a node-type icon or a legal-term label anywhere in the UI shows a small tooltip with the same one-paragraph definition. Hover-glossary keeps the explanation contextual without forcing a full help-pane open.</p>
+
+  <h3>Onboarding for returning users on new features</h3>
+  <p>When a new feature ships in a future version, the onboarding system surfaces a one-time notice on first encounter ("New: per-instance options_box override") with a "tell me more" link to a longer explanation. This is the same coachmark mechanism, applied to feature additions rather than first-use.</p>
+
+  <h2>End-of-session self-review <span class="anchor">(Article VIII § 4)</span></h2>
+
+  <p>Strict review of the work above against the Constitution. Structured to make any future review session's job tractable.</p>
+
+  <h3>Article II commitments — compliance check</h3>
+  <ul>
+    <li><strong>§ 1 Frame/Argument Split.</strong> Honored. E2 (Frame Building) is structurally distinct from E3 (Argument Running) — different layouts, different available controls, different visual chrome (E6). Argument-layer overlays are explicitly hidden in Frame Building. The operating-mode toggle affordance reflects the data-layer enforcement, not creates it.</li>
+    <li><strong>§ 2 Determinism.</strong> Honored. The interview pane (E3) renders the open-items list as derived by D2's deterministic algorithm; no UI logic re-orders or filters in a way that breaks determinism. The output viewer renders the ConditionalOutput object verbatim. No build-time AI is introduced into rendering paths; LLM hooks remain Stream G's domain.</li>
+    <li><strong>§ 3 Per-Node Satisfaction Criteria.</strong> Honored. The options_box editor (E2) exposes the SatisfactionPolicy library, the override chain, and per-instance overrides where Stream A/B permit them. Visual surfacing of failed_conditions (E4) makes the per-node criteria transparent to the user.</li>
+    <li><strong>§ 4 Independent Versioning.</strong> Honored. E5 surfaces FrameVersion and ArgumentSessionVersion histories separately; in Argument Running, a second tab shows the underlying FrameVersion history read-only. No UI affordance couples the two version streams.</li>
+    <li><strong>§ 5 Human-Readable Structure.</strong> Honored. Graph layout (E1) is the canonical view; the outline tree provides a linear-readable equivalent. Status visualization (E4) makes the runtime output legible from the graph alone. The CheckpointOption virtual-edge rendering preserves the schema's invariants while keeping routing visually present.</li>
+    <li><strong>§ 6 Use-Case Commitment.</strong> Honored. Mode-aware visibility (D4/D5) governs every editor surface in E2 and E3. Personal flavor's "enable Source fields" opt-in is exposed in frame settings (E6). No UI surface privileges legal mode at the architecture layer; legal-only affordances appear conditionally.</li>
+  </ul>
+
+  <h3>Article III quality criteria — score</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> Every action surfaced in Stream D maps to a UI affordance in Stream E. Every node type and every edge type has a defined visual representation in E1. Every status value has a defined badge in E4. Spot checks: D1 frame deletion → E2 cascade-with-confirmation dialog; D2 interview ordering → E3 interview pane with jurisdictional bubble; D3 mode-change blocking items → E6 inline-editor resolution UI. Coverage is complete.</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> Top-down hierarchical layout (E1) matches how lawyers read a case or a treatise: from question down through analytical structure to conclusion. The interview's "recommended next + free navigation" pattern (E3) matches how lawyers actually engage a brief — a sense of order, but skipping ahead and circling back routinely. Status badges (E4) communicate state without forcing the reader through a separate "results" screen, which would feel computationally alien. Authority chips (E1) and binding/persuasive sub-flag display (E4) speak the legal vocabulary directly. The version history (E5) preserves drafts the way a lawyer expects of a working document. Where idioms differ across modes (E5 milestones, E6 mode chip wording, E7 glossary), the legal idiom is the default in legal mode and academic/personal idioms surface only when the user has selected those flavors.</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> The output viewer renders ConditionalOutput from Stream C verbatim, with no client-side reordering or summarization. The interview pane lists items in the deterministic D2 order. Validation surfaces (E2) name the rule id and link to the implicated nodes. No UI element summarizes runtime state in a way that the user cannot audit by clicking through to the underlying node.</li>
+    <li><strong>§ 4 Clarity.</strong> Three coordinated validation surfaces (E2 decision #9), three coordinated output views (E3, A9), one consistent status palette across all surfaces (E4). The outline tree (E2) gives a keyboard-navigable linear view for users who prefer that mode. Glossary on hover (E7) keeps explanations contextual.</li>
+    <li><strong>§ 5 Reversibility.</strong> Version history (E5) preserves every save; restore creates a forked branch rather than overwriting. Mode change (E6) commits only after user confirmation and never deletes data. Cascade deletes (E2) require confirmation with explicit cascade summary. Coachmarks are dismissable and resettable (E7).</li>
+    <li><strong>§ 6 Interface Fit.</strong> Each subsection (E1–E7) is independently readable. A future session needing only the version-history flow can skip to E5; one needing only the status palette can jump to E4. Wireframe sketches use ASCII rather than embedded images so the document renders the same in any viewer. References to other streams use section ids, not quoted content.</li>
+  </ul>
+
+  <h3>Autonomous decisions — Article V § 3 trigger re-check</h3>
+  <p>Each numbered decision in "Decisions made in this session" is checked against the escalation triggers:</p>
+  <ul>
+    <li>All twelve decisions are agent-discretionary technical/UI choices under Article V § 2(c). They affect visual presentation, layout, and interaction patterns but do not modify schema, runtime algorithms, or any architectural commitment.</li>
+    <li>None reverses a prior stream decision. Each builds on Streams A–D as already committed.</li>
+    <li>None forecloses a use case. Both legal and general modes (and personal/academic flavors within general) get full UI surface. Where a flavor lacks an affordance (e.g., DISTINGUISHED_BY hidden in personal), the schema and runtime are unchanged; only the editor visibility is gated, consistent with D5.</li>
+    <li>None requires Anthropic safety input.</li>
+    <li>The Constitution does not speak to UI strategy directly; Article III § 2 (Legal Practice Fit) supplies the strongest soft constraint, and the decisions are documented against it. No trigger fires.</li>
+  </ul>
+
+  <h3>Mid-session self-review under Article XII § 2</h3>
+  <ul>
+    <li><strong>(a) Reverses a stream decision</strong>: no.</li>
+    <li><strong>(b) Introduces a new architectural commitment or strong technical default</strong>: this document deliberately avoids tech-stack commitments (graph rendering library, framework, etc.); those are Stream H4 territory. The defaults committed here (top-down layout, three-pane editor, status palette structure) are visual/structural defaults that downstream tech-stack work will implement; they do not constrain library choice. No mid-session review trigger fires under this provision.</li>
+    <li><strong>(c) Changes a current_state field from a different stream</strong>: this session updates current_state for Stream E completion only, with cross-references for unblocked work in G/H/I. No other stream's status changes.</li>
+    <li><strong>(d) Article V § 3 trigger</strong>: none, per the autonomous-decision check above.</li>
+  </ul>
+
+  <h3>In-session flags resolved</h3>
+  <p>One in-session flag was raised and resolved in this session; it is not escalated to the register because its resolution does not reverse a prior stream decision and is internally constrained by the Constitution.</p>
+  <ul>
+    <li><strong>Flag (in-session, resolved).</strong> Tension between legal idiom and academic/personal idiom in shared UI surfaces. Specifically: status badges, version-history wording, validation-drawer language. Should the UI use legal vocabulary as the default and relabel for non-legal modes, or use neutral vocabulary throughout? <strong>Resolution</strong>: shared UI chrome (status icons, badge meanings, version-history mechanics) uses neutral terminology (e.g., "milestone" rather than "filing draft"); mode/flavor-specific surfaces (Premise <code>kind</code> picker, burden-of-proof labels per Stream D D5, Authority label "Source" vs. "Authority") use the appropriate vocabulary. This is consistent with Stream D's pattern and with Article III § 6 (the application's chrome should be approachable across use cases).</li>
+  </ul>
+
+  <h3>Items deferred</h3>
+  <ul>
+    <li><strong>Specific color values, typography, and animation curves.</strong> Visual polish work, deferred to a subsequent design pass. The structure committed in this document — pairing rules, layout topology, interaction patterns — is intended to be stable across visual revisions.</li>
+    <li><strong>Mobile / narrow-screen layouts.</strong> Out of scope for v1 wireframes; the application is desktop-first. Adaptation strategy can be designed when v1 desktop is stable.</li>
+    <li><strong>Keyboard shortcut full inventory.</strong> Common shortcuts named (zoom, pan, fit-to-screen, search). A complete inventory across both modes is a polish item once the editor is in implementation.</li>
+    <li><strong>Accessibility detailed audit.</strong> Color-blindness pairing rule (decision #4) is the structural commitment; full WCAG audit (focus rings, ARIA labels, screen-reader narration of the canvas) is a Stream H concern and a polish item.</li>
+    <li><strong>Quick-toggle gesture for architectural mode in the top-bar chip</strong>: deferred to v2 per E6, pending usage data.</li>
+    <li><strong>Visual diff in version history</strong>: only structural and field-level diff specified for v1. A pixel-level visual diff (showing the canvas at version A vs. version B side-by-side) is a richer affordance reserved for v2.</li>
+    <li><strong>Starter frame templates</strong>: none ship in v1 by default. The frame-template machinery (D1, A6) supports user-created templates; whether to author starter templates (e.g., "Negligence (US)", "Statutory interpretation (US Federal)") is a content question for the user, not a UI question.</li>
+  </ul>
+
+  <h2>What's unblocked next</h2>
+  <p>With Stream E specified end-to-end at wireframe / interaction-flow level:</p>
+  <ul>
+    <li><strong>Stream H (persistence and infrastructure)</strong> can now compile against concrete UI requirements: graph rendering library candidates (DAG layout + interactive editing + custom node shapes/edges), version-history storage that supports the side-pane tree view, debounced auto-save matching the visual feedback model, an export path for the prose summary view.</li>
+    <li><strong>Stream G (LLM hook design)</strong> has UI surfaces to target now: where each build-time suggestion shows up in the editor (inline reuse suggestions in the Premise authoring field; suggestion chips on the Conclusion direction picker; etc.), with explicit "user always confirms" affordances.</li>
+    <li><strong>Stream F (legal-mode specifics)</strong> remains: F5 (court hierarchy database) is independent and warrants its own session. F6's UI surface (binding/persuasive chip on Authority, BINDING_IN chip on Authority node) is committed in E1 and E4; F6's runtime upgrade path (replacing the C6 string-match heuristic) is the remaining work.</li>
+    <li><strong>Stream I (final coding spec)</strong> compiles after H and G reach v1 depth.</li>
+  </ul>
+
+  <h2>Cheat sheet — Stream E items</h2>
+  <table>
+    <tr><th>Id</th><th>Subject</th><th>Section</th></tr>
+    <tr><td>E1</td><td>Graph layout: top-down hierarchical, node shapes, edge styling, virtual edges, selection/zoom/pan, argument overlay rendering</td><td>E1</td></tr>
+    <tr><td>E2</td><td>Frame Building editor: top bar, three panes (palette+outline, canvas, inspector), edge creation, validation surface, options_box editor</td><td>E2</td></tr>
+    <tr><td>E3</td><td>Argument Running: top bar, two panes (interview, output viewer), per-node-type item editors, three-tab output (path overlay / decision tree / prose), Premise pool</td><td>E3</td></tr>
+    <tr><td>E4</td><td>Status visualization: five-status palette with color+icon pairing, sub-flag chips, indeterminate-gate styling, failed_conditions tooltip, transitions, legend</td><td>E4</td></tr>
+    <tr><td>E5</td><td>Version history: side-pane tree, milestones vs. auto-saves, preview, restore (forks branch), structural diff, no deletion affordance</td><td>E5</td></tr>
+    <tr><td>E6</td><td>Mode toggles: top-bar operating-mode toggle (gated by C5 strict one way, free the other), frame-settings architectural-mode change with blocking-vs-advisory dialog, flavor change immediate</td><td>E6</td></tr>
+    <tr><td>E7</td><td>Onboarding: opt-out welcome screen, guided first-frame wizard, coachmarks on first-encounter affordances, empty-state guidance, help/glossary surface, returning-user new-feature notices</td><td>E7</td></tr>
+  </table>
+
+</div>

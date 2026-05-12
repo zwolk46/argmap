@@ -1,0 +1,1254 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 22px 0 6px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+<div class="doc">
+  <h1>stream_i_schema_spec_v1.html</h1>
+  <p class="subtitle">Per-module spec for <code>src/schema/</code> &nbsp;·&nbsp; Stream I session I.2 &nbsp;·&nbsp; May 10, 2026</p>
+
+  <div class="notice">
+    <p>This document is the implementation source of truth for <code>src/schema/</code>. It commits per-file TypeScript types, the discriminated-union encodings for Node and Edge, the SatisfactionPolicy and Condition shapes, the full validation-rule registry, the JSON envelope, the migration registry, and the Vitest acceptance tests for the module. The cross-module surface (what other modules import from <code>@/schema</code>) is pinned in <code>stream_i_contracts_v1.html</code> Contract 1; this spec adds the per-file organization, internal types, and behavioral contracts the coding session implements against. The schema module is the dependency root: every other module imports from it, and it imports nothing from the application codebase.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>The coding session implementing <code>src/schema/</code> reads, in order: Constitution and Protocol, <code>current_state.html</code>, <code>stream_i_buildkit_index_v1.html</code>, <code>stream_i_contracts_v1.html</code> Contract 1, this document. No prior stream documents (A–H) are read. Implement-until-green against the Vitest tests at the end of this document; write <code>src/schema/README.md</code> as the cross-session compression artifact for downstream sessions. This spec uses real TypeScript exclusively; all <code>?</code> markers are TypeScript optional, and discriminated-union shapes use a <code>type</code> or <code>kind</code> field as the discriminator (each interface explicitly states which).</p>
+
+  <h2>File map</h2>
+  <p>Nine files under <code>src/schema/</code>. The barrel <code>index.ts</code> re-exports everything below.</p>
+  <table>
+    <tr><th>File</th><th>Purpose</th><th>Primary exports</th></tr>
+    <tr><td><code>identifiers.ts</code></td><td>Type aliases for entity ids</td><td><code>NodeRef</code>, <code>EdgeRef</code>, <code>FrameId</code>, <code>FrameVersionId</code>, <code>SessionId</code>, <code>SessionVersionId</code>, <code>HookId</code></td></tr>
+    <tr><td><code>nodes.ts</code></td><td>Node discriminated union and per-type shapes</td><td><code>Node</code>, <code>NodeBase</code>, <code>NodeType</code>, <code>RootQuestion</code>, <code>SubQuestion</code>, <code>Term</code>, <code>Interpretation</code>, <code>Checkpoint</code>, <code>CheckpointOption</code>, <code>LogicalGate</code>, <code>AndGate</code>, <code>OrGate</code>, <code>NotGate</code>, <code>IfThenGate</code>, <code>UnlessGate</code>, <code>Conclusion</code>, <code>ConclusionDirection</code>, <code>Authority</code>, <code>Premise</code>, <code>PremiseKind</code>, type guards</td></tr>
+    <tr><td><code>edges.ts</code></td><td>Edge discriminated union and per-type shapes</td><td><code>Edge</code>, <code>EdgeBase</code>, <code>EdgeType</code>, twelve edge variants, <code>VALID_EDGE_PAIRS</code></td></tr>
+    <tr><td><code>frame.ts</code></td><td>Frame, FrameVersion, mode/flavor, jurisdiction, positions, LLM settings projections</td><td><code>Frame</code>, <code>FrameVersion</code>, <code>Mode</code>, <code>Flavor</code>, <code>Jurisdiction</code>, <code>Position</code>, <code>LlmSettings</code>, <code>BurdenThresholdMap</code>, <code>HookInvocationRecord</code></td></tr>
+    <tr><td><code>session.ts</code></td><td>Argument-layer entities, computed projections persisted on session</td><td><code>ArgumentSession</code>, <code>ArgumentSessionVersion</code>, <code>CheckpointResponse</code>, <code>InterpretationSelection</code>, <code>NodeStatus</code>, <code>ConditionalOutput</code>, <code>ConditionalBranch</code>, <code>BranchCondition</code>, <code>OpenGate</code>, <code>ConfidenceBreakdown</code></td></tr>
+    <tr><td><code>satisfaction-policy.ts</code></td><td>The "options box" condition library and policy shape</td><td><code>SatisfactionPolicy</code>, <code>Condition</code>, <code>BurdenLevel</code>, <code>DEFAULT_SATISFACTION_POLICIES</code></td></tr>
+    <tr><td><code>validation-rules.ts</code></td><td>Validation rule registry and result shapes</td><td><code>ValidationRule</code>, <code>ValidationResult</code>, <code>Severity</code>, <code>VALIDATION_RULES</code> (the full V-FR/V-NODE/V-EDGE/V-GATE/V-ARG registry), <code>runValidation()</code></td></tr>
+    <tr><td><code>envelope.ts</code></td><td>JSON serialization envelopes for export/import</td><td><code>FrameExport</code>, <code>ArgumentSessionExport</code>, <code>CURRENT_APP_VERSION</code></td></tr>
+    <tr><td><code>migrations.ts</code></td><td>Schema-version migration mechanism</td><td><code>Migration</code>, <code>MigrationRegistry</code>, <code>migrate()</code>, <code>CURRENT_SCHEMA_VERSION</code>, <code>MIGRATION_REGISTRY</code></td></tr>
+  </table>
+  <p>Conventions throughout: timestamps are <code>string</code> (ISO-8601); all ids are <code>string</code> (UUID v4); UTF-8 with no trimming; absent and <code>null</code> are normalized to absent at the schema layer (the codebase never emits <code>null</code>); arrays are ordered iff the per-type spec calls out order semantics, otherwise treated as sets.</p>
+
+  <h2>Cross-document resolution notes (for self-review)</h2>
+  <p>While compiling this spec from <code>stream_b_schema_v1.html</code> against <code>stream_i_contracts_v1.html</code>, five TypeScript-precision divergences between the two were identified. In each case the contracts doc paraphrased Stream B; per the contracts doc's own attribution ("the canonical shape is in <code>stream_b_schema_v1.html</code>"), this spec adopts Stream B's name and shape. The corrections are itemized in the self-review and logged as a single in-session-escalated flag for a future I.1 review session to bump the contracts doc to <code>_v2</code>. The schema module is the canonical home; downstream modules' imports resolve through this file map.</p>
+
+  <div class="file-header">// src/schema/identifiers.ts</div>
+  <p>Type aliases for entity ids. All ids are UUID v4 strings; the aliases are documentation only (no branded types in v1 — branding adds friction without preventing the misuses we actually see). Per Article II § 4 and Stream H, frame ids and session ids are independent namespaces; type aliases preserve readability without enforcing namespace separation at the type level.</p>
+<pre><code>export type NodeRef = string;
+export type EdgeRef = string;
+export type FrameId = string;
+export type FrameVersionId = string;
+export type SessionId = string;
+export type SessionVersionId = string;
+
+// Stable hook identifiers; the discriminated set is fixed at v1 (Stream G).
+export type HookId =
+  | "G1" | "G2" | "G3" | "G4" | "G5"
+  | "G6" | "G7" | "G8" | "G9" | "G10"
+  | "G11" | "G12" | "G13";
+</code></pre>
+
+  <div class="file-header">// src/schema/nodes.ts</div>
+  <p>The <code>Node</code> discriminated union over nine variants. The discriminator field is <code>type</code>. Within <code>type: "LogicalGate"</code>, the sub-discriminator is <code>gate_type</code> (V-GATE-1..4 enforce arity per gate_type). Per the contradiction-fix already adopted in current_state.html, <code>FORECLOSES</code> is an edge type only, never a gate_type. The <code>presentation</code> nested object holds optional UI hints ignored by the runtime (<code>x</code>, <code>y</code>, <code>collapsed</code>, <code>color_override</code>); the layout module reads <code>node.presentation?.collapsed</code> and the user-anchored x/y from this nested object — it does not access flat fields on Node.</p>
+
+<pre><code>import type { NodeRef } from "./identifiers";
+import type { Jurisdiction } from "./frame";
+import type { SatisfactionPolicy } from "./satisfaction-policy";
+
+export type NodeType =
+  | "RootQuestion" | "SubQuestion" | "Term" | "Interpretation"
+  | "Checkpoint" | "LogicalGate" | "Conclusion" | "Authority" | "Premise";
+
+export interface NodeBase {
+  id: string;                                  // UUID v4
+  slug?: string;
+  type: NodeType;                              // discriminator
+  layer: "frame" | "argument";                 // derivable from type; stored for fast filtering
+  notes?: string;                              // A12: per-node working thoughts; not used by logic
+  presentation?: {
+    x?: number;
+    y?: number;
+    color_override?: string;
+    collapsed?: boolean;
+  };
+  created_at: string;                          // ISO-8601
+  updated_at: string;
+  created_by?: string;                         // user id; multi-user is v2
+}
+</code></pre>
+
+  <h4>RootQuestion (B1.1)</h4>
+<pre><code>export interface RootQuestion extends NodeBase {
+  type: "RootQuestion";
+  layer: "frame";
+  statement: string;
+  standard_of_review?: string;                 // legal mode only
+  options_box?: SatisfactionPolicy;
+}
+</code></pre>
+
+  <h4>SubQuestion (B1.2)</h4>
+<pre><code>export interface SubQuestion extends NodeBase {
+  type: "SubQuestion";
+  layer: "frame";
+  statement: string;
+  is_jurisdictional: boolean;                  // legal mode; default false; runtime ignores in general mode
+  standard_of_review?: string;                 // legal mode; inherits from parent if unset
+  options_box?: SatisfactionPolicy;
+}
+</code></pre>
+
+  <h4>Term (B1.3)</h4>
+<pre><code>export interface Term extends NodeBase {
+  type: "Term";
+  layer: "frame";
+  name: string;
+  order: number;                               // 0-indexed within parent Question; foreclosure resolution + UI default ordering (A7)
+  dispositive: boolean;                        // when true, resolution can foreclose siblings (A7)
+  linked_to?: NodeRef;                         // A10: another Term whose Interpretations this Term shares; one-way; no cycles (V-NODE-3)
+  options_box?: SatisfactionPolicy;
+}
+</code></pre>
+
+  <h4>Interpretation (B1.4)</h4>
+<pre><code>export interface Interpretation extends NodeBase {
+  type: "Interpretation";
+  layer: "frame";
+  statement: string;
+  jurisdiction_override?: Jurisdiction;        // legal mode; overrides frame default for this branch
+  options_box?: SatisfactionPolicy;
+}
+</code></pre>
+
+  <h4>Checkpoint and CheckpointOption (B1.5)</h4>
+<pre><code>export type CheckpointAnswerType = "boolean" | "multiple_choice" | "graded";
+
+export interface CheckpointOption {
+  id: string;                                  // stable within parent Checkpoint
+  label: string;                               // "yes" | "no" | "unclear" | author-defined
+  target_node_id?: NodeRef;                    // null only for the "graded" middle state
+  satisfies: boolean;                          // whether selecting this option counts as satisfying the Checkpoint
+  routes_to_status?: "contested";              // override for "graded" middle state
+}
+
+export type BurdenLevel =
+  | "preponderance" | "clear_and_convincing" | "beyond_reasonable_doubt"
+  | "scintilla" | "substantial_evidence";
+
+export interface Checkpoint extends NodeBase {
+  type: "Checkpoint";
+  layer: "frame";
+  question: string;
+  answer_type: CheckpointAnswerType;
+  options: CheckpointOption[];                 // shape and length depends on answer_type (V-NODE-5/6/7)
+  requires_premise: boolean;                   // default true
+  requires_authority: boolean;                 // default false; legal mode only (V-ARG-2)
+  burden_level?: BurdenLevel;                  // legal mode; feeds burden_met condition
+  options_box?: SatisfactionPolicy;
+}
+</code></pre>
+  <p>Defaults that Frame-Building actions seed: a new Checkpoint is created with <code>answer_type: "boolean"</code> and options <code>[{ id, label: "yes", satisfies: true }, { id, label: "no", satisfies: false }]</code> (per A2). Default for new <code>multiple_choice</code> Checkpoints is two options "yes"/"no" with <code>satisfies</code> mirroring the boolean default. <code>graded</code> Checkpoints have exactly three options; the middle option carries <code>routes_to_status: "contested"</code>. Authors may relabel; the three-state structure is fixed.</p>
+
+  <h4>LogicalGate (B1.6) — sub-discriminated union with named slots</h4>
+  <p>Per the contradiction fix and V-GATE-1..4: gate inputs are formally typed via named slot fields specific to each <code>gate_type</code>. There is no uniform <code>inputs[]</code> on LogicalGate; the encoding below makes IF_THEN's antecedent/consequent and UNLESS's main/exception structurally explicit. The five gate variants share <code>type: "LogicalGate"</code> and discriminate on <code>gate_type</code>. Boolean-evaluable input nodes are: Checkpoint, Interpretation, SubQuestion, RootQuestion, and other LogicalGates. Term and Premise/Authority inputs are forbidden (V-GATE-5, V-GATE-6). LogicalGate has no per-instance <code>options_box</code> override; its satisfaction is computed from input statuses per gate_type semantics in Stream C.</p>
+
+<pre><code>export interface AndGate extends NodeBase {
+  type: "LogicalGate";
+  layer: "frame";
+  gate_type: "AND";
+  inputs: NodeRef[];                           // V-GATE-1: minimum 2
+  output_target?: NodeRef;
+}
+
+export interface OrGate extends NodeBase {
+  type: "LogicalGate";
+  layer: "frame";
+  gate_type: "OR";
+  inputs: NodeRef[];                           // V-GATE-1: minimum 2
+  output_target?: NodeRef;
+}
+
+export interface NotGate extends NodeBase {
+  type: "LogicalGate";
+  layer: "frame";
+  gate_type: "NOT";
+  input: NodeRef;                              // V-GATE-2: exactly 1
+  output_target?: NodeRef;
+}
+
+export interface IfThenGate extends NodeBase {
+  type: "LogicalGate";
+  layer: "frame";
+  gate_type: "IF_THEN";
+  antecedent: NodeRef;                         // V-GATE-3: exactly one antecedent
+  consequent: NodeRef;                         // V-GATE-3: exactly one consequent
+  output_target?: NodeRef;
+}
+
+export interface UnlessGate extends NodeBase {
+  type: "LogicalGate";
+  layer: "frame";
+  gate_type: "UNLESS";
+  main: NodeRef;                               // V-GATE-4: exactly one main
+  exception: NodeRef;                          // V-GATE-4: exactly one exception
+  output_target?: NodeRef;
+}
+
+export type LogicalGate = AndGate | OrGate | NotGate | IfThenGate | UnlessGate;
+</code></pre>
+
+  <h4>Conclusion and ConclusionDirection (B1.7, A1)</h4>
+  <p>Confidence is not a stored field on Conclusion (per A1 and current_state.html). It is computed at session render time from the status map (see <code>ConfidenceBreakdown</code> in <code>session.ts</code>) and displayed alongside the Conclusion. Storing it on the node would let users assert certainty the structure does not support — the explicit reasoning in A1 against this. The legal-mode <code>direction</code> enum and the general-mode <code>position_id</code> reference into <code>Frame.positions</code> are both required and discriminate on <code>kind</code>; mode mismatches at the Conclusion layer block architectural mode transitions per Stream D D3.</p>
+
+<pre><code>export type ConclusionDirection =
+  | { kind: "legal";
+      value: "favors_plaintiff" | "favors_defendant"
+           | "affirm" | "reverse" | "remand" | "dismiss" | "custom";
+      custom_label?: string;                   // required when value === "custom"
+    }
+  | { kind: "general";
+      position_id: string;                     // references Frame.positions[].id (V-FR-10)
+      custom_label?: string;
+    };
+
+export interface Conclusion extends NodeBase {
+  type: "Conclusion";
+  layer: "frame";
+  statement: string;
+  direction: ConclusionDirection;              // required; mode-aware
+  reasoning_summary?: string;                  // LLM hook G3 commits here at build time
+  tags?: string[];
+  remedy?: string;                             // legal mode v1; promotable to Remedy node in v2
+  options_box?: SatisfactionPolicy;
+}
+</code></pre>
+
+  <h4>Authority (B1.8)</h4>
+  <p>The same Authority shape is used whether the node lives on the Frame (cited at build-time supporting an Interpretation) or on the ArgumentSession (added at runtime by a Premise's <code>authority_ref</code>). The locus is implicit from where the node is stored. In <code>personal</code> flavor, the type is labeled "Source" in the UI; the schema name remains <code>Authority</code> for code consistency. <code>BINDING_IN</code> is implemented as the embedded <code>binding_in: Jurisdiction[]</code> field rather than as an edges-table row — the EdgeBase requires a NodeRef target, but Jurisdiction is a value object, not an entity (current_state.html / Stream B B2).</p>
+
+<pre><code>export interface Authority extends NodeBase {
+  type: "Authority";
+  layer: "frame" | "argument";                 // determined by where it is stored
+  citation: string;                            // e.g., "Erie R.R. v. Tompkins, 304 U.S. 64 (1938)"
+
+  // Legal-mode fields:
+  court?: string;
+  year?: number;
+  holding_summary?: string;
+  is_holding?: boolean;                        // vs dicta; default true
+  is_binding?: boolean;                        // computed by F6 when live; manually settable v1
+  jurisdiction?: Jurisdiction;                 // where this authority issues from (V-FR-11 when is_binding)
+  binding_in?: Jurisdiction[];                 // embedded relation: see "BINDING_IN edge" note in B2
+
+  // Academic-flavor fields:
+  author?: string;
+  venue?: string;                              // journal, conference, publisher
+  position?: string;                           // what the author argues, or "represents scholarly consensus"
+
+  // Universal:
+  url?: string;
+  short_label?: string;                        // for compact display, e.g. "Erie"
+}
+</code></pre>
+
+  <h4>Premise (B1.9, A11)</h4>
+  <p><code>PremiseKind</code> is a runtime-checked string drawn from a vocabulary that depends on the parent frame's <code>mode</code> and <code>flavor</code>. The schema layer types <code>kind</code> as the open string union of all vocabularies; per-frame validity is enforced at validation time by V-ARG-3 against <code>PREMISE_KIND_VOCABULARIES</code>. This keeps the schema mode-agnostic at the type level and centralizes vocabulary in <code>frame.ts</code>.</p>
+
+<pre><code>export type PremiseKind =
+  // legal:
+  | "stipulated" | "found" | "disputed" | "procedural"
+  // academic:
+  | "empirical" | "definitional" | "normative"
+  // personal:
+  | "observation" | "value" | "assumption";
+// (note: "stipulated" is shared across legal/academic/personal vocabularies)
+
+export interface Premise extends NodeBase {
+  type: "Premise";
+  layer: "argument";
+  statement: string;
+  kind: PremiseKind;                           // V-ARG-3 enforces vocabulary by frame.mode/flavor
+  source?: string;                             // free-text citation/source label
+  authority_ref?: NodeRef;                     // id of an Authority node (frame-layer or session-layer); V-ARG-2/V-ARG-4
+}
+</code></pre>
+
+  <h4>Node union and type guards</h4>
+<pre><code>export type Node =
+  | RootQuestion | SubQuestion | Term | Interpretation
+  | Checkpoint | LogicalGate | Conclusion | Authority | Premise;
+
+// Type guards. The discriminator is `type`; for LogicalGate, also narrow on gate_type.
+export function isRootQuestion(n: Node): n is RootQuestion { return n.type === "RootQuestion"; }
+export function isSubQuestion(n: Node): n is SubQuestion   { return n.type === "SubQuestion"; }
+export function isTerm(n: Node): n is Term                 { return n.type === "Term"; }
+export function isInterpretation(n: Node): n is Interpretation { return n.type === "Interpretation"; }
+export function isCheckpoint(n: Node): n is Checkpoint     { return n.type === "Checkpoint"; }
+export function isLogicalGate(n: Node): n is LogicalGate   { return n.type === "LogicalGate"; }
+export function isConclusion(n: Node): n is Conclusion     { return n.type === "Conclusion"; }
+export function isAuthority(n: Node): n is Authority       { return n.type === "Authority"; }
+export function isPremise(n: Node): n is Premise           { return n.type === "Premise"; }
+
+export function isAndGate(g: LogicalGate): g is AndGate         { return g.gate_type === "AND"; }
+export function isOrGate(g: LogicalGate): g is OrGate           { return g.gate_type === "OR"; }
+export function isNotGate(g: LogicalGate): g is NotGate         { return g.gate_type === "NOT"; }
+export function isIfThenGate(g: LogicalGate): g is IfThenGate   { return g.gate_type === "IF_THEN"; }
+export function isUnlessGate(g: LogicalGate): g is UnlessGate   { return g.gate_type === "UNLESS"; }
+
+// Boolean-evaluable check used by V-GATE-5/6 and the runtime gate evaluator.
+export function isBooleanEvaluable(n: Node): boolean {
+  return n.type === "Checkpoint" || n.type === "Interpretation"
+      || n.type === "SubQuestion" || n.type === "RootQuestion"
+      || n.type === "LogicalGate";
+}
+</code></pre>
+
+  <div class="file-header">// src/schema/edges.ts</div>
+  <p>Twelve edge types form the discriminated union <code>Edge</code>. The discriminator is <code>type</code>. Edges are always directed; bidirectionality is modeled as two separate Edge entities. Per current_state.html / Stream B B2: <code>CITED_BY</code> was renamed <code>CITES</code>, <code>ALTERNATIVE_PATH_TO</code> was removed (two convergent paths are two <code>LEADS_TO</code> edges with the same target), and <code>FORECLOSES</code> is an edge only (not a LogicalGate type). The <code>BINDING_IN</code> edge type is retained in the EdgeType union for the validation layer's enumeration but is implemented as the embedded <code>Authority.binding_in: Jurisdiction[]</code> field rather than as an Edge row — Jurisdiction is a value object, not an entity, and EdgeBase requires a NodeRef target.</p>
+
+<pre><code>import type { NodeRef, EdgeRef } from "./identifiers";
+
+export type EdgeType =
+  | "DECOMPOSES_INTO" | "TURNS_ON" | "INTERPRETED_AS" | "LEADS_TO"
+  | "FORECLOSES" | "GATES" | "ANSWERS" | "SUPPORTS" | "CONTRADICTS"
+  | "CITES" | "BINDING_IN" | "DISTINGUISHED_BY";
+
+export interface EdgeBase {
+  id: string;                                  // UUID v4
+  slug?: string;
+  type: EdgeType;
+  layer: "frame" | "argument";
+  source: NodeRef;
+  target: NodeRef;
+  label?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Frame-layer structural edges
+export interface DecomposesIntoEdge extends EdgeBase { type: "DECOMPOSES_INTO"; layer: "frame"; }
+export interface TurnsOnEdge        extends EdgeBase { type: "TURNS_ON";        layer: "frame"; }
+export interface InterpretedAsEdge  extends EdgeBase { type: "INTERPRETED_AS";  layer: "frame"; }
+
+export interface LeadsToEdge extends EdgeBase {
+  type: "LEADS_TO"; layer: "frame";
+  condition?: string;                          // optional author-labeled branch annotation; not used by routing logic
+}
+
+export interface ForeclosesEdge extends EdgeBase {
+  type: "FORECLOSES"; layer: "frame";
+  scope?: "moot" | "decided";                  // default "moot"
+}
+
+export interface GatesEdge extends EdgeBase { type: "GATES"; layer: "frame"; }
+
+// Argument-layer edges
+export interface AnswersEdge extends EdgeBase {
+  type: "ANSWERS"; layer: "argument";
+  selected_option_id: string;                  // references CheckpointOption.id within the target Checkpoint
+}
+
+export interface SupportsEdge extends EdgeBase {
+  type: "SUPPORTS"; layer: "argument";
+  weight?: "strong" | "moderate" | "weak";
+}
+
+export interface ContradictsEdge extends EdgeBase {
+  type: "CONTRADICTS"; layer: "argument";
+  weight?: "strong" | "moderate" | "weak";
+}
+
+// Authority-related frame-layer edges
+export interface CitesEdge extends EdgeBase {
+  type: "CITES"; layer: "frame";
+  strength?: "directly_on_point" | "analogous" | "background";
+}
+
+// BINDING_IN: retained in the EdgeType union but never instantiated as an Edge row.
+// The conceptual relation is implemented as the embedded Authority.binding_in field.
+// Validation rules ignore Edge[] entries with type === "BINDING_IN"; the union is included
+// for exhaustiveness in switch statements over EdgeType.
+export interface BindingInEdge extends EdgeBase { type: "BINDING_IN"; layer: "frame"; }
+
+export interface DistinguishedByEdge extends EdgeBase {
+  type: "DISTINGUISHED_BY"; layer: "frame";
+  reasoning?: string;
+}
+
+export type Edge =
+  | DecomposesIntoEdge | TurnsOnEdge | InterpretedAsEdge | LeadsToEdge
+  | ForeclosesEdge | GatesEdge | AnswersEdge | SupportsEdge
+  | ContradictsEdge | CitesEdge | BindingInEdge | DistinguishedByEdge;
+</code></pre>
+
+  <h4>Valid source/target type pairs (V-EDGE-1 source data)</h4>
+  <p>The validation rule V-EDGE-1 enforces that every edge's source and target node types are permitted for that edge type. The truth table below is the single source of consultation; the validation rule walks <code>VALID_EDGE_PAIRS</code> rather than encoding the rules per edge type. The drag-from-handle UI gesture (Stream E E2) consults the same map to filter the edge-type picker by source node type.</p>
+
+<pre><code>import type { NodeType } from "./nodes";
+
+export interface ValidEdgePair {
+  source_types: ReadonlyArray&lt;NodeType&gt;;
+  target_types: ReadonlyArray&lt;NodeType&gt;;
+}
+
+export const VALID_EDGE_PAIRS: Readonly&lt;Record&lt;EdgeType, ValidEdgePair&gt;&gt; = {
+  DECOMPOSES_INTO: { source_types: ["RootQuestion", "SubQuestion"],
+                     target_types: ["SubQuestion"] },
+  TURNS_ON:        { source_types: ["RootQuestion", "SubQuestion"],
+                     target_types: ["Term"] },
+  INTERPRETED_AS:  { source_types: ["Term"],
+                     target_types: ["Interpretation"] },
+  LEADS_TO:        { source_types: ["Interpretation", "LogicalGate"],
+                     target_types: ["Checkpoint", "SubQuestion", "Conclusion", "LogicalGate"] },
+  FORECLOSES:      { source_types: ["Interpretation"],
+                     target_types: ["Term", "SubQuestion", "Checkpoint"] },
+  GATES:           { source_types: ["LogicalGate"],
+                     target_types: ["RootQuestion", "SubQuestion", "Term", "Interpretation",
+                                    "Checkpoint", "LogicalGate", "Conclusion"] },
+  ANSWERS:         { source_types: ["Premise"],
+                     target_types: ["Checkpoint"] },
+  SUPPORTS:        { source_types: ["Premise"],
+                     target_types: ["Interpretation", "Conclusion"] },
+  CONTRADICTS:     { source_types: ["Premise"],
+                     target_types: ["Interpretation", "Conclusion", "Checkpoint"] },
+  CITES:           { source_types: ["Authority"],
+                     target_types: ["Interpretation"] },
+  BINDING_IN:      { source_types: [],         // never instantiated as an Edge; see note above
+                     target_types: [] },
+  DISTINGUISHED_BY:{ source_types: ["Authority"],
+                     target_types: ["Interpretation"] },
+};
+</code></pre>
+
+  <div class="file-header">// src/schema/frame.ts</div>
+  <p>The Frame entity, its versioned snapshot, mode/flavor enums, jurisdiction value object, position table, and the LLM-settings projection types. <code>LlmSettings</code> lives here because it is a Frame field; <code>llm-hooks</code> imports these types rather than redefining them. <code>FrameVersion</code> includes the optional <code>llm_settings_snapshot</code> projection field per F-001 (resolved/APPROVED): the runtime needs to see the calibrated thresholds at version-resolution time deterministically, so they're projected onto the version snapshot rather than read from the live Frame.</p>
+
+<pre><code>import type { FrameId, FrameVersionId, HookId, NodeRef } from "./identifiers";
+import type { Node } from "./nodes";
+import type { Edge } from "./edges";
+import type { SatisfactionPolicy } from "./satisfaction-policy";
+import type { NodeType } from "./nodes";
+
+export type Mode = "legal" | "general";
+export type Flavor = "personal" | "academic";  // only meaningful when mode === "general"
+
+export interface Jurisdiction {
+  level: "federal" | "state" | "tribal" | "territory" | "international";
+  region?: string;                             // e.g., "9th Circuit", "California", "S.D.N.Y."
+  court?: string;                              // e.g., "Supreme Court of California"
+  hierarchy_node_id?: string;                  // reserved for F5 court-hierarchy database wire-in
+}
+
+export interface Position {
+  id: string;                                  // stable within Frame; e.g., "pos_pro_x_8b21"
+  label: string;
+  description?: string;
+}
+
+// Premise.kind vocabulary table; consulted by V-ARG-3 at validation time.
+export const PREMISE_KIND_VOCABULARIES = {
+  legal:               ["stipulated", "found", "disputed", "procedural"],
+  general_academic:    ["empirical", "definitional", "normative", "stipulated"],
+  general_personal:    ["observation", "value", "assumption", "stipulated"],
+} as const;
+
+// Stream G F-001: G5 calibrated thresholds projection on FrameVersion.
+export interface BurdenThresholdMap {
+  preponderance: number;
+  clear_and_convincing: number;
+  beyond_reasonable_doubt: number;
+  scintilla: number;
+  substantial_evidence: number;
+  source: "default" | "g5_calibrated";
+  calibrated_from?: { standard_of_review: string; calibrated_at: string };
+}
+
+// Stream G refined LlmSettings (lives on Frame). The "opaque object" reservation in
+// Stream B B3 is now resolved by Stream G; this is the authoritative shape.
+export interface LlmSettings {
+  build_time_hooks_enabled: boolean;           // default true
+  runtime_hooks_enabled: boolean;              // default false in v1; runtime is deterministic
+  output_time_hooks_enabled: boolean;          // default true; G6 still requires user click
+  prompt_versions?: { [hook_name: string]: string };
+  per_hook_enabled?: { [hook_name: string]: boolean };
+  calibrated_thresholds?: BurdenThresholdMap;  // G5
+  invocations: HookInvocationRecord[];         // append-only audit log
+  provider_id?: string;
+}
+
+export interface HookInvocationRecord {
+  id: string;                                  // UUID v4
+  hook_id: HookId;
+  prompt_name: string;
+  prompt_version: string;                      // immutable once published
+  provider_id: string;
+  model_id: string;
+  input_hash: string;                          // SHA-256 of canonicalized input
+  raw_response?: string;                       // optional; large responses elided by config
+  decision: "accepted" | "edited" | "rejected";
+  final_value?: unknown;
+  target_node_ids?: NodeRef[];
+  target_field_paths?: string[];
+  invoked_at: string;
+  committed_at?: string;
+}
+
+export interface Frame {
+  id: FrameId;
+  slug?: string;
+  title: string;
+  description?: string;
+  mode: Mode;
+  flavor?: Flavor;                             // required when mode === "general"; forbidden otherwise
+  jurisdiction_default?: Jurisdiction;         // legal mode only
+  positions?: Position[];                      // general mode; required when frame has Conclusions (V-FR-10)
+  default_satisfaction_policies: { [K in NodeType]?: SatisfactionPolicy };
+  tags: string[];
+  pinned: boolean;                             // app-layer enforces max 8 pinned per user
+  created_at: string;
+  updated_at: string;
+  last_opened_at?: string;
+  current_version_id: FrameVersionId;
+  llm_settings?: LlmSettings;
+}
+
+export interface FrameVersion {
+  id: FrameVersionId;
+  frame_id: FrameId;
+  version_number: number;                      // monotonic, 1-indexed
+  parent_version_id?: FrameVersionId;
+  created_at: string;
+  created_by?: string;
+  change_summary?: string;                     // G13 hook commits here at build time
+  nodes: Node[];                               // full snapshot
+  edges: Edge[];                               // full snapshot
+  is_milestone: boolean;
+  llm_settings_snapshot?: {                    // F-001: G5 calibrated thresholds projection
+    calibrated_thresholds?: BurdenThresholdMap;
+  };
+}
+</code></pre>
+
+  <div class="file-header">// src/schema/session.ts</div>
+  <p>Argument-layer entities and the computed projections persisted on session. <code>NodeStatus</code>, <code>OpenGate</code>, <code>ConditionalOutput</code>, <code>ConfidenceBreakdown</code>, <code>ConditionalBranch</code>, and <code>BranchCondition</code> live here because they're stored on <code>ArgumentSession</code> and <code>ArgumentSessionVersion</code> — the schema is their canonical home. The runtime (Stream C / Contract 2) imports these from <code>@/schema</code> and produces them in <code>ComputeResult</code>; it does not re-declare them. <code>ArgumentSessionVersion</code> includes the optional <code>output_overrides</code> field per F-002 (resolved/APPROVED with notes): G6's prose rewrite lives in a parallel field; the canonical <code>ConditionalOutput.prose_summary</code> is preserved unchanged as the deterministic baseline.</p>
+
+<pre><code>import type { NodeRef, FrameId, FrameVersionId, SessionId, SessionVersionId, HookId } from "./identifiers";
+import type { FrameVersion, Mode } from "./frame";
+import type { Authority, Premise } from "./nodes";
+import type { Edge } from "./edges";
+
+export interface NodeStatus {
+  status: "open" | "satisfied" | "contested" | "foreclosed" | "not_applicable";
+  via?: Array&lt;"binding_authority" | "persuasive_authority" | "stipulation"
+              | "structural_resolution" | "default"&gt;;
+  evaluated_at: string;
+  failed_conditions?: string[];                // condition kinds that did not pass; populated when status === "open" or "contested"
+}
+
+export interface CheckpointResponse {
+  checkpoint_id: NodeRef;
+  selected_option_id: string;                  // references CheckpointOption.id within the target Checkpoint
+  premise_id: NodeRef;                         // the Premise that supplies this answer
+  answered_at: string;
+  notes?: string;
+}
+
+// Stream C amendment to B4. V-ARG-6/7/8 govern.
+export interface InterpretationSelection {
+  term_id: NodeRef;
+  selected_interpretation_ids: NodeRef[];      // usually one; multiple permitted to record alternative paths to the same Conclusion
+  supporting_premise_id?: NodeRef;
+  supporting_authority_id?: NodeRef;
+  notes?: string;
+  selected_at: string;
+}
+
+export interface BranchCondition {
+  gate_node_id: NodeRef;                       // the Checkpoint or Term whose answer determines the branch
+  required_value: string;                      // for Checkpoint: a CheckpointOption.id; for Term: an Interpretation.id
+  required_value_label: string;                // pre-rendered for display
+}
+
+export interface ConditionalBranch {
+  id: string;
+  conditions: BranchCondition[];
+  resulting_conclusion: NodeRef;
+  intermediate_path: NodeRef[];
+  prose: string;                               // deterministic prose for this branch
+}
+
+export interface OpenGate {
+  node_id: NodeRef;
+  reason: "no_premise" | "premise_contradicted" | "burden_unmet" | "authority_missing" | "structural";
+  prompt: string;
+}
+
+export interface ConfidenceBreakdown {
+  total_checkpoints_on_path: number;
+  satisfied_via_binding: number;
+  satisfied_via_persuasive: number;
+  satisfied_via_stipulation: number;
+  satisfied_via_structural: number;
+  contested: number;
+  open: number;
+}
+
+export interface ConditionalOutput {
+  shape: "determinate" | "conditional" | "contested" | "incomplete";
+
+  // Populated when shape === "determinate":
+  conclusion?: NodeRef;
+  primary_path?: NodeRef[];
+
+  // Populated when shape === "conditional":
+  branches?: ConditionalBranch[];
+
+  // Populated when shape === "contested":
+  contested_nodes?: NodeRef[];
+  best_inference?: NodeRef;                    // tentative; selected by the Stream C deterministic tiebreaker
+
+  // Populated when shape === "incomplete":
+  open_gates?: OpenGate[];
+
+  // Always populated:
+  prose_summary: string;                       // deterministic textual rendering; the default view (A9)
+  computed_at: string;
+  confidence_breakdown: ConfidenceBreakdown;
+}
+
+export interface ArgumentSession {
+  id: SessionId;
+  slug?: string;
+  frame_id: FrameId;
+  frame_version_id: FrameVersionId;
+  frame_version_snapshot: FrameVersion;        // embedded copy; insulates session from later frame edits
+  title: string;
+  description?: string;
+
+  premises: Premise[];                         // argument-layer nodes created in this session
+  argument_edges: Edge[];                      // ANSWERS / SUPPORTS / CONTRADICTS edges; argument layer only (V-EDGE-3)
+  session_authorities?: Authority[];           // Authorities introduced at runtime by Premise.authority_ref
+
+  checkpoint_responses: CheckpointResponse[];
+  interpretation_selections: InterpretationSelection[];   // Stream C amendment to B4
+
+  status_map: { [node_id: string]: NodeStatus };          // computed; updated on each premise change
+  output?: ConditionalOutput;                  // computed
+  active_path?: NodeRef[];                     // computed
+
+  frame_version_drift_warning?: string;        // populated lazily when underlying Frame has advanced
+
+  created_at: string;
+  updated_at: string;
+  current_version_id: SessionVersionId;
+}
+
+export interface ArgumentSessionVersion {
+  id: SessionVersionId;
+  session_id: SessionId;
+  version_number: number;
+  parent_version_id?: SessionVersionId;
+  created_at: string;
+  created_by?: string;
+  change_summary?: string;
+  premises: Premise[];
+  argument_edges: Edge[];
+  session_authorities?: Authority[];
+  checkpoint_responses: CheckpointResponse[];
+  interpretation_selections: InterpretationSelection[];   // Stream C amendment
+  is_milestone: boolean;
+
+  // F-002: G6 prose-rewrite carrier. Canonical ConditionalOutput.prose_summary is unchanged.
+  output_overrides?: {
+    rewritten_prose?: string;
+    rewritten_at?: string;
+    rewritten_by_hook?: HookId;
+  };
+}
+</code></pre>
+
+  <div class="file-header">// src/schema/satisfaction-policy.ts</div>
+  <p>The "options box" framework per Article II § 3. <code>SatisfactionPolicy</code> is AND-by-default with at most one explicit AnyOf group; no nesting, no NOT (negations are explicit conditions like <code>not_contradicted</code>, <code>not_distinguished</code>, <code>not_foreclosed</code>). The required field is named <code>all_of</code>, parallel to <code>any_of</code>. The <code>Condition</code> type is a discriminated union with <code>kind</code> as the discriminator (parameterless conditions still carry a <code>kind</code> field; the parameterized <code>premise_kind_in</code> and <code>burden_met</code> add their own param fields). The 12-condition library is closed at v1; adding conditions requires a Stream B amendment per Stream B B6 governance.</p>
+
+<pre><code>import type { BurdenLevel } from "./nodes";    // re-exported here for module symmetry
+export type { BurdenLevel };
+
+export type Condition =
+  // Structural
+  | { kind: "premise_attached" }
+  | { kind: "interpretation_selected" }
+  | { kind: "all_children_resolved" }
+  | { kind: "path_complete" }
+
+  // Quality
+  | { kind: "not_contradicted" }
+  | { kind: "premise_kind_in"; kinds: string[] }
+  | { kind: "burden_met"; level: BurdenLevel }
+
+  // Authority (legal-only; offered as opt-in for academic flavor)
+  | { kind: "authority_required" }
+  | { kind: "authority_binding" }
+  | { kind: "not_distinguished" }
+
+  // Procedural
+  | { kind: "standard_of_review_applied" }
+
+  // Universal
+  | { kind: "not_foreclosed" };
+
+export interface SatisfactionPolicy {
+  all_of: Condition[];                         // required; AND-combined; may be empty
+  any_of?: Condition[];                        // optional; max one AnyOf group; no nesting (per A3)
+}
+
+// Per-node-type defaults seeded at frame creation. Per A3, only Checkpoint, RootQuestion,
+// SubQuestion, and Interpretation may carry per-instance overrides via Node.options_box;
+// other types use the frame default unconditionally. Premise and Authority have no policy.
+export const DEFAULT_SATISFACTION_POLICIES: Readonly&lt;{
+  Checkpoint: SatisfactionPolicy;
+  Interpretation: SatisfactionPolicy;
+  Term: SatisfactionPolicy;
+  SubQuestion: SatisfactionPolicy;
+  RootQuestion: SatisfactionPolicy;
+  Conclusion: SatisfactionPolicy;
+  LogicalGate: SatisfactionPolicy;
+}&gt; = {
+  Checkpoint: {
+    all_of: [
+      { kind: "premise_attached" },
+      { kind: "not_contradicted" },
+      { kind: "burden_met", level: "preponderance" },
+      { kind: "not_foreclosed" },
+    ],
+  },
+  Interpretation: {
+    all_of: [{ kind: "interpretation_selected" }, { kind: "not_foreclosed" }],
+  },
+  Term: {
+    all_of: [{ kind: "interpretation_selected" }, { kind: "not_foreclosed" }],
+  },
+  SubQuestion: {
+    all_of: [{ kind: "all_children_resolved" }, { kind: "not_foreclosed" }],
+  },
+  RootQuestion: {
+    all_of: [{ kind: "all_children_resolved" }, { kind: "not_foreclosed" }],
+  },
+  Conclusion: {
+    all_of: [{ kind: "path_complete" }, { kind: "not_foreclosed" }],
+  },
+  LogicalGate: {
+    // gate_type semantics drive the rest; the frame default carries only not_foreclosed
+    all_of: [{ kind: "not_foreclosed" }],
+  },
+};
+
+// Override resolution: per A3, the per-instance options_box (if present on Checkpoint,
+// RootQuestion, SubQuestion, or Interpretation) replaces the frame-default policy entirely.
+// Merging is intentionally NOT supported. This function is the single point of resolution.
+export function resolveEffectivePolicy(
+  node_type: keyof typeof DEFAULT_SATISFACTION_POLICIES,
+  per_instance: SatisfactionPolicy | undefined,
+  frame_default: SatisfactionPolicy | undefined,
+): SatisfactionPolicy {
+  if (per_instance) return per_instance;
+  if (frame_default) return frame_default;
+  return DEFAULT_SATISFACTION_POLICIES[node_type];
+}
+</code></pre>
+
+  <div class="file-header">// src/schema/validation-rules.ts</div>
+  <p>The full validation-rule registry. Every rule is a <code>ValidationRule</code> instance carrying its stable id (e.g., <code>V-FR-1</code>), its severity (<code>error</code> blocks Frame → Argument transition; <code>warning</code> advises only), its description, and an <code>evaluate</code> function returning <code>ValidationResult[]</code>. The aggregator <code>runValidation()</code> walks the registry in id order (lexicographic on the rule id, which is deterministic given the fixed naming convention) and concatenates results. Stream H wires this into the C5 frame-completeness check; Stream D D3 consults it for mode-transition gating.</p>
+
+<pre><code>import type { NodeRef, EdgeRef } from "./identifiers";
+import type { FrameVersion } from "./frame";
+import type { ArgumentSession } from "./session";
+
+export type Severity = "error" | "warning";
+
+export interface ValidationResult {
+  rule_id: string;
+  severity: Severity;
+  node_id?: NodeRef;
+  edge_id?: EdgeRef;
+  message: string;
+}
+
+export interface ValidationRule {
+  id: string;                                  // e.g., "V-FR-1"
+  severity: Severity;
+  description: string;
+  evaluate(frame: FrameVersion, session?: ArgumentSession): ValidationResult[];
+}
+
+// Aggregator. Walks rules in lexicographic id order for determinism.
+export function runValidation(
+  frame: FrameVersion,
+  session?: ArgumentSession,
+  rules: ValidationRule[] = VALIDATION_RULES,
+): ValidationResult[] {
+  const sorted = [...rules].sort((a, b) =&gt; a.id.localeCompare(b.id));
+  const out: ValidationResult[] = [];
+  for (const r of sorted) out.push(...r.evaluate(frame, session));
+  return out;
+}
+
+// The full registry. The coding session implements each `evaluate` to the rule
+// description below; tests in tests/schema/validation-rules.test.ts assert each
+// fires on hand-built malformed fixtures.
+export const VALIDATION_RULES: ReadonlyArray&lt;ValidationRule&gt; = [
+  // ... (declared below, grouped by family for readability)
+] as const;
+</code></pre>
+
+  <h4>Frame-level rules (V-FR-1..12)</h4>
+  <p>The descriptions below are the <em>contract</em>; the coding session writes <code>evaluate</code> bodies that satisfy them. Severity follows Stream B B6.</p>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td><code>V-FR-1</code></td><td>error</td><td>The frame has exactly one RootQuestion.</td></tr>
+    <tr><td><code>V-FR-2</code></td><td>error</td><td>Every non-Root node has at least one incoming edge (no orphans). Authority and Premise nodes are exempt; they may exist disconnected (Authority on a frame waiting to be cited; Premise pre-staged in a session pool).</td></tr>
+    <tr><td><code>V-FR-3</code></td><td>error</td><td>Every Term has at least two outgoing INTERPRETED_AS edges, OR a non-null <code>linked_to</code>. A Term with one Interpretation and no link is a frame error: there is no choice to make.</td></tr>
+    <tr><td><code>V-FR-4</code></td><td>error</td><td>Every Checkpoint is reachable from RootQuestion through frame-layer edges. Reachability is computed in lexicographic-id order.</td></tr>
+    <tr><td><code>V-FR-5</code></td><td>error</td><td>Every Conclusion is reachable from RootQuestion.</td></tr>
+    <tr><td><code>V-FR-6</code></td><td>error</td><td>The frame graph (excluding FORECLOSES, BINDING_IN, CITES, DISTINGUISHED_BY) is a DAG. No structural cycles in the resolution flow.</td></tr>
+    <tr><td><code>V-FR-7</code></td><td>warning</td><td>Legal-mode frame has at least one SubQuestion with <code>is_jurisdictional: true</code>. Per A8, warning, not blocker.</td></tr>
+    <tr><td><code>V-FR-8</code></td><td>error</td><td>Every path from RootQuestion eventually terminates at a Conclusion (no dangling Term/Checkpoint that doesn't continue).</td></tr>
+    <tr><td><code>V-FR-9</code></td><td>error</td><td>No "compound" Checkpoints. Detection is best-effort and primarily a warning unless heuristic confidence is high; v1 evaluator emits warning severity for the heuristic and the rule's nominal "error" severity is only fired by an explicit author marking (deferred). v1 implementation: emit a warning whenever a Checkpoint's <code>question</code> contains " and " or " or " between two clause-like spans, modulo a stop-word list.</td></tr>
+    <tr><td><code>V-FR-10</code></td><td>error</td><td>(general mode) Every Conclusion's <code>direction.position_id</code> resolves to an entry in <code>Frame.positions</code>. A Position cannot be deleted while referenced.</td></tr>
+    <tr><td><code>V-FR-11</code></td><td>error</td><td>(legal mode) Every Authority with <code>is_binding: true</code> has a non-null <code>jurisdiction</code>.</td></tr>
+    <tr><td><code>V-FR-12</code></td><td>warning</td><td>Every Interpretation with no incoming CITES has at least one explanatory <code>notes</code> field.</td></tr>
+  </table>
+
+  <h4>Node-level rules (V-NODE-1..9)</h4>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td><code>V-NODE-1</code></td><td>error</td><td>Every NodeRef in any field resolves to a node within the same FrameVersion (frame-layer) or ArgumentSession (argument-layer). Cross-layer refs are allowed only argument → frame.</td></tr>
+    <tr><td><code>V-NODE-2</code></td><td>error</td><td>Every node's <code>type</code> matches the structural shape of its fields (no Conclusion missing <code>direction</code>, no Term missing <code>order</code>, etc.). Verified by exhaustive switch on <code>type</code> and structural assertion per variant.</td></tr>
+    <tr><td><code>V-NODE-3</code></td><td>error</td><td>Term <code>linked_to</code> chains terminate (no cycles). Walk by lexicographic id.</td></tr>
+    <tr><td><code>V-NODE-4</code></td><td>error</td><td>Term <code>linked_to</code> targets a Term within the same FrameVersion.</td></tr>
+    <tr><td><code>V-NODE-5</code></td><td>error</td><td>Checkpoint with <code>answer_type: "boolean"</code> has exactly two options.</td></tr>
+    <tr><td><code>V-NODE-6</code></td><td>error</td><td>Checkpoint with <code>answer_type: "graded"</code> has exactly three options.</td></tr>
+    <tr><td><code>V-NODE-7</code></td><td>error</td><td>Checkpoint with <code>answer_type: "multiple_choice"</code> has at least two options.</td></tr>
+    <tr><td><code>V-NODE-8</code></td><td>error</td><td>Every CheckpointOption with <code>satisfies: true</code> has a non-null <code>target_node_id</code>, OR the option's target is a Conclusion (terminal answer).</td></tr>
+    <tr><td><code>V-NODE-9</code></td><td>error</td><td>Every CheckpointOption.id is unique within its parent Checkpoint.</td></tr>
+  </table>
+
+  <h4>Edge-level rules (V-EDGE-1..4)</h4>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td><code>V-EDGE-1</code></td><td>error</td><td>Every edge's <code>source</code> and <code>target</code> exist and are of types permitted for that edge type per <code>VALID_EDGE_PAIRS</code>.</td></tr>
+    <tr><td><code>V-EDGE-2</code></td><td>error</td><td>No duplicate edges: at most one edge of a given <code>type</code> between a given (source, target) pair, except for FORECLOSES (which may target multiple distinct nodes from the same source via multiple edges, each with its own target). SUPPORTS/CONTRADICTS edges from the same Premise to the same target with distinct weights are collapsed at validation time to one (warning emitted).</td></tr>
+    <tr><td><code>V-EDGE-3</code></td><td>error</td><td>Argument-layer edges (ANSWERS, SUPPORTS, CONTRADICTS) live in an ArgumentSession's <code>argument_edges</code>, not in a FrameVersion's <code>edges</code>.</td></tr>
+    <tr><td><code>V-EDGE-4</code></td><td>error</td><td>Frame-layer edges live in a FrameVersion's <code>edges</code>, not in an ArgumentSession.</td></tr>
+  </table>
+
+  <h4>LogicalGate rules (V-GATE-1..6)</h4>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td><code>V-GATE-1</code></td><td>error</td><td>AND and OR gates have at least 2 entries in <code>inputs</code>.</td></tr>
+    <tr><td><code>V-GATE-2</code></td><td>error</td><td>NOT gates carry exactly one <code>input</code> NodeRef (the named slot).</td></tr>
+    <tr><td><code>V-GATE-3</code></td><td>error</td><td>IF_THEN gates carry exactly one <code>antecedent</code> and one <code>consequent</code> (named slots).</td></tr>
+    <tr><td><code>V-GATE-4</code></td><td>error</td><td>UNLESS gates carry exactly one <code>main</code> and one <code>exception</code> (named slots).</td></tr>
+    <tr><td><code>V-GATE-5</code></td><td>error</td><td>No gate input is a Term node (Terms multi-resolve into Interpretations; use a specific Interpretation).</td></tr>
+    <tr><td><code>V-GATE-6</code></td><td>error</td><td>No gate input is a Premise or Authority (those are the wrong layer).</td></tr>
+  </table>
+
+  <h4>Argument-layer rules (V-ARG-1..8)</h4>
+  <p>V-ARG-6/7/8 are the Stream C amendment to B4 governing <code>InterpretationSelection</code>.</p>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td><code>V-ARG-1</code></td><td>error</td><td>Every CheckpointResponse references a Checkpoint that exists in <code>frame_version_snapshot</code>.</td></tr>
+    <tr><td><code>V-ARG-2</code></td><td>error</td><td>Every Premise answering a Checkpoint with <code>requires_authority: true</code> has a non-null <code>authority_ref</code>.</td></tr>
+    <tr><td><code>V-ARG-3</code></td><td>error</td><td>Every Premise has a <code>kind</code> drawn from the vocabulary corresponding to the frame's <code>mode</code>/<code>flavor</code>, per <code>PREMISE_KIND_VOCABULARIES</code> in <code>frame.ts</code>.</td></tr>
+    <tr><td><code>V-ARG-4</code></td><td>error</td><td>Every <code>authority_ref</code> resolves to an Authority node in either <code>frame_version_snapshot</code> or <code>session_authorities</code>.</td></tr>
+    <tr><td><code>V-ARG-5</code></td><td>warning</td><td>If a Checkpoint has both ANSWERS and CONTRADICTS edges from different Premises, the status determiner flags the node as contested; warning surface only — this is a normal state.</td></tr>
+    <tr><td><code>V-ARG-6</code></td><td>error</td><td>Every selected interpretation in an InterpretationSelection is a child of the named term via INTERPRETED_AS in <code>frame_version_snapshot</code>.</td></tr>
+    <tr><td><code>V-ARG-7</code></td><td>warning</td><td>Every Term reachable from the active path has at least one InterpretationSelection record.</td></tr>
+    <tr><td><code>V-ARG-8</code></td><td>warning</td><td>Providing an InterpretationSelection record for a Term whose <code>linked_to</code> is non-null is allowed but warns: the linked target's selection takes precedence at runtime.</td></tr>
+  </table>
+
+  <div class="file-header">// src/schema/envelope.ts</div>
+  <p>JSON envelopes for export and import. Both envelopes carry <code>schema_version</code> as the dispatch key for migrations (see <code>migrations.ts</code>). <code>ArgumentSessionExport</code> may optionally embed the <code>FrameExport</code> for standalone-shareable sessions; the alternative is a session export that references a frame exported separately.</p>
+
+<pre><code>import type { Frame, FrameVersion } from "./frame";
+import type { ArgumentSession, ArgumentSessionVersion } from "./session";
+
+export const CURRENT_APP_VERSION = "1.0.0";   // bumped per release; consulted by importers for diagnostics
+
+export interface FrameExport {
+  schema_version: number;                      // matches CURRENT_SCHEMA_VERSION when fresh
+  app_version: string;
+  exported_at: string;
+  frame: Frame;
+  current_version: FrameVersion;
+  history?: FrameVersion[];                    // optional; omitted by default for size
+}
+
+export interface ArgumentSessionExport {
+  schema_version: number;
+  app_version: string;
+  exported_at: string;
+  session: ArgumentSession;
+  current_version: ArgumentSessionVersion;
+  history?: ArgumentSessionVersion[];
+  embedded_frame_export?: FrameExport;         // when sharing a session standalone
+}
+</code></pre>
+
+  <div class="file-header">// src/schema/migrations.ts</div>
+  <p>The schema-version migration mechanism. v1 ships at <code>CURRENT_SCHEMA_VERSION = 1</code> with an empty <code>migrations</code> table — there is nothing to migrate from at v1. The mechanism is in place so future schema bumps walk a path of pure <code>(unknown) =&gt; unknown</code> functions chained from the document's <code>schema_version</code> to <code>CURRENT_SCHEMA_VERSION</code>. Each migration is required to be referentially transparent (no clock reads, no environment branches) so that exported documents migrate identically across machines and runs.</p>
+
+<pre><code>export type Migration = (input: unknown) =&gt; unknown;
+
+export interface MigrationRegistry {
+  readonly current_schema_version: number;
+  // Map from source version → migration that produces source+1.
+  // Walking the registry from `from` to `current_schema_version` chains the migrations.
+  migrations: { [from: number]: Migration };
+}
+
+export const CURRENT_SCHEMA_VERSION = 1;
+
+export const MIGRATION_REGISTRY: MigrationRegistry = {
+  current_schema_version: CURRENT_SCHEMA_VERSION,
+  migrations: {
+    // empty at v1; future entries: 1: migrate_v1_to_v2, 2: migrate_v2_to_v3, ...
+  },
+};
+
+export class UnknownSchemaVersionError extends Error {
+  constructor(public readonly seen: number) {
+    super(`Unknown schema_version ${seen}; no migration path to ${CURRENT_SCHEMA_VERSION}`);
+    this.name = "UnknownSchemaVersionError";
+  }
+}
+
+/**
+ * Migrate an envelope of unknown shape carrying schema_version up to CURRENT_SCHEMA_VERSION.
+ * Returns the migrated envelope. Throws UnknownSchemaVersionError when no path exists.
+ *
+ * Pure: no clock reads, no global state. The registry is the only source of behavior.
+ */
+export function migrate(
+  envelope: { schema_version: number } &amp; Record&lt;string, unknown&gt;,
+  registry: MigrationRegistry = MIGRATION_REGISTRY,
+): unknown {
+  if (envelope.schema_version === registry.current_schema_version) return envelope;
+  if (envelope.schema_version &gt; registry.current_schema_version) {
+    throw new UnknownSchemaVersionError(envelope.schema_version);
+  }
+  let current: unknown = envelope;
+  let v = envelope.schema_version;
+  while (v &lt; registry.current_schema_version) {
+    const step = registry.migrations[v];
+    if (!step) throw new UnknownSchemaVersionError(envelope.schema_version);
+    current = step(current);
+    v += 1;
+  }
+  // Stamp the new schema_version onto the result.
+  if (typeof current === "object" &amp;&amp; current !== null) {
+    (current as Record&lt;string, unknown&gt;).schema_version = registry.current_schema_version;
+  }
+  return current;
+}
+</code></pre>
+
+  <h2>Mode-aware schema behavior summary</h2>
+  <p>This section restates the mode/flavor surface visibility from <code>current_state.html</code> "Mode-specific surface visibility" specifically as it affects the schema layer. It is a reading aid for the coding session implementing schema; it does not introduce new commitments.</p>
+
+  <h3>Legal mode</h3>
+  <p>The following fields are <em>active</em> at the schema layer in legal mode (carry runtime meaning) and either ignored or absent in general mode: <code>Frame.jurisdiction_default</code>, <code>SubQuestion.is_jurisdictional</code>, <code>RootQuestion.standard_of_review</code>, <code>SubQuestion.standard_of_review</code>, <code>Interpretation.jurisdiction_override</code>, <code>Checkpoint.requires_authority</code>, <code>Checkpoint.burden_level</code>, <code>Authority.{court, year, holding_summary, is_holding, is_binding, jurisdiction, binding_in}</code>, <code>Conclusion.remedy</code>, the <code>{ kind: "legal" }</code> branch of <code>ConclusionDirection</code>. EdgeTypes <code>BINDING_IN</code> (as the embedded relation) and <code>DISTINGUISHED_BY</code> are active. Legal-only Conditions in the satisfaction-policy library: <code>authority_required</code>, <code>authority_binding</code>, <code>not_distinguished</code>, <code>standard_of_review_applied</code>. Validation rules <code>V-FR-7</code>, <code>V-FR-11</code>, <code>V-ARG-2</code> are active. Premise <code>kind</code> vocabulary: <code>PREMISE_KIND_VOCABULARIES.legal</code>.</p>
+
+  <h3>General mode</h3>
+  <p>All legal-only fields are present on the schema (the schema is mode-agnostic at the type level — fields don't disappear from <code>Node</code> shapes when the frame switches mode) but are runtime-inactive: validators ignore them, the runtime does not consult them, and the editor hides them. <code>Frame.flavor</code> is required (V-NODE-2 enforces). <code>Frame.positions</code> is required when the frame has Conclusions (V-FR-10). <code>Conclusion.direction</code> uses the <code>{ kind: "general", position_id }</code> branch.</p>
+
+  <h3>Personal flavor</h3>
+  <p>Authority is hidden by default in the editor (per-frame opt-in to enable); when enabled, the UI label is "Source." The schema name remains <code>Authority</code>. Legal Authority fields stay hidden (and absent at write-time). Premise <code>kind</code> vocabulary: <code>PREMISE_KIND_VOCABULARIES.general_personal</code>. CITES is visible only when Authority is enabled. DISTINGUISHED_BY is hidden. The <code>authority_required</code> condition is not offered in the options-box editor.</p>
+
+  <h3>Academic flavor</h3>
+  <p>Authority is visible by default with the academic field set (<code>author</code>, <code>venue</code>, <code>position</code>); label "Authority." Premise <code>kind</code> vocabulary: <code>PREMISE_KIND_VOCABULARIES.general_academic</code>. CITES and DISTINGUISHED_BY both visible. The <code>authority_required</code> condition is offered as opt-in. Burden-level UI relabels for idiom (no schema change; see Stream D D5).</p>
+
+  <h3>Schema-layer guarantee</h3>
+  <p>The schema is a <em>superset</em> of every mode's active fields. Switching a frame's mode never breaks a schema-valid document: legal-only fields persist as inactive metadata, and reactivate on switching back. The validators surface mode mismatches as <em>warnings</em> at the schema layer (e.g., a legal-only field set on a general-mode frame is a soft warning, not a hard error) so frames don't break when their mode is changed. Hard mode-transition gating lives at the Stream D D3 layer (<code>attemptTransition</code> in <code>@/modes</code>) and operates on the <code>Conclusion.direction</code> mismatch specifically.</p>
+
+  <h2>Vitest acceptance tests</h2>
+  <p>Three test files under <code>tests/schema/</code>. The coding session implements each module file and the tests below pass. Tests run under the frozen-clock Vitest configuration shipped in I.1's skeleton; no test reads the real clock.</p>
+
+  <h3><code>tests/schema/round-trip.test.ts</code></h3>
+  <p>Round-trip a representative legal-mode FrameVersion (with at least one of every node type, every edge type that admits a frame-layer instantiation, an InterpretationSelection on a session, and a populated <code>llm_settings_snapshot</code>) through serialize → migrate → validate, asserting structural identity.</p>
+<pre><code>import { describe, it, expect } from "vitest";
+import {
+  migrate, MIGRATION_REGISTRY, CURRENT_SCHEMA_VERSION,
+  runValidation, type FrameExport, type ArgumentSessionExport,
+} from "@/schema";
+import { buildLegalModeFixture } from "./fixtures/legal-mode-fixture";
+
+describe("schema/round-trip", () =&gt; {
+  it("a legal-mode FrameExport round-trips identically through JSON serialize/parse", () =&gt; {
+    const exp: FrameExport = buildLegalModeFixture().frame_export;
+    const json = JSON.stringify(exp);
+    const parsed = JSON.parse(json) as FrameExport;
+    expect(parsed).toStrictEqual(exp);
+  });
+
+  it("a current-version envelope passes migrate() unchanged", () =&gt; {
+    const exp: FrameExport = buildLegalModeFixture().frame_export;
+    const migrated = migrate(exp as unknown as { schema_version: number } &amp; Record&lt;string, unknown&gt;,
+                             MIGRATION_REGISTRY);
+    expect(migrated).toStrictEqual(exp);
+  });
+
+  it("a current-version envelope passes runValidation() with zero errors", () =&gt; {
+    const { frame_export, session_export } = buildLegalModeFixture();
+    const results = runValidation(frame_export.current_version, session_export.session);
+    const errors = results.filter(r =&gt; r.severity === "error");
+    expect(errors).toEqual([]);
+  });
+
+  it("an ArgumentSessionExport with embedded frame round-trips identically", () =&gt; {
+    const { session_export } = buildLegalModeFixture();
+    const exp: ArgumentSessionExport = session_export;
+    expect(JSON.parse(JSON.stringify(exp))).toStrictEqual(exp);
+  });
+
+  it("schema_version on a fresh export equals CURRENT_SCHEMA_VERSION", () =&gt; {
+    const { frame_export } = buildLegalModeFixture();
+    expect(frame_export.schema_version).toBe(CURRENT_SCHEMA_VERSION);
+  });
+});
+</code></pre>
+
+  <h3><code>tests/schema/validation-rules.test.ts</code></h3>
+  <p>Asserts that every rule in V-FR-1..12, V-NODE-1..9, V-EDGE-1..4, V-GATE-1..6, V-ARG-1..8 fires on a hand-built malformed fixture targeted at exactly that rule, AND that a clean reference fixture produces zero results from that rule. The pattern below is one row in a parameterized test; the coding session populates the table for all 39 rules.</p>
+<pre><code>import { describe, it, expect } from "vitest";
+import { runValidation, VALIDATION_RULES, type FrameVersion } from "@/schema";
+import * as fixtures from "./fixtures/validation-fixtures";
+
+interface RuleCase {
+  rule_id: string;
+  malformed: () =&gt; { frame: FrameVersion; session?: import("@/schema").ArgumentSession };
+  expected_count_min: number;                  // typically 1
+}
+
+const CASES: RuleCase[] = [
+  { rule_id: "V-FR-1",  malformed: fixtures.frameWithTwoRoots, expected_count_min: 1 },
+  { rule_id: "V-FR-2",  malformed: fixtures.frameWithOrphanSubQuestion, expected_count_min: 1 },
+  { rule_id: "V-FR-3",  malformed: fixtures.termWithOneInterpretationNoLink, expected_count_min: 1 },
+  // ... entries for V-FR-4..12, V-NODE-1..9, V-EDGE-1..4, V-GATE-1..6, V-ARG-1..8
+];
+
+describe("schema/validation-rules", () =&gt; {
+  it("the registry contains every documented rule id exactly once", () =&gt; {
+    const ids = VALIDATION_RULES.map(r =&gt; r.id);
+    const expected = [
+      "V-FR-1","V-FR-2","V-FR-3","V-FR-4","V-FR-5","V-FR-6","V-FR-7","V-FR-8",
+      "V-FR-9","V-FR-10","V-FR-11","V-FR-12",
+      "V-NODE-1","V-NODE-2","V-NODE-3","V-NODE-4","V-NODE-5","V-NODE-6","V-NODE-7","V-NODE-8","V-NODE-9",
+      "V-EDGE-1","V-EDGE-2","V-EDGE-3","V-EDGE-4",
+      "V-GATE-1","V-GATE-2","V-GATE-3","V-GATE-4","V-GATE-5","V-GATE-6",
+      "V-ARG-1","V-ARG-2","V-ARG-3","V-ARG-4","V-ARG-5","V-ARG-6","V-ARG-7","V-ARG-8",
+    ];
+    expect(new Set(ids)).toEqual(new Set(expected));
+    expect(ids.length).toBe(expected.length);
+  });
+
+  it("runValidation walks rules in deterministic lexicographic id order", () =&gt; {
+    // Two runs over the same input produce identical results in identical order.
+    const { frame } = fixtures.frameWithMultipleErrors();
+    const a = runValidation(frame);
+    const b = runValidation(frame);
+    expect(a).toStrictEqual(b);
+  });
+
+  describe.each(CASES)("rule %s", ({ rule_id, malformed, expected_count_min }) =&gt; {
+    it(`fires on its targeted malformed fixture`, () =&gt; {
+      const { frame, session } = malformed();
+      const results = runValidation(frame, session);
+      const matches = results.filter(r =&gt; r.rule_id === rule_id);
+      expect(matches.length).toBeGreaterThanOrEqual(expected_count_min);
+    });
+
+    it(`does not fire on the clean reference fixture`, () =&gt; {
+      const { frame, session } = fixtures.cleanReference();
+      const results = runValidation(frame, session);
+      const matches = results.filter(r =&gt; r.rule_id === rule_id);
+      expect(matches).toEqual([]);
+    });
+  });
+});
+</code></pre>
+
+  <h3><code>tests/schema/type-narrowing.test.ts</code></h3>
+  <p>Type-level assertions that the discriminated unions narrow correctly end-to-end. These are compile-time tests: TypeScript's <code>satisfies</code> operator and <code>@ts-expect-error</code> annotations carry the load. The runtime body can be a no-op; the file's purpose is to fail typecheck when the union contracts are broken.</p>
+<pre><code>import { describe, it, expect } from "vitest";
+import {
+  isCheckpoint, isLogicalGate, isAndGate, isIfThenGate, isUnlessGate,
+  isBooleanEvaluable,
+  type Node, type LogicalGate, type Edge, type Condition,
+} from "@/schema";
+
+describe("schema/type-narrowing", () =&gt; {
+  it("Node type guards narrow to the per-type interface", () =&gt; {
+    function example(n: Node) {
+      if (isCheckpoint(n)) {
+        // n is Checkpoint here; the answer_type field is accessible.
+        const at: "boolean" | "multiple_choice" | "graded" = n.answer_type;
+        return at;
+      }
+      if (isLogicalGate(n)) {
+        // n is LogicalGate here. Sub-narrow on gate_type:
+        if (isAndGate(n))    { const _x: import("@/schema").NodeRef[] = n.inputs; return _x; }
+        if (isIfThenGate(n)) { const _a: import("@/schema").NodeRef = n.antecedent; return _a; }
+        if (isUnlessGate(n)) { const _m: import("@/schema").NodeRef = n.main; return _m; }
+      }
+      return null;
+    }
+    expect(typeof example).toBe("function");
+  });
+
+  it("LogicalGate sub-discriminator exhausts via switch on gate_type", () =&gt; {
+    function exhaust(g: LogicalGate): string {
+      switch (g.gate_type) {
+        case "AND":     return `and-${g.inputs.length}`;
+        case "OR":      return `or-${g.inputs.length}`;
+        case "NOT":     return `not-${g.input}`;
+        case "IF_THEN": return `if-${g.antecedent}-${g.consequent}`;
+        case "UNLESS":  return `unless-${g.main}-${g.exception}`;
+        // No `default` — exhaustiveness is assured by the union.
+      }
+    }
+    expect(typeof exhaust).toBe("function");
+  });
+
+  it("Edge discriminator exhausts via switch on type", () =&gt; {
+    function exhaust(e: Edge): string {
+      switch (e.type) {
+        case "DECOMPOSES_INTO":
+        case "TURNS_ON":
+        case "INTERPRETED_AS":
+        case "GATES":
+        case "BINDING_IN":
+          return e.type;
+        case "LEADS_TO":         return e.condition ?? "leads_to";
+        case "FORECLOSES":       return e.scope ?? "moot";
+        case "ANSWERS":          return e.selected_option_id;
+        case "SUPPORTS":
+        case "CONTRADICTS":      return e.weight ?? "unweighted";
+        case "CITES":            return e.strength ?? "background";
+        case "DISTINGUISHED_BY": return e.reasoning ?? "";
+      }
+    }
+    expect(typeof exhaust).toBe("function");
+  });
+
+  it("Condition discriminator exhausts via switch on kind", () =&gt; {
+    function exhaust(c: Condition): string {
+      switch (c.kind) {
+        case "premise_attached":
+        case "interpretation_selected":
+        case "all_children_resolved":
+        case "path_complete":
+        case "not_contradicted":
+        case "authority_required":
+        case "authority_binding":
+        case "not_distinguished":
+        case "standard_of_review_applied":
+        case "not_foreclosed":
+          return c.kind;
+        case "premise_kind_in":  return `kinds:${c.kinds.join(",")}`;
+        case "burden_met":       return `burden:${c.level}`;
+      }
+    }
+    expect(typeof exhaust).toBe("function");
+  });
+
+  it("isBooleanEvaluable reflects the V-GATE-5/6 input policy", () =&gt; {
+    // Sanity: the predicate considers Checkpoint, Interpretation, SubQuestion, RootQuestion, LogicalGate true; others false.
+    expect(typeof isBooleanEvaluable).toBe("function");
+  });
+});
+</code></pre>
+
+  <h3>Test fixtures</h3>
+  <p>Two fixture modules under <code>tests/schema/fixtures/</code>. The coding session implements them; the spec fixes their public surface so tests above compile.</p>
+<pre><code>// tests/schema/fixtures/legal-mode-fixture.ts
+import type { FrameExport, ArgumentSessionExport } from "@/schema";
+export function buildLegalModeFixture(): {
+  frame_export: FrameExport;
+  session_export: ArgumentSessionExport;
+};
+
+// tests/schema/fixtures/validation-fixtures.ts
+import type { FrameVersion, ArgumentSession } from "@/schema";
+type Bundle = { frame: FrameVersion; session?: ArgumentSession };
+export function cleanReference(): Bundle;
+export function frameWithTwoRoots(): Bundle;
+export function frameWithOrphanSubQuestion(): Bundle;
+export function termWithOneInterpretationNoLink(): Bundle;
+export function frameWithMultipleErrors(): Bundle;
+// ... one builder per validation rule under test (39 total)
+</code></pre>
+
+  <h2>Self-review (Article VIII § 4)</h2>
+
+  <h3>Architectural commitments (Article II)</h3>
+  <ul>
+    <li><strong>§ 1 Frame/Argument Split.</strong> Honored. <code>frame.ts</code> and <code>session.ts</code> are separate files; <code>NodeBase.layer</code> is the cheap-filter discriminator; argument-layer entities are siblings on <code>ArgumentSession</code> rather than embedded in FrameVersion. Cross-layer references (Premise → Authority on either layer; Premise → frame Checkpoint via ANSWERS edge) are allowed only argument → frame, enforced by V-NODE-1.</li>
+    <li><strong>§ 2 Determinism.</strong> Honored at the schema layer. <code>runValidation</code> walks rules in lexicographic id order; <code>migrate</code> walks the registry deterministically; no schema function reads the clock or environment. The schema module imports nothing from the application codebase, so the runtime boundary is naturally maintained when other modules import it.</li>
+    <li><strong>§ 3 Per-Node Satisfaction Criteria.</strong> Honored. <code>SatisfactionPolicy</code> is the central type; <code>DEFAULT_SATISFACTION_POLICIES</code> is the per-node-type defaults; <code>resolveEffectivePolicy</code> is the single resolution point for per-instance overrides on the four allowed node types.</li>
+    <li><strong>§ 4 Independent Versioning.</strong> Honored. <code>FrameVersion</code> and <code>ArgumentSessionVersion</code> are independent shapes with independent <code>parent_version_id</code> chains and independent <code>version_number</code> sequences. Sessions embed a frame snapshot rather than reference a live frame.</li>
+    <li><strong>§ 5 Human-Readable Structure.</strong> Honored. The discriminated unions make the logic of a frame readable from <code>nodes</code> and <code>edges</code> directly: every constraint a node imposes is on the node, every relation between nodes is in the edge table. <code>Term.order</code> is documented as foreclosure-resolution + UI default ordering only — it is not a silent coupling variable.</li>
+    <li><strong>§ 6 Use-Case Commitment.</strong> Honored. The schema is a superset of legal-mode and general-mode (with personal/academic flavors); legal-only fields are present on every Frame regardless of mode but are runtime-inactive in non-legal mode. Mode switching never invalidates a previously valid document.</li>
+  </ul>
+
+  <h3>Quality criteria (Article III)</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> The spec compiles directly from Stream B's canonical shapes and incorporates the F-001 / F-002 register-resolved schema extensions. Validation rules are restated in full from B6 plus the Stream C amendment to B4.</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> Authority, jurisdiction, BINDING_IN (as embedded relation), DISTINGUISHED_BY, burden_level, standard_of_review, the legal-only Conditions, and the legal Conclusion direction enum are all first-class on the schema. The F5/F6 wire-in path is reserved through <code>Jurisdiction.hierarchy_node_id</code> and the F-001 calibrated-thresholds projection without committing to the F5 mechanism prematurely.</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> Schema functions (<code>runValidation</code>, <code>migrate</code>, <code>resolveEffectivePolicy</code>) are pure and order-stable. <code>HookInvocationRecord</code> on <code>LlmSettings.invocations</code> is the audit trail.</li>
+    <li><strong>§ 4 Clarity.</strong> Nine files, each with a focused purpose; the module barrel re-exports everything; type guards are provided for every union variant. The validation rules carry stable ids that surface in the UI per Stream E.</li>
+    <li><strong>§ 5 Reversibility.</strong> The migration mechanism is in place from v1; the registry is empty. Any future schema change has a clean migration path. <code>Conclusion.remedy</code> is a deferred-promotion field with a documented v2 migration path (Stream B B1.7).</li>
+    <li><strong>§ 6 Interface Fit.</strong> The coding session reads Constitution, current_state, buildkit index, contracts doc Contract 1, this spec — five docs to begin useful work. The test fixtures are specified to module-public surface only; the coding session implements them at will.</li>
+  </ul>
+
+  <h3>In-session flags (Article X § 1) — escalated to register</h3>
+  <p>Five TypeScript-precision divergences between Stream B (canonical for schema entities per the contracts doc's own self-attribution) and the I.1 contracts doc were identified while compiling this spec. Each has been resolved in this spec by adopting Stream B's name/shape; the contracts doc requires a corresponding bump to <code>stream_i_contracts_v2.html</code> at the next I.1 review session. Consolidated as one register flag (F-003) since all five are the same kind of issue and should be processed together.</p>
+  <ol>
+    <li><code>SatisfactionPolicy.conditions</code> (contracts) → <code>all_of</code> (this spec, per Stream B). Rationale: parallel naming with <code>any_of</code>; Stream B is the canonical source.</li>
+    <li><code>Condition.premise_kind_in.allowed_kinds</code> (contracts) → <code>kinds</code> (this spec, per Stream B). Rationale: Stream B is the canonical source; the contracts doc paraphrased.</li>
+    <li><code>NodeStatus</code> placed in <code>@/runtime</code> (contracts) → moved to <code>@/schema/session</code> (this spec). Rationale: <code>ArgumentSession.status_map</code> stores <code>NodeStatus</code>; the schema module persists it; runtime cannot be the canonical home for a persisted shape because schema cannot import from runtime.</li>
+    <li><code>OpenGate</code> placed in <code>@/runtime</code> (contracts) → moved to <code>@/schema/session</code> (this spec). Rationale: same as <code>NodeStatus</code>; <code>ConditionalOutput.open_gates</code> persists OpenGate on session.</li>
+    <li><code>Node.{x, y, collapsed}</code> flat (contracts) → nested under <code>Node.presentation?.{...}</code> (this spec, per Stream B). Rationale: Stream B's nested form is canonical; the layout module's contract (which references <code>Node.collapsed</code> directly) needs a small read-site update to <code>node.presentation?.collapsed</code> when I.7 (layout spec) lands.</li>
+  </ol>
+  <p>The runtime, persistence, modes, layout, llm-hooks, state, and ui modules will import the corrected types from <code>@/schema</code> through the file map above; their downstream specs (I.3–I.9) do not need to wait on the contracts-doc bump because the schema module is the canonical source per Stream I conventions ("the canonical shape is in <code>stream_b_schema_v1.html</code>"). The contracts-doc bump is housekeeping that brings the I.1 doc into line with the source-of-truth schema spec; it does not gate downstream coding sessions.</p>
+
+  <h3>Article V § 3 escalation triggers — recheck</h3>
+  <ul>
+    <li><strong>(a) Reverses a user-stated strategy.</strong> No. The user's planning-session decisions (Stream I structure, per-module spec discipline, Stream B as canonical) are honored.</li>
+    <li><strong>(b) Reverses or weakens an Article II commitment.</strong> No. Determinism is reinforced (pure schema functions, lexicographic ordering); frame/argument split is structurally enforced; per-node satisfaction criteria is centrally typed.</li>
+    <li><strong>(c) Two Article II commitments conflict and the conflict is unresolvable from the Constitution.</strong> No. The five contracts-doc divergences are resolvable under Article V § 2(a) (discretionary contradiction resolution) and the contracts doc's own Stream-B-deference clause; no constitutional conflict.</li>
+    <li><strong>(d) Forecloses a use case.</strong> No. Both legal and general modes (with both flavors) remain first-class; the schema is a strict superset.</li>
+    <li><strong>(e) Anthropic safety policies require user input.</strong> No.</li>
+    <li><strong>(f) Constitution silent or contradictory on a substantial question.</strong> No. The five resolutions in the in-session-escalated flag are TypeScript-precision corrections within the contracts doc — they have a clear resolution under the contracts doc's own self-attribution rule.</li>
+  </ul>
+  <p>No Article V § 3 trigger fires; this session proceeds without user escalation. The five corrections are logged as a single register flag (F-003) for the next I.1 review session.</p>
+
+</div>

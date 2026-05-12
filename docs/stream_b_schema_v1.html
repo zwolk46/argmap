@@ -1,0 +1,791 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 20px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 4px; font-weight: 500; }
+  .doc .tag-locked { background: var(--color-background-success); color: var(--color-text-success); }
+  .doc .tag-defer { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .doc .tag-flag { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .item { margin-bottom: 22px; }
+  .doc .item-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .doc .item-id { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-secondary); font-weight: 500; }
+  .doc .item-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+  .doc .field-list { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.65; color: var(--color-text-primary); white-space: pre-wrap; overflow-x: auto; }
+  .doc .field-list .cm { color: var(--color-text-secondary); }
+  .doc .field-list .kw { color: var(--color-text-primary); font-weight: 500; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+</style>
+<div class="doc">
+  <h1>Stream B — Schema and Data Model</h1>
+  <p class="subtitle">Companion to handoff_document_v2.html, master_plan_v1.html, and stream_a_resolutions_v1.html &nbsp;·&nbsp; Session date: May 2, 2026 &nbsp;·&nbsp; Version 1</p>
+
+  <div class="notice">
+    <p>This document is the field-level data specification for the app. It covers Stream B end-to-end: node schemas (B1), edge schemas (B2), frame metadata (B3), argument session (B4), conditional output (B5), validation rules (B6), and the identifier and migration plan (B7). Everything here applies the Stream A resolutions and the contradiction fixes already adopted in the master plan. Stream C (runtime algorithms) and Stream D (mode definitions) build directly from this spec.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>Field definitions are written in a TypeScript-like notation chosen for compactness and readability. The actual on-disk format is JSON; types here describe its shape. Conventions:</p>
+  <ul>
+    <li><code>field: type</code> — required field.</li>
+    <li><code>field?: type</code> — optional; may be absent or null. The two are treated identically (absent ≡ null) at the schema layer; tooling normalizes to absent.</li>
+    <li><code>type[]</code> — an ordered array. Order is significant where called out (e.g., LogicalGate slot semantics); otherwise treated as a set.</li>
+    <li><code>"a" | "b"</code> — string-literal union (an enum).</li>
+    <li><code>NodeRef</code> — a node id; see "Identifiers and references" below.</li>
+    <li>Fields marked <code>// legal mode only</code> exist on the schema in all modes but are ignored by validators and renderers when the frame is not in legal mode. The same applies to <code>// flavor: academic</code> etc. Unknown-field tolerance: absence is fine; a field set inappropriately for the mode is a soft-warning, not a hard error, so frames don't break when their mode is changed.</li>
+    <li>All string fields are UTF-8 with no trimming. All timestamps are ISO 8601 with timezone (<code>2026-05-02T14:23:00-05:00</code>). All numeric ids/versions are monotonically increasing integers starting at 1.</li>
+  </ul>
+
+  <h2>Decisions made in this session</h2>
+  <p>The following technical refinements were resolved while writing this spec. They preserve the conceptual decisions in the Stream A resolutions while giving them concrete shape. Each is flagged so it is easy to find and revisit:</p>
+  <ol>
+    <li><strong>Identifier model refined.</strong> Each entity carries a stable opaque <code>id</code> (UUID v4 from day one) plus an optional human-readable <code>slug</code>. References use <code>id</code>; the <code>slug</code> is for logs, debug UIs, and exported documents. This eliminates the slug-to-UUID migration step from B7 and replaces it with a config flag (whether to auto-generate slugs). Rationale: a single migration is fragile across long-lived data, and slugs collide when frames are templated. See B7 below.</li>
+    <li><strong>FORECLOSES is modeled as a directed edge with a typed target set.</strong> One <code>FORECLOSES</code> edge per (Interpretation → foreclosed-target) pair, where the target is a Term, SubQuestion, or Checkpoint. Multi-target foreclosure is expressed by multiple edges. This keeps the "one source, one target" edge invariant.</li>
+    <li><strong>LogicalGate uses a discriminated union with named slots</strong>, not a uniform <code>inputs[]</code>. This makes IF_THEN's antecedent/consequent and UNLESS's main/exception roles structurally explicit and validatable, which the contradiction fix called for.</li>
+    <li><strong>Frame versions are stored as full snapshots, not deltas.</strong> Snapshots make replay and session-binding trivial; deltas would require a reconstruction algorithm at every read. Storage size is a Stream H concern; deduplication can be layered in later without a schema change.</li>
+    <li><strong>Argument-layer authorities are first-class.</strong> An Authority node may exist on the Frame (cited at build-time supporting an Interpretation) or on the ArgumentSession (added at runtime by a Premise's <code>authority_ref</code>). Both go in the same Authority shape; the locus is implicit from where the node lives.</li>
+    <li><strong>Conclusion direction in general mode references a frame-level Position table.</strong> Frames in <code>general</code> mode declare named positions (e.g., "Pro X", "Anti X"); Conclusions reference those by id. Legal mode uses the fixed enum from A1.</li>
+    <li><strong>NodeStatus carries a <code>via</code> array</strong>, not the original handoff-doc peer states <code>satisfied_binding</code> / <code>satisfied_persuasive</code>. The A3 resolution collapsed those into sub-flags; this spec implements that collapse as <code>{ status: "satisfied", via: ["binding_authority"] }</code>.</li>
+  </ol>
+
+  <h2>Identifiers and references <span class="anchor">(B7)</span></h2>
+
+  <h3>Identifier model</h3>
+  <p>Each persisted entity (Frame, FrameVersion, Node, Edge, ArgumentSession, Authority, Premise, etc.) carries:</p>
+  <ul>
+    <li><code>id: string</code> — a UUID v4. Always present, immutable for the lifetime of the entity. References use this.</li>
+    <li><code>slug?: string</code> — a human-readable label, auto-generated in development environments and optional in production. Format: <code>&lt;type-prefix&gt;_&lt;humanized-noun&gt;_&lt;4-char-suffix&gt;</code>, e.g. <code>term_willful_a3f9</code>, <code>checkpoint_contact-occurred_b71c</code>. The 4-char suffix is base-36 random; the noun is a slugified excerpt of the user-visible label, truncated to 32 chars. Slugs are not unique by themselves; uniqueness is guaranteed only by the <code>id</code>.</li>
+  </ul>
+  <p>This refinement removes the migration step the original handoff doc anticipated: there is nothing to migrate, because production already uses UUIDs. Turning slugs off in production is a single-line config change. The <code>// TODO: swap slug for UUID</code> comment in the original plan becomes <code>// CONFIG: enable_slugs = false in prod</code>.</p>
+
+  <h3>NodeRef and EdgeRef</h3>
+  <p>Wherever a field references another entity, it uses the bare <code>id</code> as a string. There are no embedded objects in references. <code>NodeRef</code> and <code>EdgeRef</code> are documentation aliases for <code>string</code> with the corresponding constraint that the value must resolve to an existing entity within the same FrameVersion (frame-layer references) or ArgumentSession (argument-layer references). Cross-layer references are allowed in one direction only: argument-layer entities may reference frame-layer entities; the reverse is forbidden.</p>
+
+  <h3>Template-friendly id design</h3>
+  <p>The id is opaque, randomly generated, and carries no positional information. Templating a frame (deep copy under a new Frame id) regenerates every node and edge id; the templating routine maintains an old-id → new-id map to rewrite all internal references in one pass. Slug regeneration is independent and doesn't affect references.</p>
+
+  <h2>Common base fields</h2>
+
+  <h3>NodeBase</h3>
+  <p>Every node type extends this base. The <code>type</code> field is the discriminator for the union.</p>
+  <div class="field-list">NodeBase {
+  id: string                    <span class="cm">// UUID v4</span>
+  slug?: string                 <span class="cm">// human-readable, dev-friendly</span>
+  type: NodeType                <span class="cm">// discriminator</span>
+  layer: "frame" | "argument"   <span class="cm">// derivable from type; stored for fast filtering</span>
+  notes?: string                <span class="cm">// A12: per-node working thoughts; not used by logic</span>
+  presentation?: {              <span class="cm">// optional UI-layer hints, ignored by logic</span>
+    x?: number
+    y?: number
+    color_override?: string     <span class="cm">// CSS color or theme token</span>
+    collapsed?: boolean         <span class="cm">// for visual collapse in graph view</span>
+  }
+  created_at: timestamp
+  updated_at: timestamp
+  created_by?: string           <span class="cm">// user id; multi-user is v2, ignored in v1</span>
+}</div>
+
+  <h3>EdgeBase</h3>
+  <div class="field-list">EdgeBase {
+  id: string                    <span class="cm">// UUID v4</span>
+  slug?: string
+  type: EdgeType                <span class="cm">// discriminator</span>
+  layer: "frame" | "argument"
+  source: NodeRef
+  target: NodeRef
+  label?: string                <span class="cm">// optional UI label, e.g. on a LEADS_TO branch</span>
+  notes?: string
+  created_at: timestamp
+  updated_at: timestamp
+}</div>
+  <p>Edges are always directed. A reverse-direction edge is a separate entity with its own id; the schema never implies bidirectionality.</p>
+
+  <h2>Mode and flavor</h2>
+
+  <h3>Mode and flavor enums</h3>
+  <div class="field-list">Mode = "legal" | "general"
+Flavor = "personal" | "academic"   <span class="cm">// only meaningful when mode = "general"</span></div>
+  <p>Mode is architectural; flavor is presentational. Per A4, schema differences are governed by <code>mode</code>; field labels, vocabularies, and visibility defaults are governed by <code>flavor</code>. Switching mode after frame creation is allowed but emits warnings about fields that may become inert (e.g., <code>jurisdiction_default</code> on a frame switched from legal to general).</p>
+
+  <h3>Premise kind vocabularies (A11)</h3>
+  <table>
+    <tr><th>Mode / Flavor</th><th>Allowed values for Premise.kind</th></tr>
+    <tr><td><code>legal</code></td><td><code>stipulated</code>, <code>found</code>, <code>disputed</code>, <code>procedural</code></td></tr>
+    <tr><td><code>general</code> / <code>academic</code></td><td><code>empirical</code>, <code>definitional</code>, <code>normative</code>, <code>stipulated</code></td></tr>
+    <tr><td><code>general</code> / <code>personal</code></td><td><code>observation</code>, <code>value</code>, <code>assumption</code>, <code>stipulated</code></td></tr>
+  </table>
+  <p>The <code>stipulated</code> value is shared across all vocabularies and means the same thing in each: both sides agree it is true and it is not subject to challenge in this frame.</p>
+
+  <h2>Jurisdiction (Legal Mode)</h2>
+  <p>A jurisdiction is a structured reference into the court hierarchy database (Stream F5). It is a value object — never an entity with its own id — embedded into Frame, Authority, and Interpretation where applicable.</p>
+  <div class="field-list">Jurisdiction {
+  level: "federal" | "state" | "tribal" | "territory" | "international"
+  region?: string             <span class="cm">// e.g., "9th Circuit", "California", "S.D.N.Y."</span>
+  court?: string              <span class="cm">// e.g., "Supreme Court of California"</span>
+  hierarchy_node_id?: string  <span class="cm">// reference into F5 court hierarchy when wired</span>
+}</div>
+  <p>In v1, only <code>level</code> and <code>region</code> are required to be populated. The <code>hierarchy_node_id</code> is reserved for when F5 lands and the binding-determination algorithm becomes live. Until then, binding determination falls back to a soft heuristic (string match on region) and is marked as such on display.</p>
+
+  <h2>SatisfactionPolicy (A3)</h2>
+
+  <h3>Shape</h3>
+  <div class="field-list">SatisfactionPolicy {
+  all_of: Condition[]    <span class="cm">// required; may be empty</span>
+  any_of?: Condition[]   <span class="cm">// optional; max one AnyOf group, no nesting (per A3)</span>
+}
+
+Condition =
+  | string                       <span class="cm">// parameterless: "premise_attached", "not_foreclosed", ...</span>
+  | { name: string, ...params }  <span class="cm">// parameterized: { name: "burden_met", level: "preponderance" }</span></div>
+
+  <h3>Condition library (12 named conditions)</h3>
+  <table>
+    <tr><th>Name</th><th>Params</th><th>Evaluates true when</th><th>Group</th></tr>
+    <tr><td><code>premise_attached</code></td><td>—</td><td>at least one Premise has an ANSWERS edge to this Checkpoint (Checkpoint-only)</td><td>Structural</td></tr>
+    <tr><td><code>interpretation_selected</code></td><td>—</td><td>this Term has at least one Interpretation marked selected in the session</td><td>Structural</td></tr>
+    <tr><td><code>all_children_resolved</code></td><td>—</td><td>every immediate downstream node along the active path has status <code>satisfied</code> or <code>foreclosed</code></td><td>Structural</td></tr>
+    <tr><td><code>path_complete</code></td><td>—</td><td>at least one fully-resolved path from RootQuestion to this node exists in the session</td><td>Structural</td></tr>
+    <tr><td><code>not_contradicted</code></td><td>—</td><td>no Premise has a CONTRADICTS edge to this node, OR contradicting premises are themselves outweighed (see <code>burden_met</code>)</td><td>Quality</td></tr>
+    <tr><td><code>premise_kind_in</code></td><td><code>kinds: string[]</code></td><td>at least one supporting Premise has <code>kind</code> in the listed values</td><td>Quality</td></tr>
+    <tr><td><code>burden_met</code></td><td><code>level: "preponderance" | "clear_and_convincing" | "beyond_reasonable_doubt" | "scintilla" | "substantial_evidence"</code></td><td>the supporting evidence (Premises, considering kinds) clears the named threshold; v1 evaluates this categorically by counting and weighting Premises by kind, with a clear LLM_HOOK for future calibration</td><td>Quality</td></tr>
+    <tr><td><code>authority_required</code></td><td>—</td><td>this node has at least one Authority cited via CITES, or a Premise carrying <code>authority_ref</code></td><td>Authority</td></tr>
+    <tr><td><code>authority_binding</code></td><td>—</td><td>at least one cited Authority is binding in the frame's jurisdiction (uses F6 logic when live; falls back to <code>is_binding</code> field)</td><td>Authority</td></tr>
+    <tr><td><code>not_distinguished</code></td><td>—</td><td>no DISTINGUISHED_BY edge marks the cited Authority as rejected for this Interpretation</td><td>Authority</td></tr>
+    <tr><td><code>standard_of_review_applied</code></td><td>—</td><td>the standard of review is set on the parent Question/SubQuestion and is consistent with the burden_met level here; this is the LLM_HOOK surface for the standard-of-review module (G5)</td><td>Procedural</td></tr>
+    <tr><td><code>not_foreclosed</code></td><td>—</td><td>no FORECLOSES edge from a satisfied Interpretation targets this node</td><td>Universal</td></tr>
+  </table>
+
+  <h3>Default policies per node type</h3>
+  <p>Every Frame stores a <code>default_satisfaction_policies</code> object mapping NodeType → SatisfactionPolicy. New frames are seeded with the defaults below. Per A3, only Checkpoint, Question (Root and Sub), and Interpretation may carry per-instance overrides; other types use the frame default unconditionally.</p>
+  <div class="field-list">default_satisfaction_policies = {
+  Checkpoint:     { all_of: ["premise_attached", "not_contradicted",
+                              { name: "burden_met", level: "preponderance" },
+                              "not_foreclosed"] },
+  Interpretation: { all_of: ["interpretation_selected", "not_foreclosed"] },
+  Term:           { all_of: ["interpretation_selected", "not_foreclosed"] },
+  SubQuestion:    { all_of: ["all_children_resolved", "not_foreclosed"] },
+  RootQuestion:   { all_of: ["all_children_resolved", "not_foreclosed"] },
+  Conclusion:     { all_of: ["path_complete", "not_foreclosed"] },
+  LogicalGate:    { all_of: ["not_foreclosed"] },  <span class="cm">// gate_type semantics drive the rest</span>
+  <span class="cm">// Premise and Authority do not have satisfaction policies; they are inputs/sources</span>
+}</div>
+
+  <h3>Override resolution</h3>
+  <p>For Checkpoint, Question, and Interpretation: the per-instance <code>options_box</code> field, if present, replaces the frame-default policy entirely. Merging is intentionally not supported — partial overrides are confusing and the whole-replacement model keeps the policy each node uses inspectable in one place.</p>
+
+  <h2>NodeStatus</h2>
+  <div class="field-list">NodeStatus {
+  status: "open" | "satisfied" | "contested" | "foreclosed" | "not_applicable"
+  via?: ("binding_authority" | "persuasive_authority" | "stipulation"
+       | "structural_resolution" | "default")[]
+  evaluated_at: timestamp
+  failed_conditions?: string[]   <span class="cm">// list of condition names that did not hold; populated when status = "open" or "contested"</span>
+}</div>
+  <p>Sub-flags in <code>via</code> are populated by the runtime status determiner (Stream C). Multiple may apply: a Checkpoint may be <code>{ status: "satisfied", via: ["binding_authority", "stipulation"] }</code> if it is both stipulated and supported by binding precedent. The <code>failed_conditions</code> array makes the path-trace UI's "what's missing" panel trivial to render.</p>
+
+  <h2>Node schemas <span class="anchor">(B1)</span></h2>
+
+  <p>NodeType discriminator values: <code>"RootQuestion"</code>, <code>"SubQuestion"</code>, <code>"Term"</code>, <code>"Interpretation"</code>, <code>"Checkpoint"</code>, <code>"LogicalGate"</code>, <code>"Conclusion"</code>, <code>"Authority"</code>, <code>"Premise"</code>.</p>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.1</span><span class="item-title">RootQuestion</span></div>
+    <div class="field-list">RootQuestion extends NodeBase {
+  type: "RootQuestion"
+  layer: "frame"
+  statement: string             <span class="cm">// the question, e.g. "Does the contract bind D?"</span>
+  standard_of_review?: string   <span class="cm">// legal mode; e.g. "de novo", "abuse of discretion"</span>
+  options_box?: SatisfactionPolicy   <span class="cm">// per-instance override of frame default</span>
+}</div>
+    <p>A frame has exactly one RootQuestion (validation rule V-FR-1). It has no incoming edges. Its outgoing edges are <code>DECOMPOSES_INTO</code> (to SubQuestions), <code>TURNS_ON</code> (directly to Terms when the question is atomic), or <code>LEADS_TO</code> (to a Conclusion when the question is trivially answered by a single fact, rare).</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.2</span><span class="item-title">SubQuestion</span></div>
+    <div class="field-list">SubQuestion extends NodeBase {
+  type: "SubQuestion"
+  layer: "frame"
+  statement: string
+  is_jurisdictional: boolean    <span class="cm">// A8; default false; legal mode only</span>
+  standard_of_review?: string   <span class="cm">// legal mode; inherits from parent if unset</span>
+  options_box?: SatisfactionPolicy
+}</div>
+    <p>SubQuestions decompose larger questions and may themselves decompose further. <code>is_jurisdictional</code> SubQuestions render first and are visually distinguished (Stream E). Frame completeness check warns (does not block) when a legal-mode frame has zero jurisdictional SubQuestions (V-FR-7).</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.3</span><span class="item-title">Term</span></div>
+    <div class="field-list">Term extends NodeBase {
+  type: "Term"
+  layer: "frame"
+  name: string                  <span class="cm">// the word or phrase, e.g. "willful"</span>
+  order: integer                <span class="cm">// 0-indexed within parent Question; controls foreclosure resolution and default UI ordering (A7)</span>
+  dispositive: boolean          <span class="cm">// per the handoff control concept (A); when true, this Term's resolution can foreclose siblings</span>
+  linked_to?: NodeRef           <span class="cm">// A10; another Term whose Interpretations this Term shares</span>
+  options_box?: SatisfactionPolicy
+}</div>
+    <p>A Term is the branching point of an interpretive choice. Per A7, <code>order</code> is used solely by the foreclosure resolver and as the default presentation order; it does not silently constrain the Interpretation set on later Terms. Per A10, <code>linked_to</code> creates a one-way reference: this Term shares the Interpretations of the target Term. Linked Terms cannot form cycles (V-NODE-3) and may carry their own <code>options_box</code> override.</p>
+    <p>Validation: every Term must have at least two outgoing <code>INTERPRETED_AS</code> edges, OR a non-null <code>linked_to</code> (V-FR-3). A Term with one Interpretation is a frame error: there is no choice to make.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.4</span><span class="item-title">Interpretation</span></div>
+    <div class="field-list">Interpretation extends NodeBase {
+  type: "Interpretation"
+  layer: "frame"
+  statement: string             <span class="cm">// the specific reading, e.g. "intentional with knowledge of consequences"</span>
+  jurisdiction_override?: Jurisdiction   <span class="cm">// legal mode; overrides frame default for this branch</span>
+  options_box?: SatisfactionPolicy
+}</div>
+    <p>An Interpretation represents one branch of how a Term is read. Outgoing edges: <code>LEADS_TO</code> (to a Checkpoint, SubQuestion, or Conclusion), and optionally <code>FORECLOSES</code> (marking sibling branches moot). Incoming edges: one <code>INTERPRETED_AS</code> from the parent Term, plus optional <code>CITES</code> from supporting Authorities and <code>SUPPORTS</code>/<code>CONTRADICTS</code> from session-time Premises.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.5</span><span class="item-title">Checkpoint (A2)</span></div>
+    <div class="field-list">Checkpoint extends NodeBase {
+  type: "Checkpoint"
+  layer: "frame"
+  question: string                                <span class="cm">// e.g. "Did contact occur?"</span>
+  answer_type: "boolean" | "multiple_choice" | "graded"
+  options: CheckpointOption[]                     <span class="cm">// shape and length depends on answer_type</span>
+  requires_premise: boolean                       <span class="cm">// default true</span>
+  requires_authority: boolean                     <span class="cm">// default false; legal mode only</span>
+  burden_level?: "preponderance" | "clear_and_convincing"
+                | "beyond_reasonable_doubt" | "scintilla"
+                | "substantial_evidence"          <span class="cm">// legal mode; feeds burden_met condition</span>
+  options_box?: SatisfactionPolicy
+}
+
+CheckpointOption {
+  id: string                    <span class="cm">// stable within the Checkpoint; references it from session responses</span>
+  label: string                 <span class="cm">// e.g. "yes", "no", "unclear", or author-defined</span>
+  target_node_id?: NodeRef      <span class="cm">// the node this option routes to; null only for "graded" middle state</span>
+  satisfies: boolean            <span class="cm">// whether selecting this option counts as satisfying the Checkpoint</span>
+  routes_to_status?: "contested"   <span class="cm">// optional override for "graded" middle state</span>
+}</div>
+    <p>Per A2:</p>
+    <ul>
+      <li>A new Checkpoint is created with <code>answer_type: "boolean"</code> and a default options pair: <code>[{label: "yes", satisfies: true}, {label: "no", satisfies: false}]</code>. The author wires <code>target_node_id</code> after.</li>
+      <li><code>multiple_choice</code> Checkpoints have author-defined <code>options</code> with at least 2 entries; each routes to a target node. The <code>satisfies</code> flag determines whether the option counts as resolving the Checkpoint or as a routing-only choice (e.g., a routing branch that itself contains further unresolved structure).</li>
+      <li><code>graded</code> Checkpoints carry exactly three options whose <code>label</code>s default to <code>"met"</code>, <code>"not_met"</code>, <code>"unclear"</code>. The middle option carries <code>routes_to_status: "contested"</code> by default, which sends the node to <code>contested</code> status in the session (per A3 status enum). Authors may relabel the three options but the three-state structure is fixed.</li>
+    </ul>
+    <p>Checkpoints are atomic. Multi-element tests (e.g., negligence's four elements) are modeled as multiple Checkpoints joined by an AND LogicalGate (V-FR-9 forbids "compound" Checkpoints).</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.6</span><span class="item-title">LogicalGate</span></div>
+    <p>LogicalGate is a discriminated union over <code>gate_type</code>. Per the contradiction fix, inputs and outputs are formally typed; FORECLOSES is removed from the gate-type list (it is an edge only).</p>
+
+    <h4>AND / OR gate</h4>
+    <div class="field-list">AndGate extends NodeBase {
+  type: "LogicalGate"
+  layer: "frame"
+  gate_type: "AND" | "OR"
+  inputs: NodeRef[]             <span class="cm">// minimum 2; each must resolve to a boolean-evaluable node</span>
+  output_target?: NodeRef       <span class="cm">// where the gate's resolution flows; rendered as a GATES edge</span>
+}</div>
+
+    <h4>NOT gate</h4>
+    <div class="field-list">NotGate extends NodeBase {
+  type: "LogicalGate"
+  gate_type: "NOT"
+  input: NodeRef                <span class="cm">// exactly one; must be boolean-evaluable</span>
+  output_target?: NodeRef
+}</div>
+
+    <h4>IF_THEN gate</h4>
+    <div class="field-list">IfThenGate extends NodeBase {
+  type: "LogicalGate"
+  gate_type: "IF_THEN"
+  antecedent: NodeRef           <span class="cm">// if this is satisfied...</span>
+  consequent: NodeRef           <span class="cm">// ...this becomes active/required</span>
+  output_target?: NodeRef
+}</div>
+
+    <h4>UNLESS gate</h4>
+    <div class="field-list">UnlessGate extends NodeBase {
+  type: "LogicalGate"
+  gate_type: "UNLESS"
+  main: NodeRef                 <span class="cm">// the rule that normally applies</span>
+  exception: NodeRef            <span class="cm">// suspends the rule when satisfied</span>
+  output_target?: NodeRef
+}</div>
+
+    <p>Boolean-evaluable nodes are: Checkpoint, Interpretation, SubQuestion, RootQuestion, and other LogicalGates. A LogicalGate that takes a Term as input is a frame error (Terms multi-resolve into Interpretations, not into a binary state); use one of the Term's Interpretations as the input instead.</p>
+    <p>Validation V-GATE-1 through V-GATE-5 enforce the arities above. The runtime status of a gate is computed in Stream C from its inputs' statuses per its gate_type semantics; it does not have its own <code>options_box</code> beyond <code>not_foreclosed</code>.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.7</span><span class="item-title">Conclusion (A1)</span></div>
+    <div class="field-list">Conclusion extends NodeBase {
+  type: "Conclusion"
+  layer: "frame"
+  statement: string             <span class="cm">// required; the answer in plain language</span>
+  direction: ConclusionDirection   <span class="cm">// required; mode-aware, see below</span>
+  reasoning_summary?: string    <span class="cm">// optional author summary; LLM_HOOK candidate (G3)</span>
+  tags?: string[]
+  remedy?: string               <span class="cm">// legal mode v1; promotable to a Remedy node in v2</span>
+  options_box?: SatisfactionPolicy
+}
+
+ConclusionDirection =
+  | { kind: "legal", value: "favors_plaintiff" | "favors_defendant"
+                          | "affirm" | "reverse" | "remand" | "dismiss" | "custom"
+      custom_label?: string }       <span class="cm">// required when value = "custom"</span>
+  | { kind: "general", position_id: string, custom_label?: string }   <span class="cm">// reference into Frame.positions</span></div>
+    <p>Confidence is not a stored field. It is computed at session render time from the status map (proportions of Checkpoints satisfied via binding authority vs. persuasive vs. stipulation vs. open vs. contested) and displayed alongside the Conclusion. Storing it on the node would let the user assert certainty the structure does not support; this was the explicit reasoning in A1.</p>
+    <p>The <code>remedy</code> field is a legal-mode v1 affordance. The schema is designed so the field can be deprecated and a separate <code>Remedy</code> node type promoted into its place without affecting existing Conclusions: a future migration would copy the string into a new node and link it via a <code>HAS_REMEDY</code> edge, leaving the field as a deprecated read-through.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.8</span><span class="item-title">Authority</span></div>
+    <div class="field-list">Authority extends NodeBase {
+  type: "Authority"
+  layer: "frame"                <span class="cm">// may also be added at session-time; same shape</span>
+  citation: string              <span class="cm">// e.g. "Erie R.R. v. Tompkins, 304 U.S. 64 (1938)"</span>
+
+  <span class="cm">// Legal mode fields:</span>
+  court?: string
+  year?: integer
+  holding_summary?: string
+  is_holding: boolean           <span class="cm">// vs dicta; default true</span>
+  is_binding?: boolean          <span class="cm">// computed by F6 when live; manually settable v1</span>
+  jurisdiction?: Jurisdiction   <span class="cm">// where this authority issues from</span>
+
+  <span class="cm">// Academic flavor fields:</span>
+  author?: string
+  venue?: string                <span class="cm">// journal, conference, publisher</span>
+  position?: string             <span class="cm">// what the author argues; or "represents scholarly consensus"</span>
+
+  <span class="cm">// Universal:</span>
+  url?: string
+  short_label?: string          <span class="cm">// for compact display, e.g. "Erie"</span>
+}</div>
+    <p>Per the resolution-session decision (#5 above), the same Authority shape is used whether the node is created at frame-build time (citing an Interpretation) or at session-runtime (referenced by a Premise's <code>authority_ref</code>). The locus is implicit from where the node is stored. In <code>personal</code> flavor, the type is labeled "Source" in the UI; the schema name remains <code>Authority</code> for code consistency.</p>
+    <p>"Scholarly consensus" is not a separate concept (per A4) — it is an Authority node with <code>position</code> describing the consensus view, typically with a <code>citation</code> pointing to the survey paper or review article that establishes the consensus.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">B1.9</span><span class="item-title">Premise (A11)</span></div>
+    <div class="field-list">Premise extends NodeBase {
+  type: "Premise"
+  layer: "argument"             <span class="cm">// argument-layer only</span>
+  statement: string
+  kind: PremiseKind             <span class="cm">// vocabulary per Frame.mode/flavor; see A11/A4</span>
+  source?: string               <span class="cm">// free-text citation/source label</span>
+  authority_ref?: NodeRef       <span class="cm">// id of an Authority node (frame-layer or session-layer)</span>
+}
+
+PremiseKind = (mode/flavor-dependent enum)</div>
+    <p>A Premise is the runtime answer to a Checkpoint (via ANSWERS), or evidence for/against an Interpretation (via SUPPORTS/CONTRADICTS). Per A2, every Checkpoint answer in the session creates a Premise; the Premise carries the user-supplied factual statement plus optional source. <code>authority_ref</code> is mandatory when the answered Checkpoint has <code>requires_authority: true</code> (V-ARG-2).</p>
+  </div>
+
+  <h2>Edge schemas <span class="anchor">(B2)</span></h2>
+
+  <p>EdgeType discriminator values: <code>"DECOMPOSES_INTO"</code>, <code>"TURNS_ON"</code>, <code>"INTERPRETED_AS"</code>, <code>"LEADS_TO"</code>, <code>"FORECLOSES"</code>, <code>"GATES"</code>, <code>"ANSWERS"</code>, <code>"SUPPORTS"</code>, <code>"CONTRADICTS"</code>, <code>"CITES"</code>, <code>"BINDING_IN"</code>, <code>"DISTINGUISHED_BY"</code>.</p>
+
+  <p>Per the contradiction fixes already adopted: <code>CITED_BY</code> is renamed <code>CITES</code> with the same direction (Authority → Interpretation); <code>ALTERNATIVE_PATH_TO</code> is removed (two convergent paths are expressed by two <code>LEADS_TO</code> edges with the same target).</p>
+
+  <table>
+    <tr><th>Edge type</th><th>Source type</th><th>Target type</th><th>Layer</th><th>Carries</th></tr>
+    <tr><td><code>DECOMPOSES_INTO</code></td><td>RootQuestion / SubQuestion</td><td>SubQuestion</td><td>frame</td><td>—</td></tr>
+    <tr><td><code>TURNS_ON</code></td><td>RootQuestion / SubQuestion</td><td>Term</td><td>frame</td><td>—</td></tr>
+    <tr><td><code>INTERPRETED_AS</code></td><td>Term</td><td>Interpretation</td><td>frame</td><td>—</td></tr>
+    <tr><td><code>LEADS_TO</code></td><td>Interpretation / LogicalGate</td><td>Checkpoint / SubQuestion / Conclusion / LogicalGate</td><td>frame</td><td><code>condition?: string</code> for author-labeled branches</td></tr>
+    <tr><td><code>FORECLOSES</code></td><td>Interpretation</td><td>Term / SubQuestion / Checkpoint</td><td>frame</td><td><code>scope: "moot" | "decided"</code> (default "moot")</td></tr>
+    <tr><td><code>GATES</code></td><td>LogicalGate</td><td>any frame node</td><td>frame</td><td>—</td></tr>
+    <tr><td><code>ANSWERS</code></td><td>Premise</td><td>Checkpoint</td><td>argument</td><td><code>selected_option_id: string</code> (which CheckpointOption was chosen)</td></tr>
+    <tr><td><code>SUPPORTS</code></td><td>Premise</td><td>Interpretation / Conclusion</td><td>argument</td><td><code>weight?: "strong" | "moderate" | "weak"</code></td></tr>
+    <tr><td><code>CONTRADICTS</code></td><td>Premise</td><td>Interpretation / Conclusion / Checkpoint</td><td>argument</td><td><code>weight?: "strong" | "moderate" | "weak"</code></td></tr>
+    <tr><td><code>CITES</code></td><td>Authority</td><td>Interpretation</td><td>frame</td><td><code>strength?: "directly_on_point" | "analogous" | "background"</code></td></tr>
+    <tr><td><code>BINDING_IN</code></td><td>Authority</td><td>(value: Jurisdiction)</td><td>frame</td><td>see note</td></tr>
+    <tr><td><code>DISTINGUISHED_BY</code></td><td>Authority</td><td>Interpretation</td><td>frame</td><td><code>reasoning?: string</code></td></tr>
+  </table>
+
+  <h3>Notes on individual edge types</h3>
+  <ul>
+    <li><code>BINDING_IN</code> targets a Jurisdiction value, not a node. Since the EdgeBase requires a NodeRef target, this edge is implemented as an embedded relation: the Authority node carries an optional <code>binding_in: Jurisdiction[]</code> field directly. The <code>BINDING_IN</code> edge type is retained in documentation as a conceptual relation but does not exist as a row in the edges table. This is the cleanest way to keep the "edge has one node target" invariant and avoid a phantom Jurisdiction-as-node type.</li>
+    <li><code>FORECLOSES</code>'s <code>scope</code> field distinguishes "moot" (the foreclosed branch is no longer relevant; status flips to <code>foreclosed</code>) from "decided" (the foreclosed branch is taken to be answered the same way the foreclosing Interpretation answers; status flips to <code>satisfied</code> with <code>via: ["structural_resolution"]</code>). Default is "moot".</li>
+    <li><code>LEADS_TO</code>'s optional <code>condition</code> field lets authors annotate why the path leads where it leads; rendered on the edge in the graph view but not used by routing logic.</li>
+    <li><code>SUPPORTS</code> and <code>CONTRADICTS</code> targeting a Conclusion are unusual but legitimate (e.g., a Premise establishing a fact that directly bears on the holding); v1 supports both. The status determiner treats Conclusion-targeted CONTRADICTS as flipping the Conclusion to <code>contested</code>.</li>
+  </ul>
+
+  <h2>Frame schema <span class="anchor">(B3)</span></h2>
+
+  <div class="field-list">Frame {
+  id: string
+  slug?: string
+  title: string
+  description?: string
+  mode: Mode                                  <span class="cm">// "legal" | "general"</span>
+  flavor?: Flavor                             <span class="cm">// required when mode = "general"; forbidden otherwise</span>
+  jurisdiction_default?: Jurisdiction         <span class="cm">// legal only</span>
+  positions?: Position[]                      <span class="cm">// general only; required when frame has Conclusions</span>
+  default_satisfaction_policies: { [nodeType: string]: SatisfactionPolicy }
+  tags: string[]
+  pinned: boolean                             <span class="cm">// default false; max 8 pinned per user enforced by app layer</span>
+  created_at: timestamp
+  updated_at: timestamp
+  last_opened_at?: timestamp
+  current_version_id: string                  <span class="cm">// → FrameVersion.id</span>
+  llm_settings?: LlmSettings                  <span class="cm">// reserved for Stream G; opaque object in v1</span>
+}
+
+Position {
+  id: string                  <span class="cm">// stable within the Frame; e.g. "pos_pro_x_8b21"</span>
+  label: string               <span class="cm">// e.g. "Pro X"</span>
+  description?: string
+}
+
+LlmSettings {
+  build_time_hooks_enabled: boolean   <span class="cm">// default true</span>
+  runtime_hooks_enabled: boolean      <span class="cm">// default false in v1; runtime is deterministic</span>
+  prompt_versions?: { [hook_name: string]: string }
+}</div>
+
+  <p>The <code>positions</code> table is the source of truth for general-mode Conclusion directions. Changing a Position's label updates all Conclusions that reference it (because they reference by id). Removing a referenced Position is blocked unless the user reassigns the dependent Conclusions first (V-FR-10).</p>
+
+  <h2>FrameVersion schema</h2>
+
+  <div class="field-list">FrameVersion {
+  id: string
+  frame_id: string                  <span class="cm">// → Frame.id</span>
+  version_number: integer           <span class="cm">// monotonic, 1-indexed</span>
+  parent_version_id?: string        <span class="cm">// previous version, for the version graph</span>
+  created_at: timestamp
+  created_by?: string
+  change_summary?: string           <span class="cm">// optional human-written summary; LLM_HOOK candidate</span>
+  nodes: Node[]                     <span class="cm">// full snapshot</span>
+  edges: Edge[]                     <span class="cm">// full snapshot</span>
+  is_milestone: boolean             <span class="cm">// for the version-history UI; true at named saves</span>
+}</div>
+
+  <p>Decision #4 above: snapshots, not deltas. Each FrameVersion is a complete, self-contained graph. The current_version_id on Frame points to the latest version; older versions are kept indefinitely (per the handoff doc's "every version stored"). Storage compaction is a Stream H concern and is invisible at the schema layer.</p>
+
+  <p>Auto-save creates a new FrameVersion at most once per significant edit (debounced); the rate is a Stream H tuning parameter. Manual saves and mode transitions force a new version with <code>is_milestone: true</code>.</p>
+
+  <h2>ArgumentSession schema <span class="anchor">(B4)</span></h2>
+
+  <div class="field-list">ArgumentSession {
+  id: string
+  slug?: string
+  frame_id: string                          <span class="cm">// → Frame.id</span>
+  frame_version_id: string                  <span class="cm">// → FrameVersion.id; the version this session was created against</span>
+  frame_version_snapshot: FrameVersion      <span class="cm">// embedded copy; insulates session from later frame edits (per master plan fix #4)</span>
+  title: string
+  description?: string
+
+  premises: Premise[]                       <span class="cm">// argument-layer nodes created in this session</span>
+  argument_edges: Edge[]                    <span class="cm">// ANSWERS, SUPPORTS, CONTRADICTS edges; argument layer only</span>
+  session_authorities?: Authority[]         <span class="cm">// Authorities introduced at runtime by Premise.authority_ref; not on frame</span>
+
+  checkpoint_responses: CheckpointResponse[]   <span class="cm">// dense record of which option was chosen at each Checkpoint</span>
+
+  status_map: { [node_id: string]: NodeStatus }   <span class="cm">// computed; updated on each premise change</span>
+
+  output?: ConditionalOutput                <span class="cm">// computed; latest result of running the session</span>
+  active_path?: NodeRef[]                   <span class="cm">// computed; primary determinate path through the frame</span>
+
+  frame_version_drift_warning?: string      <span class="cm">// populated when underlying Frame has advanced past frame_version_id</span>
+
+  created_at: timestamp
+  updated_at: timestamp
+  current_version_id: string                <span class="cm">// → ArgumentSessionVersion.id</span>
+}
+
+CheckpointResponse {
+  checkpoint_id: NodeRef
+  selected_option_id: string                <span class="cm">// references CheckpointOption.id within the Checkpoint</span>
+  premise_id: NodeRef                       <span class="cm">// the Premise that supplies this answer</span>
+  answered_at: timestamp
+  notes?: string                            <span class="cm">// optional per-answer note (per A2)</span>
+}
+
+ArgumentSessionVersion {
+  id: string
+  session_id: string
+  version_number: integer
+  parent_version_id?: string
+  created_at: timestamp
+  created_by?: string
+  change_summary?: string
+  premises: Premise[]
+  argument_edges: Edge[]
+  session_authorities?: Authority[]
+  checkpoint_responses: CheckpointResponse[]
+  is_milestone: boolean
+}</div>
+
+  <p>The session embeds a full <code>FrameVersion</code> snapshot at creation. This is the master plan's fix #4 made concrete: the session never silently breaks if the underlying Frame is edited. If the user wants the session to track newer frame versions, they explicitly migrate it (a Stream D operation), which copies premises and responses forward where they still attach to existing nodes and lists the orphans.</p>
+
+  <p>Per the handoff doc, Frame and ArgumentSession are versioned independently. ArgumentSessionVersion mirrors FrameVersion's shape but for the argument layer. Sessions and Frames have no shared version-numbering.</p>
+
+  <p><code>frame_version_drift_warning</code> populates lazily: when the user opens a session whose <code>frame_version_id</code> is older than the parent Frame's <code>current_version_id</code>, the field is set to a human-readable summary of what changed since. It does not block running the session; it is informational only.</p>
+
+  <h2>ConditionalOutput schema <span class="anchor">(B5)</span></h2>
+
+  <div class="field-list">ConditionalOutput {
+  shape: "determinate" | "conditional" | "contested" | "incomplete"
+
+  <span class="cm">// Populated when shape = "determinate":</span>
+  conclusion?: NodeRef                     <span class="cm">// reference into the FrameVersion snapshot</span>
+  primary_path?: NodeRef[]                 <span class="cm">// ordered nodes from RootQuestion to Conclusion</span>
+
+  <span class="cm">// Populated when shape = "conditional":</span>
+  branches?: ConditionalBranch[]
+
+  <span class="cm">// Populated when shape = "contested":</span>
+  contested_nodes?: NodeRef[]
+  best_inference?: NodeRef                 <span class="cm">// optional Conclusion the system best guesses, with a "tentative" flag in display</span>
+
+  <span class="cm">// Populated when shape = "incomplete":</span>
+  open_gates?: OpenGate[]
+
+  <span class="cm">// Always populated:</span>
+  prose_summary: string                    <span class="cm">// deterministic textual rendering; the default view (A9)</span>
+  computed_at: timestamp
+  confidence_breakdown: ConfidenceBreakdown <span class="cm">// the proportions A1 calls for at display time</span>
+}
+
+ConditionalBranch {
+  id: string
+  conditions: BranchCondition[]            <span class="cm">// the if-clauses that select this branch</span>
+  resulting_conclusion: NodeRef            <span class="cm">// the Conclusion this branch produces</span>
+  intermediate_path: NodeRef[]             <span class="cm">// the path from the divergence point to the Conclusion</span>
+  prose: string                            <span class="cm">// deterministic prose for this branch</span>
+}
+
+BranchCondition {
+  gate_node_id: NodeRef                    <span class="cm">// the Checkpoint or Term whose answer determines the branch</span>
+  required_value: string                   <span class="cm">// for Checkpoint: a CheckpointOption.id; for Term: an Interpretation.id</span>
+  required_value_label: string             <span class="cm">// pre-rendered for display</span>
+}
+
+OpenGate {
+  node_id: NodeRef
+  reason: "no_premise" | "premise_contradicted" | "burden_unmet" | "authority_missing" | "structural"
+  prompt: string                           <span class="cm">// the exact question to surface to the user</span>
+}
+
+ConfidenceBreakdown {
+  total_checkpoints_on_path: integer
+  satisfied_via_binding: integer
+  satisfied_via_persuasive: integer
+  satisfied_via_stipulation: integer
+  satisfied_via_structural: integer
+  contested: integer
+  open: integer
+}</div>
+
+  <p>Per A9, a single <code>ConditionalOutput</code> object drives all three views: the prose summary view (default), the decision tree view, and the path-overlay view. Renderers consume the same object; differences are presentational. The <code>prose_summary</code> field is generated deterministically (no LLM in the routing path, per A2's AI strategy) by walking the structure and templating standard sentences. An LLM_HOOK exists for prose-rewriting but is build-time / opt-in only.</p>
+
+  <p>The four <code>shape</code> values map to user-visible states:</p>
+  <ul>
+    <li><code>determinate</code>: every Checkpoint on the path is satisfied; there is one Conclusion. The view shows it directly.</li>
+    <li><code>conditional</code>: at least one Checkpoint is unanswered, but the structure short-circuits to a small number of named branches. The view shows "if X then A; if Y then B."</li>
+    <li><code>contested</code>: Premises exist on both sides of one or more Checkpoints; no determinate path exists. The view shows the contested points and any best-inference Conclusion as tentative.</li>
+    <li><code>incomplete</code>: the frame itself is incomplete (paths don't terminate, gates have no inputs); the user is shown the open structural gaps and prevented from publishing the session.</li>
+  </ul>
+
+  <h2>Validation rules <span class="anchor">(B6)</span></h2>
+
+  <p>Validation rules are the frame-completeness check that runs before mode transitions and on demand. Each rule has a stable id (e.g., V-FR-1) so failures can be referenced from UI and logs. Rules are tagged as <strong>error</strong> (blocks mode transition) or <strong>warning</strong> (advises but does not block).</p>
+
+  <h3>Frame-level rules</h3>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td>V-FR-1</td><td>error</td><td>The frame has exactly one RootQuestion.</td></tr>
+    <tr><td>V-FR-2</td><td>error</td><td>Every non-Root node has at least one incoming edge (no orphans).</td></tr>
+    <tr><td>V-FR-3</td><td>error</td><td>Every Term has at least two outgoing INTERPRETED_AS edges, OR a non-null <code>linked_to</code>.</td></tr>
+    <tr><td>V-FR-4</td><td>error</td><td>Every Checkpoint is reachable from RootQuestion through frame-layer edges.</td></tr>
+    <tr><td>V-FR-5</td><td>error</td><td>Every Conclusion is reachable from RootQuestion.</td></tr>
+    <tr><td>V-FR-6</td><td>error</td><td>The frame graph (excluding FORECLOSES, BINDING_IN, CITES, DISTINGUISHED_BY) is a DAG. No structural cycles in the resolution flow.</td></tr>
+    <tr><td>V-FR-7</td><td>warning</td><td>Legal-mode frame has at least one SubQuestion with <code>is_jurisdictional: true</code>. Per A8, this is a warning, not a blocker.</td></tr>
+    <tr><td>V-FR-8</td><td>error</td><td>Every path from RootQuestion eventually terminates at a Conclusion (no dangling Term/Checkpoint that doesn't continue).</td></tr>
+    <tr><td>V-FR-9</td><td>error</td><td>No "compound" Checkpoints: a Checkpoint's <code>question</code> field, by author convention, names a single test. Detection is best-effort and primarily a warning unless heuristic confidence is high.</td></tr>
+    <tr><td>V-FR-10</td><td>error</td><td>(general mode) Every Conclusion's <code>direction.position_id</code> resolves to an entry in <code>Frame.positions</code>. A Position cannot be deleted while referenced.</td></tr>
+    <tr><td>V-FR-11</td><td>error</td><td>(legal mode) Every Authority with <code>is_binding: true</code> has a non-null <code>jurisdiction</code>.</td></tr>
+    <tr><td>V-FR-12</td><td>warning</td><td>Every Interpretation with no incoming CITES has at least one explanatory <code>notes</code> field, encouraging the author to defend the reading. Warning only.</td></tr>
+  </table>
+
+  <h3>Node-level rules</h3>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td>V-NODE-1</td><td>error</td><td>Every NodeRef in any field resolves to a node within the same FrameVersion (frame-layer) or ArgumentSession (argument-layer).</td></tr>
+    <tr><td>V-NODE-2</td><td>error</td><td>Every node's <code>type</code> matches the structural shape of its fields (no Conclusion missing <code>direction</code>, no Term missing <code>order</code>, etc.).</td></tr>
+    <tr><td>V-NODE-3</td><td>error</td><td>Term <code>linked_to</code> chains terminate (no cycles).</td></tr>
+    <tr><td>V-NODE-4</td><td>error</td><td>Term <code>linked_to</code> targets a Term within the same FrameVersion.</td></tr>
+    <tr><td>V-NODE-5</td><td>error</td><td>Checkpoint with <code>answer_type: "boolean"</code> has exactly two options.</td></tr>
+    <tr><td>V-NODE-6</td><td>error</td><td>Checkpoint with <code>answer_type: "graded"</code> has exactly three options.</td></tr>
+    <tr><td>V-NODE-7</td><td>error</td><td>Checkpoint with <code>answer_type: "multiple_choice"</code> has at least two options.</td></tr>
+    <tr><td>V-NODE-8</td><td>error</td><td>Every CheckpointOption with <code>satisfies: true</code> has a non-null <code>target_node_id</code>, OR the option is the terminal answer (its target is a Conclusion).</td></tr>
+    <tr><td>V-NODE-9</td><td>error</td><td>Every CheckpointOption.id is unique within its parent Checkpoint.</td></tr>
+  </table>
+
+  <h3>Edge-level rules</h3>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td>V-EDGE-1</td><td>error</td><td>Every edge's <code>source</code> and <code>target</code> exist and are of types permitted for that edge type (per the table in B2).</td></tr>
+    <tr><td>V-EDGE-2</td><td>error</td><td>No duplicate edges: at most one edge of a given <code>type</code> between a given (source, target) pair, except for FORECLOSES (which may target multiple distinct nodes from the same source via multiple edges, each with its own pair) and SUPPORTS/CONTRADICTS (one Premise may support/contradict the same Interpretation through multiple edges only with distinct weights — disallowed; collapse to one).</td></tr>
+    <tr><td>V-EDGE-3</td><td>error</td><td>Argument-layer edges live in an ArgumentSession, not in a FrameVersion.</td></tr>
+    <tr><td>V-EDGE-4</td><td>error</td><td>Frame-layer edges live in a FrameVersion, not in an ArgumentSession.</td></tr>
+  </table>
+
+  <h3>LogicalGate rules</h3>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td>V-GATE-1</td><td>error</td><td>AND and OR gates have at least 2 inputs.</td></tr>
+    <tr><td>V-GATE-2</td><td>error</td><td>NOT gates have exactly 1 input.</td></tr>
+    <tr><td>V-GATE-3</td><td>error</td><td>IF_THEN gates have exactly one antecedent and one consequent (named slots).</td></tr>
+    <tr><td>V-GATE-4</td><td>error</td><td>UNLESS gates have exactly one main and one exception (named slots).</td></tr>
+    <tr><td>V-GATE-5</td><td>error</td><td>No gate input is a Term node (Terms are not boolean-evaluable; use a specific Interpretation).</td></tr>
+    <tr><td>V-GATE-6</td><td>error</td><td>No gate input is a Premise or Authority (those are the wrong layer).</td></tr>
+  </table>
+
+  <h3>Argument-layer rules</h3>
+  <table>
+    <tr><th>Id</th><th>Severity</th><th>Rule</th></tr>
+    <tr><td>V-ARG-1</td><td>error</td><td>Every CheckpointResponse references a Checkpoint that exists in the frame_version_snapshot.</td></tr>
+    <tr><td>V-ARG-2</td><td>error</td><td>Every Premise answering a Checkpoint with <code>requires_authority: true</code> has a non-null <code>authority_ref</code>.</td></tr>
+    <tr><td>V-ARG-3</td><td>error</td><td>Every Premise has a <code>kind</code> drawn from the vocabulary corresponding to the frame's <code>mode</code>/<code>flavor</code>.</td></tr>
+    <tr><td>V-ARG-4</td><td>error</td><td>Every <code>authority_ref</code> resolves to an Authority node in either <code>frame_version_snapshot</code> or <code>session_authorities</code>.</td></tr>
+    <tr><td>V-ARG-5</td><td>warning</td><td>If a Checkpoint has both ANSWERS and CONTRADICTS edges from different Premises, the status determiner flags the node as contested; this is a normal state, not an error.</td></tr>
+  </table>
+
+  <h2>Mode-aware schema behavior</h2>
+  <p>This is a consolidated reference for how mode and flavor affect the schema, drawn from the per-section notes above.</p>
+
+  <h3>Legal mode adds</h3>
+  <ul>
+    <li>Frame.<code>jurisdiction_default</code></li>
+    <li>SubQuestion.<code>is_jurisdictional</code> (active)</li>
+    <li>RootQuestion.<code>standard_of_review</code>, SubQuestion.<code>standard_of_review</code></li>
+    <li>Interpretation.<code>jurisdiction_override</code></li>
+    <li>Checkpoint.<code>requires_authority</code> (active), Checkpoint.<code>burden_level</code></li>
+    <li>Authority.<code>court</code>, .<code>year</code>, .<code>holding_summary</code>, .<code>is_holding</code>, .<code>is_binding</code>, .<code>jurisdiction</code>, .<code>binding_in</code></li>
+    <li>Conclusion.<code>direction</code> uses the legal enum; Conclusion.<code>remedy</code> active</li>
+    <li>Premise <code>kind</code> vocabulary: legal set</li>
+    <li>BINDING_IN, DISTINGUISHED_BY edges active</li>
+  </ul>
+
+  <h3>General mode adds</h3>
+  <ul>
+    <li>Frame.<code>flavor</code> required</li>
+    <li>Frame.<code>positions</code> populated; Conclusion.<code>direction</code> uses the general variant referencing positions</li>
+  </ul>
+
+  <h3>Academic flavor</h3>
+  <ul>
+    <li>Authority fully visible; <code>author</code>, <code>venue</code>, <code>position</code> active</li>
+    <li>Premise <code>kind</code> vocabulary: academic set</li>
+  </ul>
+
+  <h3>Personal flavor</h3>
+  <ul>
+    <li>Authority hidden by default; usable per-frame opt-in (UI-level)</li>
+    <li>Authority labeled "Source" in UI; schema name unchanged</li>
+    <li>Premise <code>kind</code> vocabulary: personal set</li>
+  </ul>
+
+  <h2>JSON envelope and storage</h2>
+  <p>An on-disk frame export consists of a Frame envelope embedding the current FrameVersion. Sessions export similarly with their snapshot and current ArgumentSessionVersion.</p>
+
+  <div class="field-list">FrameExport {
+  schema_version: integer       <span class="cm">// the schema spec version this file was written against</span>
+  app_version: string
+  exported_at: timestamp
+  frame: Frame
+  current_version: FrameVersion
+  history?: FrameVersion[]      <span class="cm">// optional; omitted by default for size</span>
+}
+
+ArgumentSessionExport {
+  schema_version: integer
+  app_version: string
+  exported_at: timestamp
+  session: ArgumentSession
+  current_version: ArgumentSessionVersion
+  history?: ArgumentSessionVersion[]
+  embedded_frame_export?: FrameExport   <span class="cm">// when sharing a session standalone</span>
+}</div>
+
+  <p>The <code>schema_version</code> integer increments whenever a non-backward-compatible change to this spec ships. Reader code uses it to dispatch into the correct migration before validating the rest of the document.</p>
+
+  <h2>Reserved / deferred design space</h2>
+  <p>The following are intentionally not specified in v1 and are flagged here so future agents do not assume they must be designed now:</p>
+  <ul>
+    <li><strong>Cross-frame references (A6).</strong> Deferred to v2. Frame templates are the v1 substitute (deep copy at creation; no live link). The id design is template-friendly (random UUIDs) so v2 can layer cross-frame edges in without restructuring.</li>
+    <li><strong>Confidence as a stored value.</strong> Always computed, never stored (per A1). If a future use case needs cached confidence, add a derived field to ArgumentSession.<code>output</code>; do not put it on Conclusion.</li>
+    <li><strong>Multi-user collaboration / concurrent editing.</strong> The schema includes a <code>created_by</code> field on Node and Edge bases as a hook, but no concurrency model is specified. v1 is single-user.</li>
+    <li><strong>Compound LogicalGates / nested AnyOf.</strong> A3 explicitly disallowed nesting in SatisfactionPolicy. If a future use case truly requires nested boolean combinators, model it with multiple LogicalGate nodes wired together, not by complicating the policy schema.</li>
+    <li><strong>Promotion of <code>remedy</code> to a separate Remedy node type.</strong> Reserved for v2. The Conclusion field is sufficient for v1; the schema migration path is documented at B1.7.</li>
+    <li><strong>Freeform Checkpoint answers.</strong> A2 deferred this. If introduced, a fourth <code>answer_type: "freeform"</code> would be added with a non-deterministic-warning flag on its session output.</li>
+    <li><strong>Storage backend.</strong> Stream H concern. Schema is storage-agnostic.</li>
+  </ul>
+
+  <h2>Cheat sheet — type index</h2>
+  <table>
+    <tr><th>Type</th><th>Layer</th><th>Section</th></tr>
+    <tr><td>Frame</td><td>—</td><td>B3</td></tr>
+    <tr><td>FrameVersion</td><td>frame</td><td>B3</td></tr>
+    <tr><td>ArgumentSession</td><td>—</td><td>B4</td></tr>
+    <tr><td>ArgumentSessionVersion</td><td>argument</td><td>B4</td></tr>
+    <tr><td>RootQuestion</td><td>frame</td><td>B1.1</td></tr>
+    <tr><td>SubQuestion</td><td>frame</td><td>B1.2</td></tr>
+    <tr><td>Term</td><td>frame</td><td>B1.3</td></tr>
+    <tr><td>Interpretation</td><td>frame</td><td>B1.4</td></tr>
+    <tr><td>Checkpoint</td><td>frame</td><td>B1.5</td></tr>
+    <tr><td>LogicalGate (AndGate, OrGate, NotGate, IfThenGate, UnlessGate)</td><td>frame</td><td>B1.6</td></tr>
+    <tr><td>Conclusion</td><td>frame</td><td>B1.7</td></tr>
+    <tr><td>Authority</td><td>frame or argument</td><td>B1.8</td></tr>
+    <tr><td>Premise</td><td>argument</td><td>B1.9</td></tr>
+    <tr><td>SatisfactionPolicy / Condition</td><td>—</td><td>SatisfactionPolicy</td></tr>
+    <tr><td>NodeStatus</td><td>—</td><td>NodeStatus</td></tr>
+    <tr><td>ConditionalOutput / ConditionalBranch / OpenGate / ConfidenceBreakdown</td><td>—</td><td>B5</td></tr>
+    <tr><td>Position</td><td>—</td><td>B3</td></tr>
+    <tr><td>Jurisdiction</td><td>—</td><td>Jurisdiction</td></tr>
+    <tr><td>CheckpointOption / CheckpointResponse</td><td>—</td><td>B1.5 / B4</td></tr>
+  </table>
+
+  <h2>What's unblocked next</h2>
+  <p>With Stream B specified end-to-end, the following streams can begin:</p>
+  <ul>
+    <li><strong>Stream C (runtime algorithms)</strong> — fully unblocked. C1 (path tracing), C2 (foreclosure resolution), C3 (status determination), C4 (conditional output generation), C5 (frame completeness checker), and C6 (authority binding) all have concrete data structures to operate on now.</li>
+    <li><strong>Stream D (mode definitions)</strong> — fully unblocked. D1 (Frame Building actions), D2 (Argument Running actions), D3 (mode transitions, which use the validation rules from B6), D4 (Legal mode toggle), and D5 (non-legal behavior).</li>
+    <li><strong>Stream F (legal-mode specifics)</strong> — F1 (Authority schema/behavior) is now specified; F2 (jurisdiction modeling) is specified to v1 depth and ready for F5/F6 to layer on; F3 and F4 (standard-of-review and burden-of-proof encoding) live inside the SatisfactionPolicy / Condition library and Checkpoint.<code>burden_level</code> field. F5 (court hierarchy database) remains independent and ready to start.</li>
+    <li><strong>Stream G (LLM hook design)</strong> — interface contracts now have clean attachment points: G1 hooks the Checkpoint authoring step, G2 hooks Interpretation suggestion at frame-build, G3 hooks Conclusion <code>reasoning_summary</code>, G4 hooks gap detection (which reads <code>NodeStatus.failed_conditions</code>), G5 hooks the <code>standard_of_review_applied</code> condition. Per the A2 AI strategy decision, all five are build-time / opt-in; runtime routing is deterministic.</li>
+    <li><strong>Stream H (persistence)</strong> — the JSON envelope and version-snapshot model are concrete enough for H1–H4 to choose a backend and tooling.</li>
+  </ul>
+
+  <h2>Integration notes — handoff doc and master plan updates required</h2>
+  <p>The following changes need to be applied to the upstream project documents to reflect the state after this session.</p>
+
+  <h3>Handoff document changes</h3>
+  <ul>
+    <li>Replace the "ID and data format" section with the refined model: every entity has a UUID <code>id</code> and an optional <code>slug</code>. Migration is a config flag, not a data migration.</li>
+    <li>Update the "Node confidence / status model" section to reflect the new <code>NodeStatus</code> shape with <code>via</code> array and <code>failed_conditions</code> list (the Stream A resolutions noted this update; this spec implements it).</li>
+    <li>Update the edge types table to match B2: confirm CITES (renamed), ALTERNATIVE_PATH_TO removed, BINDING_IN as conceptual relation (implemented as field on Authority).</li>
+    <li>Add the JSON envelope and FrameExport / ArgumentSessionExport shapes to a new "Persistence format" section, or link to this Stream B doc.</li>
+    <li>Mark "Data schema" as complete in the Development path section. Step 2 (mode definitions) is now in progress. Step 1 is done.</li>
+  </ul>
+
+  <h3>Master plan changes</h3>
+  <ul>
+    <li>Mark all of Stream B (B1–B7) as resolved.</li>
+    <li>Note the B7 refinement: there is no slug-to-UUID migration; it became a config flag. Update the B7 description accordingly.</li>
+    <li>Update sequencing: B is fully resolved; C, D, parts of F, G, and H are now unblocked.</li>
+    <li>Add a brief note that this spec is the source of truth for type definitions; downstream streams should reference type names by their ids in this document (B1.5 = Checkpoint, etc.) rather than redefining them.</li>
+    <li>Recommended next session: Stream C in full, or Stream D in full. Both are agent-driven with limited user input needed.</li>
+  </ul>
+</div>

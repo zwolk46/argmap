@@ -1,0 +1,251 @@
+<style>
+  .doc { max-width: 720px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 20px 0 6px; color: var(--color-text-primary); }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 4px; font-weight: 500; }
+  .doc .tag-locked { background: var(--color-background-success); color: var(--color-text-success); }
+  .doc .tag-defer { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .item { margin-bottom: 18px; }
+  .doc .item-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .doc .item-id { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-secondary); font-weight: 500; }
+  .doc .item-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+  .doc .field-list { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 14px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.6; color: var(--color-text-primary); }
+</style>
+<div class="doc">
+  <h1>Stream A — Resolutions</h1>
+  <p class="subtitle">Companion to handoff_document_v2.html and master_plan_v1.html &nbsp;·&nbsp; Session date: May 1, 2026 &nbsp;·&nbsp; Version 1</p>
+
+  <div class="notice">
+    <p>This document records the conceptual decisions resolved in the first focused planning session. Stream A from the master plan is now resolved end-to-end (A1–A12). All decisions feed Stream B (schema) and downstream streams. Anything here can be revisited if the user objects when reviewing.</p>
+  </div>
+
+  <h2>Summary</h2>
+  <p>The session resolved all 12 Stream A items, including three additions identified during the session itself (A10–A12). The handoff doc and master plan need updates to reflect these resolutions; see the integration notes at the end.</p>
+
+  <h2>Resolutions</h2>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A1</span><span class="item-title">Conclusion node content</span><span class="tag tag-locked">locked</span></div>
+    <p>A Conclusion stores the answer plus a structural direction; confidence is computed from the path, not stored on the node; remedy is a v1 field on the Conclusion (legal mode only) with the schema designed so it can be promoted to a separate node type later if remedy sub-frames are needed.</p>
+    <div class="field-list">
+      Conclusion {<br>
+      &nbsp;&nbsp;statement: text&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// required</span><br>
+      &nbsp;&nbsp;direction: enum&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// required, mode-aware</span><br>
+      &nbsp;&nbsp;reasoning_summary: text?&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// optional</span><br>
+      &nbsp;&nbsp;tags: string[]?<br>
+      &nbsp;&nbsp;remedy: text?&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// legal mode only, v1</span><br>
+      &nbsp;&nbsp;notes: text?&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// from A12</span><br>
+      }
+    </div>
+    <p>Direction enum, legal mode: <code>favors_plaintiff</code>, <code>favors_defendant</code>, <code>affirm</code>, <code>reverse</code>, <code>remand</code>, <code>dismiss</code>, <code>custom</code>. General mode: <code>position_a</code>, <code>position_b</code>, ... (mapped to user-named positions on the frame), <code>custom</code>.</p>
+    <p>Confidence is <em>displayed</em> on the Conclusion (computed from the session's status map — proportions of Checkpoints satisfied by binding authority vs. persuasive vs. contested vs. open) but never <em>stored</em> on the node. This prevents the user from asserting certainty the structure does not support.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A2</span><span class="item-title">Checkpoint interview UX</span><span class="tag tag-locked">locked</span></div>
+    <p>Checkpoints have one of three answer types, all defined at frame-build time. Default for a new Checkpoint: <code>multiple_choice</code> pre-filled with two options ("yes"/"no").</p>
+    <ul>
+      <li><strong>boolean</strong> — yes/no. Each answer maps to a target branch.</li>
+      <li><strong>multiple_choice</strong> — author-defined options, each mapped to a target branch or outcome.</li>
+      <li><strong>graded</strong> — three-state for burden/threshold questions (met / not met / unclear). The middle state routes to <code>contested</code>.</li>
+    </ul>
+    <p>Every answer requires the user to attach a Premise (created on the fly: text statement + optional source/Authority). Optional notes field on every answer.</p>
+    <p>In Legal Mode, Checkpoints can be flagged <code>requires_authority: true</code>, meaning the attached Premise must reference an Authority node, not just assert a fact.</p>
+    <p>Checkpoints are atomic. Multi-element tests (e.g., negligence: duty/breach/causation/damages) are modeled as multiple Checkpoints, not one Checkpoint with multiple parts.</p>
+    <div class="field-list">
+      Checkpoint {<br>
+      &nbsp;&nbsp;question: text<br>
+      &nbsp;&nbsp;answer_type: enum {boolean, multiple_choice, graded}<br>
+      &nbsp;&nbsp;options: { label, target_node_id, satisfies: bool }[]<br>
+      &nbsp;&nbsp;requires_premise: bool&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// default true</span><br>
+      &nbsp;&nbsp;requires_authority: bool&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// default false; legal mode only</span><br>
+      &nbsp;&nbsp;options_box: SatisfactionPolicy&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// from A3</span><br>
+      &nbsp;&nbsp;notes: text?<br>
+      }
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A2 (AI strategy)</span><span class="item-title">Build-time AI / deterministic runtime</span><span class="tag tag-locked">locked</span></div>
+    <p>The user originally proposed runtime LLM mapping of Checkpoint answers to branches. After discussion, this was rejected in favor of a build-time / runtime split that preserves determinism and auditability.</p>
+    <ul>
+      <li><strong>Build-time AI (suggestion only, user always confirms)</strong>: Checkpoint question wording, answer option suggestions, routing suggestions, Interpretation suggestions with authorities. All suggestions are baked into the frame after user confirmation.</li>
+      <li><strong>Runtime: zero LLM in the routing path.</strong> Argument Running uses only the pre-baked structure. Same frame + same premises = same path, every time.</li>
+      <li><strong>Optional sidecar AI at runtime, never on routing</strong>: drafting Premise text from a fact pattern the user pastes; flagging cross-implications as advisory notes.</li>
+    </ul>
+    <p>Each LLM hook gets a versioned <code>.md</code> prompt file with a defined input/output shape. This fits cleanly into Stream G and is a non-trivial change to G's scope: G now must specify build-time vs. runtime classification per hook, and all build-time hooks must produce structured output the user can edit before commit.</p>
+    <p>A fourth, non-deterministic <code>freeform</code> answer type was discussed and deferred to v2 unless a real use case forces it sooner. Frames using it would require an explicit "non-deterministic" warning in their audit trail.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A3</span><span class="item-title">Per-node satisfaction criteria — the "options box"</span><span class="tag tag-locked">locked</span></div>
+    <p>Each node type has a default satisfaction policy at the frame level (editable per-frame), and Checkpoints, Questions, and Interpretations can override the policy per-instance. Other node types use the default always.</p>
+    <p><strong>Condition library</strong> (≈12 named conditions, each knows how to evaluate itself against the ArgumentSession):</p>
+    <ul>
+      <li>Structural: <code>premise_attached</code>, <code>interpretation_selected</code>, <code>all_children_resolved</code>, <code>path_complete</code></li>
+      <li>Quality: <code>not_contradicted</code>, <code>premise_kind_in[list]</code>, <code>burden_met(level)</code></li>
+      <li>Authority (legal/academic): <code>authority_required</code>, <code>authority_binding</code>, <code>not_distinguished</code></li>
+      <li>Procedural (legal): <code>standard_of_review_applied</code> (LLM hook surface)</li>
+      <li>Universal: <code>not_foreclosed</code></li>
+    </ul>
+    <p><strong>Default policy per node type</strong>:</p>
+    <table>
+      <tr><th>Node</th><th>Default conditions (all must hold)</th></tr>
+      <tr><td><code>Checkpoint</code></td><td><code>premise_attached</code> ∧ <code>not_contradicted</code> ∧ <code>burden_met(preponderance)</code> ∧ <code>not_foreclosed</code></td></tr>
+      <tr><td><code>Interpretation</code></td><td><code>selected</code> ∧ <code>not_foreclosed</code></td></tr>
+      <tr><td><code>Term</code></td><td><code>interpretation_selected</code> ∧ <code>not_foreclosed</code></td></tr>
+      <tr><td><code>SubQuestion</code> / <code>RootQuestion</code></td><td><code>all_children_resolved</code> ∧ <code>not_foreclosed</code></td></tr>
+      <tr><td><code>Conclusion</code></td><td><code>path_complete</code> ∧ <code>not_foreclosed</code></td></tr>
+      <tr><td><code>Premise</code> / <code>Authority</code></td><td>(no satisfaction policy — these are inputs/sources)</td></tr>
+    </table>
+    <p><strong>Composition</strong>: AND by default, plus one explicit AnyOf group per policy. A policy is <code>AND(c1, c2, ..., AnyOf(c5, c6, c7))</code>. No nested groups, no NOT (negative conditions are explicit, e.g. <code>not_contradicted</code>).</p>
+    <p><strong>Status enum</strong> (refining the handoff doc's 5-state):</p>
+    <ul>
+      <li><code>open</code> — at least one condition unmet</li>
+      <li><code>satisfied</code> — all conditions met; sub-flags <code>via_binding_authority</code> / <code>via_persuasive_authority</code> exposed for legal-mode display</li>
+      <li><code>contested</code> — premises on both sides, neither dispositive</li>
+      <li><code>foreclosed</code> — <code>not_foreclosed</code> failed</li>
+      <li><code>not_applicable</code> — node lives on a path never reached</li>
+    </ul>
+    <p>This refinement collapses the handoff doc's <code>satisfied_binding</code> and <code>satisfied_persuasive</code> into sub-flags rather than peer top-level states. The handoff doc's status section needs updating.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A4</span><span class="item-title">Mode differentiation: Personal / Academic / Legal</span><span class="tag tag-locked">locked</span></div>
+    <p>Two architectural modes, three presentation modes.</p>
+    <ul>
+      <li><strong>Architectural modes</strong>: <code>legal</code> and <code>general</code>. Differ in schema (Legal adds Authority binding, jurisdiction, court hierarchy hooks, standard-of-review fields).</li>
+      <li><strong>Within general, a flavor</strong>: <code>personal</code> or <code>academic</code>. Flavor is metadata, not schema. It changes Authority node behavior, Premise <code>kind</code> vocabulary, and UI labels.</li>
+    </ul>
+    <p>In <code>academic</code> flavor, Authority is fully active (citation, author, year, venue, position, URL). In <code>personal</code>, Authority is hidden by default but available — turned on per-frame if needed. Authority is labeled "Source" in personal flavor.</p>
+    <p>Premise <code>kind</code> vocabularies:</p>
+    <ul>
+      <li>Legal: <code>stipulated</code>, <code>found</code>, <code>disputed</code>, <code>procedural</code></li>
+      <li>Academic: <code>empirical</code>, <code>definitional</code>, <code>normative</code>, <code>stipulated</code></li>
+      <li>Personal: <code>observation</code>, <code>value</code>, <code>assumption</code>, <code>stipulated</code></li>
+    </ul>
+    <p>"Scholarly consensus" is not a distinct concept in v1 — it's an Authority with a <code>position</code> field describing the consensus view.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A5</span><span class="item-title">Frame organization</span><span class="tag tag-locked">locked</span></div>
+    <p>Tags + search + recents + pinned. No folders.</p>
+    <p>Frame metadata fields (B3 input):</p>
+    <div class="field-list">
+      Frame {<br>
+      &nbsp;&nbsp;id, title, description<br>
+      &nbsp;&nbsp;mode: enum {legal, general}<br>
+      &nbsp;&nbsp;flavor: enum {personal, academic}?&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// only when mode=general</span><br>
+      &nbsp;&nbsp;tags: string[]<br>
+      &nbsp;&nbsp;pinned: bool&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// max 8 pinned per user</span><br>
+      &nbsp;&nbsp;jurisdiction_default: jurisdiction?&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// legal only</span><br>
+      &nbsp;&nbsp;created_at, updated_at, last_opened_at<br>
+      &nbsp;&nbsp;current_version<br>
+      }
+    </div>
+    <p>Home screen surfaces: pinned section (max 8), recents (last 10), search across title/description/node text/tags/Conclusion statements.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A6</span><span class="item-title">Cross-frame references</span><span class="tag tag-defer">deferred to v2</span></div>
+    <p>Live cross-frame references are deferred to v2. The v1 substitute is <strong>frame templates</strong>: at frame creation, the user can pick "start from existing frame" and get a deep copy. No live link, no version coupling, no circular reference detection needed. Schema's <code>id</code> design must be template-friendly (random IDs, no positional dependencies).</p>
+    <p>Frame template support is a Stream D action item (D1) for v1.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A7</span><span class="item-title">Resolution order semantics outside foreclosure</span><span class="tag tag-locked">locked</span></div>
+    <p>Order is purely a foreclosure mechanism. Outside foreclosure, resolution order has no effect on what Interpretations are available for later Terms. Frame authors who want "Term X interpretation A constrains Term Y" must express that structurally — by routing X's interpretation through a SubQuestion that contains Y with the constrained Interpretation set.</p>
+    <p>Reasoning: silent coupling is invisible. The frame's logic should be readable from the graph, not from a hidden ordering variable.</p>
+    <p>The <code>order</code> field on Term is retained, used only by the foreclosure resolver and for default UI presentation order.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A8</span><span class="item-title">Jurisdiction structure (Legal Mode)</span><span class="tag tag-locked">locked</span></div>
+    <p>Jurisdictional pre-checks are ordinary SubQuestions with an <code>is_jurisdictional: true</code> flag. They use the same Term/Interpretation/Checkpoint machinery as everything else.</p>
+    <p>Behavior:</p>
+    <ul>
+      <li>Rendered first in the UI ordering.</li>
+      <li>Visually distinguished (treatment decided in Stream E).</li>
+      <li>Frame completeness checker warns — does not block — when a Legal-mode frame has no jurisdictional SubQuestions.</li>
+    </ul>
+    <p>This unblocks F2.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A9</span><span class="item-title">Conditional output presentation</span><span class="tag tag-locked">locked</span></div>
+    <p>Three coordinated views, all rendered from the same <code>ConditionalOutput</code> object (B5 will spec):</p>
+    <ol>
+      <li><strong>Default: prose summary.</strong> Deterministic textual rendering, no LLM. Exportable.</li>
+      <li><strong>Toggle: decision tree view.</strong> Inline tree showing only open gates and the Conclusions each branch leads to.</li>
+      <li><strong>Toggle: path overlay on the frame.</strong> Active path highlighted in the main frame view, with open gates marked.</li>
+    </ol>
+    <p>Default view is a per-user setting; per-frame override available.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A10</span><span class="item-title">Term scope and reuse</span><span class="tag tag-locked">locked</span></div>
+    <p>Term has a nullable <code>linked_to: term_id</code> field. When the user creates a Term whose name matches an existing Term in the same frame, the UI offers a checkbox: "use the same interpretation as the existing Term." Checked → linked Term shares Interpretations with its target. Unchecked → independent Term with its own Interpretation branches.</p>
+    <p>Linking is one-way (a Term points at the Term it follows) and cannot create cycles. The linked Term inherits Interpretations and their selection state at runtime; it can have its own <code>options_box</code> override.</p>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A11</span><span class="item-title">Premise typing</span><span class="tag tag-locked">locked</span></div>
+    <p>Premise gets a <code>kind</code> enum, vocabulary determined by Frame mode/flavor (see A4). The <code>kind</code> feeds the <code>contested</code> status calculation and the display layer (e.g., disputed vs. stipulated premises render differently).</p>
+    <div class="field-list">
+      Premise {<br>
+      &nbsp;&nbsp;id, statement: text<br>
+      &nbsp;&nbsp;kind: enum&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// vocabulary per Frame mode/flavor</span><br>
+      &nbsp;&nbsp;source: text?&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// optional citation/source</span><br>
+      &nbsp;&nbsp;authority_ref: authority_id?&nbsp;&nbsp;<span style="color: var(--color-text-secondary);">// when authority required</span><br>
+      &nbsp;&nbsp;notes: text?<br>
+      }
+    </div>
+  </div>
+
+  <div class="item">
+    <div class="item-header"><span class="item-id">A12</span><span class="item-title">Per-node notes</span><span class="tag tag-locked">locked</span></div>
+    <p>Every node type has an optional <code>notes: text</code> field for the user's working thoughts. Not part of the formal logical structure; not used by path tracing or status determination. Persists with the frame.</p>
+  </div>
+
+  <h2>Integration notes — handoff doc and master plan updates required</h2>
+  <p>The following changes need to be applied to <code>handoff_document_v2.html</code> and <code>master_plan_v1.html</code> for them to reflect the current state. These should happen before the next session.</p>
+
+  <h3>Handoff document changes</h3>
+  <ul>
+    <li>Status model section: replace 5-state enum with new 5-state enum (<code>open</code>, <code>satisfied</code> with sub-flags, <code>contested</code>, <code>foreclosed</code>, <code>not_applicable</code>).</li>
+    <li>Mode section: update to reflect <code>legal</code> vs. <code>general</code> architectural split with <code>personal</code>/<code>academic</code> flavor under general.</li>
+    <li>Open questions section: remove A8 (jurisdiction structure — now resolved), A4 (non-legal mode feature set — now resolved), Authority fields in non-legal modes (now resolved).</li>
+    <li>Edge types table: confirm <code>FORECLOSES</code> is edge-only, <code>ALTERNATIVE_PATH_TO</code> is removed, <code>CITED_BY</code> renamed to <code>CITES</code> (these were already adopted in master plan but not yet applied to the handoff doc itself).</li>
+    <li>Add <code>notes</code> field reference at node descriptions level (A12).</li>
+    <li>Add Term <code>linked_to</code> reference (A10).</li>
+    <li>Add Premise <code>kind</code> reference (A11).</li>
+    <li>Add Conclusion field set (A1) including legal-mode <code>remedy</code>.</li>
+    <li>Add SubQuestion <code>is_jurisdictional</code> flag reference (A8).</li>
+    <li>Add the build-time vs. runtime AI policy (A2 AI strategy) to the LLM hooks section.</li>
+  </ul>
+
+  <h3>Master plan changes</h3>
+  <ul>
+    <li>Mark all of Stream A as resolved.</li>
+    <li>Add A10, A11, A12 to the historical record of Stream A items.</li>
+    <li>Update Stream G description to reflect build-time vs. runtime classification per hook.</li>
+    <li>Add note under Stream D: frame template support is a v1 D1 action item (substitute for deferred A6).</li>
+    <li>Update sequencing: A is fully resolved; B is now unblocked end-to-end.</li>
+  </ul>
+
+  <h2>What's unblocked next</h2>
+  <p>With Stream A complete, Stream B (schema and data model) is fully unblocked. B1–B7 can be specified in a single dedicated session. F2 (jurisdiction modeling) is unblocked by A8. Most of Stream D is unblocked by A. The court hierarchy database (F5) was always independent and can run in parallel from any session.</p>
+  <p>Recommended next session: Stream B in full. It is agent-driven; the user only sanity-checks the result.</p>
+</div>

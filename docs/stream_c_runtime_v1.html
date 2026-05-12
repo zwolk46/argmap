@@ -1,0 +1,1155 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 20px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 4px; font-weight: 500; }
+  .doc .tag-locked { background: var(--color-background-success); color: var(--color-text-success); }
+  .doc .tag-defer { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .doc .tag-flag { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .doc .tag-amend { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .item { margin-bottom: 22px; }
+  .doc .item-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .doc .item-id { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-secondary); font-weight: 500; }
+  .doc .item-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+  .doc .field-list { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 16px; margin: 8px 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.65; color: var(--color-text-primary); white-space: pre-wrap; overflow-x: auto; }
+  .doc .field-list .cm { color: var(--color-text-secondary); }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+</style>
+<div class="doc">
+  <h1>Stream C — Runtime Behavior and Algorithms</h1>
+  <p class="subtitle">Companion to handoff_document_v2.html, master_plan_v1.html, stream_a_resolutions_v1.html, and stream_b_schema_v1.html &nbsp;·&nbsp; Session date: May 4, 2026 &nbsp;·&nbsp; Version 1</p>
+
+  <div class="notice">
+    <p>This document specifies the runtime behavior of the app: how the structures defined in Stream B are evaluated to produce a result for the user. It covers Stream C end-to-end: path tracing (C1), foreclosure resolution (C2), status determination (C3), conditional output generation (C4), the frame completeness checker (C5), and authority binding determination (C6). Algorithms are written in pseudocode at a level that a coding agent can implement directly. Determinism is treated as a load-bearing requirement throughout — a consequence of the A2 AI-strategy decision that no LLM sits in the routing path.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>This document is algorithm-first rather than data-first. The Stream B spec is the source of truth for type definitions; this document references those types by section id (B1.5 = Checkpoint, B5 = ConditionalOutput, etc.) rather than redefining them. Algorithms are written in a Python-like pseudocode that elides import statements, error wrapping, and obvious null handling so the structure is visible. Where a decision had multiple defensible options, the chosen option is documented with rationale in the "Decisions made in this session" block; that block is the place to look first if any algorithm seems surprising.</p>
+  <p>Conventions:</p>
+  <ul>
+    <li><strong>Pure functions.</strong> Every named function is pure — same inputs, same output, no side effects, no clock reads, no randomness. State changes happen in one place: the session writer at the orchestration layer.</li>
+    <li><strong>Stable iteration.</strong> Wherever the algorithm iterates over a set or map, sort by <code>id</code> (lexicographically) before iterating. This is the only thing that keeps "set" semantics deterministic across runtimes and machines.</li>
+    <li><strong>Reverse topological order.</strong> Status computation walks children before parents. The frame DAG (V-FR-6) makes this well-defined.</li>
+    <li><strong>"Active path" vs. "reachable set."</strong> Reachable = could be visited if all branches were taken. Active = visited under the current selections and responses. The two diverge at branching nodes (Term, Checkpoint, LogicalGate). Both are needed; the algorithms compute them separately.</li>
+    <li><strong>NodeRef resolution.</strong> Every algorithm operates on a single FrameVersion snapshot plus an ArgumentSession's argument-layer entities. Cross-version references are not legal here; a session that drifts across frame versions is migrated explicitly before runtime evaluation (Stream D concern).</li>
+  </ul>
+
+  <h2>Decisions made in this session</h2>
+  <p>The following technical refinements were resolved while writing this spec. Items marked <span class="tag tag-amend">stream B amendment</span> are minimal additions to the schema; they are minor and follow directly from conditions and language already locked in A3 and B. They are flagged for inclusion when the handoff doc and stream_b doc are next updated. Each decision is locatable in the body of this document.</p>
+  <ol>
+    <li><span class="tag tag-amend">stream B amendment</span> <strong>InterpretationSelection added to ArgumentSession.</strong> The A3 condition library already names <code>interpretation_selected</code> ("this Term has at least one Interpretation marked selected in the session"), but Stream B did not specify the data structure that records the selection. A new entity, <code>InterpretationSelection</code>, lives on ArgumentSession alongside <code>checkpoint_responses</code>. See "Schema amendment" below.</li>
+    <li><strong>Dispositive Term semantics fully specified.</strong> A dispositive Term, once any of its Interpretations is selected, automatically forecloses all <em>sibling</em> Terms under the same parent Question. The Term <code>order</code> field decides which dispositive Term takes effect first when several siblings are dispositive. This matches the handoff doc's plain-language description and A7's "order is purely a foreclosure mechanism." Explicit FORECLOSES edges still exist and are processed independently; the two foreclosure sources merge into one foreclosed set.</li>
+    <li><strong>CheckpointOption target traversal model.</strong> CheckpointOption.<code>target_node_id</code> is treated as a logical edge for graph algorithms (reachability, topological sort, path walking) even though it is not promoted to an Edge entity in the B schema. ANSWERS edges live in the argument layer and represent "this Premise is the response to this Checkpoint"; option targets live in the frame layer and represent "if this option is chosen, route to this node." Different things; both needed.</li>
+    <li><strong>Five-phase computation pipeline.</strong> Validate → resolve foreclosure → compute reachable + active sets → compute status map → generate output. The phases are ordered by dependency; each is a pure function whose inputs are the outputs of prior phases. This is the load-bearing structural commitment of this spec.</li>
+    <li><strong>Status precedence ordering.</strong> When a node's status could plausibly be assigned from multiple sources (e.g., it's both foreclosed and contested), precedence is fixed: <code>foreclosed</code> &gt; <code>not_applicable</code> &gt; <code>contested</code> &gt; <code>open</code> &gt; <code>satisfied</code>. The first applicable wins. This makes status assignment a single deterministic pass.</li>
+    <li><strong>Burden_met evaluation: categorical, not stochastic.</strong> The <code>burden_met</code> condition (B's condition library) is evaluated by a fixed scoring rule: each supporting Premise contributes a weight by <code>kind</code> and edge <code>weight</code>, and contradicting Premises subtract; the total is compared against a threshold per burden level. The scoring table is fixed in this spec, and an LLM_HOOK is reserved for a future calibration override (G5). No probabilistic reasoning runs in v1.</li>
+    <li><strong>LogicalGate output for unresolved inputs is "indeterminate," not "open."</strong> A gate whose inputs are partly unresolved produces an indeterminate result that propagates conditional branches into ConditionalOutput. The gate's own <code>NodeStatus</code> is <code>open</code> with <code>failed_conditions: ["inputs_indeterminate"]</code>. This separates "the gate is broken" from "the gate is computing a conditional answer," which is the right distinction for the conditional output view.</li>
+    <li><strong>Best-inference Conclusion in contested cases is selected by a fixed tiebreaker.</strong> When the output shape is <code>contested</code>, the best-inference Conclusion is chosen by: (a) most fully-resolved path, (b) most binding-authority support, (c) lexicographic Conclusion id. No probabilistic ranking, no LLM. The user always sees this Conclusion flagged as tentative.</li>
+    <li><strong>The frame-completeness checker (C5) runs in two contexts with two strictness levels.</strong> "Pre-mode-transition" mode treats every error rule as a hard block. "Editing" mode reports both errors and warnings as advisory and never blocks. Same rule set, different consumer policy.</li>
+    <li><strong>Authority binding (C6) has a v1 implementation that doesn't depend on F5.</strong> Until the court hierarchy database lands, binding is determined by: (a) explicit <code>is_binding</code> override from the user, (b) string match between Authority's jurisdiction and Frame's jurisdiction, (c) "soft heuristic" flag in the result so UI can mark it as preliminary.</li>
+    <li><strong>Cycle detection is defensive, not load-bearing.</strong> V-FR-6 guarantees no cycles in the resolution flow. Runtime algorithms still check, and abort with a structured error if a cycle is observed. This catches bugs in the validation layer without slowing the common path materially.</li>
+  </ol>
+
+  <h2>Schema amendment <span class="anchor">(amendment to B4)</span></h2>
+
+  <p>The Stream B spec needs a small addition to record explicit Interpretation selections. Without it, the A3 condition <code>interpretation_selected</code> has no underlying data to evaluate. The amendment is minimal and additive — no changes to existing fields.</p>
+
+  <div class="field-list">ArgumentSession {
+  <span class="cm">// ... existing fields ...</span>
+  interpretation_selections: InterpretationSelection[]   <span class="cm">// new in this amendment</span>
+  <span class="cm">// ... existing fields ...</span>
+}
+
+InterpretationSelection {
+  term_id: NodeRef                  <span class="cm">// the Term being resolved</span>
+  selected_interpretation_ids: NodeRef[]   <span class="cm">// usually one; multiple permitted for "alternative paths"</span>
+  supporting_premise_ids: NodeRef[]?       <span class="cm">// optional; cross-references SUPPORTS edges</span>
+  supporting_authority_ids: NodeRef[]?     <span class="cm">// optional; cross-references CITES edges</span>
+  notes?: string
+  selected_at: timestamp
+}</div>
+
+  <p>An InterpretationSelection is the argument-layer record of how a Term was resolved. Multiple selections under one Term are permitted and represent the "alternative paths to the same Conclusion" pattern: e.g., the holding may rest on either of two readings of "willful," and the user wants to record that the conclusion follows under either. Frame validators do not require a single selection per Term; the runtime simply walks each selected branch.</p>
+
+  <p>A new validation rule is added: <strong>V-ARG-6 (error)</strong> — every <code>selected_interpretation_id</code> in an InterpretationSelection points to an Interpretation that is a child (via INTERPRETED_AS) of the named <code>term_id</code>. A new validation rule is also added: <strong>V-ARG-7 (warning)</strong> — at session-time, every Term reachable from the active path has at least one InterpretationSelection record. This is a warning because an unselected Term simply produces an open gate in the output.</p>
+
+  <p>Linked Terms (A10): when <code>Term.linked_to</code> is non-null, the linked Term inherits the selection of its target. No InterpretationSelection record is required for the linked Term itself; if one is provided, V-ARG-8 (warning) is raised reminding the user that the linked target's selection takes precedence.</p>
+
+  <h2>Determinism guarantee</h2>
+
+  <p>The runtime computation pipeline is deterministic in the strict sense: given identical inputs, it produces byte-identical outputs.</p>
+
+  <p>Formally, the function</p>
+
+  <div class="field-list">compute(
+  frame_version_snapshot: FrameVersion,
+  checkpoint_responses: CheckpointResponse[],
+  interpretation_selections: InterpretationSelection[],
+  premises: Premise[],
+  argument_edges: Edge[],
+  session_authorities: Authority[]
+) -> {
+  status_map: Map&lt;NodeRef, NodeStatus&gt;,
+  active_path: NodeRef[],
+  output: ConditionalOutput,
+  open_gates: OpenGate[],
+  validation_results: ValidationResult[]
+}</div>
+
+  <p>satisfies: for any two invocations with the same six inputs, the returned five-tuple is identical. This holds across machines, processes, and library upgrades — provided the implementation respects the conventions in this document (stable iteration, no clock reads in the body, no environment-dependent branches, no LLM in the body).</p>
+
+  <p>This guarantee is the practical meaning of A2's "Same frame + same premises = same path, every time." It is also what allows a session to be replayed against an older frame version, exported, audited, or reproduced from a textual log months later. Every test case in the runtime test suite is a tuple of (input fixture, expected output snapshot); a determinism regression is detectable by any diff.</p>
+
+  <h2>The runtime computation pipeline</h2>
+
+  <p>Five phases, each pure, each consuming only the outputs of prior phases:</p>
+
+  <table>
+    <tr><th>Phase</th><th>Input</th><th>Output</th><th>Stream</th></tr>
+    <tr><td>1. Validate frame</td><td>FrameVersion</td><td>ValidationResult[]</td><td>C5</td></tr>
+    <tr><td>2. Resolve foreclosure</td><td>FrameVersion + InterpretationSelection[]</td><td>foreclosed_set: Set&lt;NodeRef&gt;</td><td>C2</td></tr>
+    <tr><td>3. Compute reachable + active sets</td><td>FrameVersion + foreclosed_set + selections + responses</td><td>reachable_set, active_set: Set&lt;NodeRef&gt;</td><td>(supports C1)</td></tr>
+    <tr><td>4. Compute status map</td><td>FrameVersion + ArgumentSession + foreclosed_set + active_set</td><td>status_map: Map&lt;NodeRef, NodeStatus&gt;</td><td>C3</td></tr>
+    <tr><td>5. Generate output</td><td>All of the above</td><td>active_path, output: ConditionalOutput, open_gates</td><td>C1 + C4</td></tr>
+  </table>
+
+  <p>The orchestrating runtime function is roughly:</p>
+
+  <div class="field-list">def compute(frame, session):
+    validation = run_validators(frame)
+    if any(r.severity == "error" for r in validation):
+        <span class="cm"># Frame is structurally broken; produce an "incomplete" output and stop.</span>
+        return incomplete_result(validation)
+
+    foreclosed = resolve_foreclosure(frame, session)        <span class="cm"># C2</span>
+    reachable = compute_reachable_set(frame, foreclosed)
+    active = compute_active_set(frame, session, foreclosed) <span class="cm"># used by C1</span>
+
+    status_map = compute_status_map(frame, session, foreclosed, active)  <span class="cm"># C3</span>
+
+    active_path, output, open_gates = generate_output(       <span class="cm"># C1 + C4</span>
+        frame, session, status_map, foreclosed, active
+    )
+
+    return ComputeResult(
+        validation_results=validation,
+        foreclosed_set=foreclosed,
+        reachable_set=reachable,
+        active_set=active,
+        status_map=status_map,
+        active_path=active_path,
+        output=output,
+        open_gates=open_gates,
+    )</div>
+
+  <p>C6 (authority binding) does not appear in the orchestrator because it is consumed inline by the <code>authority_binding</code> condition during phase 4, and again by the prose-summary generator in phase 5. It is a leaf-level utility, not a pipeline phase.</p>
+
+  <h2>Pre-pipeline: the frame as a graph</h2>
+
+  <p>Before any phase runs, the FrameVersion is reified into a graph data structure. This is mechanical but worth specifying because several algorithms below assume the conversion has happened.</p>
+
+  <div class="field-list">def build_graph(frame_version):
+    nodes_by_id = { n.id: n for n in frame_version.nodes }
+    outgoing = { n.id: [] for n in frame_version.nodes }
+    incoming = { n.id: [] for n in frame_version.nodes }
+
+    for e in frame_version.edges:
+        outgoing[e.source].append(e)
+        incoming[e.target].append(e)
+
+    <span class="cm"># Logical edges from CheckpointOption.target_node_id and</span>
+    <span class="cm"># LogicalGate.output_target are stored on the source node, not as Edge entities.</span>
+    <span class="cm"># Algorithms iterate over both real edges and these logical edges via:</span>
+    def out_traversal(node_id):
+        for e in outgoing[node_id]:
+            yield e
+        node = nodes_by_id[node_id]
+        if node.type == "Checkpoint":
+            for opt in node.options:
+                if opt.target_node_id:
+                    yield SyntheticEdge(
+                        source=node_id, target=opt.target_node_id,
+                        type="OPTION_LEADS_TO", option_id=opt.id
+                    )
+        if node.type == "LogicalGate" and node.output_target:
+            yield SyntheticEdge(
+                source=node_id, target=node.output_target,
+                type="GATES"
+            )
+
+    return Graph(nodes_by_id, outgoing, incoming, out_traversal)</div>
+
+  <p>SyntheticEdge is a transient object; it never lives on disk. It exists so that traversal code does not have to special-case Checkpoint and LogicalGate at every callsite.</p>
+
+  <p>From the rest of this document, "edge" without qualification means either a stored Edge or a SyntheticEdge produced by <code>out_traversal</code>. Where a distinction matters, it is called out.</p>
+
+  <h2>Phase 1 — Frame validation <span class="anchor">(C5)</span></h2>
+
+  <p>The completeness checker runs every rule in B6 and returns a list of results. Two consumer policies use the same output:</p>
+
+  <ul>
+    <li><strong>Editing (default).</strong> All results are surfaced in the UI as advisories. Errors are highlighted; warnings are shown but do not block any user action. The user can always save and continue editing.</li>
+    <li><strong>Pre-mode-transition (strict).</strong> Errors block the transition (Frame → Argument cannot be entered if any error is present). Warnings are surfaced for acknowledgment but do not block.</li>
+  </ul>
+
+  <h3>Rule evaluator</h3>
+
+  <p>Each rule is a function with a uniform signature so the checker can iterate over them:</p>
+
+  <div class="field-list">Rule = (frame: FrameVersion, graph: Graph) -> ValidationResult[]
+
+ValidationResult {
+  rule_id: string                       <span class="cm">// e.g. "V-FR-6"</span>
+  severity: "error" | "warning"
+  node_ids: NodeRef[]                   <span class="cm">// nodes implicated</span>
+  edge_ids?: EdgeRef[]                  <span class="cm">// edges implicated; optional</span>
+  message: string                       <span class="cm">// pre-rendered for UI</span>
+  suggested_fix?: string                <span class="cm">// optional; for advisory display</span>
+}</div>
+
+  <p>The full evaluator just composes rules:</p>
+
+  <div class="field-list">def run_validators(frame):
+    graph = build_graph(frame)
+    results = []
+    for rule in ALL_RULES:                 <span class="cm"># sorted by rule_id for stable order</span>
+        results.extend(rule(frame, graph))
+    return results</div>
+
+  <h3>Rule implementations (selected)</h3>
+
+  <p>Most rules are local checks on a single node or edge. A few require global graph properties; those are spelled out below. The full rule list lives in B6; this section gives implementation sketches for the non-obvious ones.</p>
+
+  <h4>V-FR-4 — every Checkpoint reachable from RootQuestion</h4>
+
+  <div class="field-list">def v_fr_4(frame, graph):
+    root = find_root(frame)
+    if not root: return []                 <span class="cm"># V-FR-1 already caught this</span>
+
+    visited = set()
+    stack = [root.id]
+    while stack:
+        cur = stack.pop()
+        if cur in visited: continue
+        visited.add(cur)
+        for e in graph.out_traversal(cur):
+            <span class="cm"># For reachability, follow every branch (not just selected ones)</span>
+            if e.type in {"DECOMPOSES_INTO", "TURNS_ON", "INTERPRETED_AS",
+                          "LEADS_TO", "GATES", "OPTION_LEADS_TO"}:
+                stack.append(e.target)
+
+    unreachable_checkpoints = [
+        n for n in frame.nodes
+        if n.type == "Checkpoint" and n.id not in visited
+    ]
+    return [
+        ValidationResult("V-FR-4", "error", [c.id], [],
+            f"Checkpoint '{c.question[:40]}' is unreachable from the root question.",
+            "Connect this Checkpoint to the rest of the frame, or delete it.")
+        for c in sorted(unreachable_checkpoints, key=lambda n: n.id)
+    ]</div>
+
+  <h4>V-FR-6 — frame is a DAG</h4>
+
+  <p>The frame graph, restricted to "structural" edges (everything except FORECLOSES, BINDING_IN, CITES, DISTINGUISHED_BY, SUPPORTS, CONTRADICTS), must be acyclic. Argument-layer edges and annotation edges do not count toward the DAG check.</p>
+
+  <div class="field-list">STRUCTURAL_EDGE_TYPES = {
+    "DECOMPOSES_INTO", "TURNS_ON", "INTERPRETED_AS",
+    "LEADS_TO", "GATES", "OPTION_LEADS_TO"
+}
+
+def v_fr_6(frame, graph):
+    <span class="cm"># Tarjan or 3-color DFS; same outcome.</span>
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = { n.id: WHITE for n in frame.nodes }
+    cycles = []
+
+    def dfs(node_id, path):
+        if color[node_id] == GRAY:
+            cycles.append(path[path.index(node_id):] + [node_id])
+            return
+        if color[node_id] == BLACK: return
+        color[node_id] = GRAY
+        for e in graph.out_traversal(node_id):
+            if e.type in STRUCTURAL_EDGE_TYPES:
+                dfs(e.target, path + [node_id])
+        color[node_id] = BLACK
+
+    for n in sorted(frame.nodes, key=lambda x: x.id):
+        if color[n.id] == WHITE:
+            dfs(n.id, [])
+
+    return [
+        ValidationResult("V-FR-6", "error", cycle, [],
+            "Cycle in resolution flow: " + " -> ".join(cycle),
+            "Remove an edge from the cycle.")
+        for cycle in cycles
+    ]</div>
+
+  <h4>V-FR-8 — every path terminates at a Conclusion</h4>
+
+  <p>A path from RootQuestion that does not eventually reach a Conclusion is a dangling branch. Detection is by reverse reachability: compute the set of nodes from which a Conclusion is reachable; flag any reachable-from-root node that is not in this set.</p>
+
+  <div class="field-list">def v_fr_8(frame, graph):
+    conclusions = { n.id for n in frame.nodes if n.type == "Conclusion" }
+
+    <span class="cm"># Reverse-reach: nodes from which any Conclusion is reachable.</span>
+    reach_concl = set(conclusions)
+    changed = True
+    while changed:
+        changed = False
+        for e in iter_all_traversal_edges(frame, graph):
+            if e.target in reach_concl and e.source not in reach_concl:
+                reach_concl.add(e.source)
+                changed = True
+
+    <span class="cm"># Forward-reach: from root, ignoring annotation edges.</span>
+    root = find_root(frame).id
+    fwd = forward_reach(root, graph)
+
+    dangling = sorted((fwd - reach_concl) - conclusions)
+
+    return [
+        ValidationResult("V-FR-8", "error", [n], [],
+            f"Node '{n}' is reachable from the root but no Conclusion is reachable from it.",
+            "Add an outgoing branch that eventually terminates at a Conclusion.")
+        for n in dangling
+    ]</div>
+
+  <h4>V-FR-9 — compound Checkpoint detection (heuristic)</h4>
+
+  <p>This rule is intentionally fuzzy: detecting whether a Checkpoint asks more than one question is a language judgment, not a structural one. The v1 heuristic flags Checkpoints whose <code>question</code> field contains a conjunction at top level (" and ", " plus ", semicolons followed by question phrases) or matches a small set of compound patterns. False positives are kept down by emitting <strong>warnings only</strong>; an LLM_HOOK is reserved for a future precision upgrade (G4).</p>
+
+  <p>The heuristic is fixed-string and case-insensitive. The patterns are documented in code as <code>COMPOUND_HEURISTICS</code>; updates to the patterns require a schema_version bump because they affect what gets flagged.</p>
+
+  <h2>Phase 2 — Foreclosure resolution <span class="anchor">(C2)</span></h2>
+
+  <p>Foreclosure is the mechanism by which selecting one branch makes others moot. The phase produces a single set of foreclosed node ids that downstream phases honor as "do not visit, do not evaluate, status is <code>foreclosed</code>." There are two sources of foreclosure; both are processed and their outputs unioned.</p>
+
+  <h3>Source 1 — explicit FORECLOSES edges</h3>
+
+  <p>An Interpretation node may carry FORECLOSES edges to specific Term, SubQuestion, or Checkpoint nodes (per B2). When the Interpretation is selected (per the InterpretationSelection record), every target of its FORECLOSES edges is added to the foreclosed set.</p>
+
+  <div class="field-list">def explicit_foreclosure(frame, session):
+    foreclosed = set()
+    selected_interp_ids = {
+        iid
+        for sel in session.interpretation_selections
+        for iid in sel.selected_interpretation_ids
+    }
+    for e in sorted(frame.edges, key=lambda x: x.id):
+        if e.type != "FORECLOSES": continue
+        if e.source in selected_interp_ids:
+            foreclosed.add(e.target)
+            <span class="cm"># scope handled at status-time:</span>
+            <span class="cm"># scope=="moot" -> status foreclosed</span>
+            <span class="cm"># scope=="decided" -> status satisfied via structural_resolution</span>
+    return foreclosed</div>
+
+  <h3>Source 2 — dispositive Term auto-foreclosure</h3>
+
+  <p>Per the handoff doc and A7: a dispositive Term, when any of its Interpretations is selected, forecloses all sibling Terms under the same parent Question. The Term <code>order</code> field decides priority when multiple sibling Terms are dispositive: the lowest-ordered dispositive Term whose Interpretation is selected wins; later dispositive Terms in the same Question are themselves foreclosed by the winner.</p>
+
+  <div class="field-list">def dispositive_foreclosure(frame, session):
+    foreclosed = set()
+    selected_term_ids = {
+        sel.term_id for sel in session.interpretation_selections
+        if sel.selected_interpretation_ids
+    }
+
+    <span class="cm"># Group Terms by their parent Question (RootQuestion or SubQuestion).</span>
+    parent_of_term = {}
+    for e in frame.edges:
+        if e.type == "TURNS_ON":
+            parent_of_term[e.target] = e.source
+    siblings_by_parent = group_terms_by_parent(frame, parent_of_term)
+
+    for parent_id, terms in siblings_by_parent.items():
+        sorted_terms = sorted(terms, key=lambda t: (t.order, t.id))
+        winner = None
+        for t in sorted_terms:
+            if t.dispositive and t.id in selected_term_ids:
+                winner = t
+                break
+        if winner:
+            for t in sorted_terms:
+                if t.id != winner.id:
+                    foreclosed.add(t.id)
+    return foreclosed</div>
+
+  <h3>Cascade</h3>
+
+  <p>Once direct foreclosure is computed, foreclosure cascades: every node strictly downstream of a foreclosed node (along structural edges) is itself foreclosed. The cascade stops at <strong>convergent</strong> nodes that remain reachable through other (non-foreclosed) ancestors. This is a standard reachability subtraction.</p>
+
+  <div class="field-list">def cascade_foreclosure(frame, graph, direct_foreclosed):
+    <span class="cm"># A node is "live" if reachable from RootQuestion through structural edges</span>
+    <span class="cm"># whose source is not foreclosed. Cascade-foreclosed = reachable-from-root</span>
+    <span class="cm"># minus reachable-from-root-without-foreclosed.</span>
+
+    root = find_root(frame).id
+    full_reach = forward_reach(root, graph, blocked=set())
+    live_reach = forward_reach(root, graph, blocked=direct_foreclosed)
+    cascaded = (full_reach - live_reach) | direct_foreclosed
+    return cascaded
+
+def resolve_foreclosure(frame, session):
+    graph = build_graph(frame)
+    direct = explicit_foreclosure(frame, session) | dispositive_foreclosure(frame, session)
+    return cascade_foreclosure(frame, graph, direct)</div>
+
+  <p>The cascade pass guarantees: if a Term is foreclosed, all its Interpretations and their downstreams are foreclosed; if an Interpretation is foreclosed, its downstream Checkpoint, SubQuestion, or Conclusion is foreclosed unless reachable through another live branch.</p>
+
+  <h3>Foreclosure scope: "moot" vs. "decided"</h3>
+
+  <p>FORECLOSES edges carry an optional <code>scope</code> field (B2): <code>"moot"</code> (default) means the foreclosed branch never gets evaluated; <code>"decided"</code> means the foreclosed branch is treated as if the foreclosing Interpretation's outcome resolved it.</p>
+
+  <p>Phase 2 outputs the foreclosed set without distinguishing scope. The scope is consulted in Phase 4 by the status determiner: a node foreclosed by a "moot" edge gets status <code>foreclosed</code>; a node foreclosed by a "decided" edge gets status <code>satisfied</code> with <code>via: ["structural_resolution"]</code>. Dispositive auto-foreclosure is always "moot."</p>
+
+  <div class="field-list">def foreclosure_scope_for(node_id, frame, session):
+    <span class="cm"># Returns "moot" or "decided" for a foreclosed node.</span>
+    selected_interps = collect_selected_interpretations(session)
+    decided_via = []
+    for e in frame.edges:
+        if (e.type == "FORECLOSES" and e.target == node_id
+            and e.source in selected_interps and e.scope == "decided"):
+            decided_via.append(e.source)
+    if decided_via: return "decided"
+    return "moot"</div>
+
+  <h2>Phase 3 — Reachable and active sets</h2>
+
+  <p>Two derived sets are needed for downstream phases.</p>
+
+  <p><strong>Reachable set</strong>: every node visitable from RootQuestion along structural edges, ignoring foreclosure and ignoring whether a branch is currently selected. This is the set of nodes the user could possibly visit by changing answers.</p>
+
+  <p><strong>Active set</strong>: every node visitable from RootQuestion along structural edges, honoring foreclosure and following only branches currently selected by InterpretationSelection / CheckpointResponse / gate evaluation. Nodes outside the active set get status <code>not_applicable</code>.</p>
+
+  <div class="field-list">def compute_reachable_set(frame, foreclosed):
+    return forward_reach(find_root(frame).id, build_graph(frame), blocked=foreclosed)
+
+def compute_active_set(frame, session, foreclosed):
+    graph = build_graph(frame)
+    active = set()
+    queue = [find_root(frame).id]
+    while queue:
+        cur = queue.pop()
+        if cur in foreclosed or cur in active: continue
+        active.add(cur)
+        node = graph.nodes_by_id[cur]
+        for e in graph.out_traversal(cur):
+            if e.type not in STRUCTURAL_EDGE_TYPES: continue
+            if not branch_is_followed(node, e, session, foreclosed): continue
+            queue.append(e.target)
+    return active
+
+def branch_is_followed(node, edge, session, foreclosed):
+    if node.type == "Term":
+        if edge.type == "INTERPRETED_AS":
+            return edge.target in selected_interpretation_ids_for(node.id, session)
+        return True
+    if node.type == "Checkpoint":
+        if edge.type == "OPTION_LEADS_TO":
+            response = response_for(node.id, session)
+            return response and edge.option_id == response.selected_option_id
+        return False                       <span class="cm"># Checkpoints have no other outgoing edges</span>
+    if node.type == "LogicalGate":
+        return gate_routes_to(node, edge, session, foreclosed)
+    return True                            <span class="cm"># Question, Interpretation: follow all structural outgoing</span></div>
+
+  <p><code>gate_routes_to</code> is defined in the LogicalGate evaluation section below; it returns true if the gate's evaluation routes to the given outgoing target.</p>
+
+  <p>For the active set, the case where a Term has multiple selected Interpretations (the alternative-paths pattern) produces multiple parallel active branches. This is intended; the output generator collapses convergent paths in C4.</p>
+
+  <h2>LogicalGate evaluation</h2>
+
+  <p>LogicalGates are referenced by status determination, active-set computation, and path tracing, so their evaluation is specified in one place and called from each consumer.</p>
+
+  <p>A gate's evaluation produces one of three results:</p>
+
+  <ul>
+    <li><strong>satisfied</strong> — the gate's logical condition holds.</li>
+    <li><strong>not_satisfied</strong> — the gate's logical condition does not hold.</li>
+    <li><strong>indeterminate</strong> — at least one input has not been resolved (status is <code>open</code> or <code>contested</code>); the gate cannot decide.</li>
+  </ul>
+
+  <p>For routing purposes, a gate "routes to" its <code>output_target</code> only when its result is <code>satisfied</code>. The <code>not_satisfied</code> and <code>indeterminate</code> outcomes do not route. (Frames that need an explicit "if-not" branch use an UNLESS gate or a separate IF_THEN gate with a NOT-prefixed antecedent.)</p>
+
+  <h3>Per-gate-type semantics</h3>
+
+  <table>
+    <tr><th>Gate type</th><th>Inputs</th><th>satisfied iff</th><th>indeterminate iff</th><th>else</th></tr>
+    <tr><td>AND</td><td>inputs[]</td><td>every input satisfied</td><td>any input indeterminate AND no input not_satisfied</td><td>not_satisfied</td></tr>
+    <tr><td>OR</td><td>inputs[]</td><td>any input satisfied</td><td>every non-satisfied input is indeterminate</td><td>not_satisfied</td></tr>
+    <tr><td>NOT</td><td>input</td><td>input not_satisfied</td><td>input indeterminate</td><td>not_satisfied (when input satisfied)</td></tr>
+    <tr><td>IF_THEN</td><td>antecedent, consequent</td><td>antecedent not_satisfied OR consequent satisfied</td><td>antecedent indeterminate, OR antecedent satisfied AND consequent indeterminate</td><td>not_satisfied (antecedent satisfied AND consequent not_satisfied)</td></tr>
+    <tr><td>UNLESS</td><td>main, exception</td><td>main satisfied AND exception not_satisfied</td><td>main indeterminate, OR main satisfied AND exception indeterminate</td><td>not_satisfied</td></tr>
+  </table>
+
+  <p>The truth tables are short-circuit-friendly: AND can resolve to not_satisfied as soon as one input fails; OR to satisfied as soon as one input succeeds; IF_THEN to satisfied as soon as antecedent fails. The implementation honors short-circuiting for performance but produces the same results as the full evaluation.</p>
+
+  <h3>Boolean evaluation of non-gate inputs</h3>
+
+  <p>Gates take Checkpoints, Interpretations, SubQuestions, RootQuestions, and other gates as inputs (per V-GATE-5/6). Each input is evaluated as boolean by reading its <code>NodeStatus</code>:</p>
+
+  <table>
+    <tr><th>Input NodeStatus</th><th>Boolean value</th></tr>
+    <tr><td>satisfied</td><td>satisfied</td></tr>
+    <tr><td>foreclosed (scope=decided)</td><td>satisfied</td></tr>
+    <tr><td>foreclosed (scope=moot)</td><td>indeterminate (the gate cannot rely on it)</td></tr>
+    <tr><td>not_applicable</td><td>indeterminate</td></tr>
+    <tr><td>open</td><td>indeterminate</td></tr>
+    <tr><td>contested</td><td>indeterminate</td></tr>
+  </table>
+
+  <p>The mapping for "moot foreclosure" → indeterminate is a deliberate choice: a gate whose input branch was made moot by an unrelated dispositive Term has nothing to compute against, and its output should not silently flip based on a side channel.</p>
+
+  <h3>Cycle in gate dependency</h3>
+
+  <p>V-FR-6 forbids cycles in the structural graph, but defensive runtime checking still applies. If a gate's input depends transitively on the gate itself (impossible if validation passed but possible during a partial-state computation), the gate is reported as indeterminate with a structured error attached, and a non-fatal log entry is emitted. The orchestrator surfaces this as a runtime validation failure.</p>
+
+  <h2>Phase 4 — Status determination <span class="anchor">(C3)</span></h2>
+
+  <p>The status determiner walks the frame in reverse topological order (children before parents) and assigns a <code>NodeStatus</code> to every node in the active set, plus <code>foreclosed</code> or <code>not_applicable</code> to nodes outside it.</p>
+
+  <h3>Status precedence</h3>
+
+  <p>Decision (#5 above): when more than one status applies, precedence is fixed.</p>
+
+  <ol>
+    <li><code>foreclosed</code> — node is in the foreclosed set with scope=moot.</li>
+    <li><code>satisfied</code> via <code>structural_resolution</code> — node is foreclosed with scope=decided.</li>
+    <li><code>not_applicable</code> — reachable but not in the active set.</li>
+    <li><code>contested</code> — active, but Premises support both sides of a binary or graded Checkpoint.</li>
+    <li><code>open</code> — active, but at least one condition in the satisfaction policy fails.</li>
+    <li><code>satisfied</code> — active and every condition passes.</li>
+  </ol>
+
+  <p>Premise and Authority nodes do not get NodeStatus assignments (per A3). They are sources, not gates.</p>
+
+  <h3>Algorithm</h3>
+
+  <div class="field-list">def compute_status_map(frame, session, foreclosed, active):
+    graph = build_graph(frame)
+    status_map = {}
+
+    <span class="cm"># Reverse topological sort over structural edges.</span>
+    topo = topological_sort(frame, graph, edge_filter=STRUCTURAL_EDGE_TYPES)
+    rev_topo = list(reversed(topo))
+
+    for node_id in rev_topo:
+        node = graph.nodes_by_id[node_id]
+        if node.type in {"Premise", "Authority"}:
+            continue                               <span class="cm"># sources, not gates</span>
+
+        <span class="cm"># Step 1: foreclosure</span>
+        if node_id in foreclosed:
+            scope = foreclosure_scope_for(node_id, frame, session)
+            if scope == "decided":
+                status_map[node_id] = NodeStatus(
+                    status="satisfied",
+                    via=["structural_resolution"],
+                    evaluated_at=session.computed_at_clock_pure,
+                    failed_conditions=[],
+                )
+            else:
+                status_map[node_id] = NodeStatus(
+                    status="foreclosed", via=[], evaluated_at=...,
+                    failed_conditions=[],
+                )
+            continue
+
+        <span class="cm"># Step 2: out-of-active-set</span>
+        if node_id not in active:
+            status_map[node_id] = NodeStatus(
+                status="not_applicable", via=[], evaluated_at=...,
+                failed_conditions=[],
+            )
+            continue
+
+        <span class="cm"># Step 3: contested check (Checkpoint-specific shortcut)</span>
+        if node.type == "Checkpoint" and is_contested(node, session, status_map):
+            status_map[node_id] = NodeStatus(
+                status="contested", via=[], evaluated_at=...,
+                failed_conditions=["contradicting_premises"],
+            )
+            continue
+
+        <span class="cm"># Step 4: evaluate satisfaction policy</span>
+        policy = node.options_box or frame.default_satisfaction_policies[node.type]
+        result = evaluate_policy(policy, node, frame, session, status_map)
+        status_map[node_id] = NodeStatus(
+            status="satisfied" if result.passed else "open",
+            via=result.via,
+            evaluated_at=...,
+            failed_conditions=result.failed,
+        )
+
+    return status_map</div>
+
+  <p>The <code>evaluated_at</code> field is filled with the orchestrator's "logical computation time" (a single timestamp passed in from the orchestrator), not a per-call clock read. This keeps the function pure for fixed inputs and lets test fixtures pin timestamps.</p>
+
+  <h3>Condition evaluation</h3>
+
+  <p>Each condition in the A3/B condition library is implemented as a pure function with a uniform signature:</p>
+
+  <div class="field-list">Condition = (
+    node: Node,
+    frame: FrameVersion,
+    session: ArgumentSession,
+    status_map: Map&lt;NodeRef, NodeStatus&gt;,    <span class="cm"># partial; children resolved, parents not</span>
+    params: Dict&lt;string, any&gt;,
+) -&gt; { passed: bool, via: string[] }
+
+def evaluate_policy(policy, node, frame, session, status_map):
+    via = []
+    failed = []
+
+    <span class="cm"># all_of (AND)</span>
+    for cond in policy.all_of:
+        result = evaluate_condition(cond, node, frame, session, status_map)
+        via.extend(result.via)
+        if not result.passed:
+            failed.append(condition_name(cond))
+
+    <span class="cm"># any_of (OR), if present — at most one group, no nesting</span>
+    any_of_passed = True
+    if policy.any_of:
+        any_of_passed = False
+        for cond in policy.any_of:
+            result = evaluate_condition(cond, node, frame, session, status_map)
+            if result.passed:
+                any_of_passed = True
+                via.extend(result.via)
+                break
+        if not any_of_passed:
+            failed.append("any_of_group_unsatisfied")
+
+    return PolicyResult(
+        passed=(not failed),
+        via=sorted(set(via)),
+        failed=failed,
+    )</div>
+
+  <h3>Condition implementations (selected)</h3>
+
+  <h4><code>premise_attached</code></h4>
+  <div class="field-list">def cond_premise_attached(node, frame, session, status_map, params):
+    if node.type != "Checkpoint": return Result(False, [])
+    answers = [
+        e for e in session.argument_edges
+        if e.type == "ANSWERS" and e.target == node.id
+    ]
+    return Result(passed=bool(answers), via=[])</div>
+
+  <h4><code>not_contradicted</code></h4>
+  <div class="field-list">def cond_not_contradicted(node, frame, session, status_map, params):
+    contradicts = [
+        e for e in session.argument_edges
+        if e.type == "CONTRADICTS" and e.target == node.id
+    ]
+    return Result(passed=(not contradicts), via=[])</div>
+
+  <h4><code>burden_met</code></h4>
+  <p>Decision (#6 above): categorical scoring, fixed table, no probabilistic reasoning. A burden level resolves to a numeric threshold; supporting Premises contribute by <code>kind</code> and edge <code>weight</code>; contradicting Premises subtract; the comparison is total &ge; threshold.</p>
+
+  <div class="field-list">PREMISE_KIND_WEIGHT = {                    <span class="cm"># legal mode</span>
+    "stipulated":   100,                   <span class="cm"># effectively certain</span>
+    "found":         70,
+    "disputed":      30,
+    "procedural":    50,
+}
+ACADEMIC_KIND_WEIGHT = {
+    "stipulated":   100,
+    "empirical":     70,
+    "definitional":  50,
+    "normative":     30,
+}
+PERSONAL_KIND_WEIGHT = {
+    "stipulated":   100,
+    "observation":   60,
+    "value":         40,
+    "assumption":    20,
+}
+EDGE_WEIGHT_MULTIPLIER = { "strong": 1.0, "moderate": 0.66, "weak": 0.33 }
+BURDEN_THRESHOLD = {
+    "scintilla":               25,
+    "preponderance":           50,
+    "substantial_evidence":    60,
+    "clear_and_convincing":    80,
+    "beyond_reasonable_doubt": 95,
+}
+
+def cond_burden_met(node, frame, session, status_map, params):
+    level = params.get("level", "preponderance")
+    threshold = BURDEN_THRESHOLD[level]
+    weight_table = pick_kind_weights(frame.mode, frame.flavor)
+
+    score = 0.0
+    via_set = set()
+    for e in session.argument_edges:
+        if e.target != node.id: continue
+        prem = find_premise(e.source, session)
+        if not prem: continue
+        kw = weight_table.get(prem.kind, 30)
+        ew = EDGE_WEIGHT_MULTIPLIER.get(e.weight or "moderate", 0.66)
+        if e.type == "SUPPORTS" or e.type == "ANSWERS":
+            score += kw * ew
+            if prem.kind == "stipulated": via_set.add("stipulation")
+        elif e.type == "CONTRADICTS":
+            score -= kw * ew
+
+    <span class="cm"># LLM_HOOK G5: future calibration override may replace this scoring.</span>
+    return Result(passed=(score &gt;= threshold), via=sorted(via_set))</div>
+
+  <p>The scoring table is fixed for v1, exposed in code as a single module so it is easy to find. The threshold values are documented in the spec but treated as configurable per-frame in v2 (deferred). The score is a simple linear sum; nothing about it is probabilistic, and the user-visible "confidence" reported on a Conclusion (per A1) is computed separately from these numbers.</p>
+
+  <h4><code>authority_binding</code></h4>
+  <p>Delegates to the C6 binding determination algorithm; see below.</p>
+
+  <div class="field-list">def cond_authority_binding(node, frame, session, status_map, params):
+    cited_authorities = [
+        e for e in frame.edges if e.type == "CITES" and e.target == node.id
+    ]
+    cited_authorities += [
+        ("via_premise", p)
+        for p in session.premises if p.authority_ref
+        and any(e.type == "ANSWERS" and e.source == p.id and e.target == node.id
+                for e in session.argument_edges)
+    ]
+    via_set = set()
+    for entry in cited_authorities:
+        if isinstance(entry, tuple):
+            authority = resolve_authority(entry[1].authority_ref, frame, session)
+        else:
+            authority = resolve_authority(entry.source, frame, session)
+        if authority and is_binding(authority, frame.jurisdiction_default):  <span class="cm"># C6</span>
+            via_set.add("binding_authority")
+    return Result(passed=("binding_authority" in via_set), via=sorted(via_set))</div>
+
+  <h3>Contested-state heuristic for Checkpoints</h3>
+
+  <p>A Checkpoint is contested (status precedence step 3) when both of the following hold:</p>
+
+  <ol>
+    <li>An ANSWERS edge exists, AND</li>
+    <li>At least one CONTRADICTS edge from a Premise targeting this Checkpoint exists, OR the answer routes to a graded option whose <code>routes_to_status</code> is <code>"contested"</code>.</li>
+  </ol>
+
+  <p>The contested status is independent of <code>burden_met</code>: a Checkpoint can be contested even when one side has a higher burden score, because the user's frame author wants to expose the dispute to the reader. The output layer (C4) decides whether to treat contested as a partial answer or a fork.</p>
+
+  <h3>SubQuestion / RootQuestion status</h3>
+
+  <p>SubQuestion and RootQuestion use the default policy <code>{ all_of: ["all_children_resolved", "not_foreclosed"] }</code>. The <code>all_children_resolved</code> condition is implemented as:</p>
+
+  <div class="field-list">def cond_all_children_resolved(node, frame, session, status_map, params):
+    children = [
+        e.target for e in frame.edges
+        if e.source == node.id
+        and e.type in {"DECOMPOSES_INTO", "TURNS_ON", "LEADS_TO"}
+    ]
+    if not children: return Result(False, [])
+    via_set = set()
+    for c in children:
+        st = status_map.get(c)
+        if st is None: return Result(False, [])  <span class="cm"># shouldn't happen in reverse-topo order</span>
+        if st.status == "satisfied":
+            via_set.update(st.via)
+            continue
+        if st.status == "foreclosed":
+            <span class="cm"># Foreclosed children do not block parent satisfaction;</span>
+            <span class="cm"># they are explicitly skipped per dispositive-Term semantics.</span>
+            continue
+        return Result(False, [])
+    return Result(True, sorted(via_set))</div>
+
+  <p>This is the implementation of "ruled on one ground, declined to reach the others": foreclosed children do not block; satisfied children pass; anything else fails.</p>
+
+  <h2>Phase 5 — Path tracing and output generation <span class="anchor">(C1 + C4)</span></h2>
+
+  <p>This phase produces three artifacts: the <code>active_path</code> (an ordered NodeRef list), the <code>output</code> (a ConditionalOutput per B5), and the <code>open_gates</code> list. They share computation; combining them in one phase avoids walking the graph twice.</p>
+
+  <h3>Output shape determination</h3>
+
+  <p>The <code>shape</code> field of ConditionalOutput is derived from the status map and the active set:</p>
+
+  <ul>
+    <li><strong><code>determinate</code></strong> — the active set contains exactly one Conclusion, every node on its path is <code>satisfied</code> (or <code>foreclosed</code> with <code>scope=decided</code>), and no open gates remain. One Conclusion, one path.</li>
+    <li><strong><code>conditional</code></strong> — the active set is well-formed but at least one Term or Checkpoint on the path is <code>open</code> in a way that produces multiple branches each leading to a different Conclusion. The output enumerates branches.</li>
+    <li><strong><code>contested</code></strong> — at least one Checkpoint on the path is <code>contested</code>. The output names the contested nodes and supplies a best-inference Conclusion as tentative.</li>
+    <li><strong><code>incomplete</code></strong> — the frame is structurally broken (errors from Phase 1) or no Conclusion is reachable from the active set. The output names the structural gaps.</li>
+  </ul>
+
+  <p>Precedence among shapes when several conditions seem to apply: <code>incomplete</code> &gt; <code>contested</code> &gt; <code>conditional</code> &gt; <code>determinate</code>.</p>
+
+  <h3>Path walking</h3>
+
+  <p>The active path is constructed by a depth-first walk from RootQuestion, following branches in the direction the session's selections and responses dictate. Multiple selected Interpretations under one Term produce a fork; the walk follows each fork and unions the resulting paths.</p>
+
+  <div class="field-list">def trace_active_path(frame, session, status_map, foreclosed, active):
+    graph = build_graph(frame)
+    path_segments = []                   <span class="cm"># list of NodeRef-list paths from root</span>
+    open_gates = []
+    branches = []                        <span class="cm"># for "conditional" shape</span>
+
+    def walk(node_id, prefix):
+        if node_id in foreclosed:
+            return                       <span class="cm"># foreclosed; cut here</span>
+        st = status_map.get(node_id)
+        if st is None or st.status == "not_applicable":
+            return
+        new_prefix = prefix + [node_id]
+        node = graph.nodes_by_id[node_id]
+
+        if node.type == "Conclusion":
+            path_segments.append(new_prefix)
+            return
+
+        next_targets = []
+        if node.type in {"RootQuestion", "SubQuestion"}:
+            for e in graph.out_traversal(node_id):
+                if e.type in {"DECOMPOSES_INTO", "TURNS_ON", "LEADS_TO"}:
+                    next_targets.append(e.target)
+
+        elif node.type == "Term":
+            sel = selected_interpretations_for(node_id, session)
+            if not sel:
+                open_gates.append(OpenGate(node_id, "no_selection",
+                    f"Pick an interpretation of '{node.name}'."))
+                return
+            for interp_id in sel:
+                if interp_id in foreclosed: continue
+                next_targets.append(interp_id)
+
+        elif node.type == "Interpretation":
+            for e in graph.out_traversal(node_id):
+                if e.type == "LEADS_TO":
+                    next_targets.append(e.target)
+
+        elif node.type == "Checkpoint":
+            response = response_for(node_id, session)
+            if not response:
+                if st.status == "contested":
+                    branches.extend(branches_from_unresolved_checkpoint(
+                        node, new_prefix, frame, session, status_map, foreclosed
+                    ))
+                else:
+                    open_gates.append(OpenGate(node_id, "no_premise", node.question))
+                return
+            opt = next((o for o in node.options if o.id == response.selected_option_id), None)
+            if opt and opt.target_node_id:
+                next_targets.append(opt.target_node_id)
+
+        elif node.type == "LogicalGate":
+            result = evaluate_gate(node, status_map, frame, session)
+            if result == "satisfied" and node.output_target:
+                next_targets.append(node.output_target)
+            elif result == "indeterminate":
+                branches.extend(branches_from_indeterminate_gate(
+                    node, new_prefix, frame, session, status_map, foreclosed
+                ))
+                return
+            else:
+                return                   <span class="cm"># gate not_satisfied; no routing</span>
+
+        for t in sorted(next_targets):
+            walk(t, new_prefix)
+
+    walk(find_root(frame).id, [])
+
+    <span class="cm"># Collapse convergent paths and pick a primary path for display.</span>
+    primary_path = pick_primary_path(path_segments, status_map)
+    return primary_path, path_segments, open_gates, branches</div>
+
+  <p><code>pick_primary_path</code> selects one path for default rendering by: (a) longest fully-satisfied path, (b) most binding-authority status sub-flags, (c) lexicographic ordering of node ids. This is the same fixed tiebreaker used for best-inference Conclusion selection (decision #8 above), applied to paths.</p>
+
+  <h3>Branches in conditional output</h3>
+
+  <p>When a Term has no selection, or a Checkpoint has no response, or a gate is indeterminate, the output may still be useful: the structure tells the reader "if X then A; if Y then B." This is generated by enumerating the small number of choices at the unresolved point and walking forward from each.</p>
+
+  <div class="field-list">def branches_from_unresolved_checkpoint(node, prefix, frame, session, status_map, foreclosed):
+    branches = []
+    for opt in sorted(node.options, key=lambda o: o.id):
+        if not opt.target_node_id or opt.target_node_id in foreclosed:
+            continue
+        sub_path = walk_assuming(
+            opt.target_node_id, frame, session, status_map, foreclosed,
+            assumption=("checkpoint_response", node.id, opt.id),
+        )
+        if not sub_path: continue
+        terminal = sub_path[-1]
+        if graph.nodes_by_id[terminal].type != "Conclusion":
+            continue
+        branches.append(ConditionalBranch(
+            id=fresh_id(),
+            conditions=[BranchCondition(
+                gate_node_id=node.id,
+                required_value=opt.id,
+                required_value_label=opt.label,
+            )],
+            resulting_conclusion=terminal,
+            intermediate_path=sub_path,
+            prose=render_branch_prose(opt, sub_path, frame),
+        ))
+    return branches</div>
+
+  <p><code>walk_assuming</code> is a hypothetical walk: it temporarily treats the named assumption as if it were already in the session, and walks forward from the assumed-resolved node. The walk is purely local — it does not re-run foreclosure or status determination for the rest of the frame. This is acceptable because the assumption is a single resolution at a single node, which only affects nodes downstream of that point.</p>
+
+  <p>Branches are emitted in alphabetical-by-condition order so the user sees the same enumeration each time. When two branches converge on the same Conclusion (e.g., both options of a Checkpoint route to the same downstream Conclusion via different paths), the branches are merged by combining their <code>conditions</code> arrays into a disjunction and recording one ConditionalBranch.</p>
+
+  <h3>Prose summary generation</h3>
+
+  <p>Per A9, the default view is a deterministic prose summary. The summary is generated by a fixed template walk over the active path or branch structure. No LLM in the routing path; an LLM_HOOK is reserved for a future "rewrite for fluency" pass that runs only at the user's request and is auditably separate from the deterministic baseline.</p>
+
+  <div class="field-list">def render_prose(output, frame, session):
+    parts = []
+
+    parts.append(f"On the question: {find_root(frame).statement}")
+    parts.append("")
+
+    if output.shape == "determinate":
+        c = node_for(output.conclusion, frame)
+        parts.append(f"The frame resolves to: {c.statement}.")
+        parts.append(f"Direction: {render_direction(c.direction, frame)}.")
+        parts.append("")
+        parts.append("Path:")
+        for nid in output.primary_path:
+            parts.append(f"  - {render_node_short(nid, frame)}")
+
+    elif output.shape == "conditional":
+        parts.append(f"The frame produces {len(output.branches)} alternative outcomes "
+                     f"depending on unresolved questions.")
+        parts.append("")
+        for b in output.branches:
+            cond_text = " and ".join(
+                f"the answer to '{label_for(c.gate_node_id, frame)}' is '{c.required_value_label}'"
+                for c in b.conditions
+            )
+            concl = node_for(b.resulting_conclusion, frame)
+            parts.append(f"  - If {cond_text}, then: {concl.statement}.")
+
+    elif output.shape == "contested":
+        parts.append("The frame contains contested points that prevent a determinate answer.")
+        for nid in output.contested_nodes:
+            parts.append(f"  - Contested: {label_for(nid, frame)}")
+        if output.best_inference:
+            c = node_for(output.best_inference, frame)
+            parts.append("")
+            parts.append(f"Tentative best inference: {c.statement}. (Subject to resolving the contested points.)")
+
+    elif output.shape == "incomplete":
+        parts.append("The frame is incomplete and cannot be fully resolved.")
+        for og in output.open_gates:
+            parts.append(f"  - Open: {og.prompt}")
+
+    parts.append("")
+    parts.append(render_confidence_breakdown(output.confidence_breakdown))
+
+    return "\n".join(parts)</div>
+
+  <p>The output of <code>render_prose</code> is plain text, deterministic byte-for-byte for the same inputs. The UI layer can mark it up further (links to nodes, etc.) but the canonical prose is what gets exported and what tests pin against.</p>
+
+  <h3>Confidence breakdown</h3>
+
+  <p>Per A1, confidence is computed at output time and never stored on the Conclusion. The breakdown is populated during status computation; output generation just reads it.</p>
+
+  <div class="field-list">def compute_confidence_breakdown(status_map, primary_path, frame):
+    cps_on_path = [
+        nid for nid in primary_path
+        if frame.node_by_id(nid).type == "Checkpoint"
+    ]
+    breakdown = ConfidenceBreakdown(
+        total_checkpoints_on_path=len(cps_on_path),
+        satisfied_via_binding=0,
+        satisfied_via_persuasive=0,
+        satisfied_via_stipulation=0,
+        satisfied_via_structural=0,
+        contested=0,
+        open=0,
+    )
+    for nid in cps_on_path:
+        st = status_map[nid]
+        if st.status == "satisfied":
+            if "binding_authority" in st.via:        breakdown.satisfied_via_binding += 1
+            elif "persuasive_authority" in st.via:   breakdown.satisfied_via_persuasive += 1
+            elif "stipulation" in st.via:            breakdown.satisfied_via_stipulation += 1
+            elif "structural_resolution" in st.via:  breakdown.satisfied_via_structural += 1
+            else: breakdown.satisfied_via_persuasive += 1
+        elif st.status == "contested": breakdown.contested += 1
+        elif st.status == "open":      breakdown.open += 1
+    return breakdown</div>
+
+  <p>The breakdown is integer-counted and order-stable. The user-facing "confidence display" is rendered from the breakdown by the UI layer (Stream E); the breakdown itself is the canonical numeric record.</p>
+
+  <h2>C6 — Authority binding determination</h2>
+
+  <p>Determining whether a cited Authority is binding in a frame's jurisdiction is the hinge for the <code>authority_binding</code> condition and for the legal-mode "satisfied via binding authority" status sub-flag. The full implementation depends on F5 (court hierarchy database), which is its own sub-project. For v1, a fallback is specified that works without F5 and is clearly marked as preliminary in the result.</p>
+
+  <h3>Inputs and outputs</h3>
+
+  <div class="field-list">def is_binding(authority: Authority, target_jurisdiction: Jurisdiction)
+        -&gt; { binding: bool, source: BindingSource, certainty: "exact" | "heuristic" }
+
+BindingSource = "manual_override" | "hierarchy_database" | "string_match" | "no_jurisdiction"</div>
+
+  <h3>Resolution order</h3>
+
+  <ol>
+    <li><strong>Manual override.</strong> If <code>authority.is_binding</code> is set explicitly (boolean, non-null), the result uses that value with <code>source: "manual_override"</code> and <code>certainty: "exact"</code>. The user has spoken; algorithms defer.</li>
+    <li><strong>Hierarchy database (F5).</strong> If <code>authority.jurisdiction.hierarchy_node_id</code> and <code>target_jurisdiction.hierarchy_node_id</code> are both populated, the binding query is dispatched to F5 and the result returned with <code>source: "hierarchy_database"</code>, <code>certainty: "exact"</code>. F5 must answer "is the authority's court binding on cases heard in the target jurisdiction's court hierarchy" using the actual court relationships.</li>
+    <li><strong>String-match heuristic (v1 fallback).</strong> If F5 is not yet wired or hierarchy ids are missing, the algorithm compares <code>level</code> and <code>region</code> strings:
+      <ul>
+        <li>Same <code>level</code> and same <code>region</code>: binding.</li>
+        <li><code>authority.level == "federal"</code> and <code>target.level == "federal"</code>, same circuit: binding.</li>
+        <li><code>authority</code> is U.S. Supreme Court: binding everywhere.</li>
+        <li>Anything else: not binding (or persuasive only, but the binding determination itself is "not binding").</li>
+      </ul>
+      Result carries <code>source: "string_match"</code>, <code>certainty: "heuristic"</code>. The UI surfaces the heuristic flag so the reader knows the binding claim is provisional until F5 is wired.</li>
+    <li><strong>No jurisdiction information.</strong> If the authority has no jurisdiction or the target frame has no jurisdiction_default, return not binding with <code>source: "no_jurisdiction"</code>, <code>certainty: "exact"</code> (because the answer is unambiguously "we cannot say binding").</li>
+  </ol>
+
+  <p>The U.S. Supreme Court special-case is wired in by name in v1 because the rule is unambiguous and the F5 fallback would otherwise miss it. When F5 lands, the fallback path is removed and the special case becomes part of the database.</p>
+
+  <h2>Incremental computation strategy</h2>
+
+  <p>The pipeline as written recomputes the entire status map and output from scratch on every change. For a small frame this is cheap; for large frames, the user's edit-to-feedback latency might suffer. This section specifies an incremental strategy that an implementation can layer on without changing the algorithmic spec.</p>
+
+  <h3>Edit dispatch table</h3>
+
+  <p>Each kind of session edit affects a known subset of the pipeline:</p>
+
+  <table>
+    <tr><th>Edit</th><th>Foreclosure?</th><th>Active set?</th><th>Status map?</th><th>Output?</th></tr>
+    <tr><td>Add/remove CheckpointResponse</td><td>no</td><td>local</td><td>local + ancestors</td><td>yes</td></tr>
+    <tr><td>Add/remove InterpretationSelection</td><td>yes (if Term has FORECLOSES or is dispositive)</td><td>local</td><td>local + ancestors</td><td>yes</td></tr>
+    <tr><td>Add/remove Premise</td><td>no</td><td>no</td><td>node it answers + ancestors</td><td>yes</td></tr>
+    <tr><td>Add SUPPORTS/CONTRADICTS edge</td><td>no</td><td>no</td><td>edge target + ancestors</td><td>yes</td></tr>
+    <tr><td>Edit Premise.kind</td><td>no</td><td>no</td><td>nodes it supports + ancestors</td><td>yes</td></tr>
+    <tr><td>Edit Premise.statement</td><td>no</td><td>no</td><td>no</td><td>prose only</td></tr>
+    <tr><td>Edit Premise.notes</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
+  </table>
+
+  <p>Frame edits invalidate everything below them, but frame edits only happen in Frame Building mode, where output computation is not running.</p>
+
+  <p>The implementation rule is: "ancestors" means the transitive set of nodes whose status policies depend on the changed node, computed by walking <em>up</em> the structural edges. The set is bounded by the path from the change to the root.</p>
+
+  <h3>When to skip the cache</h3>
+
+  <p>Three cases force a full recompute:</p>
+
+  <ol>
+    <li><strong>Schema migration.</strong> Any change to <code>schema_version</code>.</li>
+    <li><strong>Validation change.</strong> Any frame edit that changes the validation results (a fresh frame load, a structural edit).</li>
+    <li><strong>Foreclosure flip.</strong> Any change that adds or removes nodes from the foreclosed set forces recompute of the cascade and downstream phases.</li>
+  </ol>
+
+  <p>Determinism is preserved either way: the cached and full-recompute paths must produce byte-identical outputs for the same inputs. Test fixtures verify this by running both paths on every test case.</p>
+
+  <h2>Determinism testing strategy</h2>
+
+  <p>The reproducibility guarantee is testable at multiple levels.</p>
+
+  <ul>
+    <li><strong>Snapshot tests.</strong> A fixture is (frame_version_snapshot.json, session.json) → (status_map.json, active_path.json, output.json). The test serializes the result and compares against the recorded snapshot. New runs produce identical bytes.</li>
+    <li><strong>Property tests.</strong> Random inputs (well-formed frames, random sessions): assert that two runs of <code>compute</code> produce equal outputs.</li>
+    <li><strong>Cache equality.</strong> For every snapshot test case, run both the full-recompute and incremental paths and assert byte-equality.</li>
+    <li><strong>Iteration order audit.</strong> A unit test asserts that every <code>for</code> loop over a Set or dict in the algorithm modules sorts before iterating. Detected by AST inspection of the algorithm modules; CI gate.</li>
+    <li><strong>Clock isolation.</strong> The compute pipeline is tested with a frozen clock; outputs must be identical at any wall-clock time.</li>
+  </ul>
+
+  <p>These tests live with Stream H's persistence and tooling, but the contracts they enforce are specified here.</p>
+
+  <h2>LLM hook integration points</h2>
+
+  <p>Per the A2 build-time / runtime split, the runtime path itself contains no LLM. But Stream G (LLM hook design) needs concrete attachment points. This document fixes the surface where each hook plugs in:</p>
+
+  <table>
+    <tr><th>Hook</th><th>Where it runs</th><th>What it consumes</th><th>What it produces</th></tr>
+    <tr><td>G1 — Checkpoint question generation</td><td>build-time, in the Checkpoint editor</td><td>parent SubQuestion's statement, sibling structure</td><td>suggested <code>question</code>, suggested <code>options</code></td></tr>
+    <tr><td>G2 — Interpretation suggestion</td><td>build-time, in the Term editor</td><td>Term's name, RootQuestion's statement, frame mode</td><td>suggested Interpretation statements with citation hints</td></tr>
+    <tr><td>G3 — Conclusion summarization</td><td>build-time, on save of a Conclusion</td><td>Conclusion's incoming path</td><td>suggested <code>reasoning_summary</code></td></tr>
+    <tr><td>G4 — Gap detection (compound Checkpoints, missing branches)</td><td>build-time, on validation runs</td><td>full FrameVersion, structural validators output</td><td>advisory ValidationResult[] with severity "warning"</td></tr>
+    <tr><td>G5 — Standard of review calibration</td><td>build-time override of <code>BURDEN_THRESHOLD</code></td><td>frame's standard_of_review and burden_level fields</td><td>tuned threshold values used in subsequent runtime calls</td></tr>
+    <tr><td>G6 — Prose rewrite (optional)</td><td>output-time, opt-in</td><td>deterministic <code>render_prose</code> output</td><td>fluency-rewritten prose, with the deterministic baseline still recorded in the session</td></tr>
+  </table>
+
+  <p>None of these change the runtime routing computation or the canonical output. G6 is the only hook that touches output, and it produces a separate "rewritten" field while preserving the deterministic baseline. Stream G will spec the prompt files, contracts, and activation strategy.</p>
+
+  <h2>Reserved / deferred design space</h2>
+  <ul>
+    <li><strong>Probabilistic burden evaluation.</strong> The current <code>burden_met</code> uses a fixed scoring table. A future v2 may replace it with a Bayesian or LLM-calibrated model. The condition's signature is stable; the implementation is replaceable. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Authority weighting beyond binding/persuasive.</strong> v1 distinguishes binding vs. persuasive. v2 may add concepts like "vacated," "overruled," "questioned" — these would surface in C6 and the <code>via</code> array. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Constraint-solver path tracing.</strong> The current walk is a simple DFS. For very large frames, a constraint solver could compute conditional outputs more efficiently. The interface (input frame + session, output ConditionalOutput) is solver-agnostic. <span class="tag tag-defer">v2 if needed</span></li>
+    <li><strong>Differential output.</strong> Showing the user "what changed since the last save" requires diffing two ConditionalOutputs. The data structures support this, but the diff algorithm and UI are deferred. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Cross-session best-inference.</strong> When the user has multiple sessions against the same frame, a "what does the body of sessions say" view could aggregate. Out of scope for v1; the schema does not preclude it. <span class="tag tag-defer">v2</span></li>
+    <li><strong>Re-run on Authority update.</strong> If F5 ships and updates a court's binding scope, sessions whose results depend on that authority would benefit from re-evaluation. The hooks for "stale because external data changed" exist (the <code>frame_version_drift_warning</code> pattern), but the F5-driven variant is deferred. <span class="tag tag-defer">v2</span></li>
+  </ul>
+
+  <h2>Integration notes — handoff doc, master plan, and Stream B updates</h2>
+
+  <p>The following changes need to be applied to the upstream project documents. None affect work already done in Streams A or B beyond the small B amendment specified above.</p>
+
+  <h3>Handoff document changes</h3>
+  <ul>
+    <li>Add a "Runtime determinism" subsection under "Core architectural decisions": one-paragraph statement of the determinism guarantee, with a pointer to this document for the formal spec.</li>
+    <li>Update the path-tracing description in the "Path tracing (Argument Running mode)" section to match the five-phase pipeline: validation → foreclosure → reachable/active → status → output. The current prose is consistent with the spec but does not name the phases.</li>
+    <li>Add a one-line note under "Node confidence / status model" pointing out that status precedence is defined: foreclosed &gt; not_applicable &gt; contested &gt; open &gt; satisfied.</li>
+    <li>Add a note under "LLM API hooks" referencing the build-time / runtime split and the G6 prose-rewrite hook.</li>
+    <li>Mark the development path's Step 1 (data schema) and the relevant runtime portions as resolved; note that mode definitions (Step 2 / Stream D) and visual layout (Step 3 / Stream E) are now the open work.</li>
+  </ul>
+
+  <h3>Stream B amendment</h3>
+  <ul>
+    <li>Add <code>InterpretationSelection</code> entity to ArgumentSession. Spec is in this document under "Schema amendment."</li>
+    <li>Add validation rules V-ARG-6, V-ARG-7, V-ARG-8 to B6.</li>
+    <li>Note that <code>NodeStatus.evaluated_at</code> is filled by the orchestrator's logical clock, not a per-call wall-clock read.</li>
+    <li>Note in B5 that <code>ConditionalOutput.prose_summary</code> is generated deterministically by <code>render_prose</code>; an LLM rewrite is opt-in and produces a separate field, not a replacement.</li>
+  </ul>
+
+  <h3>Master plan changes</h3>
+  <ul>
+    <li>Mark all of Stream C (C1–C6) as resolved.</li>
+    <li>Note that Stream B has a small amendment carried forward from this session (InterpretationSelection); B is otherwise resolved.</li>
+    <li>Update sequencing: C is fully resolved; D, E, F (legal-mode pieces excluding F5), G, and H are now unblocked. F5 (court hierarchy database) remains independent and still benefits from a dedicated agent session.</li>
+    <li>Recommended next session: Stream D in full, OR Stream E at the wireframe level. Both are now ready and either can run independently. If a coding agent is ready to start, Stream H (persistence and tooling) is also ready and provides the runtime substrate the rest of the app will run on.</li>
+  </ul>
+
+  <h2>Cheat sheet — algorithms by stream id</h2>
+  <table>
+    <tr><th>Stream</th><th>Algorithm</th><th>Section</th></tr>
+    <tr><td>C1</td><td>Path tracing in Argument Running mode</td><td>Phase 5</td></tr>
+    <tr><td>C2</td><td>Foreclosure resolution (explicit + dispositive + cascade)</td><td>Phase 2</td></tr>
+    <tr><td>C3</td><td>Status determination over the SatisfactionPolicy condition library</td><td>Phase 4</td></tr>
+    <tr><td>C4</td><td>Conditional output generation, including branches and prose summary</td><td>Phase 5</td></tr>
+    <tr><td>C5</td><td>Frame completeness checker (rules from B6)</td><td>Phase 1</td></tr>
+    <tr><td>C6</td><td>Authority binding determination (manual override → F5 → string heuristic)</td><td>Standalone</td></tr>
+    <tr><td>cross-cutting</td><td>LogicalGate evaluation (satisfied / not_satisfied / indeterminate)</td><td>LogicalGate evaluation</td></tr>
+    <tr><td>cross-cutting</td><td>Determinism guarantee and testing strategy</td><td>Determinism guarantee, Determinism testing strategy</td></tr>
+    <tr><td>cross-cutting</td><td>Incremental computation</td><td>Incremental computation strategy</td></tr>
+  </table>
+
+  <h2>What's unblocked next</h2>
+  <p>With Stream C specified end-to-end, the remaining planning work is:</p>
+  <ul>
+    <li><strong>Stream D (mode definitions)</strong> — actions, transitions, and validations for Frame Building, Argument Running, Legal Mode toggle, and non-legal-mode behavior. Fully unblocked. Mostly agent-driven; user input needed on a small number of UX details.</li>
+    <li><strong>Stream E (UI / UX design)</strong> — graph layout, editor UI, interview flow, status visualization, version history. Fully unblocked. Mixed; the agent can prototype and the user can review.</li>
+    <li><strong>Stream F (legal-mode specifics)</strong> — F1 through F4 are largely defined by Streams B and C; F5 (court hierarchy database) is the substantial remaining piece and warrants its own session; F6 (binding determination) is the algorithmic piece specified here as C6 with an F5-dependent upgrade path.</li>
+    <li><strong>Stream G (LLM hook design)</strong> — the surfaces are now nailed down (G1 through G6 above). The remaining work is prompt files, input/output contracts, and an activation strategy.</li>
+    <li><strong>Stream H (persistence and infrastructure)</strong> — storage backend, auto-save, version history implementation, tech stack. Fully unblocked.</li>
+    <li><strong>Stream I (final coding spec)</strong> — assembles the outputs of A through H into a single self-contained spec for a coding agent. Should run after the others are at least at v1 depth.</li>
+  </ul>
+
+  <p>Two natural next sessions: <strong>Stream D in full</strong>, which produces a clean handoff to UI work; or <strong>Stream H first</strong>, which sets up the substrate the rest of the app sits on. Either works. The user steers.</p>
+</div>

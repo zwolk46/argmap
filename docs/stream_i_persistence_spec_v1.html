@@ -1,0 +1,2129 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 22px 0 6px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+<div class="doc">
+  <h1>stream_i_persistence_spec_v1.html</h1>
+  <p class="subtitle">Per-module spec for <code>src/persistence/</code> &nbsp;·&nbsp; Stream I session I.4 &nbsp;·&nbsp; May 10, 2026</p>
+
+  <div class="notice">
+    <p>This document is the implementation source of truth for <code>src/persistence/</code>. It commits per-file TypeScript signatures, the IndexedDB store layout (declared via Dexie), the <code>Repository</code> interface as the only surface application code sees, the four single-transaction composite operations, the <code>AutosaveController</code> with 5s/30s debounce and milestone forcing, the pure <code>diff</code> functions for frame and session versions, the precomputed search index, the cross-tab <code>CrossTabBus</code>, the schema-migration plumbing, and Vitest acceptance tests for the module. The cross-module surface (what other modules import from <code>@/persistence</code>) is pinned in <code>stream_i_contracts_v1.html</code> Contract 3; this spec adds the per-file organization, internal types, atomicity contracts, and behavioral contracts the coding session implements against.</p>
+    <p style="margin-top:6px;">The persistence layer sits <em>outside</em> the runtime determinism boundary (Article II § 2 binds the runtime, not the persistence layer). <code>src/persistence/</code> may read the clock for <code>created_at</code> / <code>updated_at</code> timestamps, may call <code>crypto.randomUUID()</code> for new entity ids, and may use Dexie's async APIs. What it must not do is leak any of those non-determinism sources <em>into</em> the runtime: the timestamps and ids the persistence layer writes onto FrameVersion and ArgumentSessionVersion records are inputs to <code>compute</code> only as fixed snapshot fields, never as live reads inside the pipeline (Stream H "Determinism implementation contract"; runtime spec self-review § 2). The persistence layer also imports only <code>@/schema</code> from the application codebase — not <code>@/runtime</code>, not <code>@/state</code>, not <code>@/modes</code>, not <code>@/ui</code>, not <code>@/llm-hooks</code>, not <code>@/layout</code> — keeping the dependency graph one-directional (Contract section above the contracts table).</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>The coding session implementing <code>src/persistence/</code> reads, in order: Constitution and Protocol, <code>current_state.html</code>, <code>stream_i_buildkit_index_v1.html</code>, <code>stream_i_contracts_v1.html</code> Contract 3 (the persistence cross-module surface) and Contract 1 (the schema imports), <code>src/schema/README.md</code> (the cross-session compression artifact written by the I.2 coding session), and this document. No prior stream documents (A–H) are read; the consolidated state in <code>current_state.html</code> plus this per-module spec is the design surface. Implement-until-green against the Vitest tests at the end of this document; write <code>src/persistence/README.md</code> as the cross-session compression artifact for downstream sessions (most importantly <code>@/state</code>, which holds a <code>Repository</code> and an <code>AutosaveController</code>, and <code>@/modes</code>, which invokes the composite operations). This spec uses TypeScript exclusively in code blocks; pseudocode passages are pseudocode and labeled as such.</p>
+
+  <p>The buildkit index allots one coding session for <code>src/persistence/</code>: Repository interface + Dexie-backed implementation + autosave + diff + search + broadcast (Stream I buildkit index, implementation sequence row I.4). All eight files below are implemented in that session, with <code>tests/persistence/</code> covering the acceptance surface at the end of this document and <code>src/persistence/README.md</code> documenting the public API for <code>@/state</code> and <code>@/modes</code> to consume.</p>
+
+  <h2>File map</h2>
+  <p>Eight files under <code>src/persistence/</code>. The barrel <code>index.ts</code> re-exports the public surface (<code>Repository</code>, <code>IndexedDbRepository</code>, the auxiliary types and error classes, <code>AutosaveController</code>, the diff functions, <code>CrossTabBus</code>, and the pure <code>buildSearchIndexEntry</code> helper for testing). Internal Dexie plumbing in <code>dexie-schema.ts</code> is not re-exported; consumers go through <code>IndexedDbRepository</code>.</p>
+  <table>
+    <tr><th>File</th><th>Purpose</th><th>Primary exports</th></tr>
+    <tr><td><code>repository.ts</code></td><td>The <code>Repository</code> interface, auxiliary summary/AppState/OrphanResolution shapes, error classes, and the <code>SaveEvent</code>/diff/<code>BroadcastEvents</code> types — every type the cross-module surface declares</td><td><code>Repository</code>, <code>FrameSummary</code>, <code>ArgumentSessionSummary</code>, <code>FrameSearchHit</code>, <code>AppState</code>, <code>OrphanResolution</code>, <code>SaveEvent</code>, <code>PendingFrameSave</code>, <code>PendingSessionSave</code>, <code>StructuralDiff</code>, <code>SessionStructuralDiff</code>, <code>BroadcastEvents</code>, <code>QuotaExceededError</code>, <code>RepositoryError</code></td></tr>
+    <tr><td><code>dexie-schema.ts</code></td><td>The <code>ArgmapDb</code> Dexie database class; per-store keypaths and indexes; the version-upgrade pipeline calling <code>@/schema</code>'s <code>migrate()</code></td><td><code>ArgmapDb</code>, <code>DEXIE_DB_NAME</code>, <code>CURRENT_DEXIE_VERSION</code>, <code>SearchIndexEntry</code>, <code>PromptFileRecord</code></td></tr>
+    <tr><td><code>indexeddb-repository.ts</code></td><td>The <code>IndexedDbRepository</code> class implementing <code>Repository</code>; transactional composite operations; quota/error mapping</td><td><code>IndexedDbRepository</code></td></tr>
+    <tr><td><code>autosave.ts</code></td><td>The <code>AutosaveController</code> implementation; 5s idle / 30s max debounce; milestone forcing; single-in-flight per entity; <code>beforeunload</code> attachment</td><td><code>AutosaveController</code>, <code>createAutosaveController</code>, <code>AUTOSAVE_IDLE_MS</code>, <code>AUTOSAVE_MAX_MS</code>, <code>APP_STATE_DEBOUNCE_MS</code></td></tr>
+    <tr><td><code>diff.ts</code></td><td>Pure <code>diffFrameVersions</code> and <code>diffSessionVersions</code> functions; layout-only bucketing per Stream H H3</td><td><code>diffFrameVersions</code>, <code>diffSessionVersions</code>, <code>LAYOUT_ONLY_FIELDS</code></td></tr>
+    <tr><td><code>search-index.ts</code></td><td>Token extraction (<code>buildSearchIndexEntry</code>), in-memory cache, <code>searchFrames</code> query implementation, transactional update pairing with frame saves</td><td><code>buildSearchIndexEntry</code>, <code>tokenize</code>, <code>SearchIndex</code> (in-memory cache class)</td></tr>
+    <tr><td><code>broadcast.ts</code></td><td>The <code>CrossTabBus</code> implementation over <code>BroadcastChannel</code>; no-op fallback for browsers without the API</td><td><code>createCrossTabBus</code>, <code>BROADCAST_CHANNEL_NAME</code>, <code>CrossTabBusImpl</code></td></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel. Re-exports the public surface above.</td><td>Re-exports above</td></tr>
+  </table>
+
+  <p>Conventions throughout: every type imported from <code>@/schema</code> is imported by name (no wildcard imports); every <code>Promise</code>-returning method uses async/await internally for readability; every IndexedDB operation that touches more than one record is wrapped in an explicit Dexie transaction; timestamps are produced by a single injected <code>now()</code> function the caller supplies (defaulting to <code>() =&gt; new Date().toISOString()</code>) so tests can freeze time without monkey-patching globals; new entity ids come from a single injected <code>generateId()</code> function (defaulting to <code>crypto.randomUUID</code>) for the same reason; both injections live on <code>IndexedDbRepository</code>'s constructor options so the test suite can supply deterministic substitutes.</p>
+
+  <h2>Cross-document resolution notes (for self-review)</h2>
+  <p>While compiling this spec from <code>stream_h_persistence_v1.html</code> against <code>stream_i_contracts_v1.html</code> Contract 3 and <code>stream_i_schema_spec_v1.html</code>, four precision questions arose where the contracts doc paraphrased or under-specified the canonical sources. In each case this spec adopts the constitutionally clean resolution; the contracts doc is the doc that needs the additive correction, not the schema, the runtime, or this persistence spec. The four items are itemized in this session's self-review (Article VIII § 4) and are logged as a single in-session-escalated flag for a future I.1 review session to bump the contracts doc — same family as F-003 and the I.3 pending flag held in <code>flag_pending_from_i3.html</code>. The four resolutions:</p>
+  <ol>
+    <li><strong>Import boundary tightened: persistence imports <code>@/schema</code> only.</strong> Contract 3's preamble line ("persistence imports schema and runtime — the latter only to call <code>compute</code> on session restore") is not implemented by any persistence method in Stream H. The restore operation in Stream H H3 creates a new version from an ancestor inside a single Dexie transaction; it does not call <code>compute</code>. Recomputation happens at the state-layer subscription site after the restore returns. Tightening the boundary reinforces Article II § 2 (the runtime is pure; preventing persistence from importing it removes a back-door where future code could accidentally chain a clock-reading wrapper through it) and matches every actually-existing call site in the design.</li>
+    <li><strong><code>AutosaveController</code> takes payload-passing signatures, not <code>(kind, id)</code>.</strong> Contract 3's <code>schedule(kind, id)</code> is underspecified: the controller cannot reach into <code>@/state</code> for the latest entity without crossing the dependency boundary, and cannot read it from the <code>Repository</code> because the Repository returns last-saved state rather than the in-memory working state. The constitutionally clean resolution is for callers to hand the controller the latest <code>PendingFrameSave</code> / <code>PendingSessionSave</code> payload directly; multiple rapid calls for the same entity overwrite earlier pending payloads. The controller becomes a dumb storage-plus-timer abstraction; the state layer remains the source of truth for what to save. This refinement does not change the contract's outward purpose (debounced batch writes); it makes the signature actually implementable within the dependency graph the contracts doc itself committed.</li>
+    <li><strong><code>StructuralDiff</code> is split into <code>StructuralDiff</code> (frame) and <code>SessionStructuralDiff</code> (session), and <code>edited</code> entries carry <code>fields_changed: string[]</code>.</strong> Contract 3's single <code>StructuralDiff</code> shape names <code>nodes</code> and <code>edges</code> collections, which fit frame versions but have no natural fill for session versions (whose collections are <code>premises</code>, <code>argument_edges</code>, <code>checkpoint_responses</code>, <code>session_authorities</code>, <code>interpretation_selections</code>). Two specialized types map cleanly to Stream H's diff algorithm and Stream E E5's Compare view. The <code>fields_changed</code> extension is additive: it lets the UI display field-level edits without re-running per-field comparison itself. The <code>layout_only: boolean</code> and a new <code>layout_changed_count: number</code> are retained as top-level signals matching Stream H's layout-bucketing UX refinement.</li>
+    <li><strong>A test-time dependency on <code>fake-indexeddb</code> is added.</strong> Vitest runs in Node; Node has no native IndexedDB. The persistence module's unit-test surface (round-trip, atomicity, autosave, diff, search-index, broadcast) is meaningful only against an actual IndexedDB implementation. The standard solution is <code>fake-indexeddb</code> as a <code>devDependency</code>; Vite's tree-shaking excludes it from the production bundle, and the buildkit index's "no additional dependency" rule is meant to apply to runtime/production dependencies (the rule's rationale, anchored in Article II § 2, is about runtime imports). The alternative (Playwright-only persistence tests against a real browser IndexedDB) loses unit-test feedback and slows the development loop without commensurate benefit. Logged for visibility, not because the constitutional analysis is uncertain.</li>
+  </ol>
+
+  <div class="file-header">// src/persistence/repository.ts</div>
+  <p>The cross-module surface for the persistence layer. This file declares the <code>Repository</code> interface and every auxiliary type that the contract names; it is the single file the rest of the application imports types from. No runtime logic lives here — every concrete behavior is in <code>indexeddb-repository.ts</code> and the sibling modules. This split keeps the contract surface free of Dexie-specific machinery so a future <code>SyncingRepository</code> (cloud-sync v2 per Stream H H1) can implement the same interface without touching this file.</p>
+
+<pre><code>import type {
+  Frame, FrameVersion,
+  ArgumentSession, ArgumentSessionVersion,
+  FrameExport, ArgumentSessionExport,
+  FrameId, FrameVersionId, SessionId, SessionVersionId,
+  Node, Edge, NodeRef, EdgeRef,
+} from "@/schema";
+
+//
+// Summary projections (returned by list*() methods so consumers don't load full payloads
+// for index views).
+//
+
+export interface FrameSummary {
+  id: FrameId;
+  title: string;
+  mode: "legal" | "general";
+  flavor?: "personal" | "academic";
+  tags: string[];
+  pinned: boolean;
+  updated_at: string;
+  last_opened_at?: string;
+  current_version_id: FrameVersionId;
+}
+
+export interface ArgumentSessionSummary {
+  id: SessionId;
+  frame_id: FrameId;
+  title: string;
+  updated_at: string;
+  current_version_id: SessionVersionId;
+  /**
+   * Populated when the session's frame_version_id does not match the frame's
+   * current_version_id (i.e., the underlying frame has moved forward since the
+   * session was last active). Stream D D3 surfaces this in the Argument Running
+   * top-bar.
+   */
+  frame_version_drift_warning?: string;
+}
+
+export interface FrameVersionSummary {
+  id: FrameVersionId;
+  frame_id: FrameId;
+  version_number: number;
+  parent_version_id?: FrameVersionId;
+  created_at: string;
+  is_milestone: boolean;
+  change_summary?: string;
+}
+
+export interface ArgumentSessionVersionSummary {
+  id: SessionVersionId;
+  session_id: SessionId;
+  version_number: number;
+  parent_version_id?: SessionVersionId;
+  created_at: string;
+  is_milestone: boolean;
+  change_summary?: string;
+}
+
+//
+// AppState — singleton per-user state, not versioned (Stream H H2).
+//
+
+export interface AppState {
+  /** Most-recent first; capped by the state layer, not here. */
+  recents: FrameId[];
+  /** App-layer enforces max 8 pinned per user (Stream A A5). */
+  pinned: FrameId[];
+  /** Default output view per A9; per-frame override lives on Frame, not here. */
+  default_output_view: "prose" | "decision_tree" | "path_overlay";
+  side_panel_collapsed: { [pane: string]: boolean };
+  coachmark_dismissals: { [coachmark_id: string]: boolean };
+  /** Default LlmProvider id used when LlmSettings.provider_id is absent. */
+  app_provider_default?: string;
+  /**
+   * Last-known application schema_version. Used at startup to detect that a
+   * newer build is opening an older database (Migration mechanism below).
+   * Bumped to CURRENT_SCHEMA_VERSION after a successful migration sweep.
+   */
+  last_known_schema_version: number;
+}
+
+//
+// Search and orphan-resolution shapes consumed by Repository methods.
+//
+
+export interface FrameSearchHit {
+  frame_id: FrameId;
+  title: string;
+  hit_field: "title" | "description" | "tag" | "node_text" | "conclusion_statement";
+  /** A short text excerpt around the hit, used by the search results UI. */
+  snippet: string;
+}
+
+/**
+ * One per orphan surfaced by Stream D D3's session-migration flow.
+ * The state/modes layer composes the resolutions; Repository.migrateSession applies them.
+ */
+export interface OrphanResolution {
+  kind: "discard" | "reattach" | "no_op";
+  /** The orphan node id in the prior frame version. */
+  source_node_id?: NodeRef;
+  /** When kind === "reattach": the new node id to point at instead. */
+  target_node_id?: NodeRef;
+}
+
+//
+// Error classes. Implementations throw these so the UI can pattern-match on .name.
+//
+
+export class QuotaExceededError extends Error {
+  readonly kind = "quota_exceeded" as const;
+  constructor(message?: string) {
+    super(message ?? "IndexedDB quota exceeded");
+    this.name = "QuotaExceededError";
+  }
+}
+
+export class RepositoryError extends Error {
+  readonly kind = "repository_error" as const;
+  readonly operation: string;
+  constructor(operation: string, message?: string) {
+    super(message ?? `Repository operation failed: ${operation}`);
+    this.name = "RepositoryError";
+    this.operation = operation;
+  }
+}
+
+//
+// The Repository interface itself.
+// Application code never touches IndexedDB or Dexie directly; everything goes through here.
+//
+
+export interface Repository {
+  // Frames
+  listFrames(): Promise&lt;FrameSummary[]&gt;;
+  loadFrame(frame_id: FrameId): Promise&lt;Frame&gt;;
+  saveFrame(frame: Frame): Promise&lt;void&gt;;
+  /** Stream D gates deletion on no live sessions; the caller checks. */
+  deleteFrame(frame_id: FrameId): Promise&lt;void&gt;;
+
+  // FrameVersions
+  listFrameVersions(frame_id: FrameId): Promise&lt;FrameVersion[]&gt;;
+  listFrameVersionSummaries(frame_id: FrameId): Promise&lt;FrameVersionSummary[]&gt;;
+  loadFrameVersion(version_id: FrameVersionId): Promise&lt;FrameVersion&gt;;
+  /**
+   * Writes a new FrameVersion AND updates Frame.current_version_id, Frame.updated_at,
+   * and the search index in one transaction (Stream H atomicity contract item 4).
+   */
+  saveFrameVersion(version: FrameVersion): Promise&lt;void&gt;;
+
+  // Argument sessions
+  listSessionsForFrame(frame_id: FrameId): Promise&lt;ArgumentSessionSummary[]&gt;;
+  loadSession(session_id: SessionId): Promise&lt;ArgumentSession&gt;;
+  saveSession(session: ArgumentSession): Promise&lt;void&gt;;
+  deleteSession(session_id: SessionId): Promise&lt;void&gt;;
+
+  listSessionVersions(session_id: SessionId): Promise&lt;ArgumentSessionVersion[]&gt;;
+  listSessionVersionSummaries(session_id: SessionId): Promise&lt;ArgumentSessionVersionSummary[]&gt;;
+  loadSessionVersion(version_id: SessionVersionId): Promise&lt;ArgumentSessionVersion&gt;;
+  saveSessionVersion(version: ArgumentSessionVersion): Promise&lt;void&gt;;
+
+  // Composite operations — atomic per Stream H "Atomicity contracts" section.
+  createFrameFromTemplate(template_frame_id: FrameId, new_title: string): Promise&lt;Frame&gt;;
+  migrateSession(
+    session_id: SessionId,
+    target_frame_version_id: FrameVersionId,
+    orphan_resolutions: OrphanResolution[],
+  ): Promise&lt;ArgumentSessionVersion&gt;;
+  restoreFrameVersion(
+    frame_id: FrameId,
+    ancestor_version_id: FrameVersionId,
+  ): Promise&lt;FrameVersion&gt;;
+  restoreSessionVersion(
+    session_id: SessionId,
+    ancestor_version_id: SessionVersionId,
+  ): Promise&lt;ArgumentSessionVersion&gt;;
+
+  // App state (per-user, not versioned).
+  loadAppState(): Promise&lt;AppState&gt;;
+  saveAppState(state: AppState): Promise&lt;void&gt;;
+
+  // Search.
+  searchFrames(query: string): Promise&lt;FrameSearchHit[]&gt;;
+
+  // Export / import. Migrations run at import time per @/schema's migrate().
+  exportFrame(frame_id: FrameId, opts: { include_history: boolean }): Promise&lt;FrameExport&gt;;
+  exportSession(
+    session_id: SessionId,
+    opts: { include_frame: boolean; include_history: boolean },
+  ): Promise&lt;ArgumentSessionExport&gt;;
+  importFrame(envelope: FrameExport): Promise&lt;Frame&gt;;
+  importSession(envelope: ArgumentSessionExport): Promise&lt;ArgumentSession&gt;;
+}
+
+//
+// Autosave payloads — passed in on every schedule call so the controller never
+// has to reach into @/state for the latest entity (see Cross-document resolution
+// note #2).
+//
+
+export interface PendingFrameSave {
+  /** The Frame entity to write (its current_version_id / updated_at must be set). */
+  frame: Frame;
+  /** The new FrameVersion to write alongside. is_milestone may be true or false. */
+  new_version: FrameVersion;
+  /** Optional change_summary; passed through to FrameVersion.change_summary. */
+  change_summary?: string;
+}
+
+export interface PendingSessionSave {
+  session: ArgumentSession;
+  new_version: ArgumentSessionVersion;
+  change_summary?: string;
+}
+
+//
+// AutosaveController — debounces writes and emits SaveEvents.
+//
+
+export interface SaveEvent {
+  kind: "frame" | "session" | "app_state";
+  /** FrameId or SessionId; absent for app_state. */
+  id?: string;
+  /** Populated on save_succeeded for frame/session events. */
+  version_id?: string;
+  /** Populated on save_failed. */
+  error?: QuotaExceededError | RepositoryError;
+}
+
+export type AutosaveEvent = "save_succeeded" | "save_failed";
+export type Unsubscribe = () =&gt; void;
+
+export interface AutosaveController {
+  /**
+   * Enqueue a frame save. Overwrites any prior pending payload for the same
+   * Frame id (the controller flushes only the latest). Honors the 5s idle /
+   * 30s max debounce.
+   */
+  scheduleFrameSave(payload: PendingFrameSave): void;
+  scheduleSessionSave(payload: PendingSessionSave): void;
+  /**
+   * Enqueue an app-state save. Debounced separately at 1s; never produces
+   * a SaveEvent with version_id since app-state is not versioned.
+   */
+  scheduleAppStateSave(state: AppState): void;
+
+  /**
+   * Force-flush pending saves immediately. Returns when all pending writes
+   * have either succeeded or emitted save_failed. Used before navigation,
+   * exports, milestone operations, and in beforeunload.
+   */
+  flushAll(): Promise&lt;void&gt;;
+  flushFrame(frame_id: FrameId): Promise&lt;void&gt;;
+  flushSession(session_id: SessionId): Promise&lt;void&gt;;
+  flushAppState(): Promise&lt;void&gt;;
+
+  /**
+   * Force-save as milestone, bypassing the debounce. The caller is responsible
+   * for setting payload.new_version.is_milestone = true.
+   */
+  saveFrameMilestone(payload: PendingFrameSave): Promise&lt;void&gt;;
+  saveSessionMilestone(payload: PendingSessionSave): Promise&lt;void&gt;;
+
+  on(event: AutosaveEvent, listener: (info: SaveEvent) =&gt; void): Unsubscribe;
+
+  /** Stop all timers and detach listeners. */
+  dispose(): void;
+}
+
+//
+// Diff contracts — pure functions consumed by Stream E E5's Compare view.
+//
+
+/**
+ * Layout-only hints — fields that, when changed in isolation, are bucketed
+ * into layout_changed_count rather than fields_changed (Stream H H3 layout
+ * bucketing).
+ */
+export const LAYOUT_ONLY_FIELDS = ["presentation"] as const;
+
+export interface NodeEditEntry {
+  id: NodeRef;
+  fields_changed: string[];   // top-level field names; never contains "presentation"
+}
+
+export interface EdgeEditEntry {
+  id: EdgeRef;
+  fields_changed: string[];
+}
+
+export interface MetadataChange {
+  field: string;              // "title", "mode", "flavor", "jurisdiction_default", etc.
+}
+
+export interface StructuralDiff {
+  nodes: {
+    added: NodeRef[];
+    removed: NodeRef[];
+    edited: NodeEditEntry[];
+  };
+  edges: {
+    added: EdgeRef[];
+    removed: EdgeRef[];
+    edited: EdgeEditEntry[];
+  };
+  metadata: {
+    changed_fields: MetadataChange[];
+  };
+  /** True iff every change was layout-only (no field changes outside LAYOUT_ONLY_FIELDS). */
+  layout_only: boolean;
+  /** Count of nodes whose only changes were layout-only. */
+  layout_changed_count: number;
+}
+
+export interface ArgumentEdgeEditEntry { id: EdgeRef; fields_changed: string[]; }
+export interface PremiseEditEntry { id: NodeRef; fields_changed: string[]; }
+export interface CheckpointResponseEditEntry { checkpoint_id: NodeRef; fields_changed: string[]; }
+export interface AuthorityEditEntry { id: NodeRef; fields_changed: string[]; }
+export interface InterpretationSelectionEditEntry { term_id: NodeRef; fields_changed: string[]; }
+
+export interface SessionStructuralDiff {
+  premises: {
+    added: NodeRef[];
+    removed: NodeRef[];
+    edited: PremiseEditEntry[];
+  };
+  argument_edges: {
+    added: EdgeRef[];
+    removed: EdgeRef[];
+    edited: ArgumentEdgeEditEntry[];
+  };
+  checkpoint_responses: {
+    added: NodeRef[];                    // by checkpoint_id
+    removed: NodeRef[];
+    edited: CheckpointResponseEditEntry[];
+  };
+  session_authorities: {
+    added: NodeRef[];
+    removed: NodeRef[];
+    edited: AuthorityEditEntry[];
+  };
+  interpretation_selections: {
+    added: NodeRef[];                    // by term_id
+    removed: NodeRef[];
+    edited: InterpretationSelectionEditEntry[];
+  };
+  metadata: { changed_fields: MetadataChange[] };
+}
+
+//
+// Cross-tab coordination — Stream H H2.
+//
+
+export interface BroadcastEvents {
+  frame_saved: { frame_id: FrameId; version_id: FrameVersionId };
+  session_saved: { session_id: SessionId; version_id: SessionVersionId };
+}
+
+export interface CrossTabBus {
+  publish&lt;K extends keyof BroadcastEvents&gt;(event: K, payload: BroadcastEvents[K]): void;
+  subscribe&lt;K extends keyof BroadcastEvents&gt;(
+    event: K,
+    listener: (payload: BroadcastEvents[K]) =&gt; void,
+  ): Unsubscribe;
+  close(): void;
+}
+</code></pre>
+
+  <div class="file-header">// src/persistence/dexie-schema.ts</div>
+  <p>The Dexie database class. Stores match Stream H H1's IndexedDB store layout 1:1. Two versioning systems coexist: <strong>Dexie's database version</strong> (controls store layout — adding stores, adding indexes, changing keypaths) and the <strong>application <code>schema_version</code></strong> (controls record-content shape, dispatched through <code>@/schema</code>'s <code>migrate()</code>). v1 ships both at version 1 with an empty migration path. The mechanism is in place so future bumps need only a single registry edit and a single <code>this.version(N).stores(...).upgrade(...)</code> chain.</p>
+
+<pre><code>import Dexie, { type Table } from "dexie";
+import {
+  migrate as schemaMigrate,
+  CURRENT_SCHEMA_VERSION,
+  type Frame, type FrameVersion,
+  type ArgumentSession, type ArgumentSessionVersion,
+  type FrameId, type FrameVersionId, type SessionId, type SessionVersionId,
+} from "@/schema";
+
+export const DEXIE_DB_NAME = "argmap_v1";
+
+/**
+ * Current Dexie database version. v1 ships at 1; each future store-layout
+ * change bumps this and adds a corresponding this.version(N).stores(...).upgrade(...)
+ * entry below.
+ */
+export const CURRENT_DEXIE_VERSION = 1;
+
+/**
+ * search_index store payload — one entry per Frame, rebuilt transactionally
+ * on every Frame or FrameVersion save (search-index.ts).
+ */
+export interface SearchIndexEntry {
+  frame_id: FrameId;
+  /** Lowercased, punctuation-stripped, whitespace-split tokens (Stream H H1 search index strategy). */
+  tokens: string[];
+  /**
+   * Per-token reverse index back to the source field, used by FrameSearchHit.hit_field.
+   * Map keys are tokens; values are the set of fields containing that token.
+   */
+  token_fields: { [token: string]: Array&lt;FrameSearchHit["hit_field"]&gt; };
+  /** Frame title cached here for snippet construction without a frame load. */
+  title: string;
+  /** ISO-8601 timestamp of the index build; used for cache-coherence assertions in tests. */
+  built_at: string;
+}
+
+/** Reserved for Stream G; not populated in v1. */
+export interface PromptFileRecord {
+  hook_name: string;
+  version: string;
+  body_markdown: string;
+  frontmatter: { [k: string]: unknown };
+  added_at: string;
+}
+
+import type { FrameSearchHit, AppState } from "./repository";
+
+/**
+ * The Dexie database. Declared as a class so TypeScript knows the table types.
+ */
+export class ArgmapDb extends Dexie {
+  // Late-initialized by Dexie; the `!` is Dexie's TypeScript idiom.
+  frames!: Table&lt;Frame, FrameId&gt;;
+  frame_versions!: Table&lt;FrameVersion, FrameVersionId&gt;;
+  argument_sessions!: Table&lt;ArgumentSession, SessionId&gt;;
+  argument_session_versions!: Table&lt;ArgumentSessionVersion, SessionVersionId&gt;;
+  /** Singleton keyed by the constant string "current". */
+  app_state!: Table&lt;AppState &amp; { key: "current" }, string&gt;;
+  search_index!: Table&lt;SearchIndexEntry, FrameId&gt;;
+  /** Reserved for Stream G; compound key [hook_name, version]. */
+  prompts!: Table&lt;PromptFileRecord, [string, string]&gt;;
+
+  constructor(db_name: string = DEXIE_DB_NAME) {
+    super(db_name);
+
+    // ---- Dexie version 1 ----
+    // Index strings follow Dexie's syntax:
+    //   primary key first, then comma-separated secondary indexes.
+    //   "*tags" declares a multi-entry index on the tags array.
+    //   "[a+b]" declares a compound index on (a, b).
+    this.version(1).stores({
+      frames:
+        "id, updated_at, last_opened_at, pinned, *tags",
+      frame_versions:
+        "id, frame_id, [frame_id+version_number], parent_version_id",
+      argument_sessions:
+        "id, frame_id, updated_at",
+      argument_session_versions:
+        "id, session_id, [session_id+version_number], parent_version_id",
+      app_state:
+        "key",
+      search_index:
+        "frame_id",
+      prompts:
+        "[hook_name+version], hook_name",
+    });
+    // No .upgrade() at v1 — nothing to migrate from.
+
+    // Future entries land below:
+    //
+    //   this.version(2).stores({ ... only the changed stores ... }).upgrade(async (tx) => {
+    //     // For schema_version bumps, walk each store and apply schemaMigrate()
+    //     // record-by-record. See migrateStoreInPlace() below.
+    //   });
+  }
+}
+
+/**
+ * Apply the application-level schema migration in-place across every store.
+ * Called by IndexedDbRepository.openOrUpgrade() when the app starts and the
+ * stored AppState.last_known_schema_version is less than CURRENT_SCHEMA_VERSION.
+ *
+ * Runs inside a single Dexie 'rw' transaction across all stores so partial
+ * failure leaves the database untouched.
+ */
+export async function applySchemaMigrationSweep(
+  db: ArgmapDb,
+  from_version: number,
+): Promise&lt;void&gt; {
+  if (from_version === CURRENT_SCHEMA_VERSION) return;
+  await db.transaction(
+    "rw",
+    [db.frames, db.frame_versions, db.argument_sessions, db.argument_session_versions, db.app_state],
+    async () =&gt; {
+      // For each store, read every record, wrap in a synthetic envelope with the
+      // stored schema_version, call schemaMigrate to bring it to CURRENT_SCHEMA_VERSION,
+      // and write back. v1 has empty migrations so this loop is a no-op; the structure
+      // is in place for future bumps.
+      const stores: Table&lt;unknown, unknown&gt;[] = [
+        db.frames, db.frame_versions, db.argument_sessions, db.argument_session_versions,
+      ];
+      for (const store of stores) {
+        const records = await store.toArray();
+        for (const record of records) {
+          const envelope = { schema_version: from_version, payload: record };
+          const migrated = schemaMigrate(envelope as { schema_version: number } &amp; Record&lt;string, unknown&gt;);
+          // The synthetic envelope round-trips by convention: payload is the record.
+          const next = (migrated as { payload?: unknown }).payload ?? migrated;
+          // Replace in place; primary key is stable.
+          await store.put(next as never);
+        }
+      }
+      const app_state = (await db.app_state.get("current")) ?? null;
+      if (app_state) {
+        app_state.last_known_schema_version = CURRENT_SCHEMA_VERSION;
+        await db.app_state.put(app_state);
+      }
+    },
+  );
+}
+</code></pre>
+
+  <p>Two clarifications on the Dexie schema. <em>First</em>, the <code>app_state</code> singleton is keyed by the literal string <code>"current"</code>; the table type intersects <code>AppState</code> with <code>{ key: "current" }</code> so Dexie's primary-key lookup compiles. <em>Second</em>, the <code>search_index</code> table is keyed by <code>frame_id</code> (one entry per Frame, not per token), matching Stream H's "precomputed token index per Frame, rebuilt on every Frame save" strategy. The per-token reverse index lives <em>inside</em> the entry as the <code>token_fields</code> map, used by <code>searchFrames</code> to populate <code>FrameSearchHit.hit_field</code>.</p>
+
+  <div class="file-header">// src/persistence/indexeddb-repository.ts</div>
+  <p>The concrete <code>Repository</code> implementation. Owns an <code>ArgmapDb</code> and routes every method through Dexie's transaction API. Every method that touches more than one record uses an explicit <code>db.transaction(...)</code> block so atomicity is enforced rather than hoped for. The constructor accepts optional <code>now()</code> and <code>generateId()</code> injections to support deterministic testing.</p>
+
+<pre><code>import {
+  ArgmapDb,
+  applySchemaMigrationSweep,
+  type SearchIndexEntry,
+} from "./dexie-schema";
+import {
+  type Repository,
+  type FrameSummary,
+  type ArgumentSessionSummary,
+  type FrameVersionSummary,
+  type ArgumentSessionVersionSummary,
+  type AppState,
+  type FrameSearchHit,
+  type OrphanResolution,
+  QuotaExceededError,
+  RepositoryError,
+} from "./repository";
+import { buildSearchIndexEntry, SearchIndex } from "./search-index";
+import {
+  migrate as schemaMigrate,
+  runValidation,
+  CURRENT_SCHEMA_VERSION,
+  CURRENT_APP_VERSION,
+  type Frame, type FrameVersion,
+  type ArgumentSession, type ArgumentSessionVersion,
+  type FrameExport, type ArgumentSessionExport,
+  type FrameId, type FrameVersionId, type SessionId, type SessionVersionId,
+  type Node, type Edge, type NodeRef,
+} from "@/schema";
+// Note: the composite-operation implementations (createFrameFromTemplate in
+// particular) will additionally import the LogicalGate variant types
+// (AndGate, OrGate, NotGate, IfThenGate, UnlessGate) and the isLogicalGate /
+// isCheckpoint / isTerm type guards to walk the reference-rewrite paths
+// itemized in the Atomicity contracts § 1.
+
+export interface IndexedDbRepositoryOptions {
+  /** Override the database name. Useful in tests for isolation. */
+  db_name?: string;
+  /** Inject a clock for deterministic tests. Defaults to () =&gt; new Date().toISOString(). */
+  now?: () =&gt; string;
+  /** Inject id generation for deterministic tests. Defaults to crypto.randomUUID. */
+  generateId?: () =&gt; string;
+}
+
+export class IndexedDbRepository implements Repository {
+  private readonly db: ArgmapDb;
+  private readonly now: () =&gt; string;
+  private readonly generateId: () =&gt; string;
+  private readonly search_cache: SearchIndex;
+
+  constructor(opts: IndexedDbRepositoryOptions = {}) {
+    this.db = new ArgmapDb(opts.db_name);
+    this.now = opts.now ?? (() =&gt; new Date().toISOString());
+    this.generateId = opts.generateId ?? (() =&gt; crypto.randomUUID());
+    this.search_cache = new SearchIndex();
+  }
+
+  /**
+   * Must be awaited before any other method runs. Opens the database, ensures the
+   * AppState singleton exists, and runs a schema-migration sweep if needed.
+   */
+  async openOrUpgrade(): Promise&lt;void&gt; {
+    try {
+      await this.db.open();
+    } catch (e) {
+      throw new RepositoryError("openOrUpgrade", (e as Error).message);
+    }
+    let app_state = await this.db.app_state.get("current");
+    if (!app_state) {
+      app_state = {
+        key: "current",
+        recents: [],
+        pinned: [],
+        default_output_view: "path_overlay",
+        side_panel_collapsed: {},
+        coachmark_dismissals: {},
+        last_known_schema_version: CURRENT_SCHEMA_VERSION,
+      } satisfies AppState &amp; { key: "current" };
+      await this.db.app_state.put(app_state);
+    } else if (app_state.last_known_schema_version &lt; CURRENT_SCHEMA_VERSION) {
+      await applySchemaMigrationSweep(this.db, app_state.last_known_schema_version);
+    }
+    // Warm the search cache from disk on open. Cheap at v1's scale.
+    await this.search_cache.loadFromDb(this.db);
+  }
+
+  // ----- Frames -----
+
+  async listFrames(): Promise&lt;FrameSummary[]&gt; {
+    const all = await this.db.frames.toArray();
+    return all.map(f =&gt; this.toFrameSummary(f));
+  }
+
+  async loadFrame(frame_id: FrameId): Promise&lt;Frame&gt; {
+    const f = await this.db.frames.get(frame_id);
+    if (!f) throw new RepositoryError("loadFrame", `Frame not found: ${frame_id}`);
+    return f;
+  }
+
+  async saveFrame(frame: Frame): Promise&lt;void&gt; {
+    return this.runTx(
+      "saveFrame",
+      "rw",
+      [this.db.frames, this.db.frame_versions, this.db.search_index],
+      async () =&gt; {
+        await this.db.frames.put(frame);
+        // The search index for this frame is regenerated when a FrameVersion saves
+        // (since the indexable text lives on the version's nodes); saving the
+        // Frame entity alone may have changed only Frame.title/description/tags,
+        // which are also indexed — so rebuild from the current_version on disk.
+        const current = await this.db.frame_versions.get(frame.current_version_id);
+        if (current) {
+          const entry = buildSearchIndexEntry(frame, current);
+          await this.db.search_index.put(entry);
+          this.search_cache.upsert(entry);
+        }
+      },
+    );
+  }
+
+  async deleteFrame(frame_id: FrameId): Promise&lt;void&gt; {
+    return this.runTx(
+      "deleteFrame",
+      "rw",
+      [this.db.frames, this.db.frame_versions, this.db.argument_sessions,
+       this.db.argument_session_versions, this.db.search_index],
+      async () =&gt; {
+        const versions = await this.db.frame_versions.where("frame_id").equals(frame_id).primaryKeys();
+        const sessions = await this.db.argument_sessions.where("frame_id").equals(frame_id).primaryKeys();
+        for (const sid of sessions as SessionId[]) {
+          const svs = await this.db.argument_session_versions.where("session_id").equals(sid).primaryKeys();
+          await this.db.argument_session_versions.bulkDelete(svs as SessionVersionId[]);
+        }
+        await this.db.argument_sessions.bulkDelete(sessions as SessionId[]);
+        await this.db.frame_versions.bulkDelete(versions as FrameVersionId[]);
+        await this.db.frames.delete(frame_id);
+        await this.db.search_index.delete(frame_id);
+        this.search_cache.remove(frame_id);
+      },
+    );
+  }
+
+  // ----- FrameVersions -----
+
+  async listFrameVersions(frame_id: FrameId): Promise&lt;FrameVersion[]&gt; {
+    return this.db.frame_versions
+      .where("[frame_id+version_number]")
+      .between([frame_id, 0], [frame_id, Infinity])
+      .toArray();
+  }
+
+  async listFrameVersionSummaries(frame_id: FrameId): Promise&lt;FrameVersionSummary[]&gt; {
+    const versions = await this.listFrameVersions(frame_id);
+    return versions.map(v =&gt; ({
+      id: v.id,
+      frame_id: v.frame_id,
+      version_number: v.version_number,
+      parent_version_id: v.parent_version_id,
+      created_at: v.created_at,
+      is_milestone: v.is_milestone,
+      change_summary: v.change_summary,
+    }));
+  }
+
+  async loadFrameVersion(version_id: FrameVersionId): Promise&lt;FrameVersion&gt; {
+    const v = await this.db.frame_versions.get(version_id);
+    if (!v) throw new RepositoryError("loadFrameVersion", `FrameVersion not found: ${version_id}`);
+    return v;
+  }
+
+  async saveFrameVersion(version: FrameVersion): Promise&lt;void&gt; {
+    return this.runTx(
+      "saveFrameVersion",
+      "rw",
+      [this.db.frames, this.db.frame_versions, this.db.search_index],
+      async () =&gt; {
+        const frame = await this.db.frames.get(version.frame_id);
+        if (!frame) {
+          throw new RepositoryError("saveFrameVersion",
+            `Parent Frame missing: ${version.frame_id}`);
+        }
+        await this.db.frame_versions.put(version);
+        frame.current_version_id = version.id;
+        frame.updated_at = this.now();
+        await this.db.frames.put(frame);
+        const entry = buildSearchIndexEntry(frame, version);
+        await this.db.search_index.put(entry);
+        this.search_cache.upsert(entry);
+      },
+    );
+  }
+
+  // ----- Argument sessions -----
+
+  async listSessionsForFrame(frame_id: FrameId): Promise&lt;ArgumentSessionSummary[]&gt; {
+    const sessions = await this.db.argument_sessions.where("frame_id").equals(frame_id).toArray();
+    const frame = await this.db.frames.get(frame_id);
+    return sessions.map(s =&gt; this.toSessionSummary(s, frame));
+  }
+
+  async loadSession(session_id: SessionId): Promise&lt;ArgumentSession&gt; {
+    const s = await this.db.argument_sessions.get(session_id);
+    if (!s) throw new RepositoryError("loadSession", `Session not found: ${session_id}`);
+    return s;
+  }
+
+  async saveSession(session: ArgumentSession): Promise&lt;void&gt; {
+    return this.runTx(
+      "saveSession",
+      "rw",
+      [this.db.argument_sessions],
+      async () =&gt; { await this.db.argument_sessions.put(session); },
+    );
+  }
+
+  async deleteSession(session_id: SessionId): Promise&lt;void&gt; {
+    return this.runTx(
+      "deleteSession",
+      "rw",
+      [this.db.argument_sessions, this.db.argument_session_versions],
+      async () =&gt; {
+        const svs = await this.db.argument_session_versions
+          .where("session_id").equals(session_id).primaryKeys();
+        await this.db.argument_session_versions.bulkDelete(svs as SessionVersionId[]);
+        await this.db.argument_sessions.delete(session_id);
+      },
+    );
+  }
+
+  async listSessionVersions(session_id: SessionId): Promise&lt;ArgumentSessionVersion[]&gt; {
+    return this.db.argument_session_versions
+      .where("[session_id+version_number]")
+      .between([session_id, 0], [session_id, Infinity])
+      .toArray();
+  }
+
+  async listSessionVersionSummaries(session_id: SessionId): Promise&lt;ArgumentSessionVersionSummary[]&gt; {
+    const versions = await this.listSessionVersions(session_id);
+    return versions.map(v =&gt; ({
+      id: v.id,
+      session_id: v.session_id,
+      version_number: v.version_number,
+      parent_version_id: v.parent_version_id,
+      created_at: v.created_at,
+      is_milestone: v.is_milestone,
+      change_summary: v.change_summary,
+    }));
+  }
+
+  async loadSessionVersion(version_id: SessionVersionId): Promise&lt;ArgumentSessionVersion&gt; {
+    const v = await this.db.argument_session_versions.get(version_id);
+    if (!v) throw new RepositoryError("loadSessionVersion",
+      `ArgumentSessionVersion not found: ${version_id}`);
+    return v;
+  }
+
+  async saveSessionVersion(version: ArgumentSessionVersion): Promise&lt;void&gt; {
+    return this.runTx(
+      "saveSessionVersion",
+      "rw",
+      [this.db.argument_sessions, this.db.argument_session_versions],
+      async () =&gt; {
+        const session = await this.db.argument_sessions.get(version.session_id);
+        if (!session) {
+          throw new RepositoryError("saveSessionVersion",
+            `Parent ArgumentSession missing: ${version.session_id}`);
+        }
+        await this.db.argument_session_versions.put(version);
+        session.current_version_id = version.id;
+        session.updated_at = this.now();
+        await this.db.argument_sessions.put(session);
+      },
+    );
+  }
+
+  // ----- Composite operations -----
+  // Each is wrapped in a single Dexie transaction; the "Atomicity contracts"
+  // section below pins the semantics.
+
+  async createFrameFromTemplate(template_frame_id: FrameId, new_title: string): Promise&lt;Frame&gt; { /* see Atomicity contracts § 1 */ }
+  async migrateSession(session_id: SessionId, target_frame_version_id: FrameVersionId,
+                       orphan_resolutions: OrphanResolution[]): Promise&lt;ArgumentSessionVersion&gt; { /* § 2 */ }
+  async restoreFrameVersion(frame_id: FrameId, ancestor_version_id: FrameVersionId): Promise&lt;FrameVersion&gt; { /* § 3 */ }
+  async restoreSessionVersion(session_id: SessionId, ancestor_version_id: SessionVersionId): Promise&lt;ArgumentSessionVersion&gt; { /* § 4 */ }
+
+  // ----- App state -----
+
+  async loadAppState(): Promise&lt;AppState&gt; {
+    const s = await this.db.app_state.get("current");
+    if (!s) throw new RepositoryError("loadAppState", "AppState singleton missing");
+    // Strip the synthetic "key" field before returning.
+    const { key: _key, ...rest } = s;
+    return rest;
+  }
+
+  async saveAppState(state: AppState): Promise&lt;void&gt; {
+    return this.runTx(
+      "saveAppState",
+      "rw",
+      [this.db.app_state],
+      async () =&gt; { await this.db.app_state.put({ ...state, key: "current" }); },
+    );
+  }
+
+  // ----- Search -----
+
+  async searchFrames(query: string): Promise&lt;FrameSearchHit[]&gt; {
+    // Implementation in search-index.ts; delegates to the warm cache.
+    return this.search_cache.query(query);
+  }
+
+  // ----- Export / import -----
+
+  async exportFrame(frame_id: FrameId, opts: { include_history: boolean }): Promise&lt;FrameExport&gt; {
+    const frame = await this.loadFrame(frame_id);
+    const current = await this.loadFrameVersion(frame.current_version_id);
+    const history = opts.include_history ? await this.listFrameVersions(frame_id) : undefined;
+    return {
+      schema_version: CURRENT_SCHEMA_VERSION,
+      app_version: CURRENT_APP_VERSION,
+      exported_at: this.now(),
+      frame,
+      current_version: current,
+      ...(history ? { history } : {}),
+    };
+  }
+
+  async exportSession(
+    session_id: SessionId,
+    opts: { include_frame: boolean; include_history: boolean },
+  ): Promise&lt;ArgumentSessionExport&gt; {
+    const session = await this.loadSession(session_id);
+    const current = await this.loadSessionVersion(session.current_version_id);
+    const history = opts.include_history ? await this.listSessionVersions(session_id) : undefined;
+    const embedded_frame_export = opts.include_frame
+      ? await this.exportFrame(session.frame_id, { include_history: false })
+      : undefined;
+    return {
+      schema_version: CURRENT_SCHEMA_VERSION,
+      app_version: CURRENT_APP_VERSION,
+      exported_at: this.now(),
+      session,
+      current_version: current,
+      ...(history ? { history } : {}),
+      ...(embedded_frame_export ? { embedded_frame_export } : {}),
+    };
+  }
+
+  async importFrame(envelope: FrameExport): Promise&lt;Frame&gt; {
+    const migrated = schemaMigrate(
+      envelope as unknown as { schema_version: number } &amp; Record&lt;string, unknown&gt;,
+    ) as FrameExport;
+    const validation = runValidation(migrated.current_version);
+    const errors = validation.filter(r =&gt; r.severity === "error");
+    if (errors.length &gt; 0) {
+      throw new RepositoryError("importFrame",
+        `Validation failed: ${errors.map(e =&gt; e.rule_id).join(", ")}`);
+    }
+    return this.runTx(
+      "importFrame",
+      "rw",
+      [this.db.frames, this.db.frame_versions, this.db.search_index],
+      async () =&gt; {
+        await this.db.frame_versions.put(migrated.current_version);
+        if (migrated.history) {
+          await this.db.frame_versions.bulkPut(migrated.history);
+        }
+        await this.db.frames.put(migrated.frame);
+        const entry = buildSearchIndexEntry(migrated.frame, migrated.current_version);
+        await this.db.search_index.put(entry);
+        this.search_cache.upsert(entry);
+        return migrated.frame;
+      },
+    );
+  }
+
+  async importSession(envelope: ArgumentSessionExport): Promise&lt;ArgumentSession&gt; {
+    const migrated = schemaMigrate(
+      envelope as unknown as { schema_version: number } &amp; Record&lt;string, unknown&gt;,
+    ) as ArgumentSessionExport;
+    return this.runTx(
+      "importSession",
+      "rw",
+      [this.db.argument_sessions, this.db.argument_session_versions,
+       this.db.frames, this.db.frame_versions, this.db.search_index],
+      async () =&gt; {
+        if (migrated.embedded_frame_export) {
+          await this.importFrameInTx(migrated.embedded_frame_export);
+        }
+        await this.db.argument_session_versions.put(migrated.current_version);
+        if (migrated.history) {
+          await this.db.argument_session_versions.bulkPut(migrated.history);
+        }
+        await this.db.argument_sessions.put(migrated.session);
+        return migrated.session;
+      },
+    );
+  }
+
+  // ----- Internals (not on the Repository interface) -----
+
+  /** Write a FrameExport inside an already-open transaction. */
+  private async importFrameInTx(envelope: FrameExport): Promise&lt;void&gt; { /* see implementation note below */ }
+
+  private toFrameSummary(f: Frame): FrameSummary {
+    return {
+      id: f.id, title: f.title, mode: f.mode, flavor: f.flavor,
+      tags: f.tags, pinned: f.pinned,
+      updated_at: f.updated_at, last_opened_at: f.last_opened_at,
+      current_version_id: f.current_version_id,
+    };
+  }
+
+  private toSessionSummary(s: ArgumentSession, parent_frame: Frame | undefined): ArgumentSessionSummary {
+    const drift_warning =
+      parent_frame &amp;&amp; parent_frame.current_version_id !== s.frame_version_id
+        ? `Frame has moved forward since this session was active (frame v${parent_frame.current_version_id.slice(0, 8)} vs session v${s.frame_version_id.slice(0, 8)}).`
+        : undefined;
+    return {
+      id: s.id, frame_id: s.frame_id, title: s.title ?? "Untitled session",
+      updated_at: s.updated_at, current_version_id: s.current_version_id,
+      ...(drift_warning ? { frame_version_drift_warning: drift_warning } : {}),
+    };
+  }
+
+  /**
+   * Wrap a Dexie transaction with consistent error mapping. Catches
+   * DOMException 'QuotaExceededError' and rethrows as the typed error;
+   * wraps other failures in RepositoryError.
+   */
+  private async runTx&lt;T&gt;(
+    op: string,
+    mode: "r" | "rw",
+    tables: Table&lt;unknown, unknown&gt;[],
+    body: () =&gt; Promise&lt;T&gt;,
+  ): Promise&lt;T&gt; {
+    try {
+      return await this.db.transaction(mode, tables, body);
+    } catch (e) {
+      const err = e as Error &amp; { name?: string };
+      if (err.name === "QuotaExceededError"
+        || err.name === "AbortError"
+        &amp;&amp; /quota/i.test(err.message ?? "")) {
+        throw new QuotaExceededError(err.message);
+      }
+      if (err instanceof QuotaExceededError || err instanceof RepositoryError) {
+        throw err;
+      }
+      throw new RepositoryError(op, err.message);
+    }
+  }
+
+  /** Close the underlying database. Useful for test teardown. */
+  close(): void { this.db.close(); }
+}
+</code></pre>
+
+  <p>Notes on the snippet above. The four composite-operation method bodies are deliberately omitted from the type-level signatures; their semantics are pinned in the <strong>Atomicity contracts</strong> section below, and the coding session implements each per that section. The private <code>importFrameInTx</code> helper exists so <code>importSession</code> can splice an embedded <code>FrameExport</code> into the same transaction it uses for the session itself — the duplication with <code>importFrame</code> is intentional and shallow (the public method opens its own transaction; the private helper reuses the surrounding one). The <code>runTx</code> wrapper's <code>QuotaExceededError</code> detection inspects both the DOMException name and a quota-substring fallback because browser implementations are not entirely consistent about which is set.</p>
+
+  <div class="file-header">// src/persistence/autosave.ts</div>
+  <p>The <code>AutosaveController</code> implementation. Stores pending payloads in two maps (frames and sessions, keyed by entity id) so multiple rapid edits to the same entity collapse to the latest payload. Two timers per entity: an idle timer (5s) reset on every schedule call, and a max-elapsed timer (30s) started on the first schedule call after a flush. Whichever fires first calls <code>flush(entity_id)</code>. App-state saves run on a separate, simpler debouncer (1s, single shared timer because AppState is a singleton).</p>
+
+<pre><code>import {
+  type AutosaveController,
+  type AutosaveEvent,
+  type PendingFrameSave,
+  type PendingSessionSave,
+  type SaveEvent,
+  type Unsubscribe,
+  type Repository,
+  type AppState,
+  QuotaExceededError,
+  RepositoryError,
+} from "./repository";
+import type { FrameId, SessionId } from "@/schema";
+
+export const AUTOSAVE_IDLE_MS = 5_000;
+export const AUTOSAVE_MAX_MS = 30_000;
+export const APP_STATE_DEBOUNCE_MS = 1_000;
+
+interface FrameSlot {
+  payload: PendingFrameSave;
+  idle_timer: ReturnType&lt;typeof setTimeout&gt; | null;
+  max_timer: ReturnType&lt;typeof setTimeout&gt; | null;
+  /** Set while a save is in flight; further schedules queue and run on completion. */
+  in_flight: boolean;
+}
+interface SessionSlot {
+  payload: PendingSessionSave;
+  idle_timer: ReturnType&lt;typeof setTimeout&gt; | null;
+  max_timer: ReturnType&lt;typeof setTimeout&gt; | null;
+  in_flight: boolean;
+}
+
+export interface AutosaveControllerOptions {
+  /** The Repository to write through. */
+  repo: Repository;
+  /**
+   * Optional clock injector for tests. The controller itself does not read the clock;
+   * it only uses setTimeout for debouncing. Provided here for symmetry with
+   * IndexedDbRepository's injection surface.
+   */
+  setTimeoutFn?: typeof setTimeout;
+  clearTimeoutFn?: typeof clearTimeout;
+}
+
+export function createAutosaveController(opts: AutosaveControllerOptions): AutosaveController {
+  return new AutosaveControllerImpl(opts);
+}
+
+class AutosaveControllerImpl implements AutosaveController {
+  private readonly repo: Repository;
+  private readonly setTimeoutFn: typeof setTimeout;
+  private readonly clearTimeoutFn: typeof clearTimeout;
+  private readonly frame_slots = new Map&lt;FrameId, FrameSlot&gt;();
+  private readonly session_slots = new Map&lt;SessionId, SessionSlot&gt;();
+  private app_state_payload: AppState | null = null;
+  private app_state_timer: ReturnType&lt;typeof setTimeout&gt; | null = null;
+  private app_state_in_flight = false;
+  private readonly listeners: { [E in AutosaveEvent]: Set&lt;(e: SaveEvent) =&gt; void&gt; } = {
+    save_succeeded: new Set(),
+    save_failed: new Set(),
+  };
+  private disposed = false;
+
+  constructor(opts: AutosaveControllerOptions) {
+    this.repo = opts.repo;
+    this.setTimeoutFn = opts.setTimeoutFn ?? setTimeout;
+    this.clearTimeoutFn = opts.clearTimeoutFn ?? clearTimeout;
+  }
+
+  scheduleFrameSave(payload: PendingFrameSave): void {
+    if (this.disposed) return;
+    const id = payload.frame.id;
+    const slot = this.frame_slots.get(id) ?? {
+      payload, idle_timer: null, max_timer: null, in_flight: false,
+    };
+    slot.payload = payload;             // overwrite-with-latest
+    if (slot.idle_timer) this.clearTimeoutFn(slot.idle_timer);
+    slot.idle_timer = this.setTimeoutFn(() =&gt; { void this.flushFrame(id); }, AUTOSAVE_IDLE_MS);
+    if (!slot.max_timer) {
+      slot.max_timer = this.setTimeoutFn(() =&gt; { void this.flushFrame(id); }, AUTOSAVE_MAX_MS);
+    }
+    this.frame_slots.set(id, slot);
+  }
+
+  scheduleSessionSave(payload: PendingSessionSave): void {
+    if (this.disposed) return;
+    const id = payload.session.id;
+    const slot = this.session_slots.get(id) ?? {
+      payload, idle_timer: null, max_timer: null, in_flight: false,
+    };
+    slot.payload = payload;
+    if (slot.idle_timer) this.clearTimeoutFn(slot.idle_timer);
+    slot.idle_timer = this.setTimeoutFn(() =&gt; { void this.flushSession(id); }, AUTOSAVE_IDLE_MS);
+    if (!slot.max_timer) {
+      slot.max_timer = this.setTimeoutFn(() =&gt; { void this.flushSession(id); }, AUTOSAVE_MAX_MS);
+    }
+    this.session_slots.set(id, slot);
+  }
+
+  scheduleAppStateSave(state: AppState): void {
+    if (this.disposed) return;
+    this.app_state_payload = state;
+    if (this.app_state_timer) this.clearTimeoutFn(this.app_state_timer);
+    this.app_state_timer = this.setTimeoutFn(() =&gt; { void this.flushAppState(); }, APP_STATE_DEBOUNCE_MS);
+  }
+
+  async flushAll(): Promise&lt;void&gt; {
+    const frame_ids = Array.from(this.frame_slots.keys()).sort();
+    const session_ids = Array.from(this.session_slots.keys()).sort();
+    const tasks: Promise&lt;void&gt;[] = [];
+    for (const id of frame_ids) tasks.push(this.flushFrame(id));
+    for (const id of session_ids) tasks.push(this.flushSession(id));
+    if (this.app_state_payload) tasks.push(this.flushAppState());
+    await Promise.allSettled(tasks);
+  }
+
+  async flushFrame(frame_id: FrameId): Promise&lt;void&gt; {
+    const slot = this.frame_slots.get(frame_id);
+    if (!slot) return;
+    if (slot.in_flight) {
+      // Queue: leave the latest payload in slot; the running save will re-fire
+      // on completion if a newer payload landed.
+      return;
+    }
+    if (slot.idle_timer) { this.clearTimeoutFn(slot.idle_timer); slot.idle_timer = null; }
+    if (slot.max_timer)  { this.clearTimeoutFn(slot.max_timer);  slot.max_timer = null;  }
+    const payload = slot.payload;
+    slot.in_flight = true;
+    try {
+      const versioned = this.applyChangeSummary(payload);
+      await this.repo.saveFrameVersion(versioned.new_version);
+      // saveFrameVersion updates Frame.current_version_id + updated_at atomically;
+      // an additional saveFrame(payload.frame) is unnecessary for the version-save
+      // path. The Frame's other fields (title, tags, etc.) are also versioned-with
+      // -the-version per Stream H decision #6, so no separate Frame.put is needed.
+      this.emit("save_succeeded", {
+        kind: "frame", id: frame_id, version_id: versioned.new_version.id,
+      });
+      this.frame_slots.delete(frame_id);
+    } catch (e) {
+      const err = e as Error;
+      this.emit("save_failed", {
+        kind: "frame", id: frame_id,
+        error: err instanceof QuotaExceededError || err instanceof RepositoryError
+          ? err : new RepositoryError("flushFrame", err.message),
+      });
+      slot.in_flight = false;
+      // Retry-on-next-edit per Stream H "Retry: on the next edit"; we don't
+      // reschedule here, but we leave the slot in the map so the next schedule
+      // call resumes from the current payload.
+    }
+  }
+
+  async flushSession(session_id: SessionId): Promise&lt;void&gt; {
+    const slot = this.session_slots.get(session_id);
+    if (!slot) return;
+    if (slot.in_flight) return;
+    if (slot.idle_timer) { this.clearTimeoutFn(slot.idle_timer); slot.idle_timer = null; }
+    if (slot.max_timer)  { this.clearTimeoutFn(slot.max_timer);  slot.max_timer = null;  }
+    const payload = slot.payload;
+    slot.in_flight = true;
+    try {
+      const versioned = this.applySessionChangeSummary(payload);
+      await this.repo.saveSessionVersion(versioned.new_version);
+      this.emit("save_succeeded", {
+        kind: "session", id: session_id, version_id: versioned.new_version.id,
+      });
+      this.session_slots.delete(session_id);
+    } catch (e) {
+      const err = e as Error;
+      this.emit("save_failed", {
+        kind: "session", id: session_id,
+        error: err instanceof QuotaExceededError || err instanceof RepositoryError
+          ? err : new RepositoryError("flushSession", err.message),
+      });
+      slot.in_flight = false;
+    }
+  }
+
+  async flushAppState(): Promise&lt;void&gt; {
+    if (!this.app_state_payload || this.app_state_in_flight) return;
+    if (this.app_state_timer) { this.clearTimeoutFn(this.app_state_timer); this.app_state_timer = null; }
+    const state = this.app_state_payload;
+    this.app_state_payload = null;
+    this.app_state_in_flight = true;
+    try {
+      await this.repo.saveAppState(state);
+      this.emit("save_succeeded", { kind: "app_state" });
+    } catch (e) {
+      const err = e as Error;
+      this.emit("save_failed", {
+        kind: "app_state",
+        error: err instanceof QuotaExceededError || err instanceof RepositoryError
+          ? err : new RepositoryError("flushAppState", err.message),
+      });
+    } finally {
+      this.app_state_in_flight = false;
+    }
+  }
+
+  async saveFrameMilestone(payload: PendingFrameSave): Promise&lt;void&gt; {
+    // The caller is responsible for setting payload.new_version.is_milestone = true.
+    // We replace any pending payload for this frame and flush immediately.
+    this.scheduleFrameSave(payload);
+    await this.flushFrame(payload.frame.id);
+  }
+
+  async saveSessionMilestone(payload: PendingSessionSave): Promise&lt;void&gt; {
+    this.scheduleSessionSave(payload);
+    await this.flushSession(payload.session.id);
+  }
+
+  on(event: AutosaveEvent, listener: (info: SaveEvent) =&gt; void): Unsubscribe {
+    this.listeners[event].add(listener);
+    return () =&gt; { this.listeners[event].delete(listener); };
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    for (const [, slot] of this.frame_slots) {
+      if (slot.idle_timer) this.clearTimeoutFn(slot.idle_timer);
+      if (slot.max_timer) this.clearTimeoutFn(slot.max_timer);
+    }
+    for (const [, slot] of this.session_slots) {
+      if (slot.idle_timer) this.clearTimeoutFn(slot.idle_timer);
+      if (slot.max_timer) this.clearTimeoutFn(slot.max_timer);
+    }
+    if (this.app_state_timer) this.clearTimeoutFn(this.app_state_timer);
+    this.frame_slots.clear();
+    this.session_slots.clear();
+    this.listeners.save_succeeded.clear();
+    this.listeners.save_failed.clear();
+  }
+
+  private applyChangeSummary(p: PendingFrameSave): PendingFrameSave {
+    if (!p.change_summary) return p;
+    return { ...p, new_version: { ...p.new_version, change_summary: p.change_summary } };
+  }
+
+  private applySessionChangeSummary(p: PendingSessionSave): PendingSessionSave {
+    if (!p.change_summary) return p;
+    return { ...p, new_version: { ...p.new_version, change_summary: p.change_summary } };
+  }
+
+  private emit(event: AutosaveEvent, info: SaveEvent): void {
+    for (const listener of this.listeners[event]) {
+      try { listener(info); } catch { /* listener errors are isolated */ }
+    }
+  }
+}
+</code></pre>
+
+  <p>Two implementation notes. <em>First</em>, the in-flight guard returns early without rescheduling: if a save fails, the slot remains populated with the latest payload, and the next <code>schedule*</code> call (which happens on the next user edit per Stream H "retry: on the next edit") re-arms the timers. <em>Second</em>, the controller never inspects or mutates the <code>Frame</code> entity beyond writing it through the Repository. The state layer is responsible for producing a fully-formed <code>PendingFrameSave</code> (including the new <code>FrameVersion</code> with its own id, <code>created_at</code>, <code>parent_version_id</code>, <code>version_number</code>, <code>is_milestone</code> flag, etc.); the controller simply queues and persists. This division keeps the controller a small, testable timer-and-storage abstraction.</p>
+
+  <div class="file-header">// src/persistence/diff.ts</div>
+  <p>Pure diff functions for FrameVersions and ArgumentSessionVersions. Per Stream H H3, the diff function is referentially transparent and runs in O(<em>n</em>) over the entity counts. <code>LAYOUT_ONLY_FIELDS</code> names the fields whose changes are bucketed out of <code>fields_changed</code> and into the top-level <code>layout_changed_count</code>. The current LAYOUT_ONLY_FIELDS list is <code>["presentation"]</code> — the only top-level Node field carrying purely layout state (per the schema spec's <code>Node.presentation?.{x, y, collapsed, color_override}</code> nesting).</p>
+
+<pre><code>import {
+  type FrameVersion, type ArgumentSessionVersion,
+  type NodeRef, type EdgeRef,
+} from "@/schema";
+import {
+  type StructuralDiff, type SessionStructuralDiff,
+  type NodeEditEntry, type EdgeEditEntry, type MetadataChange,
+  LAYOUT_ONLY_FIELDS,
+} from "./repository";
+
+/**
+ * Pure. O(|nodes_a| + |nodes_b| + |edges_a| + |edges_b|). Output arrays are
+ * sorted by id for stable test snapshots. Layout-only changes are bucketed
+ * into layout_changed_count per Stream H H3.
+ */
+export function diffFrameVersions(a: FrameVersion, b: FrameVersion): StructuralDiff {
+  const nodes_a = new Map(a.nodes.map(n =&gt; [n.id, n]));
+  const nodes_b = new Map(b.nodes.map(n =&gt; [n.id, n]));
+  const edges_a = new Map(a.edges.map(e =&gt; [e.id, e]));
+  const edges_b = new Map(b.edges.map(e =&gt; [e.id, e]));
+
+  const node_added: NodeRef[] = [];
+  const node_removed: NodeRef[] = [];
+  const node_edited: NodeEditEntry[] = [];
+  let layout_changed_count = 0;
+  for (const [id, after] of nodes_b) {
+    const before = nodes_a.get(id);
+    if (!before) { node_added.push(id); continue; }
+    const all_changes = diffFields(before, after);
+    if (all_changes.length === 0) continue;
+    const non_layout = all_changes.filter(f =&gt; !LAYOUT_ONLY_FIELDS.includes(f as never));
+    if (non_layout.length === 0) {
+      layout_changed_count++;
+    } else {
+      node_edited.push({ id, fields_changed: non_layout });
+    }
+  }
+  for (const id of nodes_a.keys()) {
+    if (!nodes_b.has(id)) node_removed.push(id);
+  }
+
+  const edge_added: EdgeRef[] = [];
+  const edge_removed: EdgeRef[] = [];
+  const edge_edited: EdgeEditEntry[] = [];
+  for (const [id, after] of edges_b) {
+    const before = edges_a.get(id);
+    if (!before) { edge_added.push(id); continue; }
+    const changes = diffFields(before, after);
+    if (changes.length &gt; 0) edge_edited.push({ id, fields_changed: changes });
+  }
+  for (const id of edges_a.keys()) {
+    if (!edges_b.has(id)) edge_removed.push(id);
+  }
+
+  const metadata_changed = diffFrameVersionMetadata(a, b);
+
+  const layout_only =
+    node_added.length === 0 &amp;&amp; node_removed.length === 0 &amp;&amp; node_edited.length === 0
+    &amp;&amp; edge_added.length === 0 &amp;&amp; edge_removed.length === 0 &amp;&amp; edge_edited.length === 0
+    &amp;&amp; metadata_changed.length === 0
+    &amp;&amp; layout_changed_count &gt; 0;
+
+  return {
+    nodes: {
+      added: node_added.sort(),
+      removed: node_removed.sort(),
+      edited: node_edited.sort((x, y) =&gt; x.id.localeCompare(y.id)),
+    },
+    edges: {
+      added: edge_added.sort(),
+      removed: edge_removed.sort(),
+      edited: edge_edited.sort((x, y) =&gt; x.id.localeCompare(y.id)),
+    },
+    metadata: { changed_fields: metadata_changed },
+    layout_only,
+    layout_changed_count,
+  };
+}
+
+/**
+ * Same shape and semantics for the argument layer. The five argument collections
+ * each get their own added/removed/edited bucket, plus session metadata.
+ */
+export function diffSessionVersions(
+  a: ArgumentSessionVersion,
+  b: ArgumentSessionVersion,
+): SessionStructuralDiff;
+
+// ----- Internals -----
+
+/**
+ * Compare two entities and return the top-level field names whose values differ
+ * by deep-structural equality. Uses JSON-string equality for nested values
+ * (canonical-string equality at the persistence layer is fine; runtime
+ * determinism is a separate concern handled in @/runtime).
+ */
+function diffFields&lt;T extends object&gt;(before: T, after: T): string[] {
+  const keys = new Set&lt;string&gt;([...Object.keys(before), ...Object.keys(after)]);
+  const out: string[] = [];
+  for (const k of keys) {
+    const bv = (before as Record&lt;string, unknown&gt;)[k];
+    const av = (after as Record&lt;string, unknown&gt;)[k];
+    if (!deepEqual(bv, av)) out.push(k);
+  }
+  return out.sort();
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  // null/undefined normalization: persistence treats absent and null as equal.
+  if (a === null || a === undefined) return b === null || b === undefined;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function diffFrameVersionMetadata(a: FrameVersion, b: FrameVersion): MetadataChange[] {
+  const fields_to_check = [
+    "version_number", "parent_version_id", "is_milestone",
+    "change_summary", "llm_settings_snapshot",
+  ] as const;
+  return fields_to_check
+    .filter(f =&gt; !deepEqual(a[f], b[f]))
+    .map(field =&gt; ({ field }));
+}
+</code></pre>
+
+  <p>Two notes on the diff design. <em>First</em>, <code>diffFields</code> uses <code>JSON.stringify</code>-string equality, which is acceptable here because the persistence layer is not the determinism boundary and because the diff is a debugging/UX surface, not a runtime input. Engine-specific JSON key-ordering differences could theoretically cause a false-positive change report, but in practice modern engines order keys by insertion which is itself stable for our records. If a future test surfaces false positives, this helper switches to a canonical-key comparator. <em>Second</em>, <code>diffSessionVersions</code>'s signature is pinned here but its body is the same pattern repeated across <code>premises</code>, <code>argument_edges</code>, <code>checkpoint_responses</code>, <code>session_authorities</code>, and <code>interpretation_selections</code>; the coding session implements it analogously to <code>diffFrameVersions</code>, keying each collection by its natural id (the <code>checkpoint_id</code> for responses; the <code>term_id</code> for selections; the entity <code>id</code> for the others).</p>
+
+  <div class="file-header">// src/persistence/search-index.ts</div>
+  <p>Token extraction, the in-memory cache, and the <code>searchFrames</code> query implementation. Stream H H1's search index strategy: precomputed token list per Frame, rebuilt on every Frame save, queried via in-memory intersection. v1 tokenization is whitespace + lowercasing + punctuation stripping; no stemming, no fuzzy match. The query is AND-intersection over query tokens against each frame's token set; matches are deduplicated by frame and surfaced as <code>FrameSearchHit</code>s with the most informative <code>hit_field</code> chosen by Stream H's field priority.</p>
+
+<pre><code>import { ArgmapDb, type SearchIndexEntry } from "./dexie-schema";
+import { type FrameSearchHit } from "./repository";
+import {
+  type Frame, type FrameVersion, type FrameId,
+} from "@/schema";
+
+/**
+ * Tokenize a single input string. v1: lowercased, punctuation-stripped,
+ * whitespace-split. Pure.
+ */
+export function tokenize(input: string): string[] {
+  return input
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")     // strip punctuation, keep letters/digits
+    .split(/\s+/)
+    .filter(t =&gt; t.length &gt; 0);
+}
+
+/**
+ * Build a SearchIndexEntry for one Frame + its current FrameVersion. The entry
+ * is keyed by frame_id and stores both the unioned token list (for fast intersection)
+ * and a per-token reverse index back to the source field (for FrameSearchHit.hit_field).
+ * Pure; tests assert determinism by snapshot.
+ */
+export function buildSearchIndexEntry(
+  frame: Frame,
+  current: FrameVersion,
+): SearchIndexEntry {
+  const tokens = new Set&lt;string&gt;();
+  const token_fields: { [token: string]: Array&lt;FrameSearchHit["hit_field"]&gt; } = {};
+
+  const add = (text: string | undefined, field: FrameSearchHit["hit_field"]): void =&gt; {
+    if (!text) return;
+    for (const t of tokenize(text)) {
+      tokens.add(t);
+      const list = token_fields[t] ?? [];
+      if (!list.includes(field)) list.push(field);
+      token_fields[t] = list;
+    }
+  };
+
+  add(frame.title, "title");
+  add(frame.description, "description");
+  for (const tag of frame.tags) add(tag, "tag");
+
+  for (const node of current.nodes) {
+    // The switch on node.type narrows `node` to the per-type interface in each
+    // branch via the discriminated-union encoding in @/schema/nodes; no casts
+    // are needed inside the cases.
+    switch (node.type) {
+      case "RootQuestion":
+      case "SubQuestion":
+      case "Interpretation":
+        add(node.statement, "node_text");
+        break;
+      case "Term":
+        add(node.name, "node_text");
+        break;
+      case "Checkpoint":
+        add(node.question, "node_text");
+        break;
+      case "Conclusion":
+        add(node.statement, "conclusion_statement");
+        if (node.reasoning_summary) add(node.reasoning_summary, "node_text");
+        break;
+      case "Authority":
+        add(node.citation, "node_text");
+        break;
+      case "Premise":
+        // Premise is an argument-layer node (lives on ArgumentSession.premises,
+        // not on FrameVersion.nodes) — this branch is unreachable when iterating
+        // a FrameVersion's nodes. The case is kept for exhaustiveness; the
+        // schema's `Node` discriminated union includes Premise so omitting it
+        // would fail the type-narrowing check.
+        break;
+      case "LogicalGate":
+        // gates carry no user text; skip
+        break;
+    }
+    if (node.notes) add(node.notes, "node_text");
+  }
+
+  return {
+    frame_id: frame.id,
+    tokens: Array.from(tokens).sort(),    // sorted for deterministic snapshots
+    token_fields,
+    title: frame.title,
+    built_at: frame.updated_at,
+  };
+}
+
+/**
+ * In-memory cache loaded from the search_index store on Repository open and
+ * updated transactionally on every Frame/FrameVersion save. Query is AND-intersection
+ * over query tokens; results sorted by an approximate match-count score.
+ */
+export class SearchIndex {
+  private entries = new Map&lt;FrameId, SearchIndexEntry&gt;();
+  private token_to_frames = new Map&lt;string, Set&lt;FrameId&gt;&gt;();
+
+  async loadFromDb(db: ArgmapDb): Promise&lt;void&gt; {
+    this.entries.clear();
+    this.token_to_frames.clear();
+    const all = await db.search_index.toArray();
+    for (const entry of all) this.upsert(entry);
+  }
+
+  upsert(entry: SearchIndexEntry): void {
+    // Remove old reverse-index entries for this frame, if any.
+    const previous = this.entries.get(entry.frame_id);
+    if (previous) {
+      for (const t of previous.tokens) {
+        this.token_to_frames.get(t)?.delete(entry.frame_id);
+      }
+    }
+    this.entries.set(entry.frame_id, entry);
+    for (const t of entry.tokens) {
+      const set = this.token_to_frames.get(t) ?? new Set&lt;FrameId&gt;();
+      set.add(entry.frame_id);
+      this.token_to_frames.set(t, set);
+    }
+  }
+
+  remove(frame_id: FrameId): void {
+    const previous = this.entries.get(frame_id);
+    if (!previous) return;
+    for (const t of previous.tokens) {
+      this.token_to_frames.get(t)?.delete(frame_id);
+    }
+    this.entries.delete(frame_id);
+  }
+
+  query(raw_query: string): FrameSearchHit[] {
+    const query_tokens = tokenize(raw_query);
+    if (query_tokens.length === 0) return [];
+    // AND-intersect candidate frame ids by token.
+    let candidates: Set&lt;FrameId&gt; | null = null;
+    for (const qt of query_tokens) {
+      const frames = this.token_to_frames.get(qt) ?? new Set&lt;FrameId&gt;();
+      if (candidates === null) candidates = new Set(frames);
+      else for (const id of Array.from(candidates)) {
+        if (!frames.has(id)) candidates.delete(id);
+      }
+      if (candidates.size === 0) return [];
+    }
+    const hits: FrameSearchHit[] = [];
+    for (const frame_id of Array.from(candidates ?? new Set&lt;FrameId&gt;()).sort()) {
+      const entry = this.entries.get(frame_id);
+      if (!entry) continue;
+      // hit_field selection: priority title &gt; conclusion_statement &gt; tag &gt;
+      // node_text &gt; description (most specific first, per Stream E's listing).
+      const priority: Array&lt;FrameSearchHit["hit_field"]&gt; = [
+        "title", "conclusion_statement", "tag", "node_text", "description",
+      ];
+      let chosen: FrameSearchHit["hit_field"] = "title";
+      outer: for (const field of priority) {
+        for (const qt of query_tokens) {
+          if (entry.token_fields[qt]?.includes(field)) { chosen = field; break outer; }
+        }
+      }
+      hits.push({
+        frame_id,
+        title: entry.title,
+        hit_field: chosen,
+        snippet: this.buildSnippet(entry, query_tokens),
+      });
+    }
+    return hits;
+  }
+
+  private buildSnippet(entry: SearchIndexEntry, query_tokens: string[]): string {
+    // Lightweight snippet: a few of the query tokens that matched, separated by '·'.
+    // The full snippet construction with surrounding context is deferred to the UI
+    // (which has both the FrameVersion in hand and can render context inline).
+    const matched = query_tokens.filter(qt =&gt; entry.tokens.includes(qt));
+    return matched.slice(0, 6).join(" · ");
+  }
+}
+</code></pre>
+
+  <p>The snippet construction in v1 is intentionally minimal. Stream E's frame-list / search UI is expected to render proper contextual snippets by joining back to the loaded FrameVersion when displaying results; the Repository surface returns the structured hit (frame_id, title, hit_field, terse snippet) and the UI does the join. This keeps <code>searchFrames</code> a pure cache lookup with no heavy text manipulation, which matters when the user is typing in the search box and the cache is queried on every keystroke.</p>
+
+  <div class="file-header">// src/persistence/broadcast.ts</div>
+  <p>The <code>CrossTabBus</code> over <code>BroadcastChannel</code>. One channel per database; events are typed against <code>BroadcastEvents</code>. When <code>BroadcastChannel</code> is unavailable (older browsers), <code>createCrossTabBus</code> returns a no-op implementation so callers don't need to feature-check. Stream H H2 documents the fallback semantics: without BroadcastChannel, the floor is last-write-wins per IndexedDB transaction; with it, peer tabs receive a courtesy notification.</p>
+
+<pre><code>import type {
+  CrossTabBus, BroadcastEvents, Unsubscribe,
+} from "./repository";
+
+export const BROADCAST_CHANNEL_NAME = "argmap_v1__crosstab";
+
+export function createCrossTabBus(channel_name: string = BROADCAST_CHANNEL_NAME): CrossTabBus {
+  if (typeof BroadcastChannel === "undefined") {
+    return new NoopCrossTabBus();
+  }
+  return new BroadcastChannelBus(new BroadcastChannel(channel_name));
+}
+
+export class CrossTabBusImpl implements CrossTabBus {
+  // Re-exported as a public class for testing; constructor accepts an injected channel-like.
+  publish&lt;K extends keyof BroadcastEvents&gt;(event: K, payload: BroadcastEvents[K]): void {
+    /* impl */
+  }
+  subscribe&lt;K extends keyof BroadcastEvents&gt;(
+    event: K,
+    listener: (payload: BroadcastEvents[K]) =&gt; void,
+  ): Unsubscribe { /* impl */ return () =&gt; {}; }
+  close(): void { /* impl */ }
+}
+
+class BroadcastChannelBus implements CrossTabBus {
+  private readonly channel: BroadcastChannel;
+  private readonly listeners = new Map&lt;
+    keyof BroadcastEvents,
+    Set&lt;(payload: BroadcastEvents[keyof BroadcastEvents]) =&gt; void&gt;
+  &gt;();
+
+  constructor(channel: BroadcastChannel) {
+    this.channel = channel;
+    this.channel.onmessage = (e: MessageEvent) =&gt; {
+      const msg = e.data as { event: keyof BroadcastEvents; payload: unknown };
+      const set = this.listeners.get(msg.event);
+      if (!set) return;
+      for (const listener of set) {
+        try { listener(msg.payload as never); } catch { /* isolate */ }
+      }
+    };
+  }
+
+  publish&lt;K extends keyof BroadcastEvents&gt;(event: K, payload: BroadcastEvents[K]): void {
+    this.channel.postMessage({ event, payload });
+  }
+
+  subscribe&lt;K extends keyof BroadcastEvents&gt;(
+    event: K,
+    listener: (payload: BroadcastEvents[K]) =&gt; void,
+  ): Unsubscribe {
+    const set = (this.listeners.get(event) ?? new Set()) as Set&lt;(p: BroadcastEvents[K]) =&gt; void&gt;;
+    set.add(listener);
+    this.listeners.set(event, set as never);
+    return () =&gt; { set.delete(listener); };
+  }
+
+  close(): void {
+    this.listeners.clear();
+    this.channel.close();
+  }
+}
+
+class NoopCrossTabBus implements CrossTabBus {
+  publish(): void { /* no-op */ }
+  subscribe(): Unsubscribe { return () =&gt; {}; }
+  close(): void { /* no-op */ }
+}
+</code></pre>
+
+  <div class="file-header">// src/persistence/index.ts</div>
+  <p>The module barrel. Re-exports the public surface only; internal Dexie schema and the bus implementation classes are not re-exported (consumers go through <code>IndexedDbRepository</code> and <code>createCrossTabBus</code>).</p>
+
+<pre><code>export {
+  // Interface + types
+  type Repository,
+  type FrameSummary,
+  type ArgumentSessionSummary,
+  type FrameVersionSummary,
+  type ArgumentSessionVersionSummary,
+  type AppState,
+  type FrameSearchHit,
+  type OrphanResolution,
+  type SaveEvent,
+  type AutosaveEvent,
+  type AutosaveController,
+  type PendingFrameSave,
+  type PendingSessionSave,
+  type StructuralDiff,
+  type SessionStructuralDiff,
+  type NodeEditEntry,
+  type EdgeEditEntry,
+  type MetadataChange,
+  type BroadcastEvents,
+  type CrossTabBus,
+  type Unsubscribe,
+  LAYOUT_ONLY_FIELDS,
+  QuotaExceededError,
+  RepositoryError,
+} from "./repository";
+export { IndexedDbRepository, type IndexedDbRepositoryOptions } from "./indexeddb-repository";
+export {
+  createAutosaveController,
+  AUTOSAVE_IDLE_MS,
+  AUTOSAVE_MAX_MS,
+  APP_STATE_DEBOUNCE_MS,
+  type AutosaveControllerOptions,
+} from "./autosave";
+export { diffFrameVersions, diffSessionVersions } from "./diff";
+export { buildSearchIndexEntry, tokenize } from "./search-index";
+export { createCrossTabBus, BROADCAST_CHANNEL_NAME } from "./broadcast";
+</code></pre>
+
+  <h2>Atomicity contracts</h2>
+  <p>Five composite operations require single-transaction atomicity. Each is implemented inside one Dexie <code>db.transaction(...)</code> block (or, for <code>saveFrameVersion</code>, inside the per-method <code>runTx</code> wrapper that opens one). Either every record commits or none does. The contracts below pin the precise transaction scope, the read steps, the write steps, and the failure semantics for each. The coding session implements each per this section.</p>
+
+  <h3>§ 1. Frame-template deep-copy (<code>createFrameFromTemplate</code>)</h3>
+  <p>Per Stream H decision #7 and Stream D D1. Creates a new Frame from an existing one by deep-copying every node and edge with regenerated UUIDs.</p>
+  <ol>
+    <li><strong>Read.</strong> Load the source <code>Frame</code> and its <code>current_version</code> FrameVersion.</li>
+    <li><strong>Build id translation map.</strong> Walk every <code>Node</code> in <code>source.nodes</code>; for each, allocate <code>generateId()</code> as the new id; record old → new. Same for every <code>Edge</code>.</li>
+    <li><strong>Rewrite internal references.</strong> For each node in the destination copy, rewrite every NodeRef it carries through the translation map: <code>CheckpointOption.target_node_id</code>, <code>AndGate.inputs[]</code> / <code>OrGate.inputs[]</code>, <code>NotGate.input</code>, <code>IfThenGate.antecedent</code> / <code>consequent</code>, <code>UnlessGate.main</code> / <code>exception</code>, <code>LogicalGate.output_target</code> (any variant), <code>Term.linked_to</code>. For each edge in the destination copy, rewrite <code>source</code> and <code>target</code>.</li>
+    <li><strong>Construct destination entities.</strong> A new <code>Frame</code> with fresh <code>id</code>, <code>title = new_title</code>, all other Frame fields deep-cloned, <code>current_version_id</code> pointing at the new version, <code>created_at = updated_at = now()</code>, <code>llm_settings</code> initialized as <code>{ ..., invocations: [] }</code> (the audit log starts empty in the new frame — the original frame's invocation history does not transfer because it concerns the original's specific hook commits). A new <code>FrameVersion</code> with fresh <code>id</code>, the new <code>frame_id</code>, <code>version_number: 1</code>, no <code>parent_version_id</code>, <code>created_at = now()</code>, <code>is_milestone: true</code>, <code>change_summary: "Created from template: &lt;source_title&gt;"</code>.</li>
+    <li><strong>Write.</strong> Inside one <code>"rw"</code> transaction over <code>frames</code>, <code>frame_versions</code>, and <code>search_index</code>: put the new FrameVersion, put the new Frame, put the new <code>SearchIndexEntry</code>.</li>
+    <li><strong>Failure.</strong> Dexie rolls back the transaction on any error; the function rethrows the mapped error and no record persists. The source Frame is never modified.</li>
+  </ol>
+  <p>Open design point: the per-Frame <code>llm_settings.invocations</code> log is reset in the template-copy (the new frame starts with no invocation history). Carrying the source's invocations would be misleading — the invocations refer to commits on nodes with old ids that no longer exist. The provenance trail for the new frame begins at its first hook invocation, if any. Stream G's hooks therefore see an empty log on the template-copied frame, which is the intended cold-start behavior.</p>
+
+  <h3>§ 2. Session migration (<code>migrateSession</code>)</h3>
+  <p>Per Stream H decision #7 and Stream D D2/D3. Forks a new <code>ArgumentSessionVersion</code> against a newer FrameVersion of the underlying frame and applies orphan resolutions.</p>
+  <ol>
+    <li><strong>Read.</strong> Load the <code>ArgumentSession</code>, its <code>current_version</code> ArgumentSessionVersion, and the target <code>FrameVersion</code>.</li>
+    <li><strong>Apply orphan resolutions.</strong> For each <code>OrphanResolution</code>: if <code>kind === "discard"</code>, remove every CheckpointResponse / InterpretationSelection / argument_edge that references <code>source_node_id</code>; if <code>kind === "reattach"</code>, rewrite each such reference from <code>source_node_id</code> to <code>target_node_id</code>; <code>"no_op"</code> is a noop. The traversal is over the prior <code>current_version</code>'s argument-layer collections, producing the new version's collections.</li>
+    <li><strong>Construct new ArgumentSessionVersion.</strong> Fresh <code>id</code>, <code>session_id</code> from the session, <code>version_number = max(existing_versions) + 1</code>, <code>parent_version_id = prior_current.id</code>, <code>created_at = now()</code>, <code>is_milestone: true</code>, <code>change_summary: "Migrated to frame v&lt;N&gt;"</code>, the post-resolution argument-layer collections, and the new <code>frame_version_id</code> + a fresh <code>frame_version_snapshot</code> (the target FrameVersion's nodes/edges, deep-cloned per Article II § 1's frame/argument split).</li>
+    <li><strong>Update session.</strong> Set <code>session.current_version_id = new_version.id</code>, <code>session.frame_version_id = target_frame_version_id</code>, <code>session.updated_at = now()</code>.</li>
+    <li><strong>Write.</strong> Inside one <code>"rw"</code> transaction over <code>argument_sessions</code> and <code>argument_session_versions</code>: put the new version, put the updated session.</li>
+    <li><strong>Failure.</strong> Rollback as in § 1.</li>
+  </ol>
+
+  <h3>§ 3. Frame version restore (<code>restoreFrameVersion</code>)</h3>
+  <p>Per Stream H H3 restore implementation. Creates a new FrameVersion off the named ancestor; the ancestor is never modified.</p>
+  <ol>
+    <li><strong>Read.</strong> Load the <code>Frame</code> and the ancestor <code>FrameVersion</code>. Query <code>frame_versions</code> for the maximum existing <code>version_number</code> on this frame.</li>
+    <li><strong>Construct new FrameVersion.</strong> Fresh <code>id</code>, the frame's <code>frame_id</code>, <code>version_number = max + 1</code>, <code>parent_version_id = ancestor.id</code>, <code>created_at = now()</code>, deep-cloned <code>nodes</code> and <code>edges</code> from the ancestor, <code>is_milestone: true</code>, <code>change_summary: \`restored from version ${ancestor.version_number}\`</code>. The <code>llm_settings_snapshot</code> (F-001) is also deep-cloned from the ancestor: the calibrated thresholds are preserved across the restore so that <code>compute()</code> produces identical output as the ancestor did.</li>
+    <li><strong>Update Frame.</strong> Set <code>current_version_id = new_version.id</code>, <code>updated_at = now()</code>.</li>
+    <li><strong>Write.</strong> Inside one <code>"rw"</code> transaction over <code>frames</code>, <code>frame_versions</code>, and <code>search_index</code>: put the new version, put the updated Frame, put the rebuilt <code>SearchIndexEntry</code>. The search index is rebuilt because the current-version-of-truth has changed.</li>
+    <li><strong>Failure.</strong> Rollback as in § 1; the ancestor is unaffected (Article II § 4).</li>
+  </ol>
+  <p>Version numbering is monotonic across the full frame, not per-branch. After restoring v3 of a 7-version frame, the new version is v8 with <code>parent_version_id: v3.id</code>. This matches Stream H H3's branch-tree rendering, which displays versions chronologically with branches drawn as indents.</p>
+
+  <h3>§ 4. Session version restore (<code>restoreSessionVersion</code>)</h3>
+  <p>The session-layer analog of § 3. Identical pattern over <code>argument_sessions</code> and <code>argument_session_versions</code>; deep-clones the ancestor's argument-layer collections and <code>frame_version_snapshot</code>; sets <code>is_milestone: true</code> and <code>change_summary: \`restored from version ${ancestor.version_number}\`</code>. Version numbering is monotonic across the full session.</p>
+
+  <h3>§ 5. saveFrameVersion (the auto-save path)</h3>
+  <p>Already in the file-level signatures above. Single transaction over <code>frames</code>, <code>frame_versions</code>, and <code>search_index</code>: put the new <code>FrameVersion</code>, update the parent <code>Frame</code>'s <code>current_version_id</code> + <code>updated_at</code>, regenerate and put the <code>SearchIndexEntry</code>. The autosave path always flows through this method; the controller does not bypass it for individual record writes.</p>
+
+  <h3>Atomicity testing</h3>
+  <p>Per the Vitest acceptance test plan below, each composite operation is exercised with two cases: (a) a happy-path completion that asserts every record is present after the call, and (b) an injected mid-transaction failure (via a Dexie hook that aborts after the second write) that asserts the prior state is preserved exactly. The injected-failure tests run against <code>fake-indexeddb</code>'s transaction model, which mirrors browser behavior.</p>
+
+  <h2>Quota and failure handling</h2>
+  <p>Per Stream H H1 "Quota and failure handling." Three failure modes, each mapped to a typed error on the <code>Repository</code> surface:</p>
+  <ul>
+    <li><strong>Quota exceeded on save.</strong> The Dexie transaction fails with a DOMException whose <code>name</code> is <code>"QuotaExceededError"</code>. The <code>runTx</code> wrapper detects this and rethrows <code>QuotaExceededError</code>. The <code>AutosaveController</code> emits <code>save_failed</code> with the typed error; the state layer surfaces the non-blocking banner per Stream H "Failure handling" and reschedules on the next user edit.</li>
+    <li><strong>Generic transaction failure.</strong> Any other transaction abort produces <code>RepositoryError</code> with the failed operation name. Same UI affordance.</li>
+    <li><strong>Read failure on app start.</strong> A failed <code>openOrUpgrade</code> throws <code>RepositoryError("openOrUpgrade", ...)</code>. The state layer catches at startup and routes to the recovery screen (per Stream H, the screen offers "Export raw data," "Open read-only," "Reset database" — those are state/UI concerns; this layer only signals).</li>
+  </ul>
+  <p>In-memory state preservation is the caller's responsibility — the <code>Repository</code> never holds the only copy of pending data. The <code>AutosaveController</code> retains the latest <code>PendingFrameSave</code> / <code>PendingSessionSave</code> in its slot on a failed flush so the next schedule call resumes from the unsaved payload, but the Zustand stores in <code>@/state</code> remain the source of truth for the working copy.</p>
+
+  <h2>Schema migration plumbing</h2>
+  <p>Three places where migrations execute, all routed through <code>@/schema</code>'s pure <code>migrate()</code> function (which walks the <code>MigrationRegistry</code> from <code>envelope.schema_version</code> to <code>CURRENT_SCHEMA_VERSION</code> with no clock reads or environment branches).</p>
+  <ol>
+    <li><strong>On import.</strong> <code>importFrame</code> and <code>importSession</code> call <code>schemaMigrate(envelope)</code> before any database write. Validation runs against the migrated envelope; only validated records reach disk.</li>
+    <li><strong>On app open.</strong> <code>openOrUpgrade</code> reads <code>AppState.last_known_schema_version</code> and, if less than <code>CURRENT_SCHEMA_VERSION</code>, calls <code>applySchemaMigrationSweep</code> to walk every record in every store through <code>schemaMigrate</code> inside one transaction across all stores. v1 ships with <code>CURRENT_SCHEMA_VERSION = 1</code> and an empty migrations table, so this is a no-op until a future bump; the structure is in place so that the future bump is mechanical.</li>
+    <li><strong>On Dexie database-version upgrade.</strong> If a future build adds a store or index, Dexie's <code>this.version(N).stores(...).upgrade(async (tx) =&gt; { ... })</code> hook runs at <code>db.open()</code>. The upgrade callback is allowed to call <code>schemaMigrate</code> record-by-record for any store whose record shape also changed. The Dexie version bump and the schema_version bump are independent: a layout-only Dexie change does not require a schema_version bump, and a record-shape-only schema_version bump (no new stores or indexes) does not require a Dexie version bump.</li>
+  </ol>
+  <p>The migration mechanism's purity is asserted at the schema layer (per the schema spec's <code>tests/schema/round-trip.test.ts</code>); the persistence layer adds tests that the sweep runs idempotently and that a forced bump from a hand-rolled <code>last_known_schema_version: 0</code> AppState exercises the registry walk even with an empty registry.</p>
+
+  <h2>Determinism implementation contract (persistence-side)</h2>
+  <p>Stream H "Determinism implementation contract" applies; this section names the persistence-specific responsibilities and what's intentionally <em>not</em> the persistence layer's concern.</p>
+  <h4>What the persistence layer guarantees</h4>
+  <ul>
+    <li><strong>Import boundary.</strong> <code>src/persistence/</code> imports only <code>@/schema</code> and third-party libraries (<code>dexie</code>; <code>fake-indexeddb</code> in tests only). It does not import <code>@/runtime</code>, <code>@/state</code>, <code>@/modes</code>, <code>@/ui</code>, <code>@/llm-hooks</code>, or <code>@/layout</code>. Enforced by ESLint <code>no-restricted-imports</code>. This is tightened from Contract 3's preamble line — see Cross-document resolution note #1.</li>
+    <li><strong>Snapshot inputs to <code>compute</code> are deterministic.</strong> Every <code>FrameVersion</code> and <code>ArgumentSessionVersion</code> the persistence layer writes is fully self-contained (nodes/edges + the F-001 <code>llm_settings_snapshot</code> projection on FrameVersion + the F-002 <code>output_overrides</code> on ArgumentSessionVersion + the <code>frame_version_snapshot</code> on session). When <code>compute</code> reads any of these, it reads a fixed snapshot, not a live record.</li>
+    <li><strong>Migrations are pure.</strong> The schema migration sweep walks records in a single Dexie transaction and applies <code>schemaMigrate</code> deterministically (pure function from envelope to envelope). The Dexie database version is incremented monotonically; downgrades are unsupported by design.</li>
+  </ul>
+  <h4>What the persistence layer is <em>not</em> responsible for</h4>
+  <ul>
+    <li><strong>Output determinism.</strong> The runtime spec (I.3) carries the determinism guarantee for <code>compute</code>; the persistence layer only feeds it inputs. The <code>computed_at</code> field on <code>ComputeInput</code> (per the runtime spec's escalation) is supplied by the state layer when invoking <code>compute</code>, not by the persistence layer.</li>
+    <li><strong>Clock determinism in <code>created_at</code> / <code>updated_at</code>.</strong> These fields read <code>Date.now()</code> at write time and are not deterministic across runs; they're informational provenance, not inputs to <code>compute</code>. The injected <code>now()</code> on <code>IndexedDbRepositoryOptions</code> lets tests freeze them when snapshot comparisons require it.</li>
+    <li><strong>Id determinism.</strong> <code>crypto.randomUUID()</code> is non-deterministic by design. The injected <code>generateId()</code> lets tests substitute a counter-based generator when needed.</li>
+  </ul>
+
+  <h2>Vitest acceptance tests</h2>
+  <p>Eight test files under <code>tests/persistence/</code>. The coding session implements each persistence file and the tests below pass. Tests run under the frozen-clock Vitest configuration shipped in I.1's skeleton; the IndexedDB layer uses <code>fake-indexeddb</code> (per Cross-document resolution note #4) imported in <code>tests/persistence/_setup.ts</code> which is in turn referenced from <code>vitest.config.ts</code>'s <code>setupFiles</code> array for the persistence test pattern.</p>
+
+  <h3><code>tests/persistence/_setup.ts</code></h3>
+  <p>Per-test-file setup. Imports <code>fake-indexeddb/auto</code> to install the in-process IndexedDB globally; defines a <code>freshDb(name?)</code> helper that returns a clean <code>IndexedDbRepository</code> with injected deterministic <code>now()</code> and <code>generateId()</code>; defines an <code>injectedNow(start_iso)</code> helper that returns a closure incrementing by 1 second per call (so successive saves produce ordered timestamps even under frozen real time).</p>
+<pre><code>import "fake-indexeddb/auto";
+import { IndexedDbRepository } from "@/persistence";
+
+let test_db_counter = 0;
+
+export function injectedNow(start_iso: string): () =&gt; string {
+  let t = new Date(start_iso).getTime();
+  return () =&gt; { const s = new Date(t).toISOString(); t += 1_000; return s; };
+}
+
+export function injectedGenerateId(): () =&gt; string {
+  let i = 0;
+  return () =&gt; {
+    i += 1;
+    return `00000000-0000-4000-8000-${i.toString(16).padStart(12, "0")}`;
+  };
+}
+
+export async function freshDb(name = `test_${++test_db_counter}`): Promise&lt;IndexedDbRepository&gt; {
+  const repo = new IndexedDbRepository({
+    db_name: name,
+    now: injectedNow("2026-05-10T00:00:00.000Z"),
+    generateId: injectedGenerateId(),
+  });
+  await repo.openOrUpgrade();
+  return repo;
+}
+</code></pre>
+
+  <h3><code>tests/persistence/repository-round-trip.test.ts</code></h3>
+  <p>End-to-end round-trip on a representative legal-mode fixture: save Frame + FrameVersion, save ArgumentSession + ArgumentSessionVersion, list them by frame, load each by id, export+import through the JSON envelope, and assert structural equality. Reuses <code>tests/schema/fixtures/legal-mode-fixture.ts</code> so the persistence and schema layers test against the same shapes.</p>
+<pre><code>import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { freshDb } from "./_setup";
+import { buildLegalModeFixture } from "../schema/fixtures/legal-mode-fixture";
+import type { IndexedDbRepository } from "@/persistence";
+
+describe("persistence/round-trip", () =&gt; {
+  let repo: IndexedDbRepository;
+  beforeEach(async () =&gt; { repo = await freshDb(); });
+  afterEach(() =&gt; repo.close());
+
+  it("saves and loads a Frame + FrameVersion", async () =&gt; {
+    const { frame_export } = buildLegalModeFixture();
+    const { frame, current_version } = frame_export;
+    // saveFrameVersion requires the parent Frame to exist first.
+    await repo.saveFrame(frame);
+    await repo.saveFrameVersion(current_version);
+    const loaded_frame = await repo.loadFrame(frame.id);
+    const loaded_version = await repo.loadFrameVersion(current_version.id);
+    expect(loaded_frame.id).toBe(frame.id);
+    expect(loaded_version.id).toBe(current_version.id);
+    expect(loaded_version.nodes).toStrictEqual(current_version.nodes);
+    expect(loaded_version.edges).toStrictEqual(current_version.edges);
+  });
+
+  it("saveFrameVersion throws RepositoryError when the parent Frame is missing", async () =&gt; {
+    const { frame_export } = buildLegalModeFixture();
+    await expect(repo.saveFrameVersion(frame_export.current_version))
+      .rejects.toThrow(/Parent Frame missing/);
+  });
+
+  it("listFrames returns a FrameSummary for every saved Frame", async () =&gt; { /* … */ });
+
+  it("export → import round-trips a Frame with full history", async () =&gt; {
+    const { frame_export } = buildLegalModeFixture();
+    await repo.saveFrame(frame_export.frame);
+    await repo.saveFrameVersion(frame_export.current_version);
+    const exported = await repo.exportFrame(frame_export.frame.id, { include_history: true });
+    // Import into a separate database.
+    const repo2 = await freshDb("import_target");
+    const imported_frame = await repo2.importFrame(exported);
+    const loaded = await repo2.loadFrameVersion(imported_frame.current_version_id);
+    expect(loaded.nodes).toStrictEqual(frame_export.current_version.nodes);
+    repo2.close();
+  });
+
+  it("export → import round-trips an ArgumentSession with embedded frame", async () =&gt; { /* … */ });
+
+  it("a session whose underlying frame has moved forward reports drift_warning", async () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/persistence/atomicity.test.ts</code></h3>
+  <p>Each composite operation is exercised happy-path and with an injected mid-transaction failure. The mid-failure case uses Dexie's <code>db.frames.hook("creating", ...)</code> or a similar hook to throw after the second write inside the transaction; the test then asserts that every record is in its pre-call state.</p>
+<pre><code>describe("persistence/atomicity", () =&gt; {
+  it("createFrameFromTemplate: happy path produces a new Frame with regenerated ids and a v1 FrameVersion", async () =&gt; {
+    // 1. Seed a source Frame with at least one Term, one Interpretation, one Checkpoint,
+    //    one LogicalGate (with named-slot inputs), and one FORECLOSES edge — enough to
+    //    exercise every reference-rewrite path.
+    // 2. Call createFrameFromTemplate(source.id, "Copy").
+    // 3. Assert the new Frame has a different id; assert every node and edge in the new
+    //    version has a different id; assert all internal references (CheckpointOption.target_node_id,
+    //    LogicalGate slots, Term.linked_to, edge source/target, FORECLOSES targets) are
+    //    rewritten through the translation map (no dangling references to source ids).
+    // 4. Assert the new FrameVersion has version_number 1, no parent_version_id, is_milestone true,
+    //    change_summary starting with "Created from template:".
+    // 5. Assert llm_settings.invocations is empty on the new Frame.
+  });
+
+  it("createFrameFromTemplate: injected mid-transaction failure leaves the database untouched", async () =&gt; { /* … */ });
+
+  it("migrateSession: applies discard, reattach, and no_op resolutions correctly", async () =&gt; { /* … */ });
+  it("migrateSession: injected mid-transaction failure leaves the session at its prior version", async () =&gt; { /* … */ });
+
+  it("restoreFrameVersion: creates a new version with parent_version_id pointing at the ancestor", async () =&gt; { /* … */ });
+  it("restoreFrameVersion: version_number is max(frame_versions) + 1, not per-branch", async () =&gt; { /* … */ });
+  it("restoreFrameVersion: ancestor is byte-identical before and after restore", async () =&gt; { /* … */ });
+  it("restoreFrameVersion: llm_settings_snapshot is deep-cloned from the ancestor", async () =&gt; { /* … */ });
+
+  it("restoreSessionVersion: same shape as restoreFrameVersion over the session-version table", async () =&gt; { /* … */ });
+
+  it("saveFrameVersion: writes the version and updates Frame.current_version_id + updated_at atomically", async () =&gt; { /* … */ });
+  it("saveFrameVersion: search_index entry is regenerated in the same transaction", async () =&gt; { /* … */ });
+
+  it("deleteFrame: cascade-deletes every FrameVersion, ArgumentSession, ArgumentSessionVersion, and search_index entry for the frame", async () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/persistence/autosave.test.ts</code></h3>
+  <p>The <code>AutosaveController</code> under fake timers. Asserts the 5s idle / 30s max debounce, the in-flight queueing, milestone forcing, and event emission. Uses <code>vi.useFakeTimers()</code> per the I.1 vitest setup; the controller's injected <code>setTimeoutFn</code> / <code>clearTimeoutFn</code> are not used here (we use Vitest's globals) but the option exists for tests that want a fully synchronous controller.</p>
+<pre><code>describe("persistence/autosave", () =&gt; {
+  it("scheduleFrameSave: flushes after 5s of idle", async () =&gt; {
+    // - schedule a save
+    // - advance time 4.999s; assert nothing has been written
+    // - advance time 0.002s; assert one save_succeeded event fired
+  });
+
+  it("scheduleFrameSave: rapid edits in a 30s window flush at 30s even without idle", async () =&gt; {
+    // - schedule, advance 4s, schedule again, advance 4s, ... for 35 seconds
+    // - assert one (and only one) save fired at 30s with the latest payload
+  });
+
+  it("scheduleFrameSave: multiple schedules for the same id overwrite, only the latest payload is written", async () =&gt; { /* … */ });
+
+  it("scheduleFrameSave: flush during an in-flight save queues the next save", async () =&gt; { /* … */ });
+
+  it("saveFrameMilestone: bypasses the debounce and produces is_milestone: true on the written version", async () =&gt; {
+    // - call saveFrameMilestone with new_version.is_milestone = true
+    // - assert the save completes within a single tick (no debounce delay)
+    // - load the version back; assert is_milestone === true
+  });
+
+  it("scheduleSessionSave: same behavior over sessions", async () =&gt; { /* … */ });
+
+  it("scheduleAppStateSave: separate 1s debouncer, never produces a version", async () =&gt; { /* … */ });
+
+  it("save_failed event: emits when Repository throws RepositoryError; retains payload for retry-on-next-edit", async () =&gt; {
+    // - stub repo.saveFrameVersion to reject once with RepositoryError
+    // - schedule, advance 5s; assert save_failed fired with the error
+    // - schedule again with a new payload; advance 5s; assert save_succeeded fired with the latest payload
+  });
+
+  it("dispose: clears all pending timers and stops emitting events", async () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/persistence/diff.test.ts</code></h3>
+  <p>Snapshot-style pure tests of <code>diffFrameVersions</code> and <code>diffSessionVersions</code>. Layout-only bucketing is exercised explicitly.</p>
+<pre><code>describe("persistence/diff", () =&gt; {
+  it("diffFrameVersions: empty diff when a === b", async () =&gt; { /* … */ });
+  it("diffFrameVersions: detects added/removed/edited nodes by id", async () =&gt; { /* … */ });
+  it("diffFrameVersions: detects added/removed/edited edges by id", async () =&gt; { /* … */ });
+  it("diffFrameVersions: layout-only changes are bucketed into layout_changed_count", async () =&gt; {
+    // - a has Node X at presentation.{x:0,y:0}; b has X at presentation.{x:50,y:80}
+    // - assert nodes.edited is empty
+    // - assert layout_changed_count is 1
+    // - assert layout_only is true (when no non-layout changes exist)
+  });
+  it("diffFrameVersions: mixed layout + semantic changes do NOT set layout_only", async () =&gt; { /* … */ });
+  it("diffFrameVersions: metadata.changed_fields surfaces FrameVersion-level field changes", async () =&gt; { /* … */ });
+  it("diffFrameVersions: output arrays are sorted by id for stable snapshots", async () =&gt; { /* … */ });
+  it("diffFrameVersions: two calls on identical inputs return structurally equal output", async () =&gt; { /* … */ });
+
+  it("diffSessionVersions: detects added/removed Premises", async () =&gt; { /* … */ });
+  it("diffSessionVersions: detects edited CheckpointResponses by checkpoint_id", async () =&gt; { /* … */ });
+  it("diffSessionVersions: detects edited InterpretationSelections by term_id", async () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/persistence/search-index.test.ts</code></h3>
+  <p>Tokenizer, entry builder, and query are all pure functions; tested directly. The <code>SearchIndex</code> cache is tested for warm-up, upsert, remove, and intersection semantics.</p>
+<pre><code>describe("persistence/search-index", () =&gt; {
+  it("tokenize: lowercases, strips punctuation, splits on whitespace", () =&gt; {
+    expect(tokenize("Hello, World! It's 2026.")).toStrictEqual(["hello", "world", "it", "s", "2026"]);
+  });
+  it("tokenize: handles Unicode letters and digits via \\p{L}\\p{N}", () =&gt; { /* … */ });
+  it("tokenize: idempotent — tokenize(tokenize(x).join(' ')) === tokenize(x)", () =&gt; { /* … */ });
+
+  it("buildSearchIndexEntry: covers title, description, tags, every node-text field, and Conclusion.statement", () =&gt; { /* … */ });
+  it("buildSearchIndexEntry: token_fields records the source field for each token", () =&gt; { /* … */ });
+  it("buildSearchIndexEntry: tokens are sorted lexicographically for deterministic snapshots", () =&gt; { /* … */ });
+  it("buildSearchIndexEntry: notes are indexed under node_text", () =&gt; { /* … */ });
+  it("buildSearchIndexEntry: LogicalGate produces no tokens (no user text)", () =&gt; { /* … */ });
+
+  it("SearchIndex.query: AND-intersects across query tokens", () =&gt; { /* … */ });
+  it("SearchIndex.query: returns no hits when any query token is missing from a frame", () =&gt; { /* … */ });
+  it("SearchIndex.query: hit_field priority is title &gt; conclusion_statement &gt; tag &gt; node_text &gt; description", () =&gt; { /* … */ });
+  it("SearchIndex.upsert: replaces prior reverse-index entries when a frame's tokens change", () =&gt; { /* … */ });
+  it("SearchIndex.remove: clears reverse-index entries for the removed frame", () =&gt; { /* … */ });
+
+  it("searchFrames through Repository: returns the same hits as a direct SearchIndex query", async () =&gt; { /* … */ });
+  it("save → search: a Frame becomes searchable in the same transaction as its FrameVersion save", async () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/persistence/broadcast.test.ts</code></h3>
+  <p>Uses two <code>BroadcastChannel</code> instances on the same channel name to simulate two tabs. The Node test runtime provides <code>BroadcastChannel</code> natively (Node 18+); no polyfill needed.</p>
+<pre><code>describe("persistence/broadcast", () =&gt; {
+  it("createCrossTabBus: returns a working bus when BroadcastChannel is available", async () =&gt; {
+    // - publish frame_saved on bus A; assert bus B's listener fires with the same payload
+  });
+  it("createCrossTabBus: returns a no-op bus when BroadcastChannel is undefined", () =&gt; {
+    // - temporarily stub globalThis.BroadcastChannel to undefined
+    // - createCrossTabBus(); publish frame_saved; subscribe; assert no errors and no calls
+  });
+  it("subscribe returns an unsubscribe function that detaches the listener", async () =&gt; { /* … */ });
+  it("close: stops dispatching messages on the closed bus", async () =&gt; { /* … */ });
+  it("event payloads are typed: frame_saved has frame_id and version_id only", async () =&gt; { /* compile-time check */ });
+});
+</code></pre>
+
+  <h3><code>tests/persistence/migration.test.ts</code></h3>
+  <p>Schema-version migration sweep. v1's <code>MIGRATION_REGISTRY</code> is empty, so the sweep is a no-op; the test asserts the sweep runs idempotently, that <code>AppState.last_known_schema_version</code> is bumped to <code>CURRENT_SCHEMA_VERSION</code> after the sweep, and that a hand-rolled <code>last_known_schema_version: 0</code> exercises the registry walk (still no-op at v1, but the test future-proofs the mechanism).</p>
+<pre><code>describe("persistence/migration", () =&gt; {
+  it("openOrUpgrade: a fresh database initializes AppState with last_known_schema_version = CURRENT_SCHEMA_VERSION", async () =&gt; { /* … */ });
+  it("openOrUpgrade: an existing AppState with last_known_schema_version &lt; CURRENT runs the sweep", async () =&gt; {
+    // - manually put AppState with last_known_schema_version: 0
+    // - call openOrUpgrade
+    // - assert AppState now has last_known_schema_version: CURRENT_SCHEMA_VERSION
+  });
+  it("applySchemaMigrationSweep: pure under empty registry — record bytes unchanged", async () =&gt; { /* … */ });
+  it("importFrame: runs schemaMigrate before validate; rejects when validation finds errors", async () =&gt; { /* … */ });
+  it("importFrame: writes records inside one transaction; mid-failure leaves nothing behind", async () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3><code>tests/persistence/quota.test.ts</code></h3>
+  <p>Quota-exceeded surfacing. The test injects a quota failure via <code>fake-indexeddb</code>'s ability to simulate a transaction abort, asserts the <code>QuotaExceededError</code> propagates through <code>runTx</code>, and asserts the <code>AutosaveController</code> emits a <code>save_failed</code> with the typed error.</p>
+<pre><code>describe("persistence/quota", () =&gt; {
+  it("saveFrameVersion: a quota-exceeded transaction abort throws QuotaExceededError", async () =&gt; { /* … */ });
+  it("AutosaveController: a quota-exceeded save emits save_failed with QuotaExceededError, retains payload", async () =&gt; { /* … */ });
+  it("after a quota failure, the next schedule call resumes from the unsaved payload", async () =&gt; { /* … */ });
+});
+</code></pre>
+
+  <h3>Test fixtures (<code>tests/persistence/fixtures/</code>)</h3>
+  <p>Two fixture modules. The first re-exports <code>buildLegalModeFixture</code> from the schema fixture so persistence and schema test against the same shapes. The second adds persistence-specific scenario builders that the atomicity and autosave tests consume.</p>
+<pre><code>// tests/persistence/fixtures/persistence-fixtures.ts
+import type {
+  Frame, FrameVersion, ArgumentSession, ArgumentSessionVersion,
+} from "@/schema";
+export function buildSeededDbState(): {
+  frames: Frame[];
+  frame_versions: FrameVersion[];
+  argument_sessions: ArgumentSession[];
+  argument_session_versions: ArgumentSessionVersion[];
+};
+export function buildFrameWithEveryNodeAndEveryEdgeType(): { frame: Frame; current_version: FrameVersion; };
+export function buildSessionWithDriftedFrameVersion(): {
+  frame: Frame; old_version: FrameVersion; new_version: FrameVersion;
+  session: ArgumentSession; session_version: ArgumentSessionVersion;
+};
+// ... one builder per migration / atomicity scenario under test
+</code></pre>
+
+  <h2>Self-review (Article VIII § 4)</h2>
+
+  <h3>Architectural commitments (Article II §§ 1–6)</h3>
+  <ul>
+    <li><strong>§ 1 Frame/Argument Split.</strong> Honored. IndexedDB stores <code>frames</code> / <code>frame_versions</code> are entirely separate from <code>argument_sessions</code> / <code>argument_session_versions</code>; the <code>Repository</code> interface treats them as independent entities; the <code>AutosaveController</code> has separate per-id slots for each side; the diff functions are typed separately (<code>StructuralDiff</code> vs. <code>SessionStructuralDiff</code>). Each <code>ArgumentSession</code> carries its own <code>frame_version_snapshot</code> — the session's logical content is sealed against frame edits without coupling the two version streams. ✓</li>
+    <li><strong>§ 2 Determinism.</strong> Honored at the persistence boundary. The persistence layer reads the clock for <code>created_at</code>/<code>updated_at</code> and uses <code>crypto.randomUUID</code> for new ids; both are isolated behind injection points (<code>now()</code>, <code>generateId()</code>) so tests can freeze them. None of these values feed <code>compute</code> at runtime except as fixed snapshot fields. The import boundary (only <code>@/schema</code> from the application codebase) keeps the dependency graph one-directional. Schema migrations route through <code>@/schema</code>'s pure <code>migrate()</code> and run inside transactions for atomicity. ✓</li>
+    <li><strong>§ 3 Per-Node Satisfaction Criteria.</strong> Honored. The persistence layer stores <code>SatisfactionPolicy</code> shapes as deeply-nested fields on Node entities; nothing here reaches into the policy structure or its evaluation. The diff function compares <code>options_box</code> field-by-field via the generic <code>deepEqual</code>; no specialized handling. ✓</li>
+    <li><strong>§ 4 Independent Versioning.</strong> Honored, and structurally enforced. The four version-related stores have independent primary keys, independent <code>[id+version_number]</code> compound indexes, and independent <code>parent_version_id</code> chains. The <code>AutosaveController</code> emits independent <code>save_succeeded</code> events for each side. The "every save is preserved" guarantee is enforced by the absence of any per-version delete path — the only deletions are at the Frame or Session level, and even those preserve the historical record up to the moment of deletion. ✓</li>
+    <li><strong>§ 5 Human-Readable Structure.</strong> Honored. The on-disk format is JSON via Dexie; an exported <code>FrameExport</code> file is human-readable text. The Repository interface and the per-store layout are documented in this spec without hidden ordering tricks. ✓</li>
+    <li><strong>§ 6 Use-Case Commitment.</strong> Honored. The persistence layer treats <code>Mode</code> and <code>Flavor</code> as opaque schema fields that flow through unchanged; legal-mode and general-mode frames round-trip identically. Nothing in this spec privileges legal mode at the storage layer. ✓</li>
+  </ul>
+
+  <h3>Quality criteria (Article III §§ 1–6)</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> Every persistence operation called for by Streams B, D, E, and H has a defined Repository method or composite operation. Every atomicity constraint from Stream D (frame-template deep-copy, session migration, restore) is wrapped in a single transaction with documented rollback semantics. Every versioning rule from Stream B (snapshots not deltas, milestone forcing, manual saves bypass debouncer) is honored. ✓</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> The persistence model is the engineering substrate behind a "I edit, it saves; I close the browser, my work is there" promise that lawyers expect. The version-history model — every save preserved, restore creates a new branch rather than overwriting — matches the working-document mental model from Google Docs and modern Office. The cost (multi-device pain in v1 absent cloud sync) is honestly named in Stream H and bounded by the export/import path. ✓</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> The clock and id injectors make every save reproducible under test. The HookInvocationRecord audit trail flows through <code>Frame.llm_settings.invocations</code> per Stream G. Every entity is keyed by a stable UUID. Every export is JSON that can be diffed externally. ✓</li>
+    <li><strong>§ 4 Clarity.</strong> Eight files, each with a focused purpose. The Repository surface is small (~25 methods). The autosave controller is one file with two tunables. The diff function is pure with one entry point per entity type. The store layout is a single 7-row table. ✓</li>
+    <li><strong>§ 5 Reversibility.</strong> The Repository abstraction is the seam for v2 cloud sync; replacing <code>IndexedDbRepository</code> with a <code>SyncingRepository</code> wrapper requires no caller-side change. Dexie is replaceable with raw IndexedDB behind the same abstraction. The migration registry handles future schema evolution mechanically. The injection surface for <code>now()</code> and <code>generateId()</code> means tests can freeze either without monkey-patching globals. ✓</li>
+    <li><strong>§ 6 Interface Fit.</strong> The coding session reads Constitution, current_state, buildkit index, contracts doc Contract 3, schema README, and this spec — six docs to begin useful work. The test fixtures cap at two shared modules (one inherited from schema, one new). The cheat-sheet structure of this spec (eight file headers, one atomicity section, one test section, one self-review section) maps directly to the implementation order. ✓</li>
+  </ul>
+
+  <h3>In-session flags (Article X § 1) — escalated to register</h3>
+  <p>Four cross-document precision items surfaced while compiling this spec, three of them affecting the contracts doc (same family as F-003 and the I.3 pending flag) and one of them adding a test-only dependency. They consolidate into a single in-session-escalated register flag with the rationale that the contracts doc is the doc that needs the bump and downstream coding sessions are not gated on it. The four items, restated from the Cross-document resolution notes above:</p>
+  <ol>
+    <li><strong>Persistence import boundary tightened to <code>@/schema</code> only.</strong> Contract 3's preamble says "persistence imports schema and runtime — the latter only to call <code>compute</code> on session restore." No persistence method in Stream H calls <code>compute</code>; recomputation happens at the state-layer subscription site after persistence returns. Tightening the boundary reinforces Article II § 2 by removing a back-door for clock-reading wrappers to thread through the runtime indirectly. Resolution: this spec commits the tighter boundary; the ESLint <code>no-restricted-imports</code> rule for <code>src/persistence/</code> forbids <code>@/runtime</code> alongside the other application modules.</li>
+    <li><strong><code>AutosaveController</code> takes payload-passing signatures, not <code>(kind, id)</code>.</strong> Contract 3's <code>schedule(kind, id)</code> shape is not implementable within the dependency graph the contracts doc itself commits — the controller would need to reach into <code>@/state</code> to find the latest in-memory entity, which is forbidden (the dependency arrow runs state → persistence, not persistence → state). Resolution: this spec replaces the signature with <code>scheduleFrameSave(payload: PendingFrameSave)</code> / <code>scheduleSessionSave(payload: PendingSessionSave)</code>. Multiple rapid calls for the same entity overwrite earlier pending payloads. The controller becomes a dumb storage-plus-timer abstraction; the state layer remains the source of truth for the working copy.</li>
+    <li><strong><code>StructuralDiff</code> split into frame-diff and session-diff; <code>edited</code> entries carry <code>fields_changed</code>; layout-only bucketing made explicit.</strong> Contract 3's single <code>StructuralDiff</code> shape names <code>nodes</code> and <code>edges</code> collections, which fit frame versions but have no natural fill for session versions. Resolution: two specialized types (<code>StructuralDiff</code> and <code>SessionStructuralDiff</code>) map cleanly to Stream H's algorithm and Stream E E5's Compare view. The <code>fields_changed: string[]</code> extension is additive. <code>LAYOUT_ONLY_FIELDS</code> is exported as a constant.</li>
+    <li><strong>Add <code>fake-indexeddb</code> as a test-time devDependency.</strong> The buildkit index's "no additional dependency may be added" rule applies to runtime/production dependencies (its rationale, anchored in Article II § 2, is about runtime imports). <code>fake-indexeddb</code> is needed for Node-based Vitest tests to exercise IndexedDB-backed code; Playwright-only persistence tests would lose unit-test feedback and slow the dev loop without commensurate benefit. Resolution: <code>fake-indexeddb</code> is added to <code>devDependencies</code>, imported in <code>tests/persistence/_setup.ts</code> only, and Vite tree-shaking excludes it from the production bundle. The constitutional analysis is settled; the item is logged for visibility.</li>
+  </ol>
+  <p>The four items consolidate as one register flag (same family as F-003 and the I.3 pending flag, all of which are additive corrections to the contracts doc). The flag's full record is written into <code>flag_pending_from_i4.html</code> in this session's Persistence phase output, pending the user merging it into the live <code>flags.html</code> at the next opportunity. Downstream coding sessions (I.5 state, I.6 modes, I.8 llm-hooks) are not gated on the contracts-doc bump because the per-module Stream I specs are canonical per Stream I conventions; the contracts-doc bump is housekeeping.</p>
+
+  <h3>Article V § 3 escalation triggers — recheck</h3>
+  <ul>
+    <li><strong>(a) Reverses a user-stated strategy.</strong> No. The user's planning-session decisions (Stream I structure, per-module spec discipline, Stream H as canonical, the Repository abstraction) are honored.</li>
+    <li><strong>(b) Reverses or weakens an Article II commitment.</strong> No. Determinism is reinforced (tighter import boundary; clock/id injection); frame/argument split is structurally enforced; per-node satisfaction criteria pass through opaquely; independent versioning is structurally enforced by separate stores and indexes.</li>
+    <li><strong>(c) Two Article II commitments conflict and the conflict is unresolvable from the Constitution.</strong> No. The four cross-document corrections are resolvable under Article V § 2(a) (discretionary contradiction resolution) and the contracts doc's own Stream-H-deference clause; no constitutional conflict.</li>
+    <li><strong>(d) Forecloses a use case.</strong> No. Both legal and general modes (with both flavors) flow through the persistence layer identically; the schema is mode-agnostic at the storage layer.</li>
+    <li><strong>(e) Anthropic safety policies require user input.</strong> No.</li>
+    <li><strong>(f) Constitution silent or contradictory on a substantial question.</strong> No. The four cross-document items are TypeScript-precision and dependency-graph corrections within the contracts doc's surface; they have clear resolutions under the contracts doc's own self-attribution rule and the buildkit index's "no additional dependency" rule's stated rationale.</li>
+  </ul>
+  <p>No Article V § 3 trigger fires; this session proceeds without user escalation. The four corrections are logged as a single register flag (in the pending file <code>flag_pending_from_i4.html</code>) for merge at the next opportunity.</p>
+
+</div>
+
+
+
+

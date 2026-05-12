@@ -1,0 +1,756 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 22px 0 6px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+<div class="doc">
+  <h1>stream_i_ui_mode_change_migration_spec_v1.html</h1>
+  <p class="subtitle">Per-module spec for <code>src/ui/mode-change/</code> and <code>src/ui/session-migration/</code> &nbsp;·&nbsp; Stream I session I.9d2 &nbsp;·&nbsp; May 11, 2026</p>
+
+  <div class="notice">
+    <p>This document is the implementation source of truth for two related but page-scoped UI surfaces delivered in the same session: <code>src/ui/mode-change/</code> (the architectural-mode-change dialog and its lighter sibling, the flavor-change dialog — both reached from <code>FrameSettingsPanel</code> inside <code>FrameBuildingPage</code>) and <code>src/ui/session-migration/</code> (the session-migration dialog reached from <code>FrameVersionDriftIndicator</code> inside <code>ArgumentRunningPage</code>). It commits per-file TypeScript signatures and behavioral contracts for: the architectural-mode-change dialog with its target picker, scan-result body, per-Conclusion <code>ConclusionDirectionEditor</code> inline editors, optional inline positions editor for the legal→general-with-no-positions case, and advisory list; the flavor-change dialog as a lighter ConfirmDialog wrapper that commits immediately per E6; the session-migration dialog with its grouped <code>OrphanCandidate</code> rows, per-row resolution pickers pre-seeded with <code>suggested_kind</code>, and the new <code>SessionStore.previewMigration</code> wiring; and the small page-level refinements that lift the dialog open-state into <code>FrameBuildingPage</code> and <code>ArgumentRunningPage</code> rather than the App (the dialogs are page-local; F-006's App-level mount pattern does not apply here). The I.9a substrate (<code>Dialog</code>, <code>ConfirmDialog</code>, <code>DialogHeader</code>/<code>Body</code>/<code>Footer</code>) and the I.9b / I.9c page-prop callbacks (<code>FrameSettingsPanel.on_open_mode_change_dialog</code> reserved by F-004; <code>FrameVersionDriftIndicator.on_open_migration_dialog</code> reserved by F-005) are the foundation this spec consumes.</p>
+    <p style="margin-top:6px;">Two cross-spec refinements are committed and held in the consolidated F-007 register flag in the same F-003 / F-004 / F-005 / F-006 family pattern: (1) a new <code>FramePatch</code> kind <code>architectural_mode_changed</code> in the state spec that atomically applies mode (and flavor, when relevant) + per-Conclusion direction resolutions + optional new positions in one <code>FrameVersion</code> — parallel to I.9b's <code>presentation_hints_reset_all</code> precedent in F-004; and (2) a new <code>SessionStore.previewMigration(target_frame_version_id): Promise&lt;OrphanCandidate[]&gt;</code> method that wraps <code>Repository.loadFrameVersion</code> + <code>enumerateOrphanCandidates</code> from <code>@/modes</code> and re-exports <code>OrphanCandidate</code> through <code>@/state</code> so the UI consumes through the selector boundary. Three minor refinements join the same flag: a new dispatch-table entry in the modes spec for <code>architectural_mode_changed</code>; extension of <code>metadata_edited.partial</code>'s Pick tuple to include <code>flavor</code> (joining the F-004 note on <code>archived</code>); and removal of the now-superseded <code>onOpenModeChangeDialog?</code> and <code>on_open_migration_dialog?</code> page-props from <code>FrameBuildingPageProps</code> and <code>ArgumentRunningPageProps</code> respectively (the dialogs are page-local, so the page provides its own handler internally — the I.9b and I.9c "I.9d wires this through the App" reservations are honored by this concrete wiring rather than by an App-level mount). Downstream coding sessions are not gated on a contracts-doc bump; the per-module specs are canonical per Stream I conventions.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>The coding sessions implementing <code>src/ui/mode-change/</code> and <code>src/ui/session-migration/</code> (which may be the same session or two adjacent ones; the buildkit index allots one I.9d sub-session per surface family) read, in order: Constitution and Protocol, <code>current_state.html</code>, <code>stream_i_buildkit_index_v1.html</code>, <code>stream_i_ui_chrome_canvas_spec_v1.html</code> (the <code>Dialog</code> + <code>ConfirmDialog</code> primitives both dialog families compose), <code>stream_i_ui_frame_building_spec_v1.html</code> (the <code>FrameSettingsPanel</code> integration point and the <code>presentation_hints_reset_all</code> atomic-FramePatch precedent), <code>stream_i_ui_argument_running_spec_v1.html</code> (the <code>FrameVersionDriftIndicator</code> integration point), <code>stream_i_state_spec_v1.html</code> (<code>FrameStore</code>, <code>SessionStore</code>, dispatch tables — narrowed by this spec to add <code>architectural_mode_changed</code> and <code>SessionStore.previewMigration</code>), <code>stream_i_modes_spec_v1.html</code> (<code>attemptTransition</code> with <code>TransitionResult.blocking</code>/<code>advisory</code>/<code>inline_editors</code>; <code>enumerateOrphanCandidates</code> with <code>OrphanCandidate</code> shape), <code>stream_i_persistence_spec_v1.html</code> (<code>Repository.loadFrameVersion</code> + <code>OrphanResolution</code> shape), <code>src/ui/README.md</code> (the I.9a substrate cross-session compression artifact), <code>src/state/README.md</code> (the I.5 cross-session compression artifact), <code>src/modes/README.md</code> (the I.6 cross-session compression artifact), and this document. No prior stream documents (A–H) are read; the consolidated state in <code>current_state.html</code> plus this per-module spec is the design surface. Implement-until-green against the Vitest tests at the end of this document; write <code>src/ui/mode-change/README.md</code> and <code>src/ui/session-migration/README.md</code> as the cross-session compression artifacts for I.9d3 / I.9d4 / I.10. This spec uses TypeScript exclusively in code blocks; pseudocode passages are pseudocode and labeled as such.</p>
+
+  <p>The two surfaces are specified in one document because they share three integration constraints — both consume modes-layer scans through the state-layer selector boundary, both mount as I.9a <code>Dialog</code>s with page-local open-state, and both join the F-007 register flag — and because the buildkit index already groups them under "I.9d2" in the May-11 planning update. The implementing session may split into two file-set commits, but the cross-spec refinements must land as a single contracts-doc-bump unit per the F-003 family pattern.</p>
+
+  <h2>What this spec does not commit</h2>
+
+  <p>This spec deliberately omits:</p>
+  <ul>
+    <li><strong>The session-settings panel</strong> (I.9d3 scope). The placeholder disabled IconButton slot the I.9c <code>buildTopBarSlots</code> renders is unchanged by this session.</li>
+    <li><strong>The onboarding wizard and coachmark machinery</strong> (I.9d4 scope).</li>
+    <li><strong>App-level dialog mount or app-routes refinement.</strong> Both I.9d2 dialogs are page-local (architectural-mode-change is reached only from <code>FrameBuildingPage</code>'s settings panel; session-migration is reached only from <code>ArgumentRunningPage</code>'s drift indicator). The F-006 App-level pattern (a single mount serving multiple pages via <code>useRoute()</code>) does not apply. <code>app-routes.tsx</code> is not touched by this session.</li>
+    <li><strong>Tech-stack decisions.</strong> The dialog primitives, focus-trap mechanics, and React Flow integration come from the I.9a substrate; this spec composes them without restating their internals.</li>
+    <li><strong>Migration-target selection beyond the current FrameVersion.</strong> Per D2 and the I.9c <code>FrameVersionDriftIndicator</code>, migration always targets the parent Frame's <code>current_version_id</code>. Migrating a session to an older specific version is reachable only through E5's restore flow on the frame side first; the I.9d2 dialog does not offer arbitrary-version-target selection.</li>
+  </ul>
+
+  <h2>File map — <code>src/ui/mode-change/</code></h2>
+  <p>Nine files under <code>src/ui/mode-change/</code>. The barrel <code>index.ts</code> re-exports the two top-level dialog components (<code>ArchitecturalModeChangeDialog</code>, <code>FlavorChangeDialog</code>) plus their prop types; sub-components and the scan hook are internal.</p>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Exports</th></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel; re-exports the two dialog components and their prop types</td><td><code>ArchitecturalModeChangeDialog</code>, <code>FlavorChangeDialog</code>, <code>ArchitecturalModeChangeDialogProps</code>, <code>FlavorChangeDialogProps</code></td></tr>
+    <tr><td><code>architectural-mode-change-dialog.tsx</code></td><td>The heavy dialog. Composes <code>Dialog</code> + <code>DialogHeader</code> + <code>DialogBody</code> + <code>DialogFooter</code>; owns local state for the staged target, the per-Conclusion direction resolutions, and the staged positions additions (when applicable); runs the scan via the hook and decides whether the Commit button is enabled</td><td><code>ArchitecturalModeChangeDialog</code>, <code>ArchitecturalModeChangeDialogProps</code></td></tr>
+    <tr><td><code>target-mode-picker.tsx</code></td><td>Step 1 sub-component: confirm the target mode (legal ↔ general) and, when target is general, the target flavor (personal / academic). For frames already in general, the picker is just a flavor toggle; for legal, the picker is a single button that proposes "general" with a flavor sub-picker</td><td><code>TargetModePicker</code>, <code>TargetModePickerProps</code></td></tr>
+    <tr><td><code>scan-result-body.tsx</code></td><td>Step 2 sub-component: renders the <code>TransitionResult</code> from <code>attemptTransition('architectural', ...)</code> as two grouped sections — blocking (with inline editors) and advisory (read-only). Empty blocking section is omitted; empty advisory section renders a single muted line "No advisories." When blocking is non-empty, the section header reads "Resolve before continuing"; when zero blocking, "Ready to commit"</td><td><code>ScanResultBody</code>, <code>ScanResultBodyProps</code></td></tr>
+    <tr><td><code>conclusion-direction-editor.tsx</code></td><td>Per-blocking-item inline editor row. Consumes a <code>ConclusionDirectionEditor</code> entry from the modes-layer <code>TransitionResult.inline_editors</code> array; renders the Conclusion's title (read from <code>frame_store.current_version.nodes</code> by id), the current direction-kind chip, and a <code>Select</code> primitive populated from <code>options[]</code>; emits <code>onResolved(node_id, direction)</code> when the user picks a value. The row is decorated with the <code>--color-severity-error</code> left-border per E6 visual polish</td><td><code>ConclusionDirectionEditorRow</code>, <code>ConclusionDirectionEditorRowProps</code></td></tr>
+    <tr><td><code>positions-inline-editor.tsx</code></td><td>Conditional sub-component, surfaced when target_mode === "general", current <code>frame.positions</code> is empty or absent, and the frame has at least one Conclusion. The user adds one or more positions inline (label-only; the patch generates ids); the directions editor below depends on these positions for its options. Internal state holds the staged positions until commit (positions are not yet on disk; they are committed as part of the <code>architectural_mode_changed</code> patch's <code>positions_added</code> field)</td><td><code>PositionsInlineEditor</code>, <code>PositionsInlineEditorProps</code></td></tr>
+    <tr><td><code>advisory-list.tsx</code></td><td>Renders the <code>TransitionResult.advisory[]</code> array as a list of muted rows: per-rule_id grouping with the rule_id chip, message text in <code>--color-text-tertiary</code>, and the affected node_refs as small clickable references. Click-through scrolls/highlights on the underlying canvas (delegating to the page's <code>onNodeFocusRequested</code> handler, optional)</td><td><code>AdvisoryList</code>, <code>AdvisoryListProps</code></td></tr>
+    <tr><td><code>flavor-change-dialog.tsx</code></td><td>The lighter sibling. Wraps <code>ConfirmDialog</code> with a title "Switch to {target_flavor} flavor?", body listing advisories from <code>scanFlavorChange</code>, and a Switch button that dispatches <code>frame_store.applyEdit({ kind: "metadata_edited", partial: { flavor: target } })</code>. Commits immediately per D3</td><td><code>FlavorChangeDialog</code>, <code>FlavorChangeDialogProps</code></td></tr>
+    <tr><td><code>use-mode-change-scan.ts</code></td><td>Pure hook that runs <code>attemptTransition('architectural', current, target)</code> once on (current_frame_version, current_mode, target_mode) change and memoizes the result. Returns the <code>TransitionResult</code> and a <code>rescan()</code> function the positions-inline-editor calls after the user stages a positions addition (because newly-staged positions change the available <code>options[]</code> for direction editors). The hook does not consume <code>ComputeResult</code> (architectural-mode-change does not gate on compute output per the modes spec, only on entity-shape inspection)</td><td><code>useModeChangeScan</code>, <code>UseModeChangeScanInput</code>, <code>UseModeChangeScanOutput</code></td></tr>
+  </table>
+
+  <h2>File map — <code>src/ui/session-migration/</code></h2>
+  <p>Seven files under <code>src/ui/session-migration/</code>. The barrel <code>index.ts</code> re-exports the dialog component and its prop type; sub-components and the preview-migration hook are internal.</p>
+  <table>
+    <tr><th>File</th><th>Role</th><th>Exports</th></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel; re-exports the dialog component and its prop type</td><td><code>SessionMigrationDialog</code>, <code>SessionMigrationDialogProps</code></td></tr>
+    <tr><td><code>session-migration-dialog.tsx</code></td><td>The dialog. Composes <code>Dialog</code> + <code>DialogHeader</code> + <code>DialogBody</code> + <code>DialogFooter</code>; reads the target FrameVersion id from <code>selectFrameVersionDrift(session_snapshot).frame_current_version_id</code>; calls the <code>usePreviewMigration</code> hook on open; owns the per-row resolution state; decides whether the Migrate button is enabled (always — every candidate has an effective resolution because rows default to <code>suggested_kind</code>)</td><td><code>SessionMigrationDialog</code>, <code>SessionMigrationDialogProps</code></td></tr>
+    <tr><td><code>migration-dialog-body.tsx</code></td><td>Body composition: loading state during preview; "No orphans — ready to migrate" when candidates is empty; grouped candidate rows otherwise, with a per-group <code>OrphanCandidateGroup</code> for each <code>carrier_kind</code> bucket in the canonical order <code>(checkpoint_response, interpretation_selection, argument_edge)</code></td><td><code>MigrationDialogBody</code>, <code>MigrationDialogBodyProps</code></td></tr>
+    <tr><td><code>orphan-candidate-group.tsx</code></td><td>Per-<code>carrier_kind</code> group with a section header ("Checkpoint responses" / "Interpretation selections" / "Argument edges") and a list of <code>OrphanCandidateRow</code> children. Honors the canonical (carrier_kind, carrier_id) order from <code>enumerateOrphanCandidates</code> — never re-sorts</td><td><code>OrphanCandidateGroup</code>, <code>OrphanCandidateGroupProps</code></td></tr>
+    <tr><td><code>orphan-candidate-row.tsx</code></td><td>Single candidate row: <code>display_summary</code> at left, <code>ResolutionPicker</code> at right. When the picker is set to "reattach," shows a target-node selector populated by reachable Same-Type nodes from the target FrameVersion's nodes (the modes-layer <code>suggested_target_node_id</code> pre-fills it). Emits <code>onResolutionChanged(carrier_id, resolution)</code></td><td><code>OrphanCandidateRow</code>, <code>OrphanCandidateRowProps</code></td></tr>
+    <tr><td><code>resolution-picker.tsx</code></td><td>Three-option picker for an <code>OrphanResolution.kind</code>: <code>discard</code>, <code>reattach</code>, <code>no_op</code>. Implemented as a <code>SegmentedToggle</code> from the I.9a primitives. Pre-seeded with <code>suggested_kind</code> from the candidate</td><td><code>ResolutionPicker</code>, <code>ResolutionPickerProps</code></td></tr>
+    <tr><td><code>use-preview-migration.ts</code></td><td>Hook wrapping <code>session_store.previewMigration(target_frame_version_id)</code>; manages local state for loading flag, result array, and error. Re-fetches when target_frame_version_id changes (which in practice happens once per dialog open). Pure React-state machinery; no business logic</td><td><code>usePreviewMigration</code>, <code>UsePreviewMigrationInput</code>, <code>UsePreviewMigrationOutput</code></td></tr>
+  </table>
+
+  <h2>Cross-document resolution notes (for self-review)</h2>
+  <p>Five small refinements relative to prior I.9 sibling specs. Each is technical, additive (or wiring-promotion of placeholders the prior specs explicitly reserved), and within agent-autonomous scope per Article V § 2(c). All five are held in the consolidated F-007 register flag below in the same F-003 / F-004 / F-005 / F-006 family pattern.</p>
+  <ol>
+    <li><strong>New <code>FramePatch</code> kind: <code>architectural_mode_changed</code>.</strong> The architectural-mode-change dialog needs to atomically commit (a) the new <code>Frame.mode</code> value, (b) the new <code>Frame.flavor</code> value (when target is general), (c) optionally new <code>Frame.positions</code> entries (when target is general and current positions are empty/absent and the frame has Conclusions), and (d) per-Conclusion <code>direction</code> updates resolving the blocking items the D3 scan surfaced. The existing <code>metadata_edited</code> patch operates on Frame-metadata fields only; the existing <code>node_edited</code> patch operates on one node at a time. Multiple sequential dispatches would produce N FrameVersions and N autosave debounces — awkward in the version-history surface and not atomic. The state spec's <code>FramePatch</code> union gains <code>| { kind: "architectural_mode_changed"; target_mode: Mode; target_flavor?: Flavor; positions_added?: Position[]; conclusion_direction_resolutions: Array&lt;{ node_id: NodeRef; direction: ConclusionDirection }&gt; }</code> and the modes spec's <code>FrameActionDispatchTable</code> gains a corresponding entry that, in one pass, produces a <code>next_version</code> in which <code>frame.mode</code> = target_mode, <code>frame.flavor</code> = target_flavor (when defined; otherwise undefined for legal target), <code>frame.positions</code> = [...(frame.positions ?? []), ...(positions_added ?? [])], and each Conclusion in the resolutions array has its <code>direction</code> field replaced with the resolved value. The dispatch entry follows the single-clock-read property (one <code>deps.now()</code>) and the sorted-iteration discipline (the resolutions array is walked in lexicographic <code>node_id</code> order even if the caller supplied it in arbitrary order, ensuring byte-identical output). The patch's <code>change_summary</code> is constructed by the caller (the dialog) per E6's "mode changed: legal → general" template; the dispatch entry itself does not synthesize the change summary. Purely additive; no existing patch shape is changed. Parallel in spirit to F-004's <code>presentation_hints_reset_all</code>.</li>
+    <li><strong>New <code>SessionStore.previewMigration</code> method.</strong> The session-migration dialog needs the <code>OrphanCandidate[]</code> list before the user picks resolutions. Two constitutional facts shape the surface. (a) The state layer is the application's source of truth for entities passed to <code>@/modes</code> functions per the F-003 family discipline (modes does not import Repository for pure helpers; state does and threads through). (b) The UI consumes selector-shape outputs from <code>@/state</code> rather than reaching into <code>@/modes</code> directly per the I.9c precedent (<code>selectInterviewItems</code> wraps <code>computeInterviewOrder</code> and re-exports <code>InterviewItem</code> through <code>@/state</code>). The constitutionally clean resolution is for the SessionStore to expose a <code>previewMigration(target_frame_version_id: FrameVersionId): Promise&lt;OrphanCandidate[]&gt;</code> method that wraps <code>this.deps.repository.loadFrameVersion(target_id)</code> + <code>enumerateOrphanCandidates(this.snapshot.session, target_frame_version)</code>, returning the canonical-order candidates array. The state spec re-exports <code>OrphanCandidate</code> from <code>@/state</code>'s barrel so the UI imports it via <code>import type { OrphanCandidate } from "@/state"</code>. The method is read-only (no patch dispatched, no FrameVersion created, no autosave touched); the actual migration commit happens through the existing <code>session_store.migrateToFrameVersion(target_id, resolutions)</code> method.</li>
+    <li><strong>New dispatch-table entry in the modes spec.</strong> The modes spec's <code>FrameActionDispatchTable</code> gains <code>architectural_mode_changed</code> as a synchronous pure transformation: <code>(args: { current_frame: Frame; current_version: FrameVersion; target_mode: Mode; target_flavor?: Flavor; positions_added?: Position[]; conclusion_direction_resolutions: Array&lt;...&gt;; deps: FrameActionDeps }) =&gt; FrameTransformResult</code>. The implementation walks <code>current_version.nodes</code> sorted by id, replacing each Conclusion's <code>direction</code> when its id appears in <code>conclusion_direction_resolutions</code> (a <code>Map</code> built from the resolutions array for O(1) lookup); updates <code>current_frame</code>'s <code>mode</code>, <code>flavor</code>, and <code>positions</code> fields; produces the new <code>FrameVersion</code> with <code>created_at = deps.now()</code> and a fresh id from <code>deps.generateId()</code>. Behavioral contracts: pure synchronous; deterministic (single <code>deps.now()</code>, sorted iteration, sorted-by-id resolutions lookup); over-supplied resolutions (entries whose <code>node_id</code> does not match an existing Conclusion) are silently dropped; under-supplied resolutions (Conclusions whose direction.kind would mismatch the new mode but no resolution provided) are caught by an invariant check that throws — the dialog enforces completeness before dispatch, so this is a dev-time wiring guard. The Vitest acceptance tests in the modes module cover all three paths.</li>
+    <li><strong>Extension of <code>metadata_edited.partial</code> Pick tuple to include <code>flavor</code>.</strong> The flavor-change dialog dispatches <code>frame_store.applyEdit({ kind: "metadata_edited", partial: { flavor: target } })</code>. The current Pick tuple in the state spec is <code>"title" | "description" | "tags" | "jurisdiction_default" | "positions"</code>; F-004 already noted that <code>archived</code> joins this tuple. This refinement adds <code>flavor</code> in parallel — both are simple Frame-metadata fields and both are absorbed by the existing <code>metadata_edited</code> dispatch-table entry without further changes. The schema spec already exposes <code>Frame.flavor</code> as the source field; no schema change. Mode is NOT added to the Pick tuple because every <code>Frame.mode</code> change flows through the new <code>architectural_mode_changed</code> patch above.</li>
+    <li><strong>Removal of <code>onOpenModeChangeDialog?</code> and <code>on_open_migration_dialog?</code> page-props.</strong> F-004 reserved <code>FrameBuildingPageProps.onOpenModeChangeDialog?: (target: "mode" | "flavor") =&gt; void</code> for I.9d wiring, and F-005 reserved <code>ArgumentRunningPageProps.on_open_migration_dialog?: () =&gt; void</code> in parallel. Both reservations anticipated an App-level dialog mount in the F-006 pattern. I.9d2's discretionary call under Article V § 2(c): both dialogs are page-local (architectural-mode-change is reached only from <code>FrameBuildingPage</code>'s <code>FrameSettingsPanel</code>; session-migration is reached only from <code>ArgumentRunningPage</code>'s <code>FrameVersionDriftIndicator</code>), so a page-internal mount is simpler and avoids the cross-page coordination the App-level pattern was designed for in the version-history pane. The two page-props are removed from their respective Props interfaces; in their place, <code>FrameBuildingPage</code> and <code>ArgumentRunningPage</code> each own a small piece of dialog open-state (specified under "Page-level refinements" below) and pass an internally-defined handler down to <code>FrameSettingsPanel.on_open_mode_change_dialog</code> / <code>FrameVersionDriftIndicator.on_open_migration_dialog</code>. The component-level callback props on <code>FrameSettingsPanel</code> and <code>FrameVersionDriftIndicator</code> are unchanged — only the upstream page-prop reservation is dissolved. This honors F-004's and F-005's intent (the placeholder behavior is replaced by real wiring) without requiring an <code>app-routes.tsx</code> refinement parallel to F-006.</li>
+  </ol>
+
+  <h2>Per-file specs — <code>src/ui/mode-change/</code></h2>
+
+  <div class="file-header">// src/ui/mode-change/architectural-mode-change-dialog.tsx</div>
+  <p>The top-level architectural-mode-change dialog. Composes the I.9a <code>Dialog</code> primitive with a header, scrollable body, and footer. Owns the staged-resolution state until commit. Reads the current Frame and current FrameVersion from <code>useFrameStore()</code>; runs the D3 architectural scan via <code>useModeChangeScan</code>; tracks per-Conclusion resolutions and per-staged-position additions in local component state; gates the Commit button on "every blocking item has a resolved direction AND positions are present-or-staged when target=general-with-Conclusions." On commit, dispatches the new <code>architectural_mode_changed</code> <code>FramePatch</code> through <code>frame_store.applyEdit</code> and closes.</p>
+
+<pre><code>import * as React from "react";
+import type {
+  NodeRef, Mode, Flavor, Position, ConclusionDirection,
+} from "@/schema";
+import type { ConclusionDirectionEditor } from "@/modes";
+
+export interface ArchitecturalModeChangeDialogProps {
+  open: boolean;
+  onClose: () =&gt; void;
+  /** Which target the dialog opens against. "mode" means the user clicked
+   *  "Change mode" (flips legal ↔ general). "flavor" means the user clicked
+   *  "Change flavor" within general mode — but flavor changes do NOT use this
+   *  dialog; the page routes flavor target to FlavorChangeDialog instead.
+   *  This prop is included for forward-compatibility and asserts at runtime
+   *  that target === "mode" when the dialog mounts; the page guards this. */
+  target: "mode" | "flavor";
+  /** Optional focus-on-mount target for the implicated Conclusion node when
+   *  the dialog opens from a deep-link or coachmark; v1 unused. */
+  focus_node_id?: NodeRef;
+}
+
+export function ArchitecturalModeChangeDialog(
+  props: ArchitecturalModeChangeDialogProps,
+): React.ReactElement | null;
+
+/** Local component state shape (not exported). Held in a useReducer so the
+ *  state transitions are testable in isolation. */
+type DialogReducerState =
+  | { phase: "idle" }
+  | {
+      phase: "staging";
+      target_mode: Mode;
+      target_flavor: Flavor | undefined;          // required when target_mode = "general"
+      staged_positions: Position[];                // empty initially; filled when positions-inline-editor stages
+      direction_resolutions: Map&lt;NodeRef, ConclusionDirection&gt;; // per-Conclusion resolutions
+      scan: ReturnType&lt;typeof useModeChangeScan&gt;["result"] | null;
+    }
+  | { phase: "committing" };
+
+type DialogReducerAction =
+  | { type: "open"; current_mode: Mode; current_flavor: Flavor | undefined }
+  | { type: "set_target_flavor"; flavor: Flavor }
+  | { type: "scan_complete"; scan: ReturnType&lt;typeof useModeChangeScan&gt;["result"] }
+  | { type: "stage_position"; position: Position }
+  | { type: "remove_staged_position"; position_id: string }
+  | { type: "set_direction_resolution"; node_id: NodeRef; direction: ConclusionDirection }
+  | { type: "begin_commit" }
+  | { type: "reset" };
+</code></pre>
+
+  <p>Behavioral contract. <em>Mount and unmount</em>: the dialog component receives <code>open</code> as a prop; when <code>open</code> is false the component returns null (and the inner <code>Dialog</code> is not mounted at all — the focus-trap reset is the I.9a Dialog primitive's responsibility on its own close handler). On open, the reducer transitions to "staging" with default target_mode = the opposite of current_mode and default target_flavor = "personal" if target_mode = "general" else undefined. <em>Body composition</em>: <code>&lt;TargetModePicker /&gt;</code> at the top, followed by <code>&lt;PositionsInlineEditor /&gt;</code> (conditionally — only when target_mode = "general", current frame.positions is empty/absent, and frame has at least one Conclusion), followed by <code>&lt;ScanResultBody /&gt;</code>. The scan runs via <code>useModeChangeScan({ current_version, current_mode, target_mode, staged_positions })</code>; the hook rescans when staged_positions changes (because new positions change the options[] for direction editors). <em>Footer</em>: "Cancel" (secondary) and "Commit mode change" (primary, destructive=false; the button is destructive=false because per D3 no data is destroyed — fields become inactive metadata). Commit is enabled iff <code>can_commit</code> selector returns true: (a) target_mode is defined; (b) when target_mode === "general", target_flavor is defined; (c) when target_mode === "general" and frame has Conclusions, frame.positions has at least one entry OR staged_positions has at least one entry; (d) every <code>ConclusionDirectionEditor</code> in scan.inline_editors has an entry in direction_resolutions. <em>Commit dispatch</em>: builds the <code>architectural_mode_changed</code> patch payload with <code>change_summary</code> = the canonical template from <code>buildModeChangeSummary(current_mode, current_flavor, target_mode, target_flavor)</code> (defined in <code>change-summary.ts</code> below; produces e.g. <code>"mode changed: legal → general (personal)"</code>); calls <code>frame_store.applyEdit(patch)</code>; on resolve transitions reducer to "idle" and calls <code>props.onClose()</code>. <em>Cancel</em>: transitions to "idle" and calls <code>props.onClose()</code>; the in-flight reducer state is discarded (no draft is preserved across dialog re-opens; the user starts fresh each time, which is consistent with E5's reasoning that draft state should not be silently restored). <em>Escape</em> and <em>outside-click</em>: I.9a Dialog's default handlers fire <code>onClose</code>, which the component routes through the cancel path. <em>Determinism</em>: the dialog reads no clock; the eventual <code>deps.now()</code> read is inside the modes dispatch-table entry, single-clock-read-per-dispatch per F-003 family discipline.</p>
+
+  <p>Two visual-polish notes from <code>stream_e_visual_polish_v1.html</code> § "Per-component token assignments": dialog surface uses <code>--color-surface-elevated</code>, <code>--shadow-lg</code>, <code>--radius-lg</code>; blocking-item rows in the scan-result body carry a <code>--color-severity-error</code> left-border; advisory rows use <code>--color-text-tertiary</code> for body text. The dialog size is <code>size="lg"</code> per the I.9a primitive (architectural-mode change is consequential and benefits from wider scan-result inspection).</p>
+
+  <div class="file-header">// src/ui/mode-change/target-mode-picker.tsx</div>
+  <p>Step 1 sub-component: target picker. Renders the current mode + flavor read-only at top ("Currently: legal"); below, the picker. For current_mode = "legal": single radio "Switch to general" with two sub-radios "personal" / "academic" (defaulting to "personal"). For current_mode = "general": single radio "Switch to legal" (no flavor sub-pick because legal has no flavor). The picker emits onChange events into the parent reducer.</p>
+
+<pre><code>import * as React from "react";
+import type { Mode, Flavor } from "@/schema";
+
+export interface TargetModePickerProps {
+  current_mode: Mode;
+  current_flavor: Flavor | undefined;
+  target_mode: Mode;
+  target_flavor: Flavor | undefined;
+  onTargetFlavorChanged: (flavor: Flavor) =&gt; void;
+}
+
+export function TargetModePicker(props: TargetModePickerProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. The current-mode side is always read-only — the user is not asked to confirm the current state, only to pick the target. The target_mode value is fully determined by current_mode (legal → general; general → legal); the picker only surfaces a flavor sub-choice when target_mode = "general". Keyboard navigation: Tab into the radio group, arrow keys cycle within the group. The flavor sub-radios are visible only when target_mode = "general"; when target_mode = "legal", the flavor sub-section is omitted entirely (no disabled state). The component reads no store state directly; the parent dialog feeds it the current and target values from the reducer.</p>
+
+  <div class="file-header">// src/ui/mode-change/positions-inline-editor.tsx</div>
+  <p>Conditional sub-component. Surfaces between the target picker and the scan-result body when (a) target_mode = "general", (b) current <code>frame.positions</code> is empty or absent, and (c) frame has at least one Conclusion. Renders a small inline editor: a labeled list of staged positions and an "Add position" button. Each staged position has an id generated client-side (via the FrameStore's <code>generateId()</code> dep, passed down through the dialog) and a user-supplied label.</p>
+
+<pre><code>import * as React from "react";
+import type { Position } from "@/schema";
+
+export interface PositionsInlineEditorProps {
+  staged_positions: Position[];
+  onPositionStaged: (position: Position) =&gt; void;
+  onPositionRemoved: (position_id: string) =&gt; void;
+  /** Provided by the dialog so this editor doesn't import from @/state directly.
+   *  The dialog gets it from useFrameStore via the store options. */
+  generateId: () =&gt; string;
+}
+
+export function PositionsInlineEditor(props: PositionsInlineEditorProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Rendering: one row per staged position with an inline rename input and a small "remove" button; below the list, a "+ Add position" button that opens an inline input for the new label. On Add, calls <code>onPositionStaged({ id: generateId(), label: trimmed_text })</code> and closes the inline input. Empty labels are not staged (the Add button is disabled when the input is empty/whitespace). The component does not enforce a minimum count — that gating is the dialog's responsibility (the dialog's <code>can_commit</code> selector requires at least one position when target = general with Conclusions). The list is rendered in insertion order; positions added through this editor go to the end of the eventual <code>positions_added</code> array, preserving order. Visual-polish note: the editor is rendered with a <code>--color-status-not-applicable-bg</code> wash and a subtle "Required" label per E6's "If the Frame has no positions table, the user is prompted to define one inline."</p>
+
+  <div class="file-header">// src/ui/mode-change/scan-result-body.tsx</div>
+  <p>The body section that renders the <code>TransitionResult</code> from <code>attemptTransition('architectural', ...)</code>. Two grouped sections: blocking items (each with an inline <code>ConclusionDirectionEditorRow</code>) and advisory items (read-only). The section headers and ordering follow a canonical pattern that does not vary with the underlying counts.</p>
+
+<pre><code>import * as React from "react";
+import type { ValidationResult } from "@/runtime";
+import type { ConclusionDirectionEditor } from "@/modes";
+import type { NodeRef, ConclusionDirection, Position } from "@/schema";
+
+export interface ScanResultBodyProps {
+  blocking: ValidationResult[];
+  advisory: ValidationResult[];
+  inline_editors: ConclusionDirectionEditor[];
+  /** Resolutions the dialog has already collected; passed in so the row
+   *  components can reflect the selected value without owning state. */
+  direction_resolutions: ReadonlyMap&lt;NodeRef, ConclusionDirection&gt;;
+  onResolutionChanged: (node_id: NodeRef, direction: ConclusionDirection) =&gt; void;
+  /** When target = general, the union of frame.positions and staged_positions.
+   *  When target = legal, undefined. The ConclusionDirectionEditor's options
+   *  array already encodes the available choices from the modes-layer scan,
+   *  but this prop is threaded down so the inline editor can render the
+   *  position labels by id rather than just the id-as-value. */
+  available_positions?: Position[];
+}
+
+export function ScanResultBody(props: ScanResultBodyProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Section ordering: blocking section first (when non-empty), advisory section second (when non-empty). When both are empty: a single muted line "No items to address — mode change ready to commit." When blocking is empty but advisory is non-empty: skip the blocking section header entirely. When blocking is non-empty: header "Resolve before continuing" with the count, followed by one <code>ConclusionDirectionEditorRow</code> per inline_editor (the inline_editors array is already in canonical id-sorted order from the modes-layer scan; this component never re-sorts). When advisory is non-empty: header "Advisories" with the count, followed by the <code>AdvisoryList</code> component. The component is purely presentational; the dialog owns all state and all dispatch. Determinism: inline_editors and advisory are consumed verbatim and rendered in their canonical order; no client-side sorting. The <code>direction_resolutions</code> map is read but never mutated.</p>
+
+  <div class="file-header">// src/ui/mode-change/conclusion-direction-editor.tsx</div>
+  <p>The per-Conclusion inline-editor row. One row per <code>ConclusionDirectionEditor</code> entry. Renders the Conclusion's title (the dialog passes a name-by-id Map down so this row doesn't reach into the FrameStore), the current direction-kind chip with severity-error styling, the required direction-kind chip, and a <code>Select</code> primitive populated from <code>options[]</code>. The row has a <code>--color-severity-error</code> left-border per E6 visual polish.</p>
+
+<pre><code>import * as React from "react";
+import type { NodeRef, ConclusionDirection, Position } from "@/schema";
+import type { ConclusionDirectionEditor } from "@/modes";
+
+export interface ConclusionDirectionEditorRowProps {
+  editor: ConclusionDirectionEditor;
+  conclusion_title: string;
+  current_value: ConclusionDirection | undefined;
+  onValueChanged: (value: ConclusionDirection) =&gt; void;
+  /** When required_direction_kind === "general", the Position[] from which
+   *  options[].value strings are Position ids. Used to render Position labels
+   *  in the Select trigger text. */
+  available_positions?: Position[];
+}
+
+export function ConclusionDirectionEditorRow(
+  props: ConclusionDirectionEditorRowProps,
+): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Layout: the row is a horizontal flex with [title + current/required chip pair] on the left, [Select] on the right. Title text uses <code>--font-size-sm</code> <code>--font-weight-medium</code>; chip pair uses the I.9a <code>Pill</code> primitive in <code>variant="mode_accent"</code>. Select shows the placeholder "Pick {target_kind} direction" when current_value is undefined; once the user picks a value, the Select shows the chosen label. On change, the row constructs the <code>ConclusionDirection</code> value: for required_direction_kind = "legal", the value is <code>{ kind: "legal", value: option.value as LegalDirection }</code>; for "general", the value is <code>{ kind: "general", position_id: option.value }</code> (the <code>options</code> array maps from Position ids to labels per the modes spec). The constructed value is passed to <code>onValueChanged</code>. The component is presentational; the parent dialog reducer holds the per-id map of resolutions. Determinism: the options array is consumed verbatim from the modes-layer scan in its canonical order.</p>
+
+  <div class="file-header">// src/ui/mode-change/advisory-list.tsx</div>
+  <p>Renders the <code>TransitionResult.advisory[]</code> array. The list is grouped by <code>rule_id</code> (e.g., all <code>MODE-CHANGE-REQUIRES-AUTHORITY-INERT</code> rows together) for readability; within a group, rows preserve the canonical order from the modes scan. Each row renders the message text in <code>--color-text-tertiary</code> with the affected node_refs as small clickable references.</p>
+
+<pre><code>import * as React from "react";
+import type { ValidationResult } from "@/runtime";
+import type { NodeRef } from "@/schema";
+
+export interface AdvisoryListProps {
+  advisory: ValidationResult[];
+  /** Optional callback the page wires; clicking a node-ref pill calls it. */
+  onNodeFocusRequested?: (node_id: NodeRef) =&gt; void;
+}
+
+export function AdvisoryList(props: AdvisoryListProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Grouping: the component walks <code>advisory[]</code> in its given order, builds an <code>OrderedMap&lt;string, ValidationResult[]&gt;</code> keyed by <code>rule_id</code> (insertion order preserved because the modes scan's canonical order is already sorted), and renders one section per rule_id. Each section header is the rule_id rendered as a <code>Pill variant="severity_warning"</code>; the body is one row per ValidationResult with the message text and the node_refs as small pills. Clicking a node-ref pill calls <code>onNodeFocusRequested(node_id)</code> when defined; when undefined, the pill is non-interactive but still rendered (so the user sees which nodes are affected). Determinism: no sorting; the rule_id grouping preserves first-occurrence order from <code>advisory[]</code>, and within a group, original order is preserved. The component is purely presentational.</p>
+
+  <div class="file-header">// src/ui/mode-change/flavor-change-dialog.tsx</div>
+  <p>The light sibling. Wraps the I.9a <code>ConfirmDialog</code> primitive. Reads the current frame and the target flavor from props; runs <code>scanFlavorChange(current_version, current_flavor, target_flavor)</code> at mount; renders the advisory list in the ConfirmDialog body; on confirm, dispatches <code>frame_store.applyEdit({ kind: "metadata_edited", partial: { flavor: target } })</code>. Commits immediately per D3 — no blocking step.</p>
+
+<pre><code>import * as React from "react";
+import type { Flavor } from "@/schema";
+
+export interface FlavorChangeDialogProps {
+  open: boolean;
+  onClose: () =&gt; void;
+  target_flavor: Flavor;
+}
+
+export function FlavorChangeDialog(props: FlavorChangeDialogProps): React.ReactElement | null;
+</code></pre>
+
+  <p>Behavioral contract. <em>Mount</em>: when open transitions from false to true, the component reads the current frame from <code>useFrameStore</code>, calls <code>scanFlavorChange</code> from <code>@/modes</code> against (current_version, current_flavor, target_flavor), and memoizes the resulting <code>TransitionResult.advisory[]</code>. <em>Body</em>: the ConfirmDialog body is a small React fragment with a one-line confirmation prompt "Switch flavor from {current_flavor} to {target_flavor}?" followed by the <code>AdvisoryList</code> (when advisory is non-empty) or a muted "No advisories." line (when empty). <em>Footer</em>: ConfirmDialog provides Cancel + Confirm; confirmLabel = "Switch"; destructive = false. <em>Confirm</em>: dispatches the metadata_edited patch with the <code>change_summary</code> = "flavor changed: {current_flavor} → {target_flavor}"; on resolve, calls <code>props.onClose()</code>. <em>Cancel / Escape / outside-click</em>: ConfirmDialog routes through onClose without dispatching. Edge case: if target_flavor === current_flavor (shouldn't happen given the page logic, but defensively), the component still renders but the Confirm button is disabled — this is a dev-time guard not a user-facing case.</p>
+
+  <div class="file-header">// src/ui/mode-change/use-mode-change-scan.ts</div>
+  <p>Pure hook that runs <code>attemptTransition('architectural', current, target)</code> from <code>@/modes</code> and memoizes the result. Returns the <code>TransitionResult</code> and a <code>rescan()</code> function. The hook does not consume <code>ComputeResult</code> — the architectural-mode-change scan operates purely on the frame's nodes and the mode pair per the modes spec, so the precomputed ComputeResult parameter to <code>attemptTransition</code> is passed as <code>undefined</code> for this case.</p>
+
+<pre><code>import type { FrameVersion, Mode, Flavor, Position } from "@/schema";
+import type { TransitionResult } from "@/modes";
+
+export interface UseModeChangeScanInput {
+  current_version: FrameVersion;
+  current_mode: Mode;
+  current_flavor: Flavor | undefined;
+  target_mode: Mode;
+  target_flavor: Flavor | undefined;
+  /** Positions added in-dialog but not yet on disk. When provided, the hook
+   *  projects them onto a virtual frame.positions array before calling
+   *  scanArchitecturalModeChange, so the resulting inline_editors[] expose
+   *  the staged positions as available options. */
+  staged_positions: Position[];
+}
+
+export interface UseModeChangeScanOutput {
+  result: TransitionResult;
+  rescan: () =&gt; void;
+}
+
+export function useModeChangeScan(input: UseModeChangeScanInput): UseModeChangeScanOutput;
+</code></pre>
+
+  <p>Behavioral contract. <em>Initial run</em>: the hook computes a synthetic <code>FrameVersion</code>-shaped object with <code>positions</code> overridden to <code>[...(current_version.positions ?? []), ...staged_positions]</code> (no other fields changed) and calls <code>attemptTransition("architectural", { frame: synthetic_version, mode: current_mode, flavor: current_flavor }, { mode: target_mode, flavor: target_flavor }, undefined)</code>. The result is memoized on the input tuple <code>(current_version.id, current_mode, current_flavor, target_mode, target_flavor, staged_positions.length, ...staged_positions.map(p =&gt; p.id))</code>. <em>Rescan</em>: increments an internal counter that re-triggers the memoization; the caller invokes <code>rescan()</code> when adding/removing staged positions to force a fresh scan even when the memoization tuple appears unchanged (the array-spread fallback handles this, but the explicit rescan API is provided for clarity and testing). <em>Note on position-fields synthesis</em>: synthesizing a virtual FrameVersion with overridden positions is a hook-local concern that does not touch the persisted FrameVersion; the actual commit dispatches the new positions through the <code>architectural_mode_changed</code> patch's <code>positions_added</code> field. The hook's synthesis is purely for scan-time options[] computation.</p>
+
+  <div class="file-header">// src/ui/mode-change/change-summary.ts</div>
+  <p>Pure helper that builds the canonical <code>change_summary</code> string for the architectural-mode-change FramePatch per E6's "mode changed: legal → general." template. Exported for testability and for use by the dialog at commit time.</p>
+
+<pre><code>import type { Mode, Flavor } from "@/schema";
+
+export function buildModeChangeSummary(
+  current_mode: Mode,
+  current_flavor: Flavor | undefined,
+  target_mode: Mode,
+  target_flavor: Flavor | undefined,
+): string;
+</code></pre>
+
+  <p>Behavioral contract. Produces strings of the form:</p>
+  <ul>
+    <li><code>"mode changed: legal → general (personal)"</code> (legal → general, flavor=personal)</li>
+    <li><code>"mode changed: legal → general (academic)"</code> (legal → general, flavor=academic)</li>
+    <li><code>"mode changed: general (personal) → legal"</code> (general personal → legal)</li>
+    <li><code>"mode changed: general (academic) → legal"</code> (general academic → legal)</li>
+  </ul>
+  <p>The function is pure synchronous; deterministic; total over all valid (current, target) mode/flavor combinations enforced by the Frame schema invariant <code>flavor</code> required-when-general / forbidden-when-legal. The strings are lowercase per the E6 example.</p>
+
+  <div class="file-header">// src/ui/mode-change/index.ts</div>
+  <p>Barrel. Re-exports only the two top-level dialog components and their prop types.</p>
+
+<pre><code>export {
+  ArchitecturalModeChangeDialog,
+  type ArchitecturalModeChangeDialogProps,
+} from "./architectural-mode-change-dialog";
+
+export {
+  FlavorChangeDialog,
+  type FlavorChangeDialogProps,
+} from "./flavor-change-dialog";
+</code></pre>
+
+  <p>The sub-components (<code>TargetModePicker</code>, <code>ScanResultBody</code>, <code>ConclusionDirectionEditorRow</code>, <code>AdvisoryList</code>, <code>PositionsInlineEditor</code>), the hook (<code>useModeChangeScan</code>), and the pure helper (<code>buildModeChangeSummary</code>) are not re-exported by the barrel. They are reachable from <code>tests/ui/mode-change/</code> for unit testing via deep imports. External consumers (the page) import only from the barrel.</p>
+
+  <h2>Per-file specs — <code>src/ui/session-migration/</code></h2>
+
+  <div class="file-header">// src/ui/session-migration/session-migration-dialog.tsx</div>
+  <p>The top-level session-migration dialog. Composes the I.9a <code>Dialog</code> primitive. Reads the current session and the target FrameVersion id from <code>useSessionStore</code> (via <code>selectFrameVersionDrift</code> for the drift state). On mount-with-open=true, calls the <code>usePreviewMigration</code> hook with the target id. Owns the per-row resolution state as a <code>Map&lt;carrier_id, OrphanResolution&gt;</code>. The Migrate button is always enabled (after preview load completes) because every candidate has an effective resolution — rows default to the candidate's <code>suggested_kind</code>.</p>
+
+<pre><code>import * as React from "react";
+import type { FrameVersionId } from "@/schema";
+import type { OrphanCandidate } from "@/state";
+import type { OrphanResolution } from "@/persistence";
+
+export interface SessionMigrationDialogProps {
+  open: boolean;
+  onClose: () =&gt; void;
+  /** The target FrameVersion id to migrate to. The page derives this from
+   *  selectFrameVersionDrift(session_snapshot).frame_current_version_id and
+   *  passes it down. The dialog does not pick a target; per D2 + I.9c
+   *  FrameVersionDriftIndicator, migration is always to the parent Frame's
+   *  current_version_id. */
+  target_frame_version_id: FrameVersionId;
+}
+
+export function SessionMigrationDialog(
+  props: SessionMigrationDialogProps,
+): React.ReactElement | null;
+
+/** Local component state shape (not exported). */
+type DialogReducerState =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | {
+      phase: "loaded";
+      candidates: OrphanCandidate[];
+      resolutions: Map&lt;string, OrphanResolution&gt;;  // keyed by candidate.carrier_id
+    }
+  | { phase: "loaded_empty" }                       // candidates is []
+  | { phase: "migrating" }
+  | { phase: "failed"; error: { kind: string; message: string } };
+
+type DialogReducerAction =
+  | { type: "begin_load" }
+  | { type: "load_complete"; candidates: OrphanCandidate[]; defaults: Map&lt;string, OrphanResolution&gt; }
+  | { type: "load_failed"; error: { kind: string; message: string } }
+  | { type: "set_resolution"; carrier_id: string; resolution: OrphanResolution }
+  | { type: "begin_migrate" }
+  | { type: "migrate_complete" }
+  | { type: "migrate_failed"; error: { kind: string; message: string } }
+  | { type: "reset" };
+</code></pre>
+
+  <p>Behavioral contract. <em>Open transition</em>: when <code>open</code> transitions from false to true, the reducer dispatches <code>begin_load</code> and the hook fires <code>usePreviewMigration({ target_frame_version_id })</code>. <em>Load complete</em>: the hook resolves with <code>OrphanCandidate[]</code>; if empty, reducer transitions to <code>loaded_empty</code>; otherwise to <code>loaded</code> with the candidates and an initial resolutions Map seeded from each candidate's <code>suggested_kind</code> (the helper <code>buildDefaultResolutions(candidates)</code> in the hook does this seeding, then the dialog's reducer takes it from there). <em>Body composition</em>: <code>&lt;MigrationDialogBody /&gt;</code> renders one of the four content states (loading / empty / loaded-with-groups / failed) per the phase. <em>Footer</em>: "Cancel" (secondary) and "Migrate" (primary, destructive=false — per D3 no data is destroyed; orphans are resolved per the user's picks). Migrate is enabled when phase = loaded OR loaded_empty (not while loading, not while migrating, not after failure). <em>Migrate dispatch</em>: builds the <code>OrphanResolution[]</code> array by iterating <code>candidates</code> in canonical order (the candidates array itself, not the Map — preserving the modes-layer sort order) and pulling each row's resolution from the Map; calls <code>session_store.migrateToFrameVersion(target_frame_version_id, resolutions)</code>; on resolve transitions to "idle" and calls <code>props.onClose()</code>; on reject transitions to "failed". <em>Failed state</em>: renders the error message and offers Retry (re-dispatches <code>begin_migrate</code>) and Cancel. <em>Cancel / Escape / outside-click</em>: I.9a Dialog routes through onClose; the reducer transitions to "idle" and discards in-flight state — consistent with the architectural-mode-change dialog's "no draft preservation" pattern. <em>Determinism note</em>: the candidates array from <code>previewMigration</code> arrives in canonical (carrier_kind, carrier_id) order from the modes layer; the dialog never re-sorts. When building the final resolutions array, the dialog iterates candidates in their given order and emits one resolution per candidate, preserving that order so the persistence-layer migrateSession sees a stable order. The size of the Map and the size of the resolutions array are equal at all times after load.</p>
+
+  <p>Visual-polish note: dialog surface uses <code>--color-surface-elevated</code>, <code>--shadow-lg</code>, <code>--radius-lg</code>. The session-migration dialog is <code>size="lg"</code> to give the grouped candidate list room to breathe. The group section headers use the I.9a <code>Pill</code> primitive in <code>variant="severity_warning"</code> (drift state warrants the warning treatment per E3); the row resolution-picker uses the standard <code>SegmentedToggle</code> at <code>size="sm"</code>.</p>
+
+  <div class="file-header">// src/ui/session-migration/migration-dialog-body.tsx</div>
+  <p>Body composition. Renders one of four content states per the dialog reducer's phase: loading (centered spinner with copy "Computing orphan candidates against version {N}…"); empty (centered text "This session has no orphans. Migrating is safe." with a small "No conflicting references in {N_records_inspected} session records." sub-line); loaded with candidates grouped by <code>carrier_kind</code>; failed (error message with retry affordance).</p>
+
+<pre><code>import * as React from "react";
+import type { FrameVersionId } from "@/schema";
+import type { OrphanCandidate } from "@/state";
+import type { OrphanResolution } from "@/persistence";
+
+export interface MigrationDialogBodyProps {
+  /** The dialog's reducer state, narrowed by the dialog before passing in. */
+  phase:
+    | { kind: "loading" }
+    | { kind: "loaded"; candidates: OrphanCandidate[]; resolutions: ReadonlyMap&lt;string, OrphanResolution&gt; }
+    | { kind: "loaded_empty" }
+    | { kind: "failed"; error: { kind: string; message: string } };
+  target_frame_version_id: FrameVersionId;
+  /** The session's current frame_version_id, for the "from N to M" copy. */
+  current_frame_version_id: FrameVersionId;
+  onResolutionChanged: (carrier_id: string, resolution: OrphanResolution) =&gt; void;
+  onRetry?: () =&gt; void;
+}
+
+export function MigrationDialogBody(props: MigrationDialogBodyProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Phase dispatch: <code>loading</code> renders a centered <code>Spinner</code> from the I.9a primitives with the copy above; <code>loaded_empty</code> renders the empty-state text; <code>loaded</code> walks <code>candidates</code> in their given order, partitioning into three buckets keyed by <code>carrier_kind</code> in the canonical order <code>checkpoint_response, interpretation_selection, argument_edge</code>, and renders one <code>OrphanCandidateGroup</code> per non-empty bucket; <code>failed</code> renders the error and the Retry button (when <code>onRetry</code> is defined). The partitioning uses a single linear scan; iteration order is preserved within each bucket (no client-side sorting). Empty buckets are omitted entirely — no "Argument edges (0)" placeholder header. The header copy at the top of the loaded state reads: "Migrating from v{from_number} to v{to_number}. Resolve these references before proceeding." (the version numbers are derived from the FrameVersion ids via the dialog's loaded preview-result, threaded through; the dialog has the full <code>FrameVersion</code> already loaded because previewMigration's wrapper called <code>loadFrameVersion</code>).</p>
+
+  <p>Determinism note: the body is purely presentational. The partitioning loop preserves candidate order, and the bucket order is a fixed constant (the order of the discriminated union in <code>carrier_kind</code>). Empty buckets are omitted in a deterministic way.</p>
+
+  <div class="file-header">// src/ui/session-migration/orphan-candidate-group.tsx</div>
+  <p>Per-<code>carrier_kind</code> group. Renders a section header (the human-friendly name) and a list of <code>OrphanCandidateRow</code>. Honors the canonical order from <code>enumerateOrphanCandidates</code> — never re-sorts.</p>
+
+<pre><code>import * as React from "react";
+import type { OrphanCandidate } from "@/state";
+import type { OrphanResolution } from "@/persistence";
+
+export interface OrphanCandidateGroupProps {
+  carrier_kind: OrphanCandidate["carrier_kind"];
+  candidates: OrphanCandidate[];
+  resolutions: ReadonlyMap&lt;string, OrphanResolution&gt;;
+  onResolutionChanged: (carrier_id: string, resolution: OrphanResolution) =&gt; void;
+}
+
+export function OrphanCandidateGroup(props: OrphanCandidateGroupProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Header text by carrier_kind: "Checkpoint responses" / "Interpretation selections" / "Argument edges". The header includes the count as a small muted suffix: "Checkpoint responses · 3". Body: one <code>OrphanCandidateRow</code> per candidate, in the supplied array order. The component does not paginate; lists are expected to be small in practice (a frame with hundreds of orphaned argument-edges from a migration is an edge case the dialog renders fully — the dialog scroll-locks the body via I.9a Dialog defaults). The component is presentational; all state lives on the dialog reducer.</p>
+
+  <div class="file-header">// src/ui/session-migration/orphan-candidate-row.tsx</div>
+  <p>Single candidate row. Layout: [display_summary at left] [ResolutionPicker at right]; when picker = "reattach", below those two, a target-node selector populated by candidate.suggested_target_node_id pre-seed and (optionally) a select-from-list affordance for picking a different reattachment target.</p>
+
+<pre><code>import * as React from "react";
+import type { NodeRef } from "@/schema";
+import type { OrphanCandidate } from "@/state";
+import type { OrphanResolution } from "@/persistence";
+
+export interface OrphanCandidateRowProps {
+  candidate: OrphanCandidate;
+  resolution: OrphanResolution;
+  onResolutionChanged: (resolution: OrphanResolution) =&gt; void;
+  /** Optional list of valid reattach targets, scoped to nodes of the same
+   *  type-and-parent as candidate.source_node_id within the target FrameVersion.
+   *  When the candidate already has suggested_target_node_id, that id is the
+   *  default selection. When alternative_targets is provided AND non-empty,
+   *  a dropdown allows the user to pick a different one. v1 may pass an empty
+   *  array (the suggestion is the only option); v1.5 polish wires the
+   *  alternative-target enumeration. */
+  alternative_targets?: Array&lt;{ node_id: NodeRef; label: string }&gt;;
+}
+
+export function OrphanCandidateRow(props: OrphanCandidateRowProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. <em>Picker change</em>: when the user picks a new kind via the <code>ResolutionPicker</code>, the row constructs a new <code>OrphanResolution</code> and calls <code>onResolutionChanged(new)</code>. The construction rule: <code>{ kind, source_node_id: candidate.source_node_id, target_node_id?: ... }</code>. The <code>target_node_id</code> field is included only when <code>kind === "reattach"</code>, defaulting to <code>candidate.suggested_target_node_id</code>. <em>Reattach-target change</em>: when picker = "reattach" and the user picks a different target from <code>alternative_targets</code>, the row constructs <code>{ kind: "reattach", source_node_id, target_node_id: new }</code> and emits. <em>Display</em>: the display_summary text is rendered in body-text style; the candidate's <code>carrier_id</code> and <code>source_node_id</code> are not surfaced (they are internal; the modes-layer-supplied display_summary is the user-facing text per the modes spec). The row honors the suggested_kind / suggested_target_node_id pre-seeding from the candidate — the parent dialog's reducer initializes the row's resolution with these defaults at load time, so the row component is always rendered with a non-undefined resolution.</p>
+
+  <div class="file-header">// src/ui/session-migration/resolution-picker.tsx</div>
+  <p>Three-option picker for an <code>OrphanResolution.kind</code>. Implemented as a <code>SegmentedToggle</code> at <code>size="sm"</code> with three options: discard / reattach / no_op.</p>
+
+<pre><code>import * as React from "react";
+import type { OrphanResolution } from "@/persistence";
+
+export interface ResolutionPickerProps {
+  value: OrphanResolution["kind"];
+  onChange: (kind: OrphanResolution["kind"]) =&gt; void;
+}
+
+export function ResolutionPicker(props: ResolutionPickerProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Renders a 3-position <code>SegmentedToggle</code> with options in canonical order: <code>discard</code>, <code>reattach</code>, <code>no_op</code>. Labels follow D3's plain-language framing: "Discard" / "Reattach" / "Keep as no-op". The component is purely presentational; the parent row constructs the full <code>OrphanResolution</code> on change.</p>
+
+  <div class="file-header">// src/ui/session-migration/use-preview-migration.ts</div>
+  <p>Hook wrapping <code>session_store.previewMigration(target_frame_version_id)</code>. Manages local state for loading, result, and error. Re-fetches when target_frame_version_id changes (which happens once per dialog open in practice).</p>
+
+<pre><code>import type { FrameVersionId } from "@/schema";
+import type { OrphanCandidate } from "@/state";
+import type { OrphanResolution } from "@/persistence";
+
+export interface UsePreviewMigrationInput {
+  target_frame_version_id: FrameVersionId | null;
+  /** When true (the dialog's open state), the hook fires the load. When false,
+   *  the hook returns idle state without fetching. */
+  enabled: boolean;
+}
+
+export interface UsePreviewMigrationOutput {
+  phase:
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "loaded"; candidates: OrphanCandidate[]; defaults: Map&lt;string, OrphanResolution&gt; }
+    | { kind: "failed"; error: { kind: string; message: string } };
+  retry: () =&gt; void;
+}
+
+export function usePreviewMigration(input: UsePreviewMigrationInput): UsePreviewMigrationOutput;
+
+/** Pure helper exported for testing. Walks candidates in canonical order and
+ *  builds an OrphanResolution Map keyed by carrier_id, with each entry seeded
+ *  from the candidate's suggested_kind (and suggested_target_node_id, when
+ *  the kind is "reattach"). */
+export function buildDefaultResolutions(
+  candidates: OrphanCandidate[],
+): Map&lt;string, OrphanResolution&gt;;
+</code></pre>
+
+  <p>Behavioral contract. <em>Lifecycle</em>: on mount with <code>enabled=true</code> and a non-null target_frame_version_id, the hook calls <code>session_store.previewMigration(target_frame_version_id)</code> through <code>useSessionStore</code>. The Promise resolves with <code>OrphanCandidate[]</code>; the hook also computes <code>buildDefaultResolutions(candidates)</code> and packages both into the loaded phase. On rejection, transitions to failed with the error.kind / error.message extracted from the typed error (<code>QuotaExceededError</code> or <code>RepositoryError</code> from <code>@/persistence</code>; both expose .kind and .message). When <code>target_frame_version_id</code> changes between renders, the hook cancels the in-flight load (via an AbortController + a stable epoch counter) and starts a new one. When <code>enabled</code> transitions from true to false, the hook transitions to idle and cancels any in-flight load. <em>Retry</em>: re-fires the load with the same target_frame_version_id; available in any phase. <em>buildDefaultResolutions</em>: iterates the candidates array in supplied order; for each, constructs <code>{ kind: c.suggested_kind, source_node_id: c.source_node_id, target_node_id: c.suggested_kind === "reattach" ? c.suggested_target_node_id : undefined }</code> and sets it in the Map under <code>c.carrier_id</code>. Deterministic; pure synchronous. Tested in isolation.</p>
+
+  <div class="file-header">// src/ui/session-migration/index.ts</div>
+  <p>Barrel. Re-exports only the dialog component and its prop type.</p>
+
+<pre><code>export {
+  SessionMigrationDialog,
+  type SessionMigrationDialogProps,
+} from "./session-migration-dialog";
+</code></pre>
+
+  <p>The sub-components (<code>MigrationDialogBody</code>, <code>OrphanCandidateGroup</code>, <code>OrphanCandidateRow</code>, <code>ResolutionPicker</code>) and the hook (<code>usePreviewMigration</code>) are not re-exported. They are reachable from <code>tests/ui/session-migration/</code> for unit testing via deep imports.</p>
+
+  <h2>Page-level refinements</h2>
+
+  <p>Two pages are touched: <code>FrameBuildingPage</code> (I.9b-owned) and <code>ArgumentRunningPage</code> (I.9c-owned). Each gains a small piece of dialog open-state and an internal handler that the corresponding child component (<code>FrameSettingsPanel</code> / <code>FrameVersionDriftIndicator</code>) calls. The page-prop reservations from F-004 / F-005 are removed.</p>
+
+  <h3><code>FrameBuildingPage</code> — additions</h3>
+
+<pre><code>// src/ui/frame-building/frame-building-page.tsx (refined)
+
+import { ArchitecturalModeChangeDialog, FlavorChangeDialog } from "@/ui/mode-change";
+
+// New local state inside FrameBuildingPage:
+type ModeChangeDialogState =
+  | { open: false }
+  | { open: true; target: "mode" }
+  | { open: true; target: "flavor" };
+
+const [mode_change_dialog, setModeChangeDialog] =
+  React.useState&lt;ModeChangeDialogState&gt;({ open: false });
+
+const openModeChangeDialog = React.useCallback((target: "mode" | "flavor") =&gt; {
+  setModeChangeDialog({ open: true, target });
+}, []);
+
+const closeModeChangeDialog = React.useCallback(() =&gt; {
+  setModeChangeDialog({ open: false });
+}, []);
+
+// In the page's JSX (added at the bottom of the page's existing return tree,
+// as siblings of the existing FrameSettingsPanel, AutoArrangeFlow, etc.):
+return (
+  &lt;React.Fragment&gt;
+    {/* … existing page content … */}
+
+    &lt;FrameSettingsPanel
+      // … existing props …
+      on_open_mode_change_dialog={openModeChangeDialog}
+    /&gt;
+
+    {/* New dialog mounts, branched by target */}
+    {mode_change_dialog.open &amp;&amp; mode_change_dialog.target === "mode" &amp;&amp; (
+      &lt;ArchitecturalModeChangeDialog
+        open={true}
+        onClose={closeModeChangeDialog}
+        target="mode"
+      /&gt;
+    )}
+    {mode_change_dialog.open &amp;&amp; mode_change_dialog.target === "flavor" &amp;&amp; (
+      &lt;FlavorChangeDialog
+        open={true}
+        onClose={closeModeChangeDialog}
+        target_flavor={
+          /* Derived: the "other" flavor relative to the current frame.flavor.
+             The page reads frame.flavor from useFrameStore and picks the
+             opposite. When current_flavor is undefined (legal mode), this
+             branch is unreachable because the ModeFlavorSection hides the
+             "Change flavor" button in legal mode. */
+          inverseFlavor(useFrameStore((s) =&gt; s.frame!.flavor))
+        }
+      /&gt;
+    )}
+  &lt;/React.Fragment&gt;
+);
+
+// inverseFlavor is a tiny pure helper colocated with the page:
+function inverseFlavor(current: Flavor): Flavor {
+  return current === "personal" ? "academic" : "personal";
+}
+</code></pre>
+
+  <p>Behavioral contract for the refinement. <em>Open path</em>: when the user clicks "Change mode" in the FrameSettingsPanel's ModeFlavorSection, the section calls <code>on_open_mode_change_dialog("mode")</code>; the page's <code>openModeChangeDialog</code> sets the state to <code>{ open: true, target: "mode" }</code>; React renders the <code>ArchitecturalModeChangeDialog</code> with open=true. <em>Close path</em>: any close (cancel, escape, outside-click, or successful commit) calls <code>closeModeChangeDialog</code> which transitions back to <code>{ open: false }</code>; the dialog component returns null and unmounts. <em>Flavor variant</em>: same pattern, but the FlavorChangeDialog is rendered with the derived inverse flavor as <code>target_flavor</code>. <em>Mutual exclusivity</em>: only one of the two dialogs is mounted at a time, gated by the <code>target</code> discriminator. <em>Removal of the page-prop</em>: <code>FrameBuildingPageProps.onOpenModeChangeDialog</code> is removed; the App-level <code>app-routes.tsx</code> no longer passes any callback for this; the page is fully self-contained for mode-change dialog wiring. <em>Test surface</em>: the page test asserts that clicking "Change mode" opens the architectural dialog; clicking "Change flavor" opens the flavor dialog; closing each via the standard handlers returns the dialog state to closed.</p>
+
+  <h3><code>ArgumentRunningPage</code> — additions</h3>
+
+<pre><code>// src/ui/argument-running/argument-running-page.tsx (refined)
+
+import { SessionMigrationDialog } from "@/ui/session-migration";
+import { selectFrameVersionDrift } from "@/state";
+
+// New local state inside ArgumentRunningPage:
+const [migration_dialog_open, setMigrationDialogOpen] = React.useState(false);
+
+const openMigrationDialog = React.useCallback(() =&gt; {
+  setMigrationDialogOpen(true);
+}, []);
+
+const closeMigrationDialog = React.useCallback(() =&gt; {
+  setMigrationDialogOpen(false);
+}, []);
+
+// The target FrameVersion id comes from the drift projection:
+const drift = useSessionStore(selectFrameVersionDrift);
+const target_frame_version_id = drift?.frame_current_version_id ?? null;
+
+// In the page's JSX, the existing on_open_migration_dialog wiring on the
+// FrameVersionDriftIndicator (which I.9c routed through the now-removed
+// page-prop reservation) is replaced by the internal handler:
+return (
+  &lt;React.Fragment&gt;
+    {/* … existing page content … */}
+
+    {/* The drift indicator is rendered inside the top bar via buildTopBarSlots;
+        the page passes openMigrationDialog into the deps shape. */}
+
+    {/* Migration dialog mount */}
+    {migration_dialog_open &amp;&amp; target_frame_version_id !== null &amp;&amp; (
+      &lt;SessionMigrationDialog
+        open={true}
+        onClose={closeMigrationDialog}
+        target_frame_version_id={target_frame_version_id}
+      /&gt;
+    )}
+  &lt;/React.Fragment&gt;
+);
+</code></pre>
+
+  <p>Behavioral contract for the refinement. <em>Open path</em>: when the user clicks the drift chip, <code>FrameVersionDriftIndicator</code> calls its <code>on_open_migration_dialog</code> callback prop (which the page wires via <code>buildTopBarSlots(deps)</code>); the page's <code>openMigrationDialog</code> transitions the state to true; React mounts the <code>SessionMigrationDialog</code>. <em>Close path</em>: any close handler routes through <code>closeMigrationDialog</code>. <em>Drift-disappeared edge case</em>: between dialog open and user interaction, the drift may resolve (e.g., a peer save updated <code>session.frame_version_id</code> to match the frame's current_version_id). The page detects this by reading <code>target_frame_version_id</code>; when null (no drift), the dialog returns null and unmounts. The page logs no error — the disappeared-drift case is benign (the user's intended migration is already done by another means). <em>Removal of the page-prop</em>: <code>ArgumentRunningPageProps.on_open_migration_dialog</code> is removed; the App-level <code>app-routes.tsx</code> no longer passes a callback for this. <em>Test surface</em>: the page test asserts that clicking the drift indicator opens the migration dialog (when drift is present) or is a no-op (when drift is absent — the I.9c contract); closing returns the dialog state to closed.</p>
+
+  <p>One small change to <code>buildTopBarSlots</code> in the argument-running module: the deps shape's <code>on_open_migration_dialog</code> is now sourced from the page's internal handler rather than from the page's props. The interface of <code>buildTopBarSlots</code> is unchanged (it still takes a deps object with this callback); only the data flow changes. The I.9c spec's "Reserved for I.9d wiring" comment in the page-props is replaced by the actual wiring.</p>
+
+  <h2>UI-layer determinism discipline (restated for I.9d2's surfaces)</h2>
+
+  <p>Per the I.9a / I.9b / I.9c / I.9d1 disciplines, the UI layer's contribution to the application's determinism guarantee (Article II § 2) is four obligations: <strong>D1</strong> canonical output verbatim, <strong>D2</strong> single-clock-read-per-dispatch, <strong>D3</strong> deterministic order (no client-side sorting of canonical lists), <strong>D4</strong> stable cross-render identity for memoized projections. Each surface in this spec honors them:</p>
+  <ul>
+    <li><strong>Architectural-mode-change dialog</strong>: D1 — <code>TransitionResult.blocking</code> / <code>advisory</code> messages and the per-Conclusion <code>ConclusionDirectionEditor</code> rows are rendered verbatim from the modes-layer scan. D2 — the dialog reads no clock; the eventual <code>deps.now()</code> read is inside the modes dispatch-table entry's single application of <code>architectural_mode_changed</code>, per F-003 family discipline. D3 — <code>inline_editors</code>, <code>blocking</code>, <code>advisory</code> arrays consumed in their canonical id-sorted order; the AdvisoryList's rule_id grouping preserves first-occurrence order; positions added through the inline editor are appended in insertion order (also deterministic for the user's session). D4 — the dialog reducer's state machine has stable transitions; the scan hook memoizes on a stable input tuple.</li>
+    <li><strong>Flavor-change dialog</strong>: D1 — <code>scanFlavorChange</code>'s advisory[] rendered verbatim. D2 — no clock read in the dialog; metadata_edited dispatch reads <code>deps.now()</code> once in its existing dispatch-table entry. D3 — advisory[] consumed in canonical order. D4 — applicable to the memoized scan result.</li>
+    <li><strong>Session-migration dialog</strong>: D1 — <code>OrphanCandidate.display_summary</code> rendered verbatim; the per-row resolution picker's labels and ordering are constants. D2 — no clock read in the dialog; the eventual writes (Repository.migrateSession) thread their own atomicity contract. D3 — candidates consumed in canonical (carrier_kind, carrier_id) order; partitioning into groups preserves order; resolutions emitted in candidates' order at commit time. D4 — the resolutions Map keyed by carrier_id has stable identity across render; the candidates array reference is stable until a re-load.</li>
+  </ul>
+
+  <h2>Vitest acceptance tests</h2>
+
+  <p>The implementing session writes the test files below alongside the implementation. Pure-React-testing-library + happy-dom; no real IndexedDB (a mock <code>Repository</code> is supplied via <code>RepositoryProvider</code>); no real <code>compute()</code> (mocks return canonical-shape <code>ComputeResult</code> / <code>TransitionResult</code> fixtures). Test fixtures: one set of <code>FrameVersion</code> / <code>ArgumentSession</code> / <code>ArgumentSessionVersion</code> JSON fixtures already in <code>@/test-fixtures</code> from prior I.9 sessions; this session adds three: (a) a frame in legal mode with three Conclusions and one Authority node (for the architectural-mode-change scan), (b) a session whose <code>frame_version_snapshot</code> references a Checkpoint that no longer exists in the parent frame's current version (for the orphan preview), (c) a frame in general mode with zero positions and two Conclusions (for the positions-inline-editor case).</p>
+
+  <h3><code>tests/ui/mode-change/</code></h3>
+  <table>
+    <tr><th>File</th><th>What it asserts</th></tr>
+    <tr><td><code>architectural-mode-change-dialog.test.tsx</code></td><td>Dialog mounts with <code>open=true</code> and target="mode"; reducer transitions through staging → loaded → committing → idle; on open with legal → general transition and at-least-one Conclusion-with-direction-mismatch, the scan-result body renders the blocking section with one ConclusionDirectionEditorRow per implicated Conclusion; the Commit button is disabled until every blocking item has an assigned direction in <code>direction_resolutions</code>; clicking Commit dispatches a <code>FramePatch</code> with <code>kind === "architectural_mode_changed"</code>, <code>target_mode === "general"</code>, <code>target_flavor</code> set, <code>conclusion_direction_resolutions</code> matching the user-picked values, and <code>change_summary</code> matching the canonical template from <code>buildModeChangeSummary</code>; on resolve, <code>onClose</code> is called. Cancel discards in-flight state. Escape and outside-click route through Cancel. Mock <code>frame_store.applyEdit</code> records the patch payload for assertion.</td></tr>
+    <tr><td><code>target-mode-picker.test.tsx</code></td><td>Renders current mode read-only; for legal current_mode shows the "Switch to general" radio plus flavor sub-radios; for general current_mode shows the "Switch to legal" radio with no flavor sub-radios; arrow keys cycle radios; selecting a flavor radio calls <code>onTargetFlavorChanged</code> with the right value.</td></tr>
+    <tr><td><code>positions-inline-editor.test.tsx</code></td><td>Renders the staged positions list; clicking "+ Add position" reveals an inline input; entering a label and confirming calls <code>onPositionStaged</code> with <code>{ id, label }</code> (id derived from the injected <code>generateId</code> spy); whitespace labels are not staged; remove button calls <code>onPositionRemoved</code> with the position id; the list is rendered in insertion order across multiple adds.</td></tr>
+    <tr><td><code>scan-result-body.test.tsx</code></td><td>For empty blocking + empty advisory, renders the single "No items to address" line; for blocking + advisory both non-empty, renders sections in canonical order (blocking first); inline_editors are mapped to ConclusionDirectionEditorRow components in given order; the section headers include counts; clicking through a direction editor calls <code>onResolutionChanged</code> with the right node_id + direction value (the row's value-construction rule is exercised here for both kinds).</td></tr>
+    <tr><td><code>conclusion-direction-editor.test.tsx</code></td><td>For required_direction_kind = "legal", the Select options match the editor.options[] verbatim; selecting an option calls onValueChanged with <code>{ kind: "legal", value }</code>. For required_direction_kind = "general" with available_positions, the Select options render Position labels (looked up by id from available_positions); selecting calls onValueChanged with <code>{ kind: "general", position_id }</code>. The current/required chip pair renders the two values; the row has the <code>--color-severity-error</code> left-border per visual-polish; the chip pair text matches the kind values verbatim.</td></tr>
+    <tr><td><code>advisory-list.test.tsx</code></td><td>Renders one section per rule_id; grouping preserves first-occurrence order; within a group, original order preserved; clicking a node-ref pill calls onNodeFocusRequested when defined; pills are non-interactive (no callback fired) when onNodeFocusRequested is undefined.</td></tr>
+    <tr><td><code>flavor-change-dialog.test.tsx</code></td><td>Renders ConfirmDialog with the right title (current → target); body shows the scanFlavorChange advisory[] (a mock returns a 2-item advisory list); Confirm dispatches <code>metadata_edited({ flavor: target })</code> with the canonical change_summary; Cancel/Escape route through onClose without dispatching.</td></tr>
+    <tr><td><code>use-mode-change-scan.test.ts</code></td><td>Initial run calls <code>attemptTransition</code> with the right kind="architectural" and the synthetic positions-overridden frame; rescan() forces a fresh call with the updated staged_positions; the returned <code>result</code> memoizes on the input tuple (no re-call when inputs unchanged).</td></tr>
+    <tr><td><code>change-summary.test.ts</code></td><td>All four canonical transition combinations produce the exact strings specified above (legal→general+personal, legal→general+academic, general+personal→legal, general+academic→legal). Edge case (target_mode === current_mode) is not exercised because the caller never invokes it; the function is pure-total over valid inputs only.</td></tr>
+  </table>
+
+  <h3><code>tests/ui/session-migration/</code></h3>
+  <table>
+    <tr><th>File</th><th>What it asserts</th></tr>
+    <tr><td><code>session-migration-dialog.test.tsx</code></td><td>Dialog with <code>open=true</code> and target_frame_version_id calls <code>session_store.previewMigration</code> on mount; while the promise pends, body shows loading state; when it resolves with empty candidates, body shows the empty state and Migrate is enabled; when it resolves with non-empty candidates, body shows grouped rows in canonical order with resolutions seeded from suggested_kind; the user can override a resolution and the dialog records the change; clicking Migrate dispatches <code>session_store.migrateToFrameVersion</code> with the target id and the resolutions array in canonical candidates order; on resolve, onClose is called; on reject, the dialog shows the failed state with Retry. The candidates fixture exercises all three carrier_kinds with mixed suggested_kind values; reattach rows that the user keeps at the suggestion emit a resolution with the suggested_target_node_id intact.</td></tr>
+    <tr><td><code>migration-dialog-body.test.tsx</code></td><td>Per-phase rendering: loading → spinner + copy; loaded_empty → empty-state text with the from/to version numbers; loaded → groups in (checkpoint_response, interpretation_selection, argument_edge) order; empty buckets are omitted; failed → error text + Retry button that fires onRetry. The partitioning is asserted by feeding a candidates array with mixed carrier_kinds in shuffled order — the body must still render the buckets in canonical order while preserving within-bucket original order.</td></tr>
+    <tr><td><code>orphan-candidate-group.test.tsx</code></td><td>Header text matches per carrier_kind ("Checkpoint responses" / "Interpretation selections" / "Argument edges"); count suffix is correct; one OrphanCandidateRow per candidate in supplied array order; no re-sorting.</td></tr>
+    <tr><td><code>orphan-candidate-row.test.tsx</code></td><td>Renders display_summary verbatim; resolution-picker reflects the current resolution.kind; switching from suggested kind to a different one emits a new OrphanResolution via onResolutionChanged with the right source_node_id (always the candidate's) and target_node_id (set only when kind = "reattach", defaulting to suggested_target_node_id; cleared otherwise). When the candidate has alternative_targets, the dropdown surfaces them and selecting a different one emits with the new target_node_id.</td></tr>
+    <tr><td><code>resolution-picker.test.tsx</code></td><td>Renders three SegmentedToggle options in canonical order; selecting each calls onChange with the right kind; the current value is reflected.</td></tr>
+    <tr><td><code>use-preview-migration.test.ts</code></td><td>Idle when <code>enabled=false</code>; on enabled-true with non-null target id, fires session_store.previewMigration; transitions through loading → loaded with the resolutions Map seeded by buildDefaultResolutions. Failed path: rejection transitions to failed with .kind and .message. Retry: re-fires the load. Target-id change cancels in-flight and starts a new load. <code>buildDefaultResolutions</code> tested in isolation: input candidates with mixed suggested_kinds produce a Map keyed by carrier_id with seeded resolutions matching the suggested kind, and target_node_id set only when kind=reattach.</td></tr>
+  </table>
+
+  <h3>Page-level integration tests (additions to existing files)</h3>
+  <table>
+    <tr><th>File (existing)</th><th>What it asserts (additions only)</th></tr>
+    <tr><td><code>tests/ui/frame-building/frame-building-page.test.tsx</code></td><td>Mounting the page and clicking "Change mode" in the FrameSettingsPanel opens the ArchitecturalModeChangeDialog; clicking "Change flavor" opens the FlavorChangeDialog with the right target_flavor (the inverse of current). The two dialogs are mutually exclusive; closing one returns the page to no-dialog state. The page no longer accepts an <code>onOpenModeChangeDialog</code> prop (the test asserts the page renders correctly without it).</td></tr>
+    <tr><td><code>tests/ui/argument-running/argument-running-page.test.tsx</code></td><td>Mounting the page with drift state present and clicking the FrameVersionDriftIndicator opens the SessionMigrationDialog with the right target_frame_version_id; clicking with no drift is a no-op; closing returns the page to no-dialog state. The page no longer accepts an <code>on_open_migration_dialog</code> prop.</td></tr>
+  </table>
+
+  <h2>Article VIII § 4 self-review</h2>
+
+  <p>Per Protocol Article VIII § 4, the agent closing a working session conducts a structured self-review of the produced spec(s) against the Constitution's commitments and the Protocol's quality criteria, recheck the Article V § 3 escalation triggers, and record any flags escalated in-session. This review is conducted below for the spec produced in I.9d2.</p>
+
+  <h3>Article II § 1–6 commitments</h3>
+  <table>
+    <tr><th>Commitment</th><th>Check</th><th>Notes</th></tr>
+    <tr><td>§ 1 Frame/Argument split</td><td>Upheld</td><td>The architectural-mode-change dialog dispatches <code>FramePatch.architectural_mode_changed</code> to <code>FrameStore</code> (Frame-side); the session-migration dialog dispatches <code>SessionPatch</code> via <code>SessionStore.migrateToFrameVersion</code> (Argument-side). The patches never cross. The new <code>architectural_mode_changed</code> FramePatch is purely a Frame-side mutation (mode, flavor, positions, ConclusionNode.required_direction_kind). Per-Conclusion direction <em>resolutions</em> are Frame-side because Conclusion nodes live in the Frame; session-side data drift caused by the mode change is handled separately through the existing session-migration path that I.9d2 also wires.</td></tr>
+    <tr><td>§ 2 Determinism (UI-layer obligation)</td><td>Upheld</td><td>D1, D2, D3, D4 explicitly restated per surface (architectural-mode-change dialog, flavor-change dialog, session-migration dialog) in the dedicated "UI-layer determinism discipline" section. No client-side sorting; canonical orderings consumed verbatim; single-clock-read remains in the modes/state layer dispatch (not in the dialog reducers).</td></tr>
+    <tr><td>§ 3 Per-node satisfaction criteria</td><td>Upheld</td><td>The architectural-mode-change scan's <code>ConclusionDirectionEditor</code> rows render the per-node <code>required_direction_kind</code> that the legal/general satisfaction-criteria contract requires; the dialog cannot commit until every Conclusion with a mismatch has a user-picked direction. This is the contract layer where satisfaction-criteria-as-Frame-state interacts with the user; the UI does not invent direction kinds, it consumes <code>editor.options[]</code> from the modes-layer scan verbatim.</td></tr>
+    <tr><td>§ 4 Independent versioning of Frame and Sessions</td><td>Upheld</td><td>The architectural-mode-change patch creates exactly one new <code>FrameVersion</code> (per the F-003 atomic-FramePatch family); sessions referencing the prior version continue to do so until their owners initiate migration through the I.9d2 session-migration dialog. The drift indicator is the bridge; the dialog flow honors the independent-versioning invariant by not retroactively rewriting any session.</td></tr>
+    <tr><td>§ 5 Deterministic ordering</td><td>Upheld</td><td><code>blocking[]</code>, <code>advisory[]</code>, <code>inline_editors[]</code> consumed in modes-layer canonical order; <code>OrphanCandidate[]</code> consumed in (carrier_kind, carrier_id) order; partitioning into groups preserves order; <code>buildDefaultResolutions</code> walks the candidates array in given order. Tested explicitly in <code>migration-dialog-body.test.tsx</code> (shuffled-input → canonical-output) and <code>scan-result-body.test.tsx</code>.</td></tr>
+    <tr><td>§ 6 AI attribution</td><td>Upheld</td><td>This spec produces no AI-authored Frame or Argument content. The dialog flows commit user-initiated patches only; <code>provenance</code> on the resulting <code>FrameVersion</code> follows the existing FrameStore convention (which marks all human-dispatched patches as <code>provenance: "human"</code>). Per-Conclusion direction resolutions, position additions, and orphan resolutions are all human inputs.</td></tr>
+  </table>
+
+  <h3>Article III § 1–6 quality criteria</h3>
+  <table>
+    <tr><th>Criterion</th><th>Check</th><th>Notes</th></tr>
+    <tr><td>§ 1 Single source of truth</td><td>Upheld</td><td>Per-module spec is the canonical implementation surface for <code>src/ui/mode-change/</code> and <code>src/ui/session-migration/</code>. Cross-document refinements (FramePatch kind, SessionStore.previewMigration, dispatch-table entry, metadata_edited.partial Pick extension, page-prop removals) are listed explicitly in the "Cross-document resolution notes" section and tracked under the consolidated F-007 register flag for downstream contracts-doc bumps. No design state lives only in commit messages or chat.</td></tr>
+    <tr><td>§ 2 Read before write</td><td>Upheld</td><td>Onboarding reads completed: <code>current_state.html</code>, <code>flags.html</code>, all six relevant Stream I per-module specs (modes, persistence, state, schema, ui-frame-building, ui-argument-running, ui-chrome-canvas, ui-version-history for F-006 pattern check), <code>stream_e_uiux_v1.html</code> for E6, <code>stream_d_modes_v1.html</code> for D3, <code>stream_e_visual_polish_v1.html</code> for dialog tokens. Confirmed before drafting that the I.9b and I.9c page-prop reservations were placeholders for I.9d wiring, not for App-level handoff.</td></tr>
+    <tr><td>§ 3 Decisions stated with rationale</td><td>Upheld</td><td>Each cross-spec refinement carries explicit rationale in the "Cross-document resolution notes" section: the atomic FramePatch is justified by the need for single-FrameVersion commits to preserve Article II § 4; the SessionStore method by the need to keep <code>Repository.loadFrameVersion</code> behind the state selector boundary so the UI does not import from <code>@/persistence</code> directly; page-prop removal by the dialogs' page-local scope and the F-006 pattern's inapplicability. The page-prop removal is the most consequential deviation from the I.9b/I.9c "reserved" comments and the rationale is recorded both here and in the spec body.</td></tr>
+    <tr><td>§ 4 Tests are the contract</td><td>Upheld</td><td>Per-file Vitest acceptance tests specified for all 14 implementation files (8 in <code>mode-change/</code> excluding barrel and 6 in <code>session-migration/</code> excluding barrel) plus two page-level integration test additions. Test fixtures explicitly enumerated. Test assertions reach to the dispatched patch payloads, the canonical orderings, the determinism obligations, and the close-handler edge cases (drift-disappeared, scan-rejection, scan-Retry).</td></tr>
+    <tr><td>§ 5 Cross-session compression</td><td>Upheld via downstream README requirement</td><td>Spec explicitly requires the implementing session to write <code>src/ui/mode-change/README.md</code> and <code>src/ui/session-migration/README.md</code> as cross-session compression artifacts for I.9d3 / I.9d4 / I.10. The READMEs distill: the page-local dialog mounting pattern, the F-003-family atomic-FramePatch pattern (architectural_mode_changed is the third instance after F-003 and F-004), the SessionStore.previewMigration access pattern, and the reducer state machines for both dialogs.</td></tr>
+    <tr><td>§ 6 No premature optimization</td><td>Upheld</td><td>The <code>useModeChangeScan</code> and <code>usePreviewMigration</code> hooks memoize on stable input tuples — the minimum needed to prevent redundant <code>attemptTransition</code> / <code>previewMigration</code> calls — but do not introduce caching layers, request deduplication, or speculative pre-fetch. The reducers use plain useReducer rather than a state-machine library. The dialogs use plain CSS classes (per <code>stream_i_ui_chrome_canvas_spec_v1.html</code>'s conventions) rather than CSS-in-JS or runtime style libraries.</td></tr>
+  </table>
+
+  <h3>Article V § 3 escalation triggers (recheck)</h3>
+  <p>Per Article V § 3, an agent escalates to Zach when any of five conditions fires. Recheck at session close:</p>
+  <ol>
+    <li><strong>Conceptual contradiction surfaced.</strong> None surfaced this session. The two cross-spec refinements (atomic FramePatch + SessionStore.previewMigration) are technical resolutions of pre-existing seams (F-003 family + state-layer selector boundary); no conceptual contradiction was identified in the design documents.</li>
+    <li><strong>New conceptual surface or natural-language decision needed.</strong> None this session. The dialog copy ("Switch to general mode", "Migrate", advisory section headers) is mechanical text derived from existing modes-layer/state-layer canonical labels; no new natural-language decisions about legal-vs-general meaning, satisfaction-criteria semantics, or user-facing argument-mapping vocabulary were required.</li>
+    <li><strong>Decision exceeds technical-resolution authority.</strong> The page-prop removal decision was checked against the I.9b and I.9c reservations: those reservations were explicitly placeholders for I.9d-time wiring decisions, and the implementing-time decision to mount page-local rather than App-level is a technical-architecture choice in the agent's authority per Article V § 1. Confirmed it is technical-only.</li>
+    <li><strong>Spec impact crosses ≥ 3 streams.</strong> The cross-document refinements touch Stream I per-module specs only (state, modes, schema-via-flavor-Pick, ui-frame-building, ui-argument-running) — five Stream I documents, but a single stream. The Stream E and Stream D plan-level documents are read for grounding (E6, D3, visual-polish tokens), not modified. Threshold not crossed.</li>
+    <li><strong>Reversal of an earlier decision Zach made personally.</strong> The page-prop removal reverses a piece of architectural sketching done at the I.9b and I.9c agent level (which is not "earlier Zach decisions"); it does not reverse any Zach-personal decisions recorded in the design documents or in the project-knowledge files. No trigger.</li>
+  </ol>
+  <p>Conclusion: no escalation trigger fires. Per Article V § 4, the agent proceeds autonomously and records the work in the spec + register-flag updates without consultation.</p>
+
+  <h3>In-session-escalated flags</h3>
+  <p>One register flag is escalated to the in-session-escalated table in <code>flags.html</code> by this session:</p>
+
+  <h4>F-007 — Consolidated I.9d2 cross-spec refinements</h4>
+  <ul>
+    <li><strong>Status</strong>: open, awaiting consolidated contracts-doc bump (parallels F-003 / F-004 / F-005 / F-006 pattern).</li>
+    <li><strong>Family</strong>: F-003 family (per-session-consolidated-refinements pattern).</li>
+    <li><strong>Source</strong>: I.9d2 session, this spec document.</li>
+    <li><strong>Refinements held</strong>:
+      <ol>
+        <li>New <code>FramePatch</code> kind <code>architectural_mode_changed</code> in <code>stream_i_state_spec_v1.html</code> with payload <code>{ target_mode: Mode; target_flavor?: Flavor; positions_added?: Position[]; conclusion_direction_resolutions: ConclusionDirectionResolution[]; change_summary: string }</code>; atomically commits in one <code>FrameVersion</code>. Parallel to F-004's <code>presentation_hints_reset_all</code>.</li>
+        <li>New <code>SessionStore.previewMigration(target_frame_version_id: FrameVersionId): Promise&lt;OrphanCandidate[]&gt;</code> method in <code>stream_i_state_spec_v1.html</code>; wraps <code>Repository.loadFrameVersion</code> + <code>enumerateOrphanCandidates</code> from <code>@/modes</code>. State spec re-exports <code>OrphanCandidate</code> from the <code>@/state</code> barrel so the UI consumes through the selector boundary.</li>
+        <li>New dispatch-table entry in <code>stream_i_modes_spec_v1.html</code>: <code>FrameActionDispatchTable.architectural_mode_changed</code> as a synchronous pure transformation applying mode, flavor, positions, and per-Conclusion direction-kind updates to the produced <code>FrameVersion</code>.</li>
+        <li>Extension of <code>metadata_edited.partial</code>'s Pick tuple in <code>stream_i_state_spec_v1.html</code> from <code>"title" | "description" | "tags" | "jurisdiction_default" | "positions"</code> to <code>"title" | "description" | "tags" | "jurisdiction_default" | "positions" | "flavor"</code>. Mode does <em>not</em> join — it always flows through <code>architectural_mode_changed</code>.</li>
+        <li>Removal of two page-prop callbacks: <code>FrameBuildingPageProps.onOpenModeChangeDialog?</code> (placed by I.9b for I.9d wiring) and <code>ArgumentRunningPageProps.on_open_migration_dialog?</code> (placed by I.9c for I.9d wiring). The dialogs are page-local; the page owns the open-state internally.</li>
+      </ol>
+    </li>
+    <li><strong>Rationale for consolidation</strong>: All five refinements are downstream of a single design commitment (page-local dialogs invoking modes-layer scans through the state-layer boundary) and travel together as one contracts-doc bump. Splitting them would create transient inconsistencies (e.g., a state spec that declares <code>architectural_mode_changed</code> but no dispatch-table entry).</li>
+    <li><strong>Owner</strong>: next Stream I planning session (likely I.9d4-or-I.10 close) bumps the affected per-module specs in lockstep. Until bumped, this spec is canonical for the I.9d2 surfaces; the cross-document refinements are read here.</li>
+    <li><strong>Downstream sessions blocked</strong>: none. The implementing session for <code>src/ui/mode-change/</code> and <code>src/ui/session-migration/</code> uses this spec directly. The next per-module spec session that touches state, modes, schema, ui-frame-building, or ui-argument-running absorbs the F-007 changes as part of its own bump.</li>
+  </ul>
+
+  <h2>Closing</h2>
+  <p>This spec is the I.9d2 deliverable. The implementing coding session reads this document plus its enumerated dependencies and writes <code>src/ui/mode-change/</code> + <code>src/ui/session-migration/</code> + the two READMEs + the integration test additions. F-007 is added to the in-session-escalated table in <code>flags.html</code>. <code>current_state.html</code> records I.9d2 as complete and points I.9d3 (the session-settings panel) as the next sub-session. No conceptual surface is opened to Zach; all decisions remain within agent technical authority per Article V § 1.</p>
+</div>

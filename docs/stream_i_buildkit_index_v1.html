@@ -1,0 +1,226 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 14px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-right: 4px; font-weight: 500; }
+  .doc .tag-stream { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+  .doc .tag-blocker { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .doc .tag-done { background: var(--color-background-success); color: var(--color-text-success); }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+</style>
+<div class="doc">
+  <h1>stream_i_buildkit_index_v1.html</h1>
+  <p class="subtitle">Stream I "build kit" — entry point for coding sessions &nbsp;·&nbsp; Stream I session I.1 &nbsp;·&nbsp; May 10, 2026</p>
+
+  <div class="notice">
+    <p>This document is the <strong>top of the coding-session reading stack</strong>. A coding session implementing module X reads this index, then the Stream I spec for X, then the READMEs of the modules X depends on. Coding sessions do not read original stream documents (Article XI § 2). The cross-module integration contracts live in the sibling doc <code>stream_i_contracts_v1.html</code>.</p>
+  </div>
+
+  <h2>What's in the build kit</h2>
+  <ul>
+    <li><strong>This document</strong> (<code>stream_i_buildkit_index_v1.html</code>) — the entry point. Reading order, module map, v1 acceptance criteria, implementation sequence with dependencies. Written by I.1.</li>
+    <li><strong>Cross-module integration contracts</strong> (<code>stream_i_contracts_v1.html</code>) — TypeScript interfaces between every pair of modules. The canonical type surface. Written by I.1.</li>
+    <li><strong>v1 project skeleton</strong> (<code>argmap_v1_skeleton.zip</code>) — drop-in repo with all build configuration, ESLint determinism gates, custom plugin scaffold, CI workflow, and module placeholders. Written by I.1; the user drops it into a fresh repo before I.2 begins.</li>
+    <li><strong>Per-module Stream I spec docs</strong> — one per <code>src/X/</code> module. Each gives TypeScript signatures internal to the module, function contracts, acceptance tests, and integration points to other modules. Written by I.2–I.9 (one session each, possibly more for UI).</li>
+    <li><strong>v1 acceptance test plan</strong> — user-facing scenarios. Written by I.10.</li>
+  </ul>
+
+  <h2>How a coding session reads this</h2>
+  <p>A coding session implementing module X loads exactly the following, in order:</p>
+  <ol>
+    <li>The Constitution and Protocol (automatic via project instructions; also mirrored at <code>.claude/CLAUDE.md</code> in the repo so Claude Code sessions inherit them).</li>
+    <li><code>current_state.html</code> — the canonical state.</li>
+    <li><strong>This document.</strong> Skim the Module map and v1 acceptance criteria; read the Implementation sequence row for X.</li>
+    <li><code>stream_i_contracts_v1.html</code> — read the contract section for X and for every module X depends on.</li>
+    <li><code>stream_i_X_spec_v1.html</code> — the per-module spec. Read in full.</li>
+    <li>The README under each <code>src/Y/</code> whose API X calls. Written by prior coding sessions.</li>
+  </ol>
+  <p>The coding session does <strong>not</strong> read original stream documents (A–H). It does not read other modules' specs. It does not read other modules' source. The READMEs are the cross-session compression artifact; if a downstream session needs to know something about an upstream module, the answer lives in the README.</p>
+
+  <h2>Module map</h2>
+  <p>Stream-aligned per Stream H H4. Each module has a Stream I spec session and one or more coding sessions.</p>
+  <table>
+    <tr><th>Module</th><th>Source dir</th><th>Stream</th><th>Spec session</th><th>Brief</th></tr>
+    <tr><td>schema</td><td><code>src/schema/</code></td><td><span class="tag tag-stream">B</span></td><td>I.2</td><td>Types, validators, JSON envelope, MigrationRegistry. The dependency root.</td></tr>
+    <tr><td>runtime</td><td><code>src/runtime/</code></td><td><span class="tag tag-stream">C</span></td><td>I.3</td><td>The five-phase compute pipeline. The determinism boundary. Imports only schema.</td></tr>
+    <tr><td>persistence</td><td><code>src/persistence/</code></td><td><span class="tag tag-stream">H</span></td><td>I.4</td><td>Repository interface, Dexie-backed implementation, autosave, diff, search, BroadcastChannel.</td></tr>
+    <tr><td>state</td><td><code>src/state/</code></td><td>—</td><td>I.5</td><td>Zustand stores, React Context providers; the integration surface UI consumes.</td></tr>
+    <tr><td>modes</td><td><code>src/modes/</code></td><td><span class="tag tag-stream">D</span></td><td>I.6</td><td>Action surfaces (D1, D2), mode transitions (D3), orphan resolution, interview ordering.</td></tr>
+    <tr><td>layout</td><td><code>src/layout/</code></td><td><span class="tag tag-stream">E (E1)</span></td><td>I.7</td><td>ELK in a Web Worker. Pure layout against frame structure.</td></tr>
+    <tr><td>llm-hooks</td><td><code>src/llm-hooks/</code></td><td><span class="tag tag-stream">G</span></td><td>I.8</td><td>HookContract, LlmProvider, prompt loader, MockLlmProvider, hook implementations. Never imported by runtime.</td></tr>
+    <tr><td>ui</td><td><code>src/ui/</code></td><td><span class="tag tag-stream">E</span></td><td>I.9 (may split I.9a–I.9d)</td><td>React + React Flow + chrome. Three-pane Frame Building, two-pane Argument Running, version history, mode toggles, onboarding.</td></tr>
+  </table>
+
+  <h2>Implementation sequence with dependencies</h2>
+  <p>Spec sessions (I.2–I.10) land in order; coding sessions then implement against the spec docs and each module's README. Order honors the dependency graph in <code>stream_i_contracts_v1.html</code>; sessions can be parallelized within a layer.</p>
+  <table>
+    <tr><th>Spec session</th><th>Spec doc</th><th>Depends on</th><th>Then coding session(s)</th><th>Tool (recommendation)</th></tr>
+    <tr><td>I.2 (schema)</td><td><code>stream_i_schema_spec_v1.html</code></td><td>—</td><td>Single coding session implements <code>src/schema/</code>; writes <code>src/schema/README.md</code>.</td><td>Claude Code</td></tr>
+    <tr><td>I.3 (runtime)</td><td><code>stream_i_runtime_spec_v1.html</code></td><td>I.2 schema spec</td><td>One or two coding sessions: phases 1–3, then phases 4–5 + conditions + authority-binding. Writes <code>src/runtime/README.md</code>.</td><td>Claude Code</td></tr>
+    <tr><td>I.4 (persistence)</td><td><code>stream_i_persistence_spec_v1.html</code></td><td>I.2 schema spec</td><td>One coding session implements Repository interface + Dexie backend + autosave + diff + search + broadcast.</td><td>Claude Code</td></tr>
+    <tr><td>I.5 (state)</td><td><code>stream_i_state_spec_v1.html</code></td><td>I.2, I.3, I.4</td><td>One coding session implements Zustand stores + React Context.</td><td>Claude Code</td></tr>
+    <tr><td>I.6 (modes)</td><td><code>stream_i_modes_spec_v1.html</code></td><td>I.2, I.3, I.4</td><td>One coding session: D1, D2, D3, orphan resolution, interview ordering.</td><td>Claude Code</td></tr>
+    <tr><td>I.7 (layout)</td><td><code>stream_i_layout_spec_v1.html</code></td><td>I.2 schema spec</td><td>One coding session: ELK Web Worker + bridge.</td><td>Either</td></tr>
+    <tr><td>I.8 (llm-hooks)</td><td><code>stream_i_llm_hooks_spec_v1.html</code></td><td>I.2, I.4</td><td>One coding session implements contracts.ts + Anthropic provider + MockLlmProvider + prompt loader; per-hook implementations land in subsequent passes (G1, G2, G3, G5, G6, G8, G9, G11, G13 ship in v1; G7, G10, G12 ship contracts only with deterministic fallbacks).</td><td>Claude Code</td></tr>
+    <tr><td>I.9 (ui)</td><td><code>stream_i_ui_spec_v1.html</code> (may split)</td><td>I.2, I.5, I.6, I.7, I.8</td><td>3–4 coding sessions: chrome + canvas/primitives, frame-building, argument-running, version-history + onboarding.</td><td>Codex</td></tr>
+    <tr><td>I.10 (acceptance)</td><td><code>stream_i_acceptance_spec_v1.html</code></td><td>All of the above</td><td>Integration session: end-to-end Playwright scenarios constituting v1 ship.</td><td>Either</td></tr>
+  </table>
+  <p>Estimated coding sessions for v1: 12–15. Each writes code in <code>src/X/</code>, tests in <code>tests/X/</code>, and updates <code>src/X/README.md</code> as the cross-session compression artifact.</p>
+
+  <h2>v1 acceptance criteria — high level</h2>
+  <p>Detailed end-to-end scenarios are I.10's deliverable. The high-level criteria below let coding sessions know what the bar is.</p>
+  <ol>
+    <li><strong>Determinism gate (Article II § 2).</strong> The CI iteration-order audit step passes on every PR. The runtime ESLint boundary passes on every PR. The runtime test suite runs under a frozen clock and produces byte-identical snapshot outputs on every run.</li>
+    <li><strong>Frame Building (legal + general modes).</strong> The user can create a frame, switch modes/flavor at frame creation, add every node type from the palette, create every edge type via the drag-from-handle gesture (filtered by valid pairs per V-EDGE-1), edit fields in the inspector, edit per-instance <code>options_box</code> on Checkpoint/Question/Interpretation nodes, save milestones, and use version history (preview, restore, structural diff). C5 strict validation runs on the Frame → Argument transition; errors block, warnings advise.</li>
+    <li><strong>Argument Running.</strong> The user can create a session against a FrameVersion, run the open-items interview in the deterministic order, answer Checkpoints (boolean / multiple_choice / graded), select Interpretations, attach Premises (with optional Authority refs in legal mode), see the three output views (path overlay default, decision tree, prose summary) update on every change, and see the status palette (5 states + sub-flags) consistently across canvas, outline tree, interview pane.</li>
+    <li><strong>Persistence (Stream H).</strong> Auto-save with the 5s/30s debounce works. Frame and ArgumentSession version histories are independent. Frame template deep-copy, session migration, and version restore are atomic. Search works across title/description/node text/tags/Conclusion statements. Cross-tab editing surfaces last-write-wins via BroadcastChannel without data loss in the worst case.</li>
+    <li><strong>Mode transitions (Stream D D3).</strong> Frame → Argument runs C5 strict and prompts for session choice on pass. Argument → Frame surfaces FrameVersion drift on return. Architectural mode change (legal ↔ general) groups blocking vs. advisory items and provides inline editors for blocking items. Flavor change commits immediately with an advisory list.</li>
+    <li><strong>LLM hooks (Stream G ship list).</strong> The hook contracts are wired and the Mock provider drives all hook tests deterministically. G1, G2, G3, G5, G6, G8, G9, G11, G13 ship with prompts; G7, G10, G12 ship interfaces with deterministic non-LLM fallbacks. Build-time hooks bake-and-commit; the audit log on <code>LlmSettings.invocations</code> populates correctly. The Anthropic provider works in dev when an API key is present; production builds gate it behind user opt-in.</li>
+    <li><strong>Onboarding (E7).</strong> First-time wizard works opt-out. Coachmarks fire once each, are dismissible, and are tracked per-user. Glossary tooltips and panel work in both modes.</li>
+    <li><strong>Export / import.</strong> A frame round-trips through <code>FrameExport</code> JSON without data loss. A session round-trips through <code>ArgumentSessionExport</code> with embedded frame.</li>
+  </ol>
+  <p>"Ships" means: <code>npm run ci</code> + <code>npm run test:e2e</code> are green from a clean checkout, and a manual run-through of the I.10 acceptance plan succeeds.</p>
+
+  <h2>v1 dependency set (already pinned in package.json)</h2>
+  <table>
+    <tr><th>Dependency</th><th>Role</th></tr>
+    <tr><td><code>react</code>, <code>react-dom</code></td><td>UI framework</td></tr>
+    <tr><td><code>@xyflow/react</code></td><td>React Flow canvas (Stream H H4 selection)</td></tr>
+    <tr><td><code>elkjs</code></td><td>ELK in a Web Worker for Sugiyama layout</td></tr>
+    <tr><td><code>zustand</code></td><td>Frame/session state stores</td></tr>
+    <tr><td><code>dexie</code></td><td>IndexedDB wrapper</td></tr>
+    <tr><td><code>vite</code>, <code>@vitejs/plugin-react</code></td><td>Build + dev server</td></tr>
+    <tr><td><code>typescript</code></td><td>Strict type-checking</td></tr>
+    <tr><td><code>vitest</code>, <code>fast-check</code>, <code>@vitest/coverage-v8</code></td><td>Unit + property tests + coverage</td></tr>
+    <tr><td><code>@playwright/test</code></td><td>E2E</td></tr>
+    <tr><td><code>eslint</code>, <code>typescript-eslint</code>, <code>eslint-plugin-react-hooks</code></td><td>Lint</td></tr>
+    <tr><td><code>eslint-plugin-argmap-determinism</code></td><td>Custom <code>no-unsorted-iteration</code> rule (in-repo workspace package)</td></tr>
+    <tr><td><code>prettier</code></td><td>Format</td></tr>
+  </table>
+  <p>No additional dependency may be added without flagging the addition under Article X. Dependencies that read the clock or environment cannot be imported from <code>src/runtime/</code> regardless (ESLint-enforced).</p>
+
+  <h2>What ships in the I.1 skeleton</h2>
+  <p>The <code>argmap_v1_skeleton.zip</code> artifact contains a runnable repo. From a fresh checkout:</p>
+  <pre><code>unzip argmap_v1_skeleton.zip
+cd argmap_v1
+npm install
+npm run ci             # passes from a clean checkout
+npm run dev            # placeholder page renders at http://localhost:5173</code></pre>
+  <p>Concrete contents:</p>
+  <ul>
+    <li><strong>Build configuration.</strong> <code>package.json</code> (full H4 dependency set, scripts), <code>tsconfig.json</code> + <code>tsconfig.node.json</code> (strict), <code>vite.config.ts</code> (with <code>@</code> path alias), <code>vitest.config.ts</code> (fake-timers default with frozen clock at 2026-05-10T00:00:00Z), <code>playwright.config.ts</code>, <code>.prettierrc</code>/<code>.prettierignore</code>, <code>.gitignore</code>.</li>
+    <li><strong>Determinism gates.</strong> <code>eslint.config.js</code> (flat config) wires <code>no-restricted-imports</code> for the runtime boundary and the custom <code>argmap-determinism/no-unsorted-iteration</code> rule. The custom plugin lives in <code>eslint-plugin-argmap-determinism/</code> as a workspace package: <code>index.js</code> + <code>rules/no-unsorted-iteration.js</code> + a <code>node:test</code>-based smoke suite.</li>
+    <li><strong>CI workflow.</strong> <code>.github/workflows/ci.yml</code> runs typecheck + lint + format check + Vitest + the plugin's self-test + a distinct iteration-order audit step on every PR; a separate Playwright job runs E2E tests after build.</li>
+    <li><strong>.claude/CLAUDE.md.</strong> Full Constitution and Protocol verbatim. Claude Code sessions inherit the rule set automatically.</li>
+    <li><strong>Module placeholders.</strong> <code>src/{schema,runtime,persistence,state,modes,layout,ui,llm-hooks}/</code> each with an empty <code>index.ts</code> (so cross-module imports compile during scaffold) and a README pointing at the relevant Stream I spec to be written. <code>src/runtime/iteration-helpers.ts</code> ships with working <code>sortedIter</code>, <code>sortedKeys</code>, <code>sortedEntries</code>.</li>
+    <li><strong>App entry.</strong> <code>index.html</code>, <code>src/main.tsx</code>, <code>src/App.tsx</code> render a minimal placeholder so <code>npm run dev</code> boots from a fresh checkout and the E2E smoke test passes.</li>
+    <li><strong>Smoke tests.</strong> <code>tests/runtime/iteration-helpers.test.ts</code> verifies the helpers and the frozen clock; <code>tests/e2e/smoke.spec.ts</code> verifies the placeholder page renders.</li>
+  </ul>
+
+  <h2>Determinism — the implementation contract restated</h2>
+  <p>Every coding session must understand this. Article II § 2 is non-negotiable. The implementation-level contract has three parts, all enforced by tooling shipped in I.1:</p>
+  <ol>
+    <li><strong>Module boundary.</strong> <code>src/runtime/</code> imports only <code>@/schema</code> and standard built-ins. Forbidden: <code>@/persistence</code>, <code>@/ui</code>, <code>@/state</code>, <code>@/llm-hooks</code>, <code>@/modes</code>, <code>@/layout</code>; React, Dexie, Zustand, ELK, anything that reads the clock or DOM. Enforced by <code>no-restricted-imports</code> in <code>eslint.config.js</code>.</li>
+    <li><strong>Sort before iterate.</strong> Every iteration over a <code>Set</code>, <code>Map</code>, or plain object inside <code>src/runtime/</code> uses one of <code>sortedIter</code>, <code>sortedKeys</code>, <code>sortedEntries</code> from <code>iteration-helpers.ts</code>. Enforced by the custom <code>argmap-determinism/no-unsorted-iteration</code> rule.</li>
+    <li><strong>Frozen clock in tests.</strong> Every test in <code>tests/runtime/</code> runs with fake timers and a frozen clock (configured in <code>vitest.config.ts</code>). Property tests (Stream I.3) run each case twice with different frozen times to surface incidental clock dependencies.</li>
+  </ol>
+  <p>If a coding session encounters a case where one of these gates seems to forbid a necessary thing, the session must:</p>
+  <ul>
+    <li>Look first for a way to refactor that respects the gate (almost always available).</li>
+    <li>If after analysis the gate appears to truly conflict with a needed capability, log an in-session-escalated flag (Article X § 1) explaining the conflict, and propose a refactor or an explicit, narrow-scope exception. Do not silently weaken any of the three gates. They implement Article II § 2 directly; a silent weakening is an Article V § 3(b) escalation trigger.</li>
+  </ul>
+
+  <h2>Repo layout the skeleton ships</h2>
+  <pre><code>argmap_v1/
+├── .claude/CLAUDE.md                # Constitution + Protocol verbatim
+├── .github/workflows/ci.yml
+├── .gitignore
+├── .prettierrc, .prettierignore
+├── README.md
+├── eslint.config.js                 # flat config; runtime boundary + custom rule
+├── eslint-plugin-argmap-determinism/
+│   ├── index.js
+│   ├── package.json
+│   ├── rules/no-unsorted-iteration.js
+│   └── tests/no-unsorted-iteration.test.js
+├── index.html
+├── package.json
+├── playwright.config.ts
+├── src/
+│   ├── App.tsx, main.tsx
+│   ├── schema/      (placeholder + README)
+│   ├── runtime/     (placeholder + README + iteration-helpers.ts)
+│   ├── persistence/ (placeholder + README)
+│   ├── state/       (placeholder + README)
+│   ├── modes/       (placeholder + README)
+│   ├── layout/      (placeholder + README)
+│   ├── ui/          (placeholder + README)
+│   └── llm-hooks/   (placeholder + README + prompts/.gitkeep)
+├── tests/
+│   ├── setup.ts
+│   ├── runtime/iteration-helpers.test.ts
+│   ├── e2e/smoke.spec.ts
+│   └── (schema, persistence, modes, llm-hooks: empty, populated by spec sessions)
+├── tsconfig.json, tsconfig.node.json
+├── vite.config.ts
+└── vitest.config.ts</code></pre>
+
+  <h2>Token-economy reminders for spec authors (I.2–I.10)</h2>
+  <p>Per Stream H consolidation in <code>current_state.html</code> "Token-optimization principles":</p>
+  <ul>
+    <li>Each Stream I spec doc cites cross-module integration contracts by section name in <code>stream_i_contracts_v1.html</code>; do not re-state them.</li>
+    <li>Each spec doc commits its module's acceptance tests in Vitest form. The tests are compressed contracts — they bound implementation freedom and let the coding session implement-until-green.</li>
+    <li>The README under <code>src/X/</code> is the cross-session compression artifact. Write it to be read, not exhaustive; it should answer "what does X expose, and what should I avoid breaking?" in one screen.</li>
+    <li>Each spec doc is read at most twice — once by I.1 author for cross-module ratification, once by the coding session that implements the module. Optimize accordingly.</li>
+  </ul>
+
+  <h2>I.1 self-review (Article VIII § 4)</h2>
+
+  <h3>Architectural commitments (Article II)</h3>
+  <ul>
+    <li><strong>§ 1 Frame/Argument Split.</strong> Honored. The contracts in <code>stream_i_contracts_v1.html</code> separate Frame/FrameVersion (frame layer) from ArgumentSession/ArgumentSessionVersion (argument layer); session embeds a frame snapshot. Module structure isolates frame-construction (modes D1, schema, validation) from argument-running (modes D2, runtime).</li>
+    <li><strong>§ 2 Determinism.</strong> Honored, and operationally enforced by three tooling gates shipping in the skeleton: ESLint runtime-boundary, ESLint <code>no-unsorted-iteration</code>, frozen-clock Vitest. The CI workflow exercises all three on every PR. The contract for <code>compute()</code> is fixed in <code>stream_i_contracts_v1.html</code> Contract 2 with the byte-identity guarantee.</li>
+    <li><strong>§ 3 Per-Node Satisfaction Criteria.</strong> Honored. <code>SatisfactionPolicy</code> and the 12-condition library are pinned in <code>schema/satisfaction-policy</code> per the contracts doc; <code>options_box</code> is on NodeBase per Stream B.</li>
+    <li><strong>§ 4 Independent Versioning.</strong> Honored. Repository.saveFrameVersion / saveSessionVersion are separate. Stream H atomicity contracts (frame-template deep-copy, session migration, restore) are exposed in the contracts doc as composite Repository operations.</li>
+    <li><strong>§ 5 Human-Readable Structure.</strong> Honored. The schema (per Stream B) carries the logic; no hidden ordering enters the runtime. <code>Term.order</code> is documented as a foreclosure-resolution + UI-default-presentation field only.</li>
+    <li><strong>§ 6 Use-Case Commitment.</strong> Honored. Both legal and general modes (with personal/academic flavors) are first-class. Mode-aware schema behavior is a contract in Stream B; mode-aware UI surface visibility is a Stream D and Stream E concern preserved in the buildkit's per-module references.</li>
+  </ul>
+
+  <h3>Quality criteria (Article III)</h3>
+  <ul>
+    <li><strong>§ 1 Correctness.</strong> The contracts re-state the canonical signatures from Streams B/C/G/H rather than re-derive them; the skeleton's tooling enforces the determinism contract that Correctness depends on for the runtime.</li>
+    <li><strong>§ 2 Legal Practice Fit.</strong> The buildkit preserves all legal-mode surfaces (Authority, jurisdiction, BINDING_IN, DISTINGUISHED_BY, burden_level, standard_of_review, F5/F6 stub) in the module map and contracts. F6-v2 wire-in path is documented as a deferred contract under Cross-cutting in the contracts doc.</li>
+    <li><strong>§ 3 Determinism and Auditability.</strong> Three tooling gates plus the HookInvocationRecord audit trail. Both load-bearing.</li>
+    <li><strong>§ 4 Clarity.</strong> The skeleton's module READMEs each fit on one screen; the buildkit index walks the full reading order in one place; the contracts doc is broken into eight per-module sections plus three cross-cutting sections.</li>
+    <li><strong>§ 5 Reversibility.</strong> Stream I docs are versioned (<code>_v1</code>); contracts changes bump to <code>_v2</code> rather than rewriting. The skeleton's customizations (ESLint rules, the custom plugin) are local to the repo and replaceable. Dependency choices are minimal and replaceable behind their respective abstractions (Repository for storage, LlmProvider for LLMs).</li>
+    <li><strong>§ 6 Interface Fit.</strong> A coding session reads (1) Constitution, (2) current_state.html, (3) this index, (4) one contracts doc, (5) one spec doc, (6) zero-or-a-few dependent-module READMEs. Estimated reading load before useful work begins: well within one tractable session.</li>
+  </ul>
+
+  <h3>Article V § 3 escalation triggers — recheck</h3>
+  <ul>
+    <li><strong>(a) Reverses a user-stated strategy.</strong> No. The buildkit follows the user's planning-session decisions (Stream I structure, two-tool split, token-optimization principles) without revision.</li>
+    <li><strong>(b) Reverses or weakens an Article II commitment.</strong> No. The skeleton's tooling reinforces Article II § 2; nothing here weakens any Article II provision.</li>
+    <li><strong>(c) Two Article II commitments conflict and the conflict is unresolvable from the Constitution.</strong> No. The contracts doc resolves all observed cross-stream interactions (e.g., G5 calibrated thresholds reaching <code>compute()</code> via FrameVersion projection rather than Frame-on-runtime; G6 prose rewrite living on ArgumentSessionVersion in a parallel field). Both have register-flag precedent (F-001, F-002).</li>
+    <li><strong>(d) Forecloses a use case.</strong> No. Both modes preserved.</li>
+    <li><strong>(e) Anthropic safety policies require user input.</strong> No.</li>
+    <li><strong>(f) Constitution silent or contradictory on a substantial question.</strong> One discretionary call: putting cross-module contracts in a sibling doc (<code>stream_i_contracts_v1.html</code>) rather than inline in this index. The user explicitly delegated this choice ("at the agent's discretion"); Article V § 2(c) covers it; not a § 3 trigger.</li>
+  </ul>
+
+  <h3>In-session flags</h3>
+  <p>None. No Stream B/C/D/E/H/G shape is altered; no register flag is generated. The discretionary sibling-doc choice is documented above and in Persistence; it is below the Article X § 1 escalation threshold (it does not reverse a prior stream decision and is not non-obvious).</p>
+
+</div>

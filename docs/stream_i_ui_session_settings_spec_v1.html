@@ -1,0 +1,511 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 18px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 18px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+  .doc .anchor { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
+  .doc pre { font-family: var(--font-mono); font-size: 11px; line-height: 1.65; background: var(--color-background-secondary); padding: 12px 14px; border-radius: var(--border-radius-md); overflow-x: auto; color: var(--color-text-primary); margin: 8px 0 14px; }
+  .doc pre code { background: none; padding: 0; font-size: 11px; }
+  .doc .file-header { font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 22px 0 6px; padding-top: 14px; border-top: 0.5px solid var(--color-border-tertiary); }
+</style>
+<div class="doc">
+  <h1>stream_i_ui_session_settings_spec_v1.html</h1>
+  <p class="subtitle">Per-module spec for <code>src/ui/session-settings/</code> &nbsp;·&nbsp; Stream I session I.9d3 &nbsp;·&nbsp; May 11, 2026</p>
+
+  <div class="notice">
+    <p>This document is the implementation source of truth for <code>src/ui/session-settings/</code> — the session-settings panel the I.9c <code>buildTopBarSlots</code> reserves a placeholder slot for and the I.9c <code>ModeFlavorChip.onOpenSettings</code> wires its callback into. The panel is the argument-running parallel to I.9b's <code>FrameSettingsPanel</code>: a right-edge <code>Drawer</code> with labeled sections that compose section-local form state read directly from <code>useSessionStore</code>, dispatching <code>SessionPatch</code> on change. The panel is page-local — reached only from <code>ArgumentRunningPage</code> — so its open-state is lifted into the page, following the F-007 page-local-dialog precedent rather than the F-006 App-level pane precedent. This spec commits per-file TypeScript signatures and behavioral contracts for: the panel shell (<code>session-settings-panel.tsx</code>); the metadata section (title + description); the G6 remove-rewrite section that dispatches the new <code>output_overrides_cleared</code> SessionPatch kind; the G12 cross-implication advisory section that displays the frame-scope <code>llm_settings</code> read-only with a "change in frame settings" affordance; the archive-and-delete section parallel to I.9b's pin-archive-delete (with Pin omitted — see "What this spec does not commit"); the page-level refinements lifting the dialog open-state into <code>ArgumentRunningPage</code>; and the small <code>buildTopBarSlots</code> deps extension that replaces the I.9c-disabled placeholder IconButton with a real callback.</p>
+    <p style="margin-top:6px;">Six cross-spec refinements are committed and held in the consolidated F-008 register flag in the same F-003 / F-004 / F-005 / F-006 / F-007 family pattern: (1) a new <code>SessionPatch</code> kind <code>output_overrides_cleared</code> in the state spec that atomically clears <code>ArgumentSessionVersion.output_overrides</code> in one new ArgumentSessionVersion; (2) a new <code>SessionActionDispatchTable.output_overrides_cleared</code> entry in the modes spec as a synchronous pure transformation; (3) an additive <code>ArgumentSession.archived: boolean</code> field in the schema spec (parallel to F-004's <code>Frame.archived</code>); (4) extension of <code>session_metadata_edited.partial</code>'s Pick tuple to include <code>archived</code> (parallel to the F-004 + F-007 pattern on the frame side); (5) a new <code>AppStateStore.deleteSession(session_id: SessionId): Promise&lt;void&gt;</code> orchestration wrapper in the state spec, parallel to the I.9b-implied <code>app_state_store.deleteFrame</code>; (6) extension of <code>ArgumentRunningTopBarDeps</code> in the argument-running spec to include <code>on_open_session_settings: () =&gt; void</code>, replacing the I.9c "disabled placeholder" notation with a real callback that the page wires from its own session-settings-panel open-state. Downstream coding sessions are not gated on a contracts-doc bump; the per-module specs are canonical per Stream I conventions.</p>
+  </div>
+
+  <h2>How to read this</h2>
+  <p>The coding session implementing <code>src/ui/session-settings/</code> reads, in order: Constitution and Protocol, <code>current_state.html</code>, <code>stream_i_buildkit_index_v1.html</code>, <code>stream_i_ui_chrome_canvas_spec_v1.html</code> (the <code>Drawer</code>, <code>SegmentedToggle</code>, <code>IconButton</code>, <code>ConfirmDialog</code>, <code>AiAttributionChip</code> primitives this spec composes; the <code>ModeFlavorChip.onOpenSettings</code> wiring; the <code>chrome/top-bar.tsx</code> slot layout the I.9c <code>buildTopBarSlots</code> populates), <code>stream_i_ui_frame_building_spec_v1.html</code> (the <code>FrameSettingsPanel</code> as the structural parallel — section organization, the metadata section's title/description bind-through-store-no-local-form-state pattern, the pin-archive-delete section's three-control layout, F-004's <code>archived</code> field flow through the <code>metadata_edited</code> partial-target tuple), <code>stream_i_ui_argument_running_spec_v1.html</code> (the I.9c-disabled IconButton in <code>buildTopBarSlots</code> the panel will activate; the <code>chips</code>-slot <code>ModeFlavorChip.onOpenSettings</code> placeholder; the F-005 callback-prop pattern; the prose tab's "Remove rewrite" affordance currently disabled with a Tooltip), <code>stream_i_ui_mode_change_migration_spec_v1.html</code> (the F-007 page-local-dialog mounting pattern as the precedent; the per-page-local-state useReducer/useState handler convention), <code>stream_i_state_spec_v1.html</code> (<code>SessionStore</code>, <code>SessionPatch</code> union, <code>session_metadata_edited</code> dispatch; <code>AppStateStore</code> surface for the <code>deleteSession</code> wrapper added by F-008; F-007's <code>SessionStore.previewMigration</code> as the precedent shape for new SessionStore wrapper methods), <code>stream_i_schema_spec_v1.html</code> (<code>ArgumentSession</code> shape, <code>ArgumentSessionVersion.output_overrides</code> field shape from F-002, <code>LlmSettings</code> shape on Frame), <code>stream_i_llm_hooks_spec_v1.html</code> (G6 prose-rewrite output_overrides commit pattern; G12 cross-implications hook with v1 no-op fallback and per-frame opt-in commitment), <code>stream_i_persistence_spec_v1.html</code> (the <code>Repository.deleteSession</code> method the new <code>AppStateStore.deleteSession</code> wraps), <code>stream_g_llm_hooks_v1.html</code> (G6 + G12 design background and the per-frame opt-in commitment for runtime sidecar hooks), <code>src/ui/README.md</code> (the I.9a substrate cross-session compression artifact), <code>src/state/README.md</code> (the I.5 cross-session compression artifact), <code>src/modes/README.md</code> (the I.6 cross-session compression artifact), and this document. No prior stream documents A–H beyond Stream G are read; the consolidated state in <code>current_state.html</code> plus this per-module spec is the design surface. Implement-until-green against the Vitest tests at the end of this document; write <code>src/ui/session-settings/README.md</code> as the cross-session compression artifact for I.9d4 / I.10.</p>
+
+  <h2>What this spec does not commit</h2>
+  <p>This spec deliberately omits:</p>
+  <ul>
+    <li><strong>The onboarding wizard and coachmark machinery</strong> (I.9d4 scope). The session-settings panel does not host a "reset coachmarks for this session" affordance; coachmark dismissals are AppState-scoped (per F-007's read of <code>selectCoachmarkDismissed</code>), so resetting is a frame-or-app-level concern that I.9d4 places elsewhere.</li>
+    <li><strong>Pin (in the v1 panel).</strong> The current_state.html description says "Pin / Archive / Delete (parallel to I.9b's pin-archive-delete section)," but sessions have no schema-level pinning surface analogous to <code>AppState.pinned: FrameId[]</code>: there is no <code>AppState.pinned_sessions</code>, no <code>ArgumentSession.pinned: boolean</code>, no v1 home-screen surface that surfaces pinned sessions, and no session-switching UI in I.9b's "Open existing session" flow (lines 183 of <code>stream_i_ui_frame_building_spec_v1.html</code>) that consumes a session-pin state. Adding session-pinning as part of I.9d3 would require either inventing a new pinning semantic ("mark as the user's primary session for this frame" — a domain concept the existing design does not commit) or adding a new <code>AppState.bookmarked_session_by_frame</code> map (additive but consumed by zero v1 surfaces, so the affordance does nothing visible). Both options are speculative; Article III § 5 (Reversibility) and § 6 (Interface Fit) favor omitting Pin until a consuming surface emerges. The decision is within Article V § 2(c) and § 2(e). When a consuming surface lands (likely a frame-side "default session" affordance or a session-list in the home screen), Pin can be added additively. The section is therefore named <strong>Archive and Delete</strong> in this v1 spec; if a future session reinstates Pin, the section is renamed to match without breaking the file or the field shapes.</li>
+    <li><strong>Cross-session output-override "permanent suppression."</strong> The phrase "Remove rewrite permanently for this session" in current_state.html is interpreted at the per-version semantic: dispatching <code>output_overrides_cleared</code> creates a new <code>ArgumentSessionVersion</code> with <code>output_overrides</code> set to undefined, which is the canonical "no rewrite present for this session" state until the user manually re-invokes G6. There is no parallel session-scope flag preventing G6 from ever being invoked again on this session — invocation is always user-initiated per Stream G's "G6 manual trigger" contract, so "permanent suppression" is achieved by the user simply not re-invoking. If a future session adds an opt-out flag (<code>ArgumentSession.g6_disabled: boolean</code>), it joins additively.</li>
+    <li><strong>A session-scope G12 override.</strong> Per the conceptual question's resolution at session-start (recorded under "Conceptual question resolution" below), the G12 toggle in the session-settings panel reads the frame-scope <code>llm_settings.runtime_hooks_enabled</code> and <code>llm_settings.per_hook_enabled?.cross_implications</code> read-only and renders a "change in frame settings" link rather than introducing a session-scope override field. No new schema is added for G12; the panel surfaces existing state.</li>
+    <li><strong>Tech-stack decisions.</strong> The drawer primitive, focus mechanics, segmented-toggle composition, confirmation-dialog wrapping, and React Flow integration come from the I.9a substrate; this spec composes them without restating their internals. The visual-polish tokens (color, typography, spacing, motion) come from <code>stream_e_visual_polish_v1.html</code> via the I.9a token surface.</li>
+    <li><strong>App-level mount.</strong> The session-settings panel is reached only from <code>ArgumentRunningPage</code>. The F-006 App-level pattern (a single mount serving multiple pages via <code>useRoute()</code>) does not apply. <code>app-routes.tsx</code> is not touched by this session. The F-007 page-local-dialog precedent governs.</li>
+  </ul>
+
+  <h2>Conceptual question resolution (recorded at session start)</h2>
+
+  <p>The I.9d2 self-review surfaced one conceptual question for I.9d3: does the G12 toggle in the session-settings panel display the frame-scope <code>llm_settings.runtime_hooks_enabled</code> read-only with a "change in frame settings" link (no new schema), or add a session-scope override field (additive schema extension)? Applying Article IV § 4 (substantial-hesitation test) at session start:</p>
+  <ul>
+    <li><em>(a) Multiple defensible options with material downstream consequences not clearly addressed by the Constitution or prior user direction?</em> Two defensible options. The downstream consequences, however, are clearly addressed by Stream G: <code>stream_g_llm_hooks_v1.html</code> line 729 states "Runtime sidecar hooks (G11, G12): disabled by default in v1. <em>The user opts in per-frame in Frame settings;</em> G11 also has a one-time per-frame confirmation dialog…" The per-frame opt-in is a Stream G design commitment. Under Article VI § 1, Stream G as a working document binds agent judgment unless the Constitution overrides; the Constitution does not. Option A directly honors the Stream G commitment; Option B would contradict it.</li>
+    <li><em>(b) Reasoning depends on inferences about user preferences not directly supported?</em> No. The choice is reachable from constitutional principles (Article III § 5 Reversibility, § 6 Interface Fit) and the prior-stream commitment alone.</li>
+    <li><em>(c) Decision commits the project to a path costly to retreat from?</em> Option A is more reversible. If a future session decides session-scope override is needed, adding the field is trivially additive (no migration; new field starts undefined and the resolution rule defaults to frame-scope when absent). Option B locks in a schema commitment that may never be exercised in v1 — G12 ships a no-op fallback per <code>stream_i_llm_hooks_spec_v1.html</code> line 1445, so the override would have no v1 user-visible effect.</li>
+  </ul>
+  <p><strong>Decision: Option A.</strong> The G12 toggle row in the session-settings panel displays the current frame-scope state (an aggregate of <code>frame.llm_settings?.runtime_hooks_enabled</code> and the per-hook override, if any) read-only, with a link that — when clicked — closes the session-settings panel and opens the frame-settings panel via a navigation-and-callback pattern specified below. No new schema is added for G12 in this session. The decision is recorded in this spec; the substantial-hesitation test did not fire; no escalation to Zach is warranted. If, after v1 ships, user feedback indicates session-scope granularity is needed, a future session adds <code>ArgumentSession.llm_overrides?: { runtime_hooks_enabled?: boolean; per_hook_enabled?: { [hook_name: string]: boolean } }</code> with the resolution rule "session-scope wins over frame-scope when defined; otherwise frame-scope" — a pattern that compiles cleanly into the existing Stream G hook-activation discipline.</p>
+
+  <h2>File map — <code>src/ui/session-settings/</code></h2>
+
+  <table>
+    <tr><th>File</th><th>Role</th><th>Public exports</th></tr>
+    <tr><td><code>index.ts</code></td><td>Barrel; re-exports the panel component and its prop type, plus the section components for tests</td><td><code>SessionSettingsPanel</code>, <code>SessionSettingsPanelProps</code>, the four section components and their prop types</td></tr>
+    <tr><td><code>session-settings-panel.tsx</code></td><td>The panel. Renders as an I.9a <code>Drawer</code> (right-edge); composes the four labeled sections in canonical order: <strong>Metadata</strong>, <strong>Output rewrite</strong> (G6), <strong>Advisory notes</strong> (G12), <strong>Archive and Delete</strong>. Open state lives in <code>ArgumentRunningPage</code>; opened by the chrome's <code>ModeFlavorChip.onOpenSettings</code> callback and by the <code>buttons</code>-slot <code>IconButton</code>'s <code>onClick</code>. Closes on Escape, click-outside, or the explicit close button. The panel does not own form state — each section reads directly from <code>useSessionStore</code> and <code>useFrameStore</code> (the G12 section needs frame-side <code>llm_settings</code>) and dispatches patches on change, so closing and re-opening the panel never loses edits</td><td><code>SessionSettingsPanel</code>, <code>SessionSettingsPanelProps</code></td></tr>
+    <tr><td><code>metadata-section.tsx</code></td><td>Title and description fields. Title is the same field as the top-bar inline session-title editor (per I.9c top-bar wiring); both surfaces bind to the same SessionPatch path. Description is multiline. Both dispatch as <code>session_metadata_edited</code> patches with the matching subset of the partial-target Pick tuple. The section also reads <code>archived: boolean</code> (per F-008 refinement #3) and displays an archived banner inline at the top of the section when set, with a small "unarchive" affordance that dispatches <code>session_metadata_edited({ archived: false })</code></td><td><code>MetadataSection</code></td></tr>
+    <tr><td><code>g6-remove-rewrite-section.tsx</code></td><td>The G6 prose-rewrite affordance. Reads <code>current_version.output_overrides?.rewritten_prose</code> from <code>useSessionStore</code>. When undefined or empty, renders a single read-only paragraph: "No rewritten prose for this session. Use the 'Rewrite' button in the prose tab of the output viewer to generate one." When present, renders the rewritten prose preview (first ~120 chars with ellipsis), the <code>AiAttributionChip</code> labeled "G6 · rewritten {time-ago}" from F-002's hook-record fields, and a destructive "Remove rewrite" button that opens a <code>ConfirmDialog</code> (title: "Remove the rewritten prose?", body: "This creates a new session version (v{N+1}). The canonical deterministic output is unchanged."). Confirm dispatches <code>session_store.applyEdit({ kind: "output_overrides_cleared" })</code> (the new SessionPatch kind from F-008 refinement #1). The dialog is destructive-styled per the I.9a <code>ConfirmDialog</code> <code>destructive: true</code> prop</td><td><code>G6RemoveRewriteSection</code></td></tr>
+    <tr><td><code>g12-advisory-toggle-section.tsx</code></td><td>The G12 cross-implication advisory toggle. <strong>Read-only display + link affordance per the conceptual question resolution above.</strong> Reads <code>frame.llm_settings?.runtime_hooks_enabled</code> and <code>frame.llm_settings?.per_hook_enabled?.cross_implications</code> from <code>useFrameStore</code>; computes the effective enabled state via the pure helper <code>g12EffectiveEnabled(llm_settings)</code> exported from this file; renders a row with the label "Cross-implication advisories" on the left, a read-only status indicator (a non-interactive <code>Pill</code> with text "Enabled" / "Disabled" and the appropriate color) on the right, and below the row a small secondary-text paragraph "Set per-frame in <a>frame settings</a>." The link calls back to the page's <code>onOpenFrameSettings</code> handler (specified under Page-level refinements; the page closes the session-settings panel first, then navigates to frame-building and opens frame-settings via the existing I.9b mechanism). Below the link is a brief explanatory paragraph: "When enabled, the application offers advisory notes during Argument Running when a premise or interpretation has implications beyond the immediate item." A read-only display surface is the right shape because G12 v1 ships a no-op fallback (per <code>stream_i_llm_hooks_spec_v1.html</code> line 1445) — the toggle has no user-visible v1 effect; the row exists to make the per-frame setting discoverable from the session surface</td><td><code>G12AdvisoryToggleSection</code>, <code>G12AdvisoryToggleSectionProps</code>, <code>g12EffectiveEnabled</code></td></tr>
+    <tr><td><code>archive-delete-section.tsx</code></td><td>Two controls: <strong>Archive</strong> (toggle, writes <code>session.archived</code> via <code>session_metadata_edited({ archived: true })</code> per F-008 refinement #4; a tooltip explains "Archived sessions are hidden from the default open-existing-session list"), <strong>Delete session</strong> (destructive — opens a <code>ConfirmDialog</code> with explicit "type the session title to confirm" guard, parallel to I.9b's frame delete; the body reads "Deleting v{current_version_number} and all earlier versions cannot be undone."). Delete confirmation routes through <code>onDeleteSession</code> which the section's parent (the panel) re-exposes from the page. On the page side, <code>onDeleteSession</code> calls <code>session_store.close()</code>, then <code>app_state_store.deleteSession(session_id)</code> (the new method from F-008 refinement #5 wrapping <code>Repository.deleteSession</code>), then <code>navigate({ kind: "frame_building", frame_id: session.frame_id })</code>. The section is at the bottom of the panel and visually separated by an extra spacing band</td><td><code>ArchiveDeleteSection</code>, <code>ArchiveDeleteSectionProps</code></td></tr>
+  </table>
+
+  <h2>Cross-document resolution notes (for self-review)</h2>
+
+  <p>Six small refinements relative to prior I.9 sibling specs. Each is technical, additive (or wiring-promotion of placeholders the I.9c spec explicitly reserved), and within agent-autonomous scope per Article V § 2(c). All six are held in the consolidated F-008 register flag below in the same F-003 / F-004 / F-005 / F-006 / F-007 family pattern.</p>
+
+  <ol>
+    <li><strong>New <code>SessionPatch</code> kind: <code>output_overrides_cleared</code>.</strong> The G6 remove-rewrite affordance needs to atomically clear <code>ArgumentSessionVersion.output_overrides</code> in one new ArgumentSessionVersion. The existing <code>session_metadata_edited</code> patch operates on session-metadata fields only; G6's own <code>commit</code> writes <em>into</em> <code>output_overrides.rewritten_prose</code> (per <code>stream_i_llm_hooks_spec_v1.html</code> line 1197) — there is no patch shape that <em>clears</em> the override. The state spec's <code>SessionPatch</code> union gains <code>| { kind: "output_overrides_cleared" }</code> (a zero-payload patch — the action is fully determined by the kind). Parallel in spirit to F-004's <code>presentation_hints_reset_all</code> (zero-payload Frame-side atomic reset) and F-007's <code>architectural_mode_changed</code> (atomic-FramePatch family). The patch is <code>versioned: true</code> by virtue of being a SessionPatch — every session-side patch creates a new <code>ArgumentSessionVersion</code> in the normal autosave flow per <code>stream_i_state_spec_v1.html</code> behavioral contracts. Purely additive; no existing patch shape is changed.</li>
+
+    <li><strong>New dispatch-table entry in the modes spec.</strong> The modes spec's <code>SessionActionDispatchTable</code> gains <code>output_overrides_cleared</code> as a synchronous pure transformation: <code>(args: { current_session: ArgumentSession; current_version: ArgumentSessionVersion; deps: SessionActionDeps }) =&gt; SessionTransformResult</code>. The implementation produces a new <code>ArgumentSessionVersion</code> that copies every field from <code>current_version</code> except <code>output_overrides</code>, which is set to <code>undefined</code>; <code>created_at = deps.now()</code>; the version id is fresh from <code>deps.generateId()</code>; <code>parent_version_id</code> is <code>current_version.id</code>; <code>is_milestone: false</code>; <code>change_summary</code> is the constant string "Removed rewritten prose." The resulting <code>ArgumentSession.current_version_id</code> is updated to the new version id; <code>updated_at = deps.now()</code> (same value read once per dispatch per F-003 family discipline). Pure synchronous; deterministic (single <code>deps.now()</code>, no iteration that could depend on map ordering); no input validation is needed because the patch has no payload. The Vitest acceptance tests in the modes module cover the field-clearing semantics and the determinism property.</li>
+
+    <li><strong>Additive schema field: <code>ArgumentSession.archived: boolean</code>.</strong> Parallel to F-004's <code>Frame.archived: boolean</code>. The schema spec's <code>ArgumentSession</code> interface gains <code>archived: boolean</code> (default <code>false</code>; the schema-level default is enforced by Stream B B7's forward-compatible envelope — legacy sessions absent the field are read as <code>false</code>). This is a session-record-level flag (not on per-version snapshot), so it survives version restores and lives parallel to <code>title</code>, <code>description</code>, etc. The home-screen and session-switching surfaces filter archived sessions out of default lists; the consuming UI surfaces are out of scope for this spec (the I.9b "Open existing session" flow is a frame-building-side surface; surfacing of archived sessions in that flow is an I.9b-or-later refinement). The field is mutated through <code>session_metadata_edited</code> per refinement #4 below.</li>
+
+    <li><strong>Extension of <code>session_metadata_edited.partial</code> Pick tuple to include <code>archived</code>.</strong> The current Pick tuple in the state spec (line 276 of <code>stream_i_state_spec_v1.html</code>) is <code>Partial&lt;Pick&lt;ArgumentSession, "title" | "description"&gt;&gt;</code>. The session-settings panel dispatches <code>session_store.applyEdit({ kind: "session_metadata_edited", partial: { archived: true } })</code> for the archive toggle and <code>{ archived: false }</code> for unarchive. This refinement extends the tuple to <code>Partial&lt;Pick&lt;ArgumentSession, "title" | "description" | "archived"&gt;&gt;</code> in parallel to the F-004 + F-007 frame-side pattern (where <code>archived</code> joined the frame's metadata_edited Pick tuple and <code>flavor</code> joined it via F-007). The modes spec's <code>SessionActionDispatchTable.session_metadata_edited</code> entry already iterates the partial object's keys generically (per its existing behavioral contract) and applies each key to the matching field on <code>ArgumentSession</code>; no dispatch-table-body change is needed beyond widening the type.</li>
+
+    <li><strong>New <code>AppStateStore.deleteSession</code> method.</strong> The session-delete flow requires an orchestration wrapper that handles the close-then-delete sequence cleanly, parallel to the I.9b-implied <code>app_state_store.deleteFrame</code> (referenced in <code>stream_i_ui_frame_building_spec_v1.html</code> line 999 but not yet pinned on the <code>AppStateStore</code> interface in <code>stream_i_state_spec_v1.html</code> — a pre-existing gap that the consolidated F-003/F-004 contracts-doc bump is expected to close). The new method signature is <code>deleteSession(session_id: SessionId): Promise&lt;void&gt;</code>. Behavioral contract: the method delegates to <code>this.deps.repository.deleteSession(session_id)</code> (existing at <code>stream_i_persistence_spec_v1.html</code> line 801) inside a try/catch; on resolve, the method completes; on reject, the method re-throws with a wrapped <code>RepositoryError</code>. The page is responsible for calling <code>session_store.close()</code> <em>before</em> calling <code>app_state_store.deleteSession</code> (the call order matters because <code>session_store.close()</code> stops further autosave scheduling against the about-to-be-deleted session; reversing the order risks a write-after-delete race). The method does <em>not</em> remove the deleted session from any AppState-level cache (sessions are not enumerated in AppState; only Frames are, via <code>AppState.recents</code> and <code>AppState.pinned</code>). The session-versions are bulk-deleted by <code>Repository.deleteSession</code>'s own transaction. The method's parallel on the frame side — <code>app_state_store.deleteFrame</code> — is referenced by I.9b without being formally pinned; this refinement notes that both methods belong on the AppStateStore interface and that the future contracts-doc bump should formalize both together. The I.9b reference to <code>app_state_store.deleteFrame</code> remains the canonical surface for the frame side; this spec does not redefine it.</li>
+
+    <li><strong>Extension of <code>ArgumentRunningTopBarDeps</code> to include <code>on_open_session_settings</code>.</strong> The I.9c spec (lines 251 and 253 of <code>stream_i_ui_argument_running_spec_v1.html</code>) renders <code>&lt;ModeFlavorChip onOpenSettings={openSessionSettings} /&gt;</code> in the <code>chips</code> slot and a disabled <code>&lt;IconButton ... onClick={openSessionSettings} disabled /&gt;</code> in the <code>buttons</code> slot, where <code>openSessionSettings</code> is a forward reference that I.9c did not pin in the <code>ArgumentRunningTopBarDeps</code> interface (lines 234–243). I.9c reserved the name as a placeholder, with the IconButton rendered with <code>disabled</code> and a Tooltip "Available in I.9d." This refinement adds <code>on_open_session_settings: () =&gt; void</code> as a required field on <code>ArgumentRunningTopBarDeps</code>, and replaces the <code>disabled</code> attribute on the <code>buttons</code>-slot IconButton with the live callback. The <code>ModeFlavorChip</code>'s <code>onOpenSettings</code> remains required (it always was per the I.9a chrome contract); it now resolves to the live callback instead of the inert forward reference. The Tooltip is removed from the IconButton. The <code>buildTopBarSlots</code> function signature widens by exactly one deps field; the page passes its <code>openSessionSettingsPanel</code> handler as that field. No new component surfaces are introduced; this is wiring promotion.</li>
+  </ol>
+
+  <h2>Per-file specs</h2>
+
+  <div class="file-header">// src/ui/session-settings/session-settings-panel.tsx</div>
+  <p>The panel. Renders as an I.9a <code>Drawer</code> (right-edge, fixed width per the I.9a layout tokens — <code>--space-drawer-default</code>); composes the four labeled sections in canonical order: Metadata, Output rewrite, Advisory notes, Archive and Delete. Open state is owned by <code>ArgumentRunningPage</code> (page-local mount; F-007 precedent); opened by the chrome's <code>ModeFlavorChip.onOpenSettings</code> callback and by the <code>buttons</code>-slot <code>IconButton</code>'s <code>onClick</code>. Closes on Escape (the Drawer primitive's <code>dismissOnEscape</code> default), click-outside (Drawer default), or the panel's explicit close button (in the Drawer footer).</p>
+
+<pre><code>import * as React from "react";
+
+export interface SessionSettingsPanelProps {
+  open: boolean;
+  on_close: () =&gt; void;
+  /** Called when the user clicks the "change in frame settings" link in the
+      G12 section. The page closes the session-settings panel first, then
+      navigates to the frame-building route for the session's parent frame and
+      opens the frame-settings panel. */
+  on_open_frame_settings: () =&gt; void;
+  /** Called when the user confirms session deletion. The page closes the
+      session_store, calls app_state_store.deleteSession, and navigates back
+      to the parent frame. */
+  on_delete_session: () =&gt; void;
+}
+
+export function SessionSettingsPanel(props: SessionSettingsPanelProps): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. The panel renders the I.9a <code>Drawer</code> with <code>open={props.open}</code>, <code>onClose={props.on_close}</code>, <code>title="Session settings"</code>, and the body as a vertical scroll container holding the four sections in canonical order. The Drawer's <code>side="right"</code> is the default. The footer holds a single "Done" button (just calls <code>on_close</code>); destructive actions are inside Archive and Delete and have their own confirmation dialogs. The panel does not own any form state — each section reads from <code>useSessionStore</code> (and the G12 section additionally from <code>useFrameStore</code>) and dispatches patches on change. Closing the panel mid-edit and re-opening it preserves all in-flight values because the source-of-truth is the store, not the panel-local state. The panel passes <code>on_open_frame_settings</code> to the G12 section and <code>on_delete_session</code> to the Archive-and-Delete section. The Metadata and Output-rewrite sections take no extra props beyond their store reads.</p>
+
+  <p><em>Section render order</em>: Metadata first (the most common edit), then Output rewrite (G6 affordance — visible when an override exists; otherwise still rendered as a read-only "no rewrite present" line), then Advisory notes (G12), then Archive and Delete (destructive section, visually separated by a band per the I.9b precedent).</p>
+
+  <p><em>Visual hierarchy</em>: Each section has a small heading (<code>--text-sm-medium</code>), a body, and a thin divider between sections (a single <code>--color-border-tertiary</code> hairline, no extra heading-decoration). The Archive-and-Delete section is preceded by an extra spacing band (<code>--space-6</code>) and the destructive button uses <code>--color-severity-error</code> per the <code>ConfirmDialog</code>'s <code>destructive: true</code> prop. The G12 section's read-only display uses the <code>Pill</code> primitive with a neutral surface — no toggle interaction is presented because the row is read-only by the conceptual-question resolution.</p>
+
+  <p><em>Coexistence with the prose-tab "Remove" affordance</em>: The I.9c prose tab also exposes a "Remove" affordance for G6 rewrites (line 605 of <code>stream_i_ui_argument_running_spec_v1.html</code>, currently disabled with a Tooltip "Available in I.9d"). Both entry points dispatch the same <code>output_overrides_cleared</code> SessionPatch and produce the same result. The prose-tab "Remove" affordance is wired by I.9d3 as part of refinement #1 above: the implementing session enables the affordance (removes the <code>disabled</code> attribute and Tooltip) and wires its <code>onClick</code> to dispatch the new SessionPatch. The prose-tab affordance and the session-settings panel affordance use distinct visual treatments (the prose tab has a small "Remove" button beside the rewritten paragraph; the session-settings panel has a destructive button inside its G6 section), but both dispatch identically. The implementing session writes a small integration test asserting that dispatching from either surface produces the same patch payload and the same resulting <code>ArgumentSessionVersion</code> shape.</p>
+
+  <div class="file-header">// src/ui/session-settings/metadata-section.tsx</div>
+  <p>Title + description fields, with archived-banner-and-unarchive composed inline at the top when <code>session.archived === true</code>.</p>
+
+<pre><code>import * as React from "react";
+
+export function MetadataSection(): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. Fields: <strong>title</strong> (single-line text input bound to <code>session.title</code> via <code>session_store.applyEdit({ kind: "session_metadata_edited", partial: { title } })</code> on commit — the same path the I.9c top-bar inline session-title editor uses, so both surfaces stay in lockstep; commit fires on blur and on Enter, with Escape cancel restoring the prior value); <strong>description</strong> (multiline textarea bound to <code>session.description</code>; same commit pattern). Both fields use the I.9b precedent of dispatching only on commit (not on every keystroke) to avoid generating one SessionVersion per character.</p>
+
+  <p>When <code>session.archived === true</code>, the section renders an archived banner at the top: a single-line <code>--color-background-warning</code> surface with the text "This session is archived" and a small "Unarchive" link button that dispatches <code>session_store.applyEdit({ kind: "session_metadata_edited", partial: { archived: false } })</code>. The banner is rendered above the title field. When <code>session.archived === false</code>, the banner is absent; the section renders the two fields without a leading banner.</p>
+
+  <div class="file-header">// src/ui/session-settings/g6-remove-rewrite-section.tsx</div>
+  <p>The G6 prose-rewrite affordance in the session-settings panel. Conditionally rendered based on the presence of an override.</p>
+
+<pre><code>import * as React from "react";
+
+export function G6RemoveRewriteSection(): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. The section reads <code>current_version.output_overrides</code> from <code>useSessionStore</code>. Two render paths:</p>
+
+  <p><em>No override present</em> (<code>current_version.output_overrides === undefined</code> OR <code>current_version.output_overrides.rewritten_prose === undefined</code>): renders a single read-only paragraph in secondary text: "No rewritten prose for this session. Use the 'Rewrite' button in the prose tab of the output viewer to generate one." No interactive controls in this render path.</p>
+
+  <p><em>Override present</em> (<code>current_version.output_overrides?.rewritten_prose</code> is a non-empty string): renders a small block with three pieces.
+    <ul>
+      <li>The <code>AiAttributionChip</code> labeled "G6 · rewritten {time-ago}" where the time-ago is derived from <code>current_version.output_overrides.rewritten_at</code> via the I.9a time-ago helper (the same helper the I.9c prose tab uses).</li>
+      <li>A preview paragraph showing the first ~120 characters of <code>rewritten_prose</code> followed by an ellipsis when the full text is longer. Full text is available in the prose tab; the panel deliberately shows a preview only, to avoid duplicating the prose tab's primary surface.</li>
+      <li>A destructive "Remove rewrite" button (icon-button-ish, label visible) that opens a <code>ConfirmDialog</code> with:
+        <ul>
+          <li><code>title</code>: "Remove the rewritten prose?"</li>
+          <li><code>body</code>: "This creates a new session version (v{N+1}). The canonical deterministic output is unchanged."</li>
+          <li><code>confirmLabel</code>: "Remove rewrite"</li>
+          <li><code>cancelLabel</code>: "Cancel"</li>
+          <li><code>destructive</code>: <code>true</code></li>
+        </ul>
+        Confirm dispatches <code>session_store.applyEdit({ kind: "output_overrides_cleared" })</code> and closes the dialog. The session-settings panel itself remains open after the dispatch; the section re-renders into the "no override present" path on the next snapshot tick.
+      </li>
+    </ul>
+  </p>
+
+  <p>{N+1} interpolation in the body string uses <code>current_version.version_number + 1</code> read at render time. The implementing session writes a test that asserts the correct version number is interpolated for both v1 → v2 and v17 → v18 cases.</p>
+
+  <div class="file-header">// src/ui/session-settings/g12-advisory-toggle-section.tsx</div>
+  <p>The G12 cross-implication advisory display. Read-only per the conceptual-question resolution; surfaces frame-scope <code>llm_settings</code> with a "change in frame settings" link.</p>
+
+<pre><code>import * as React from "react";
+import type { LlmSettings } from "@/schema";
+
+export interface G12AdvisoryToggleSectionProps {
+  on_open_frame_settings: () =&gt; void;
+}
+
+export function G12AdvisoryToggleSection(
+  props: G12AdvisoryToggleSectionProps,
+): React.ReactElement;
+
+/** Pure helper: derives the effective enabled state for the G12 hook from the
+    frame's llm_settings. Returns true iff runtime_hooks_enabled is true AND
+    per_hook_enabled.cross_implications is not false (i.e., undefined or true).
+    Exported for tests. */
+export function g12EffectiveEnabled(
+  llm_settings: LlmSettings | undefined,
+): boolean;
+</code></pre>
+
+  <p>Behavioral contract. The section reads <code>frame.llm_settings</code> from <code>useFrameStore</code> (the frame-store is already open on the argument-running page per I.9c's mount lifecycle — line 157 of <code>stream_i_ui_argument_running_spec_v1.html</code>). It computes the effective enabled state via the pure helper:</p>
+
+<pre><code>export function g12EffectiveEnabled(
+  llm_settings: LlmSettings | undefined,
+): boolean {
+  if (!llm_settings) return false;                                  // schema default
+  if (!llm_settings.runtime_hooks_enabled) return false;            // master switch
+  const per = llm_settings.per_hook_enabled?.cross_implications;
+  return per !== false;                                             // undefined or true → enabled
+}
+</code></pre>
+
+  <p>The section renders three pieces, stacked vertically:</p>
+  <ul>
+    <li><em>Header row</em>: a small heading "Cross-implication advisories" on the left, a non-interactive <code>Pill</code> on the right with text "Enabled" (when <code>g12EffectiveEnabled(...)</code> returns <code>true</code>; uses neutral surface or success surface per the I.9a Pill variants) or "Disabled" (when <code>false</code>; neutral surface). The Pill is <em>not</em> a toggle — clicking it does nothing.</li>
+    <li><em>Link line</em>: secondary-text paragraph "Set per-frame in <a>frame settings</a>." The anchor is an in-app link styled per the I.9a token surface (subtle underline, primary-text color); on click, it calls <code>props.on_open_frame_settings()</code>. The hosting panel and the page coordinate the follow-on flow (panel close → navigation → frame-settings open) — that flow is specified under Page-level refinements.</li>
+    <li><em>Explanatory paragraph</em>: secondary-text, ~one-and-a-half lines: "When enabled, the application offers advisory notes during Argument Running when a premise or interpretation has implications beyond the immediate item. Notes are advisory only — they never change the deterministic output." The "advisory only / never change the deterministic output" framing is the Article II § 2 guarantee surfaced in user-facing language; it is the right place to repeat the determinism commitment because this is where a user might wonder whether G12 affects the routing path.</li>
+  </ul>
+
+  <p><em>v1 effect</em>: G12 ships a no-op fallback per <code>stream_i_llm_hooks_spec_v1.html</code> line 1445 (returns <code>{ advisories: [] }</code>). The Enabled / Disabled display is therefore informational in v1 — the user sees the per-frame intent but no advisories are produced. The display is forward-looking for v1.5 when the LLM body lands. The implementing session writes a test asserting the helper returns the correct value across the four cases: no llm_settings, runtime_hooks_enabled=false, runtime_hooks_enabled=true + per_hook_enabled.cross_implications=true, runtime_hooks_enabled=true + per_hook_enabled.cross_implications=false.</p>
+
+  <div class="file-header">// src/ui/session-settings/archive-delete-section.tsx</div>
+  <p>The archive-and-delete section. Two controls; Pin omitted per "What this spec does not commit."</p>
+
+<pre><code>import * as React from "react";
+
+export interface ArchiveDeleteSectionProps {
+  on_delete_session: () =&gt; void;
+}
+
+export function ArchiveDeleteSection(
+  props: ArchiveDeleteSectionProps,
+): React.ReactElement;
+</code></pre>
+
+  <p>Behavioral contract. The section renders two controls, stacked vertically with a small inter-control margin (<code>--space-3</code>).</p>
+
+  <p><em>Archive</em>: a toggle bound to <code>session.archived</code> via <code>useSessionStore</code>. The control is a single horizontal row: a label "Archive this session" on the left, a small <code>Toggle</code>-shaped control on the right (the I.9a substrate does not define a dedicated Toggle primitive; the implementing session composes <code>SegmentedToggle</code> with two options [On, Off] sized small per the substrate's <code>size="sm"</code> variant, with both options rendered as a compact pair — this matches the I.9b precedent of using <code>SegmentedToggle</code> for two-state on/off in settings panels). On change, dispatches <code>session_store.applyEdit({ kind: "session_metadata_edited", partial: { archived: nextValue } })</code>. Below the row, a small secondary-text paragraph: "Archived sessions are hidden from the default open-existing-session list. You can still find them via search and version history."</p>
+
+  <p><em>Delete</em>: a destructive button "Delete session" on its own row, styled with <code>--color-severity-error</code> per the visual-polish destructive convention. On click, opens a <code>ConfirmDialog</code>:</p>
+  <ul>
+    <li><code>title</code>: "Delete this session permanently?"</li>
+    <li><code>body</code>: a multi-element body composed inline:
+      <ul>
+        <li>Paragraph: "Deleting v{current_version_number} and all earlier versions cannot be undone."</li>
+        <li>Paragraph: "Type the session title to confirm:"</li>
+        <li>A text input that the user types into. The Confirm button is disabled until the typed value matches <code>session.title</code> exactly (case-sensitive). The match is computed locally — no patch is dispatched until Confirm.</li>
+      </ul>
+    </li>
+    <li><code>confirmLabel</code>: "Delete session"</li>
+    <li><code>cancelLabel</code>: "Cancel"</li>
+    <li><code>destructive</code>: <code>true</code></li>
+  </ul>
+  <p>The "type the title to confirm" guard parallels the I.9b frame-delete guard (line 999 of <code>stream_i_ui_frame_building_spec_v1.html</code>) and honors Stream E6's destructive-action discipline. On Confirm, the section calls <code>props.on_delete_session()</code> — the page handles close-then-delete-then-navigate. The ConfirmDialog closes itself on Confirm (the panel will also be unmounted by the page on navigation, but the ordering — dialog closes first, then panel unmounts on route change — is well-defined by React's render cycle).</p>
+
+  <p>The section title is "Archive and Delete" (not "Pin / Archive / Delete"). The omission of Pin is documented in this spec's "What this spec does not commit" section; the test file for the section asserts that no Pin-related affordance is rendered.</p>
+
+  <div class="file-header">// src/ui/session-settings/index.ts</div>
+<pre><code>export { SessionSettingsPanel, type SessionSettingsPanelProps } from "./session-settings-panel";
+export { MetadataSection } from "./metadata-section";
+export { G6RemoveRewriteSection } from "./g6-remove-rewrite-section";
+export {
+  G12AdvisoryToggleSection,
+  type G12AdvisoryToggleSectionProps,
+  g12EffectiveEnabled,
+} from "./g12-advisory-toggle-section";
+export { ArchiveDeleteSection, type ArchiveDeleteSectionProps } from "./archive-delete-section";
+</code></pre>
+
+  <h2>Page-level refinements</h2>
+
+  <p>One page is touched: <code>ArgumentRunningPage</code> (I.9c-owned). The page gains the session-settings-panel open-state, the panel mount, the "open frame settings from G12 link" handler, the "delete session" handler, and the deps-shape extension on <code>buildTopBarSlots</code>. No App-level wiring is added (the F-006 App-level pattern does not apply; F-007 page-local-dialog is the precedent).</p>
+
+  <h3><code>ArgumentRunningPage</code> — additions</h3>
+
+<pre><code>// src/ui/argument-running/argument-running-page.tsx (refined)
+
+import { SessionSettingsPanel } from "@/ui/session-settings";
+import { useNavigate } from "@/ui";
+import { useAppStateStore, useSessionStore } from "@/state";
+
+// New local state inside ArgumentRunningPage:
+const [session_settings_panel_open, setSessionSettingsPanelOpen] =
+  React.useState(false);
+
+const openSessionSettingsPanel = React.useCallback(() =&gt; {
+  setSessionSettingsPanelOpen(true);
+}, []);
+
+const closeSessionSettingsPanel = React.useCallback(() =&gt; {
+  setSessionSettingsPanelOpen(false);
+}, []);
+
+// The session id is captured at handler-creation time. The handler closes the
+// panel first, then navigates to the frame-building route with a sentinel that
+// tells the destination page to open its frame-settings panel.
+const onOpenFrameSettingsFromG12Link = React.useCallback(() =&gt; {
+  closeSessionSettingsPanel();
+  const session = session_store.getSnapshot().session;
+  if (session === null) return;
+  navigate({
+    kind: "frame_building",
+    frame_id: session.frame_id,
+    /* The route union (per stream_i_ui_chrome_canvas_spec_v1.html routing.ts)
+       does not currently carry an "open_settings_panel" sub-flag. The
+       implementing session adds an optional `open_frame_settings_on_mount?:
+       boolean` field to the frame_building route variant — additive, defaults
+       to undefined; FrameBuildingPage reads it on mount, opens its settings
+       panel if true, and clears the flag by navigating to the same route
+       without the flag. This is a minor I.9a routing refinement; recorded
+       under F-008 refinement note (i) for the future contracts-doc bump but
+       fully local to argument-running and frame-building wiring in v1. */
+    open_frame_settings_on_mount: true,
+  });
+}, [navigate, closeSessionSettingsPanel]);
+
+// The delete handler closes the session_store, calls the new AppStateStore
+// method, and navigates to the parent frame's build page.
+const onDeleteSession = React.useCallback(async () =&gt; {
+  const session = session_store.getSnapshot().session;
+  if (session === null) return;
+  const frame_id = session.frame_id;
+  const session_id = session.id;
+  await session_store.close();
+  await app_state_store.deleteSession(session_id);
+  navigate({ kind: "frame_building", frame_id });
+}, [session_store, app_state_store, navigate]);
+
+// In the page's JSX (added at the bottom of the page's existing return tree,
+// as a sibling of HelpGlossaryPane and SuggestionDrawer):
+return (
+  &lt;React.Fragment&gt;
+    {/* … existing page content … */}
+
+    &lt;TopBar
+      operating_mode="argument_running"
+      slots={buildTopBarSlots({
+        session_store, frame_store, app_state_store,
+        on_open_migration_dialog: openMigrationDialog,
+        on_open_session_settings: openSessionSettingsPanel,   // NEW per F-008 refinement #6
+        on_toggle_version_history: props.on_toggle_version_history,
+        on_toggle_help: () =&gt; setHelpPaneOpen((v) =&gt; !v),
+        version_history_open: false /* I.9d */,
+        help_pane_open: helpPaneOpen,
+      })}
+    /&gt;
+
+    {/* … existing TwoPaneLayout, HelpGlossaryPane, SuggestionDrawer, etc. … */}
+
+    &lt;SessionSettingsPanel
+      open={session_settings_panel_open}
+      on_close={closeSessionSettingsPanel}
+      on_open_frame_settings={onOpenFrameSettingsFromG12Link}
+      on_delete_session={onDeleteSession}
+    /&gt;
+  &lt;/React.Fragment&gt;
+);
+</code></pre>
+
+  <p>Behavioral contract for the refinement.</p>
+
+  <p><em>Open path</em>: the user clicks either the <code>ModeFlavorChip</code> (which calls <code>onOpenSettings</code> — wired from <code>buildTopBarSlots</code>'s <code>on_open_session_settings</code>) or the session-settings <code>IconButton</code> in the <code>buttons</code> slot (which calls its <code>onClick</code> — wired to the same <code>on_open_session_settings</code>). Either path calls the page's <code>openSessionSettingsPanel</code> which sets the local state to true; React renders the <code>SessionSettingsPanel</code> with <code>open=true</code>.</p>
+
+  <p><em>Close path</em>: any close (Escape, click-outside, the Drawer's close button via the Done footer button) calls <code>closeSessionSettingsPanel</code> which sets the local state to false; the Drawer animates out and returns null on the next snapshot tick.</p>
+
+  <p><em>G12 link path</em>: the user clicks the "change in frame settings" link in the G12 section. The section calls <code>props.on_open_frame_settings</code>, which on the page side is <code>onOpenFrameSettingsFromG12Link</code>. That handler (a) closes the session-settings panel, (b) reads the session's parent frame_id, (c) navigates to <code>{ kind: "frame_building", frame_id, open_frame_settings_on_mount: true }</code>. The frame-building page reads the <code>open_frame_settings_on_mount</code> flag on mount and opens its settings panel via the existing I.9b mechanism (<code>settingsPanelOpen</code> state set to true). The flag is consumed once: the frame-building page navigates to <code>{ kind: "frame_building", frame_id }</code> (without the flag) on the next render tick, so reloading or back-button doesn't re-open the settings panel. This routing refinement is purely additive to the Route union: the existing <code>{ kind: "frame_building", frame_id }</code> variant gains an optional <code>open_frame_settings_on_mount?: boolean</code> field; legacy navigations omit the flag and behave as before.</p>
+
+  <p><em>Delete session path</em>: the user types the session title in the delete-confirm dialog, clicks "Delete session." The section calls <code>props.on_delete_session</code>, which on the page side is <code>onDeleteSession</code>. That handler awaits <code>session_store.close()</code> (the close call is awaited because it must complete before the delete to avoid an autosave-after-delete race); then awaits <code>app_state_store.deleteSession(session_id)</code> (the new method from F-008 refinement #5); then navigates to the parent frame's build page. The session-settings panel unmounts as part of the route change. If the navigation arrives at the home screen instead of frame-building (e.g., the user has the home route as their post-delete preference — not configurable in v1), the destination is still well-defined: <code>{ kind: "frame_building", frame_id }</code> is the deterministic post-delete destination.</p>
+
+  <p><em>Test surface</em>: the page test asserts that (a) clicking the ModeFlavorChip opens the session-settings panel; (b) clicking the session-settings IconButton in the buttons slot opens the panel; (c) the panel's close handler closes the panel; (d) the G12 link handler closes the panel and dispatches a navigation with the right shape; (e) the delete handler closes the session_store, calls <code>app_state_store.deleteSession</code> with the right session_id, and dispatches a navigation to frame-building.</p>
+
+  <h3>Small change to <code>buildTopBarSlots</code></h3>
+
+  <p>The I.9c <code>ArgumentRunningTopBarDeps</code> interface (lines 234–243 of <code>stream_i_ui_argument_running_spec_v1.html</code>) gains one new required field per F-008 refinement #6:</p>
+
+<pre><code>// src/ui/argument-running/top-bar-slots.ts (refined)
+
+export interface ArgumentRunningTopBarDeps {
+  session_store: SessionStore;
+  frame_store: FrameStore;
+  app_state_store: AppStateStore;
+  on_open_migration_dialog: () =&gt; void;
+  on_open_session_settings: () =&gt; void;     // NEW per F-008 refinement #6
+  on_toggle_version_history?: () =&gt; void;
+  on_toggle_help: () =&gt; void;
+  version_history_open: boolean;
+  help_pane_open: boolean;
+}
+
+// In the function body, the chips and buttons slots are refined:
+//
+//   chips:
+//     &lt;ModeFlavorChip onOpenSettings={deps.on_open_session_settings} /&gt;
+//     &lt;FrameVersionDriftIndicator on_open_migration_dialog={deps.on_open_migration_dialog} /&gt;
+//     &lt;StatusSummaryChip /&gt;
+//
+//   buttons:
+//     &lt;VersionHistoryButton open={deps.version_history_open}
+//                           onToggle={deps.on_toggle_version_history ?? noop} /&gt;
+//     &lt;IconButton
+//       aria_label="Session settings"
+//       icon={GearIcon}
+//       onClick={deps.on_open_session_settings}
+//     /&gt;                                                       /* disabled removed */
+//     &lt;HelpButton open={deps.help_pane_open} onToggle={deps.on_toggle_help} /&gt;
+</code></pre>
+
+  <p>The <code>disabled</code> attribute and the "Available in I.9d" Tooltip are both removed from the session-settings IconButton. The <code>title</code> prop in the I.9c spec is corrected to <code>aria_label</code> to match the I.9a IconButton contract (line 522 of <code>stream_i_ui_chrome_canvas_spec_v1.html</code>). The <code>icon</code> prop is set to the gear-icon component (the same one the frame-side <code>FrameSettingsButton</code> uses — a minor reuse pattern; the implementing session imports the icon from the I.9a chrome surface).</p>
+
+  <h2>UI-layer determinism discipline (restated for I.9d3's surfaces)</h2>
+
+  <p>Per the I.9a / I.9b / I.9c / I.9d1 / I.9d2 disciplines, the UI layer's contribution to the application's determinism guarantee (Article II § 2) is four obligations: <strong>D1</strong> canonical output verbatim, <strong>D2</strong> single-clock-read-per-dispatch, <strong>D3</strong> deterministic order (no client-side sorting of canonical lists), <strong>D4</strong> stable cross-render identity for memoized projections. Each surface in this spec honors them:</p>
+
+  <ul>
+    <li><strong>Session-settings panel shell</strong>: D1 — none of the panel surfaces render output canonically derived from <code>compute()</code> directly (G6's rewritten prose is read verbatim from <code>session_version.output_overrides.rewritten_prose</code> as a session-versioned field, not from <code>ConditionalOutput</code>; G12's enabled state is derived from <code>frame.llm_settings</code> through a pure helper). D2 — the panel reads no clock; the eventual <code>deps.now()</code> reads are inside the SessionStore's <code>session_metadata_edited</code> and <code>output_overrides_cleared</code> dispatch-table entries, each consuming a single clock read per dispatch per F-003 family discipline. D3 — the four sections are rendered in canonical order (Metadata, Output rewrite, Advisory notes, Archive and Delete); no list is consumed from upstream that could be re-sorted. D4 — section-local memoizations (the G12 effective-enabled derivation; the G6 preview-string truncation) are pure functions of their inputs and stable across renders.</li>
+
+    <li><strong>G6 remove-rewrite section</strong>: D1 — the rewritten prose preview is rendered verbatim from <code>output_overrides.rewritten_prose</code>, character-truncated only; the AI-attribution chip's label is rendered from <code>output_overrides.rewritten_at</code> via the I.9a time-ago helper which is deterministic given its input. D2 — the ConfirmDialog's body interpolates <code>current_version.version_number + 1</code> read at render time, not at click time; the clock read happens once inside the SessionStore's dispatch path when Confirm is clicked. D3 — no list rendering. D4 — the preview-string truncation is a pure function of the input string.</li>
+
+    <li><strong>G12 advisory-toggle section</strong>: D1 — the effective-enabled derivation is a pure function of <code>frame.llm_settings</code>; the Pill's label is one of two constants ("Enabled" / "Disabled") chosen by the derivation. D2 — the section reads no clock; the eventual <code>deps.now()</code> reads only fire if the user follows the link to frame-settings and changes the per-frame value there (Frame-side dispatch). D3 — no list rendering. D4 — <code>g12EffectiveEnabled</code> is pure-total over its input type.</li>
+
+    <li><strong>Archive-and-Delete section</strong>: D1 — the destructive-confirm body interpolates <code>session.title</code> verbatim into the type-to-confirm field's matcher; no derived strings. D2 — the section reads no clock; the eventual <code>deps.now()</code> reads are in the SessionStore's <code>session_metadata_edited({ archived: ... })</code> dispatch (for the archive toggle) and in the Repository transaction (for the delete). D3 — no list rendering. D4 — the type-match check is a pure equality comparison.</li>
+  </ul>
+
+  <h2>Vitest acceptance tests</h2>
+
+  <p>The implementing session writes the test files below alongside the implementation. Pure-React-testing-library + happy-dom; no real IndexedDB (a mock <code>Repository</code> is supplied via <code>RepositoryProvider</code>); no real <code>compute()</code> (mocks return canonical-shape <code>ComputeResult</code> fixtures). Test fixtures: the I.9c session-and-frame fixtures already in <code>@/test-fixtures</code> are sufficient; this session adds two: (a) an <code>ArgumentSessionVersion</code> with <code>output_overrides</code> populated (rewritten_prose, rewritten_at, rewritten_by_hook = "G6"), for the G6 section's override-present render path; (b) a <code>Frame</code> with <code>llm_settings</code> set to each of the four <code>g12EffectiveEnabled</code> input cases, for the G12 helper test.</p>
+
+  <h3><code>tests/ui/session-settings/</code></h3>
+
+  <table>
+    <tr><th>File</th><th>What it asserts</th></tr>
+    <tr><td><code>session-settings-panel.test.tsx</code></td><td>Panel mounts with <code>open=true</code>; renders four sections in canonical order (Metadata, Output rewrite, Advisory notes, Archive and Delete); the Done footer button calls <code>on_close</code>; Escape closes; click-outside closes; the panel is read-only-stable across re-opens (closing mid-edit and re-opening shows the same store-derived values). The panel re-renders cleanly when the underlying session snapshot changes (mock store emits a new snapshot; assertions on the rendered title field's value update accordingly).</td></tr>
+    <tr><td><code>metadata-section.test.tsx</code></td><td>Title input commits on blur and on Enter (dispatches <code>session_metadata_edited({ title })</code>); Escape on the title field cancels the in-flight edit (no dispatch); description textarea commits on blur (dispatches <code>session_metadata_edited({ description })</code>); when <code>session.archived === true</code>, the archived banner is rendered above the title field, and the Unarchive link dispatches <code>session_metadata_edited({ archived: false })</code>; when <code>session.archived === false</code>, no banner is rendered.</td></tr>
+    <tr><td><code>g6-remove-rewrite-section.test.tsx</code></td><td>When <code>current_version.output_overrides === undefined</code>, renders the "No rewritten prose" line and no Remove button; when <code>output_overrides.rewritten_prose</code> is set, renders the AiAttributionChip with label "G6 · rewritten {time-ago}", the preview paragraph (asserts the first 120 characters + ellipsis when input is longer), and the Remove button; clicking Remove opens the ConfirmDialog with the canonical title, body (asserts {N+1} interpolation for current_version_number=1 → "v2" and current_version_number=17 → "v18"), confirmLabel, cancelLabel, destructive=true; clicking Confirm dispatches <code>session_store.applyEdit({ kind: "output_overrides_cleared" })</code> exactly once; Cancel/Escape/outside-click route through onClose without dispatching.</td></tr>
+    <tr><td><code>g12-advisory-toggle-section.test.tsx</code></td><td>Helper test: <code>g12EffectiveEnabled(undefined) === false</code>; <code>g12EffectiveEnabled({ ..., runtime_hooks_enabled: false })</code> === false; <code>g12EffectiveEnabled({ ..., runtime_hooks_enabled: true, per_hook_enabled: undefined })</code> === true; <code>g12EffectiveEnabled({ ..., runtime_hooks_enabled: true, per_hook_enabled: { cross_implications: true } })</code> === true; <code>g12EffectiveEnabled({ ..., runtime_hooks_enabled: true, per_hook_enabled: { cross_implications: false } })</code> === false. Component test: when helper returns true, the Pill renders text "Enabled"; when false, "Disabled"; the link "frame settings" is rendered and is interactive; clicking it calls <code>on_open_frame_settings</code> exactly once; no toggle interaction is exposed (asserts no checkbox / switch / segmented-toggle has an onChange handler that would dispatch a patch). The explanatory paragraph mentions "advisory only" verbatim.</td></tr>
+    <tr><td><code>archive-delete-section.test.tsx</code></td><td>Archive toggle on a non-archived session dispatches <code>session_metadata_edited({ archived: true })</code>; toggling back dispatches <code>session_metadata_edited({ archived: false })</code>. Delete button opens ConfirmDialog with title "Delete this session permanently?"; the body includes the {current_version_number} interpolation; the type-to-confirm input enables the Confirm button only when the typed value exactly equals <code>session.title</code> (case-sensitive); clicking Confirm calls <code>on_delete_session</code> exactly once; Cancel/Escape/outside-click route through onClose without calling on_delete_session. The section renders no Pin-related affordance (asserted by querying for any element with text "Pin" or aria-label containing "pin" — none should match).</td></tr>
+  </table>
+
+  <h3>Integration tests on existing modules (additions)</h3>
+
+  <table>
+    <tr><th>File</th><th>What it adds</th></tr>
+    <tr><td><code>tests/ui/argument-running/argument-running-page.test.tsx</code> (extends I.9c)</td><td>Asserts (1) clicking the ModeFlavorChip opens the session-settings panel; (2) clicking the session-settings IconButton in the buttons slot opens the panel; (3) the panel's close handler closes it; (4) the G12 link handler closes the panel and dispatches a <code>navigate</code> call with <code>{ kind: "frame_building", frame_id: session.frame_id, open_frame_settings_on_mount: true }</code>; (5) the delete handler calls <code>session_store.close</code>, then <code>app_state_store.deleteSession(session_id)</code>, then <code>navigate({ kind: "frame_building", frame_id })</code>, in that order; (6) the buttons slot no longer renders a disabled session-settings IconButton.</td></tr>
+    <tr><td><code>tests/ui/argument-running/top-bar-slots.test.ts</code> (extends I.9c)</td><td>Asserts the <code>buildTopBarSlots</code> deps shape now requires <code>on_open_session_settings: () =&gt; void</code>; the produced TopBarSlots' <code>chips</code> renders the ModeFlavorChip with <code>onOpenSettings === deps.on_open_session_settings</code>; the produced <code>buttons</code> renders the session-settings IconButton with the live callback (no <code>disabled</code> prop set).</td></tr>
+    <tr><td><code>tests/ui/argument-running/output-viewer.test.tsx</code> or the existing prose-tab test (extends I.9c)</td><td>The prose-tab's "Remove" affordance for G6 rewrites is enabled (no <code>disabled</code> attribute, no "Available in I.9d" Tooltip) and on click dispatches the new <code>output_overrides_cleared</code> SessionPatch. This is a consumer-side integration of F-008 refinement #1; it sits in the argument-running spec's test surface, not in session-settings, because the prose-tab surface is I.9c-owned.</td></tr>
+    <tr><td><code>tests/ui/frame-building/frame-building-page.test.tsx</code> (extends I.9b)</td><td>The frame-building page reads <code>open_frame_settings_on_mount</code> from the current route on mount; when true, the page opens its settings panel and navigates to the same route without the flag on the next render tick (assertion: a second navigate call fires after the panel-open, with the flag absent); when undefined or false, the page mounts normally without opening the settings panel.</td></tr>
+  </table>
+
+  <h2>Article VIII § 4 self-review</h2>
+
+  <p>Per Article VIII § 4, the agent reframes itself as a reviewer evaluating the Phase 2 output strictly against the Constitution and Protocol. The check below is the in-spec record; an end-of-session block in this section confirms that the work satisfies the Constitution's commitments, the Article III quality criteria, and the Article V § 3 escalation triggers.</p>
+
+  <h3>Article II § 1–6 architectural commitments</h3>
+
+  <table>
+    <tr><th>Commitment</th><th>Check</th><th>Notes</th></tr>
+    <tr><td>§ 1 Frame/Argument split</td><td>Upheld</td><td>The session-settings panel dispatches only SessionPatch to <code>SessionStore</code> (Argument-side) for the metadata fields, the archive toggle, and the new <code>output_overrides_cleared</code> patch. The G12 section reads <code>frame.llm_settings</code> from <code>useFrameStore</code> (read-only — no patches dispatched to the FrameStore from this panel); the "change in frame settings" link is a navigation, not a frame-side mutation. The delete flow calls <code>app_state_store.deleteSession</code> which is a Repository-level destructive operation on session storage only — Frame storage is untouched. The two patch families never cross.</td></tr>
+    <tr><td>§ 2 Determinism (UI-layer obligation)</td><td>Upheld</td><td>D1, D2, D3, D4 explicitly restated per surface in the "UI-layer determinism discipline" section. The new <code>output_overrides_cleared</code> SessionActionDispatchTable entry follows the F-003 family discipline (single <code>deps.now()</code> read per dispatch; pure synchronous transformation; deterministic field-clearing semantics). The G12 effective-enabled helper is pure-total over its input type — fully deterministic.</td></tr>
+    <tr><td>§ 3 Per-node satisfaction criteria</td><td>Unaffected</td><td>No satisfaction-policy state is exposed or mutated by the session-settings panel. The panel surfaces session metadata, output-rewrite removal, hook-enablement display, and the archive/delete actions — none of which touch <code>SatisfactionPolicy</code> or <code>options_box</code>.</td></tr>
+    <tr><td>§ 4 Independent versioning of Frame and Sessions</td><td>Upheld</td><td>The new <code>output_overrides_cleared</code> patch creates exactly one new <code>ArgumentSessionVersion</code> (per the SessionPatch family convention); the archive-toggle and metadata-edit dispatches similarly each create one new ArgumentSessionVersion through the existing <code>session_metadata_edited</code> path. No FrameVersion is touched by any panel surface; the parent Frame's <code>current_version_id</code> remains unchanged. The G12 link navigates to frame-building but does not itself mutate Frame state; any subsequent frame-side mutation happens through the frame-settings panel's own dispatch paths. Independent-versioning invariant preserved.</td></tr>
+    <tr><td>§ 5 Deterministic ordering</td><td>Upheld</td><td>The four panel sections render in canonical order (Metadata, Output rewrite, Advisory notes, Archive and Delete) — pinned in code, not derived from any upstream list. The Vitest acceptance test for the panel asserts this order explicitly.</td></tr>
+    <tr><td>§ 6 Use-case commitment</td><td>Upheld</td><td>Both legal and general modes are first-class. The session-settings panel mounts identically in both modes; the G12 advisory display is shown in both (the underlying frame-scope opt-in is per-frame regardless of mode, per Stream G's commitment); the archive and delete affordances are mode-agnostic. The G6 remove-rewrite surface applies to both modes per the G6 hook contract (<code>mode_visibility: { legal: true, general: { personal: true, academic: true } }</code> per <code>stream_i_llm_hooks_spec_v1.html</code> line 1188). Use-case identity unchanged.</td></tr>
+  </table>
+
+  <h3>Article III § 1–6 quality criteria</h3>
+
+  <table>
+    <tr><th>Criterion</th><th>Check</th><th>Notes</th></tr>
+    <tr><td>§ 1 Correctness</td><td>Upheld</td><td>The panel models four distinct session-level concerns (metadata, output-rewrite, advisory hook enablement, lifecycle: archive / delete) with field shapes and dispatch paths that match the underlying schema and modes-layer contracts. The G12 surface honors Stream G's per-frame opt-in commitment; the G6 surface honors F-002's canonical-prose-unchanged guarantee.</td></tr>
+    <tr><td>§ 2 Legal Practice Fit</td><td>Upheld for the relevant surfaces</td><td>None of this spec's surfaces are legal-specific; the session-settings panel is mode-agnostic. The two legal-flavored notions touched indirectly are (a) the G12 advisory's potential to surface cross-jurisdictional implications in legal mode (v1.5 territory; the v1 surface is the read-only frame-settings link) and (b) the archive-vs-delete distinction (lawyers care about preserving the work record even when finished with a session; archive accomplishes this without irreversible deletion). The destructive-confirm "type the title" guard parallels legal-practice habits of explicit confirmation on irreversible actions.</td></tr>
+    <tr><td>§ 3 Determinism and Auditability</td><td>Upheld</td><td>Every panel dispatch path goes through the deterministic SessionStore / AppStateStore surfaces; the new <code>output_overrides_cleared</code> patch is itself a deterministic pure transformation per the dispatch-table contract. The version-by-version audit trail per Article II § 4 captures every archive toggle, every metadata edit, every output-rewrite removal as a distinct ArgumentSessionVersion with a canonical <code>change_summary</code> (the modes-layer dispatch entries pin the summary strings: "Removed rewritten prose." for output_overrides_cleared; the existing session_metadata_edited summary for the metadata patches).</td></tr>
+    <tr><td>§ 4 Clarity</td><td>Upheld</td><td>The panel's structure mirrors the frame-side I.9b FrameSettingsPanel, so the user transfers their mental model directly. Each section has a clear single concern; destructive actions have explicit confirms; the G12 read-only surface explains "advisory only" so the user understands the determinism guarantee at the surface level. The "change in frame settings" link makes the cross-surface settings relationship discoverable.</td></tr>
+    <tr><td>§ 5 Reversibility</td><td>Upheld</td><td>Every cross-spec refinement is additive (new SessionPatch kind; new dispatch-table entry; new schema field with default false; new Pick-tuple member; new AppStateStore method; new deps field). The Pin omission is reversible — adding Pin later is additive when a consuming surface emerges. The G12 Option-A read-only design is reversible — adding a session-scope override is additive on top of the current shape. The route-union extension (<code>open_frame_settings_on_mount</code> optional field) is additive — legacy navigations omit it. No locked-in choice that would block a future redesign.</td></tr>
+    <tr><td>§ 6 Interface Fit</td><td>Upheld</td><td>The implementing coding session reads: Constitution, current_state.html, this spec, the four direct-dependency module READMEs (state, modes, schema, persistence), the I.9a/I.9b/I.9c per-module specs for the substrate, the I.9d2 spec for the page-local mounting precedent, the llm-hooks spec for the G6/G12 background. Per Article III § 6 (volume-of-materials principle of economy), this is bounded — roughly 11 documents excluding the Constitution. The session-settings panel is small (four sections, six files including the barrel) and the cross-spec refinements are six well-bounded items.</td></tr>
+  </table>
+
+  <h3>Article V § 3 escalation triggers (recheck)</h3>
+
+  <p>Per Article V § 3, an agent escalates to Zach when any of six conditions fires. Recheck at session close:</p>
+
+  <ol>
+    <li><strong>(a) Decision reverses a user-stated strategy or directive.</strong> The Pin omission was checked against this trigger: the "Pin / Archive / Delete (parallel to I.9b's pin-archive-delete section)" phrase in current_state.html is agent-authored (added by the I.9d2 self-review's description of the I.9d3 scope), not Zach-stated. Stream G's per-frame opt-in for runtime sidecar hooks (G11, G12) is Stream G's design commitment, not Zach's; Option A for the G12 toggle honors it. No Zach-stated strategy is reversed. No trigger.</li>
+    <li><strong>(b) Decision reverses or weakens an architectural commitment under Article II.</strong> Each of the six cross-spec refinements was checked against Article II § 1–6 in the table above; all are honored. The new <code>output_overrides_cleared</code> patch preserves the F-002 commitment that the canonical <code>ConditionalOutput.prose_summary</code> is never mutated by an LLM (the patch only clears the parallel override field, not the canonical baseline). No trigger.</li>
+    <li><strong>(c) Article II commitments conflict.</strong> No conflict surfaced this session. The Article II § 1 (Frame/Argument split) and § 4 (Independent versioning) commitments are jointly honored by the session-side-only dispatch discipline and the new ArgumentSessionVersion-per-patch convention.</li>
+    <li><strong>(d) Decision forecloses a use case or changes product identity.</strong> No use case is foreclosed. Both legal and general modes are first-class in the panel. The personal flavor remains supported (the archive affordance is the same; the G6 remove-rewrite is the same; the G12 display surface is the same — the underlying hook activation is per-frame regardless of flavor). No trigger.</li>
+    <li><strong>(e) Anthropic safety policies require user input.</strong> No Anthropic safety surface is touched. The panel surfaces are entirely within the application's normal feature set. No trigger.</li>
+    <li><strong>(f) Constitution silent or contradictory on a substantial question.</strong> The conceptual question (G12 Option A vs B) was checked against this trigger at session start. The Constitution is not silent — Article III § 5 and § 6 give clear guidance toward A — and Stream G's per-frame opt-in commitment is concordant. The substantial-hesitation test (Article IV § 4) did not fire; the decision is resolvable through good-faith application of constitutional and prior-stream principles. No trigger.</li>
+  </ol>
+
+  <p>Additional checks specific to this session:</p>
+  <ul>
+    <li><strong>Conceptual contradiction surfaced.</strong> None. The cross-spec refinements are technical resolutions of pre-existing seams (the G6 prose-rewrite "Remove" wiring that I.9c reserved; the session-settings IconButton placeholder that I.9c reserved; the Pick-tuple extension pattern from F-004 + F-007; the AppStateStore.deleteSession parallel to the I.9b-implied deleteFrame).</li>
+    <li><strong>New conceptual surface or natural-language decision needed.</strong> None this session. The panel copy (section headings, explanatory paragraphs, confirm-dialog titles and bodies) is mechanical text derived from existing modes-layer/state-layer canonical labels and the F-002 / Stream G activation semantics. The G12 explanatory paragraph's "advisory only — never change the deterministic output" framing is a user-facing surface of Article II § 2, not a new natural-language decision.</li>
+    <li><strong>Decision exceeds technical-resolution authority.</strong> The Pin omission and the G12 Option-A resolution were both checked against this; both fall within Article V § 1 / § 2(c) / § 2(e) (refine technical specifications; defer features when scope demands it). The I.9c reservations for <code>openSessionSettings</code> and the disabled IconButton were explicitly placeholders for I.9d wiring decisions, and the wiring decisions here are technical-architecture choices.</li>
+    <li><strong>Spec impact crosses ≥ 3 streams.</strong> The cross-document refinements touch Stream I per-module specs only (state, modes, schema, ui-frame-building (via the route refinement on the destination side), ui-argument-running) — five Stream I documents, but a single stream. Stream G is read for grounding (G6 + G12 background and the per-frame opt-in commitment), not modified. Threshold not crossed.</li>
+    <li><strong>Reversal of an earlier Zach-personal decision.</strong> The Pin omission was checked: the "Pin / Archive / Delete" phrase is agent-authored at the I.9d2 self-review level; it is not a Zach-personal decision. No trigger.</li>
+  </ul>
+
+  <p>Conclusion: no escalation trigger fires. Per Article V § 4, the agent proceeds autonomously and records the work in the spec + register-flag updates without consultation. The conceptual question raised by the I.9d2 self-review is resolved autonomously per the Article IV § 4 substantial-hesitation test (which did not fire).</p>
+
+  <h3>In-session-escalated flags</h3>
+
+  <p>One register flag is escalated to the in-session-escalated table in <code>flags.html</code> by this session:</p>
+
+  <h4>F-008 — Consolidated I.9d3 cross-spec refinements</h4>
+  <ul>
+    <li><strong>Status</strong>: open, awaiting consolidated contracts-doc bump (parallels F-003 / F-004 / F-005 / F-006 / F-007 pattern).</li>
+    <li><strong>Family</strong>: F-003 family (per-session-consolidated-refinements pattern).</li>
+    <li><strong>Source</strong>: I.9d3 session, this spec document.</li>
+    <li><strong>Refinements held</strong>:
+      <ol>
+        <li>New <code>SessionPatch</code> kind <code>output_overrides_cleared</code> in <code>stream_i_state_spec_v1.html</code>; zero-payload patch that produces a new <code>ArgumentSessionVersion</code> with <code>output_overrides</code> set to undefined. Parallel to F-004's <code>presentation_hints_reset_all</code> and F-007's <code>architectural_mode_changed</code>.</li>
+        <li>New dispatch-table entry in <code>stream_i_modes_spec_v1.html</code>: <code>SessionActionDispatchTable.output_overrides_cleared</code> as a synchronous pure transformation, single <code>deps.now()</code> read, constant <code>change_summary</code> "Removed rewritten prose."</li>
+        <li>Additive schema field in <code>stream_i_schema_spec_v1.html</code>: <code>ArgumentSession.archived: boolean</code> (default false), parallel to F-004's <code>Frame.archived</code>. Stream B B7 forward-compatible envelope handles legacy sessions.</li>
+        <li>Extension of <code>session_metadata_edited.partial</code>'s Pick tuple in <code>stream_i_state_spec_v1.html</code> from <code>Partial&lt;Pick&lt;ArgumentSession, "title" | "description"&gt;&gt;</code> to <code>Partial&lt;Pick&lt;ArgumentSession, "title" | "description" | "archived"&gt;&gt;</code>. Parallel to the F-004 + F-007 frame-side Pick-tuple extensions.</li>
+        <li>New method <code>AppStateStore.deleteSession(session_id: SessionId): Promise&lt;void&gt;</code> in <code>stream_i_state_spec_v1.html</code>; wraps <code>Repository.deleteSession</code>. Parallel to the I.9b-implied <code>app_state_store.deleteFrame</code> referenced in <code>stream_i_ui_frame_building_spec_v1.html</code> line 999 but not yet pinned on the <code>AppStateStore</code> interface — the future contracts-doc bump should formalize both methods together.</li>
+        <li>Extension of <code>ArgumentRunningTopBarDeps</code> in <code>stream_i_ui_argument_running_spec_v1.html</code> to include <code>on_open_session_settings: () =&gt; void</code> as a required field; corresponding removal of the <code>disabled</code> attribute on the <code>buttons</code>-slot session-settings IconButton and the "Available in I.9d" Tooltip; correction of the IconButton's <code>title</code> prop to <code>aria_label</code> per the I.9a contract.</li>
+      </ol>
+    </li>
+    <li><strong>Additional sub-item recorded as note (i)</strong>: a minor I.9a routing refinement adding an optional <code>open_frame_settings_on_mount?: boolean</code> field to the <code>{ kind: "frame_building", frame_id }</code> route variant in <code>stream_i_ui_chrome_canvas_spec_v1.html</code>'s <code>routing.ts</code>. Additive; legacy navigations omit it. Consumed by the I.9b FrameBuildingPage on mount and cleared on the next render tick. Not a separate refinement number because it is mechanically additive and locally scoped to the G12 link flow; recorded for the future contracts-doc bump.</li>
+    <li><strong>Rationale for consolidation</strong>: All six refinements are downstream of a single design commitment (a session-settings panel mounted page-locally in ArgumentRunningPage, dispatching SessionPatches through the existing SessionStore surface and reaching cross-page state only through navigation, not through shared mounts) and travel together as one contracts-doc bump. Splitting them would create transient inconsistencies (e.g., a state spec that declares <code>output_overrides_cleared</code> but no dispatch-table entry; a schema spec that adds <code>archived</code> but no Pick-tuple extension).</li>
+    <li><strong>Owner</strong>: next Stream I planning session (likely I.9d4-or-I.10 close) bumps the affected per-module specs in lockstep. Until bumped, this spec is canonical for the I.9d3 surfaces; the cross-document refinements are read here.</li>
+    <li><strong>Downstream sessions blocked</strong>: none. The implementing session for <code>src/ui/session-settings/</code> uses this spec directly. The next per-module spec session that touches state, modes, schema, ui-frame-building (route variant), ui-argument-running (TopBar deps), ui-chrome-canvas (routing.ts) absorbs the F-008 changes as part of its own bump.</li>
+  </ul>
+
+  <h2>Closing</h2>
+  <p>This spec is the I.9d3 deliverable. The implementing coding session reads this document plus its enumerated dependencies and writes <code>src/ui/session-settings/</code> + the README + the integration test additions on the I.9c and I.9b page tests + the prose-tab "Remove" affordance wiring on the I.9c output viewer. F-008 is added to the in-session-escalated table in <code>flags.html</code>. <code>current_state.html</code> records I.9d3 as complete and points I.9d4 (the onboarding wizard + coachmark machinery) as the next sub-session. No conceptual surface is opened to Zach; the conceptual question raised by the I.9d2 self-review is resolved autonomously per Article IV § 4 (the substantial-hesitation test did not fire); all decisions remain within agent technical authority per Article V § 1.</p>
+</div>
