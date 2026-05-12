@@ -11,19 +11,34 @@ authority-aware features specific to law.
 
 ## Repo state
 
-Pre-coding planning complete for Streams A–H (conceptual decisions, schema,
-runtime, modes, UI/UX, legal mode, LLM hooks, persistence). Stream I (the
-"build kit") in progress:
+Pre-coding planning complete for Streams A–H. Stream I (the "build kit")
+design phase complete (I.1–I.10). Coding phase in progress:
 
-- I.1 buildkit index + cross-module contracts: complete.
-- I.2 schema spec: complete.
-- I.3–I.10 (runtime, persistence, state, modes, layout, llm-hooks, ui,
-  acceptance specs): pending.
+- I.1 skeleton + I.2 schema: complete (this session).
+- I.3 runtime, I.4 persistence, I.5 state, I.6 modes, I.7 layout, I.8 llm-hooks,
+  I.9 ui sub-modules, I.10 Home page + integration tests + E2E: pending.
 
-The project skeleton itself has not yet been scaffolded. The first coding
-session scaffolds the repo per `docs/stream_i_buildkit_index_v1.html`
-"Repo layout the skeleton ships" and "What ships in the I.1 skeleton",
-then implements the schema module per `docs/stream_i_schema_spec_v1.html`.
+## Running
+
+```bash
+npm install
+npm run dev            # http://localhost:5173 — placeholder page
+npm run ci             # typecheck + lint + format + unit tests + plugin self-test + iteration audit
+npm run test:e2e       # Playwright smoke (requires app built or dev server running)
+```
+
+## Layout
+
+```
+src/schema/      — types, validators, JSON envelope, migrations (this session, I.2)
+src/runtime/     — placeholder; I.3 implements the compute pipeline. iteration-helpers ship now.
+src/persistence/ — placeholder; I.4
+src/state/       — placeholder; I.5
+src/modes/       — placeholder; I.6
+src/layout/      — placeholder; I.7
+src/llm-hooks/   — placeholder; I.8
+src/ui/          — placeholder; I.9a–I.9d4 + I.10
+```
 
 ## Working in this repo
 
@@ -35,9 +50,9 @@ Article VIII of the Protocol.
 Authoritative current project state: `docs/current_state.html`.
 Append-only flag register: `docs/flags.html`.
 
-## Tech stack (Stream H H4)
+## Determinism gates (Article II § 2)
 
-React + TypeScript + Vite · React Flow (@xyflow/react) · ELK (elkjs) in a
-Web Worker · Zustand · Dexie · Vitest + fast-check + Playwright · ESLint
-with custom `argmap-determinism/no-unsorted-iteration` rule for the runtime
-boundary · Prettier · GitHub Actions CI.
+- ESLint `no-restricted-imports` boundary on `src/runtime/`.
+- `eslint-plugin-argmap-determinism/no-unsorted-iteration` (workspace package).
+- Frozen-clock Vitest at `2026-05-10T00:00:00Z`.
+- Per-PR `scripts/audit-iteration-order.mjs` belt-and-braces audit.

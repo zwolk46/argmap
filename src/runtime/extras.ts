@@ -1,0 +1,227 @@
+// Public runtime helpers consumed by downstream modules per contracts v2.
+//
+// computeCascadeReport (F-004): cascade-delete report for the modes layer's
+// node_removed dispatch entry.
+//
+// enumerateOrphanCandidates (F-007): pre-migration analysis used by the
+// session-migration UI to enumerate carriers (premises, edges, answers,
+// selections, authorities) that would not have a target node in the
+// destination FrameVersion.
+//
+// rankPremiseReuse: deterministic Jaccard + recency + kind-match ranking.
+
+import type {
+  FrameVersion,
+  ArgumentSessionVersion,
+  NodeRef,
+  EdgeRef,
+  Premise,
+  Node,
+} from "@/schema";
+import { sortedBy } from "./iteration-helpers";
+
+export type CascadeReason =
+  | { kind: "orphaned_by_node"; cause_node_id: NodeRef }
+  | { kind: "orphaned_by_edge"; cause_edge_id: EdgeRef }
+  | { kind: "explicitly_requested" };
+
+export interface CascadeReport {
+  cascade_nodes: ReadonlyArray<{ node_id: NodeRef; reason: CascadeReason }>;
+  cascade_edges: ReadonlyArray<{ edge_id: EdgeRef; reason: CascadeReason }>;
+}
+
+export interface OrphanCandidate {
+  carrier_kind:
+    | "premise"
+    | "argument_edge"
+    | "checkpoint_answer"
+    | "interpretation_selection"
+    | "session_authority";
+  carrier_id: string;
+  display_summary: string;
+  suggested_kind: "discard" | "reattach" | "no_op";
+  reattach_candidates?: ReadonlyArray<{ target_node_id: NodeRef; label: string }>;
+}
+
+export interface PremiseReuseSuggestion {
+  premise_id: string;
+  score: number;
+}
+
+export function computeCascadeReport(
+  frame_version: FrameVersion,
+  to_delete: { node_ids?: NodeRef[]; edge_ids?: EdgeRef[] },
+): CascadeReport {
+  const removedNodes = new Set<NodeRef>(to_delete.node_ids ?? []);
+  const removedEdges = new Set<EdgeRef>(to_delete.edge_ids ?? []);
+
+  const cascade_nodes: Array<{ node_id: NodeRef; reason: CascadeReason }> = [];
+  const cascade_edges: Array<{ edge_id: EdgeRef; reason: CascadeReason }> = [];
+
+  // Explicitly requested first (sorted lex).
+  for (const id of sortedBy([...removedNodes], (x) => x)) {
+    cascade_nodes.push({ node_id: id, reason: { kind: "explicitly_requested" } });
+  }
+  for (const id of sortedBy([...removedEdges], (x) => x)) {
+    cascade_edges.push({ edge_id: id, reason: { kind: "explicitly_requested" } });
+  }
+
+  // Edges whose source or target is in removedNodes → cascade.
+  for (const e of sortedBy(frame_version.edges, (x) => x.id)) {
+    if (removedEdges.has(e.id)) continue;
+    if (removedNodes.has(e.source)) {
+      cascade_edges.push({
+        edge_id: e.id,
+        reason: { kind: "orphaned_by_node", cause_node_id: e.source },
+      });
+    } else if (removedNodes.has(e.target)) {
+      cascade_edges.push({
+        edge_id: e.id,
+        reason: { kind: "orphaned_by_node", cause_node_id: e.target },
+      });
+    }
+  }
+
+  return { cascade_nodes, cascade_edges };
+}
+
+export function enumerateOrphanCandidates(
+  session_version: ArgumentSessionVersion,
+  target_frame_version: FrameVersion,
+): OrphanCandidate[] {
+  const nodeIds = new Set<NodeRef>();
+  for (const n of target_frame_version.nodes) nodeIds.add(n.id);
+
+  const out: OrphanCandidate[] = [];
+
+  for (const p of sortedBy(session_version.premises, (x) => x.id)) {
+    if (p.authority_ref && !nodeIds.has(p.authority_ref)) {
+      out.push({
+        carrier_kind: "premise",
+        carrier_id: p.id,
+        display_summary: `Premise '${truncate(p.statement, 60)}' cites missing authority ${p.authority_ref}.`,
+        suggested_kind: "discard",
+      });
+    }
+  }
+
+  for (const e of sortedBy(session_version.argument_edges, (x) => x.id)) {
+    if (!nodeIds.has(e.target)) {
+      out.push({
+        carrier_kind: "argument_edge",
+        carrier_id: e.id,
+        display_summary: `${e.type} edge targets missing node ${e.target}.`,
+        suggested_kind: "discard",
+      });
+    }
+  }
+
+  for (const r of sortedBy(session_version.checkpoint_responses, (x) => x.checkpoint_id)) {
+    if (!nodeIds.has(r.checkpoint_id)) {
+      out.push({
+        carrier_kind: "checkpoint_answer",
+        carrier_id: r.checkpoint_id,
+        display_summary: `Answer for missing checkpoint ${r.checkpoint_id}.`,
+        suggested_kind: "discard",
+      });
+    }
+  }
+
+  for (const sel of sortedBy(session_version.interpretation_selections, (x) => x.term_id)) {
+    if (!nodeIds.has(sel.term_id)) {
+      out.push({
+        carrier_kind: "interpretation_selection",
+        carrier_id: sel.term_id,
+        display_summary: `Selection for missing term ${sel.term_id}.`,
+        suggested_kind: "discard",
+      });
+    }
+  }
+
+  for (const a of sortedBy(session_version.session_authorities ?? [], (x) => x.id)) {
+    // session_authorities are by definition session-scope; we report unused
+    // ones (no Premise.authority_ref points at them in the new session
+    // shape) as candidates the user can review.
+    let referenced = false;
+    for (const p of session_version.premises) {
+      if (p.authority_ref === a.id) {
+        referenced = true;
+        break;
+      }
+    }
+    if (!referenced) {
+      out.push({
+        carrier_kind: "session_authority",
+        carrier_id: a.id,
+        display_summary: `Session authority '${truncate(a.citation, 60)}' is unreferenced.`,
+        suggested_kind: "no_op",
+      });
+    }
+  }
+
+  return out;
+}
+
+function truncate(s: string, n: number): string {
+  if (s.length <= n) return s;
+  return s.slice(0, n - 1) + "…";
+}
+
+function tokenize(s: string): Set<string> {
+  const out = new Set<string>();
+  for (const part of s.toLowerCase().split(/\W+/g)) {
+    if (part.length > 0) out.add(part);
+  }
+  return out;
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 0;
+  let inter = 0;
+  for (const x of a) if (b.has(x)) inter++;
+  const union = a.size + b.size - inter;
+  if (union === 0) return 0;
+  return inter / union;
+}
+
+export function rankPremiseReuse(
+  candidates: ReadonlyArray<Premise>,
+  context: { node: Node; frame_version: FrameVersion },
+): ReadonlyArray<PremiseReuseSuggestion> {
+  void context.frame_version;
+  const seed = nodeSeedText(context.node);
+  const seedTokens = tokenize(seed);
+
+  const scored = candidates.map((p) => ({
+    premise: p,
+    jaccard: jaccard(seedTokens, tokenize(p.statement)),
+  }));
+
+  // Stable sort: jaccard descending, then premise id ascending.
+  scored.sort((a, b) => {
+    if (b.jaccard !== a.jaccard) return b.jaccard - a.jaccard;
+    return a.premise.id.localeCompare(b.premise.id);
+  });
+
+  return scored.map((s) => ({ premise_id: s.premise.id, score: s.jaccard }));
+}
+
+function nodeSeedText(node: Node): string {
+  switch (node.type) {
+    case "RootQuestion":
+    case "SubQuestion":
+    case "Interpretation":
+    case "Conclusion":
+      return node.statement;
+    case "Term":
+      return node.name;
+    case "Checkpoint":
+      return node.question;
+    case "Authority":
+      return node.citation;
+    case "Premise":
+      return node.statement;
+    case "LogicalGate":
+      return node.gate_type;
+  }
+}

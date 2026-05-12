@@ -1,0 +1,52 @@
+{
+  "name": "argmap",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "eslint-plugin-argmap-determinism"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:plugin": "node --test eslint-plugin-argmap-determinism/tests/no-unsorted-iteration.test.js",
+    "ci:audit-iteration": "node scripts/audit-iteration-order.mjs",
+    "ci": "npm run typecheck && npm run lint && npm run format && npm run test && npm run test:plugin && npm run ci:audit-iteration"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.3.5",
+    "dexie": "^4.0.10",
+    "elkjs": "^0.9.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.16.0",
+    "eslint-plugin-argmap-determinism": "*",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "fake-indexeddb": "^6.2.5",
+    "fast-check": "^3.23.1",
+    "happy-dom": "^15.11.7",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}
