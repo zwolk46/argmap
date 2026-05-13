@@ -153,7 +153,9 @@ export class SupabaseRepository implements Repository {
   async listFrameVersionSummaries(frame_id: FrameId): Promise<FrameVersionSummary[]> {
     const { data, error } = await this.client
       .from("frame_versions")
-      .select("id, frame_id, version_number, parent_version_id, created_at, is_milestone, change_summary")
+      .select(
+        "id, frame_id, version_number, parent_version_id, created_at, is_milestone, change_summary",
+      )
       .eq("frame_id", frame_id)
       .eq("user_id", this.user_id)
       .order("version_number", { ascending: true });
@@ -319,7 +321,9 @@ export class SupabaseRepository implements Repository {
   ): Promise<ArgumentSessionVersionSummary[]> {
     const { data, error } = await this.client
       .from("argument_session_versions")
-      .select("id, session_id, version_number, parent_version_id, created_at, is_milestone, change_summary")
+      .select(
+        "id, session_id, version_number, parent_version_id, created_at, is_milestone, change_summary",
+      )
       .eq("session_id", session_id)
       .eq("user_id", this.user_id)
       .order("version_number", { ascending: true });
@@ -471,7 +475,8 @@ export class SupabaseRepository implements Repository {
         }));
       }
       if (n.type === "LogicalGate") {
-        if ("output_target" in n) n.output_target = translate(n.output_target as string | undefined);
+        if ("output_target" in n)
+          n.output_target = translate(n.output_target as string | undefined);
       }
       return n as unknown as (typeof source_version.nodes)[number];
     });
@@ -722,10 +727,7 @@ export class SupabaseRepository implements Repository {
 
   // ----- Export / import -----
 
-  async exportFrame(
-    frame_id: FrameId,
-    opts: { include_history: boolean },
-  ): Promise<FrameExport> {
+  async exportFrame(frame_id: FrameId, opts: { include_history: boolean }): Promise<FrameExport> {
     const frame = await this.loadFrame(frame_id);
     const current = await this.loadFrameVersion(frame.current_version_id);
     const history = opts.include_history ? await this.listFrameVersions(frame_id) : undefined;
@@ -761,7 +763,9 @@ export class SupabaseRepository implements Repository {
   }
 
   async importFrame(envelope: FrameExport): Promise<Frame> {
-    const migrated = migrate(envelope as unknown as { schema_version: number } & Record<string, unknown>) as unknown as FrameExport;
+    const migrated = migrate(
+      envelope as unknown as { schema_version: number } & Record<string, unknown>,
+    ) as unknown as FrameExport;
     await this.saveFrame(migrated.frame);
     for (const v of [migrated.current_version, ...(migrated.history ?? [])]) {
       await this.saveFrameVersion(v);
@@ -770,7 +774,9 @@ export class SupabaseRepository implements Repository {
   }
 
   async importSession(envelope: ArgumentSessionExport): Promise<ArgumentSession> {
-    const migrated = migrate(envelope as unknown as { schema_version: number } & Record<string, unknown>) as unknown as ArgumentSessionExport;
+    const migrated = migrate(
+      envelope as unknown as { schema_version: number } & Record<string, unknown>,
+    ) as unknown as ArgumentSessionExport;
     if (migrated.embedded_frame_export) await this.importFrame(migrated.embedded_frame_export);
     await this.saveSession(migrated.session);
     for (const v of [migrated.current_version, ...(migrated.history ?? [])]) {

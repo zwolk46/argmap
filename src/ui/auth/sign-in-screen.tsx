@@ -43,9 +43,7 @@ export function SignInScreen(): ReactElement {
   }
 
   if (loading) {
-    return (
-      <div style={{ padding: 24, fontFamily: "sans-serif" }}>Loading your workspace…</div>
-    );
+    return <div style={{ padding: 24, fontFamily: "sans-serif" }}>Loading your workspace…</div>;
   }
 
   return (

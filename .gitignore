@@ -10,3 +10,7 @@ test-results
 *.tsbuildinfo
 .DS_Store
 .vercel
+# Local Supabase env (Wave F). Production env vars come from the Vercel
+# Marketplace Supabase integration; .env.local is only for local dev.
+.env.local
+.env
