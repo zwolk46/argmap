@@ -51,17 +51,23 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
 
   function on_save(): void {
     const store = session_store.getState();
-    // Pre-dispatch new premise if any so we can pass its id forward.
+    // P0-16: enrich the new Premise with the editor's Notes + Authority so
+    // they actually persist. (Reusing an existing Premise keeps that
+    // Premise's existing notes/authority_ref unchanged; editing a reused
+    // Premise requires the inline edit affordance, not this surface.)
     if (premise_result && premise_result.kind === "new") {
-      store.applyPatch({ kind: "premise_added", premise: premise_result.premise });
+      const enriched = {
+        ...premise_result.premise,
+        ...(notes.trim().length > 0 ? { notes } : {}),
+        ...(authority_id ? { authority_ref: authority_id } : {}),
+      };
+      store.applyPatch({ kind: "premise_added", premise: enriched });
     }
     store.applyPatch({
       kind: "interpretation_selected",
       term_id: node.id,
       interpretation_id: selected_interpretation_id!,
     });
-    void authority_id;
-    void notes;
     on_saved();
   }
 

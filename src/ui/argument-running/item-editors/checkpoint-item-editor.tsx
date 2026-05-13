@@ -32,8 +32,16 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
       const store = session_store.getState();
       let premise_id: string;
       if (premise_result!.kind === "new") {
-        store.applyPatch({ kind: "premise_added", premise: premise_result!.premise });
-        premise_id = premise_result!.premise.id;
+        // P0-16: stash the Authority selection on the new Premise via
+        // authority_ref so it persists. The Premise schema supports
+        // authority_ref out of the box; before this fix the editor's
+        // `authority_id` was silently discarded.
+        const enriched = {
+          ...premise_result!.premise,
+          ...(authority_id ? { authority_ref: authority_id } : {}),
+        };
+        store.applyPatch({ kind: "premise_added", premise: enriched });
+        premise_id = enriched.id;
       } else {
         premise_id = premise_result!.premise_id;
       }
@@ -46,10 +54,6 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
           notes: notes.trim() ? notes : undefined,
         },
       });
-      // authority_id is intentionally not persisted at the SessionPatch level in v1
-      // (the schema's Premise carries an optional authority_ref but the patch
-      // surface does not expose it). I.9d will close this loop.
-      void authority_id;
       on_saved();
     } catch (e) {
       setError((e as Error).message);

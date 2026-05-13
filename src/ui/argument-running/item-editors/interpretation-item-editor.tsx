@@ -27,8 +27,16 @@ export function InterpretationItemEditor(props: InterpretationItemEditorProps): 
     const store = session_store.getState();
     let premise_id: string;
     if (premise_result.kind === "new") {
-      store.applyPatch({ kind: "premise_added", premise: premise_result.premise });
-      premise_id = premise_result.premise.id;
+      // P0-16: enrich the new Premise with the editor's Notes + Authority
+      // so they actually persist. Reused premises keep their existing
+      // notes/authority_ref unchanged.
+      const enriched = {
+        ...premise_result.premise,
+        ...(notes.trim().length > 0 ? { notes } : {}),
+        ...(authority_id ? { authority_ref: authority_id } : {}),
+      };
+      store.applyPatch({ kind: "premise_added", premise: enriched });
+      premise_id = enriched.id;
     } else {
       premise_id = premise_result.premise_id;
     }
@@ -54,8 +62,6 @@ export function InterpretationItemEditor(props: InterpretationItemEditorProps): 
             updated_at: ts,
           };
     store.applyPatch({ kind: "argument_edge_added", edge });
-    void authority_id;
-    void notes;
     on_saved();
   }
 
