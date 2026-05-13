@@ -142,10 +142,18 @@ export interface Repository {
   restoreFrameVersion(
     frame_id: FrameId,
     ancestor_version_id: FrameVersionId,
+    /**
+     * Optional custom change_summary stamped on the new version. P1: when
+     * supplied, the repository writes it inside the same transaction
+     * instead of forcing the caller to issue a second saveFrameVersion
+     * just to overwrite the default "Restored from version N" copy.
+     */
+    change_summary?: string,
   ): Promise<FrameVersion>;
   restoreSessionVersion(
     session_id: SessionId,
     ancestor_version_id: SessionVersionId,
+    change_summary?: string,
   ): Promise<ArgumentSessionVersion>;
 
   // App state (per-user, not versioned).

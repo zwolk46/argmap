@@ -108,17 +108,18 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
     ): Promise<void> {
       const { frame } = get();
       if (!frame) return;
-      const new_version = await repo.restoreFrameVersion(frame.id, ancestor_version_id);
-      const stamped: FrameVersion =
-        change_summary && change_summary.length > 0
-          ? { ...new_version, change_summary }
-          : new_version;
-      if (change_summary && change_summary.length > 0) {
-        await repo.saveFrameVersion(stamped);
-      }
+      // P1: pass change_summary directly into the repo call. Before this,
+      // a custom summary forced a second saveFrameVersion that re-walked
+      // the transaction and produced a brief render with the default
+      // "Restored from version N" copy visible in the version-history pane.
+      const new_version = await repo.restoreFrameVersion(
+        frame.id,
+        ancestor_version_id,
+        change_summary && change_summary.length > 0 ? change_summary : undefined,
+      );
       const next_frame: Frame = { ...frame, current_version_id: new_version.id };
-      const validation = validateOnly(stamped, compute_driver);
-      set({ frame: next_frame, frame_version: stamped, validation });
+      const validation = validateOnly(new_version, compute_driver);
+      set({ frame: next_frame, frame_version: new_version, validation });
     },
 
     async invokeHook(hook_id: string, args: unknown): Promise<void> {

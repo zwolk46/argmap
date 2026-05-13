@@ -11,8 +11,6 @@ const crosstab = createCrossTabBus();
 // app_state_changed) on every successful flush so peer tabs can refresh.
 const autosave = createAutosaveController({ repo, crosstab });
 
-void repo.openOrUpgrade();
-
 const llm_settings_default: LlmSettings = {
   build_time_hooks_enabled: false,
   runtime_hooks_enabled: false,
@@ -23,8 +21,69 @@ const llm_settings_default: LlmSettings = {
 const now = (): string => new Date().toISOString();
 const generateId = (): string => crypto.randomUUID();
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
+function BootError({ message }: { message: string }): React.ReactElement {
+  return (
+    <div
+      style={{
+        padding: "var(--space-6)",
+        maxWidth: 480,
+        margin: "10vh auto",
+        background: "var(--color-severity-error-bg, #fee2e2)",
+        color: "var(--color-severity-error, #b91c1c)",
+        borderLeft: "var(--border-thick, 3px) solid var(--color-severity-error, #dc2626)",
+        borderRadius: "var(--radius-md, 6px)",
+        fontFamily: "var(--font-sans, sans-serif)",
+        fontSize: "var(--font-size-sm, 13px)",
+        lineHeight: 1.6,
+      }}
+    >
+      <h1
+        style={{
+          fontSize: "var(--font-size-md, 14px)",
+          fontWeight: "var(--font-weight-semibold, 600)",
+          margin: 0,
+          marginBottom: "var(--space-2, 8px)",
+        }}
+      >
+        We couldn't open your local storage
+      </h1>
+      <p style={{ margin: 0 }}>{message}</p>
+      <p style={{ margin: "var(--space-2, 8px) 0 0" }}>
+        Try reloading the page. If the problem persists, your browser may be in private mode or
+        out of storage.
+      </p>
+    </div>
+  );
+}
+
+function BootGate(): React.ReactElement {
+  const [status, setStatus] = React.useState<"loading" | "ready" | { error: string }>("loading");
+  React.useEffect(() => {
+    let cancelled = false;
+    repo
+      .openOrUpgrade()
+      .then(() => {
+        if (!cancelled) setStatus("ready");
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setStatus({ error: msg });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (status === "loading") {
+    // Plain text — design tokens may not have loaded yet on cold boot.
+    return <div style={{ padding: 24 }}>Loading your workspace…</div>;
+  }
+  if (typeof status === "object") {
+    return <BootError message={status.error} />;
+  }
+  return (
     <App
       repo={repo}
       autosave={autosave}
@@ -35,5 +94,11 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       now={now}
       generateId={generateId}
     />
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <BootGate />
   </React.StrictMode>,
 );

@@ -142,18 +142,17 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
     ): Promise<void> {
       const { session } = get();
       if (!session) return;
-      const new_version = await repo.restoreSessionVersion(session.id, ancestor_version_id);
-      const stamped: ArgumentSessionVersion =
-        change_summary && change_summary.length > 0
-          ? { ...new_version, change_summary }
-          : new_version;
-      if (change_summary && change_summary.length > 0) {
-        await repo.saveSessionVersion(stamped);
-      }
+      // P1: pass change_summary directly so the repo stamps it inside the
+      // restore transaction; no second saveSessionVersion call needed.
+      const new_version = await repo.restoreSessionVersion(
+        session.id,
+        ancestor_version_id,
+        change_summary && change_summary.length > 0 ? change_summary : undefined,
+      );
       const next_session = await repo.loadSession(session.id);
       const computed_at = now();
       const compute_result = compute_driver.runFor(next_session, computed_at);
-      set({ session: next_session, session_version: stamped, compute_result });
+      set({ session: next_session, session_version: new_version, compute_result });
     },
 
     async previewMigration(target_frame_version_id: FrameVersionId): Promise<OrphanCandidate[]> {

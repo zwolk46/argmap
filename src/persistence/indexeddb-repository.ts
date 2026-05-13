@@ -647,6 +647,7 @@ export class IndexedDbRepository implements Repository {
   async restoreFrameVersion(
     frame_id: FrameId,
     ancestor_version_id: FrameVersionId,
+    change_summary?: string,
   ): Promise<FrameVersion> {
     return this.runTx(
       "restoreFrameVersion",
@@ -679,7 +680,7 @@ export class IndexedDbRepository implements Repository {
           parent_version_id: ancestor.id,
           created_at: ts,
           is_milestone: true,
-          change_summary: `Restored from version ${ancestor.version_number}`,
+          change_summary: change_summary ?? `Restored from version ${ancestor.version_number}`,
         };
 
         frame.current_version_id = new_version_id;
@@ -698,6 +699,7 @@ export class IndexedDbRepository implements Repository {
   async restoreSessionVersion(
     session_id: SessionId,
     ancestor_version_id: SessionVersionId,
+    change_summary?: string,
   ): Promise<ArgumentSessionVersion> {
     return this.runTx(
       "restoreSessionVersion",
@@ -733,7 +735,7 @@ export class IndexedDbRepository implements Repository {
           parent_version_id: ancestor.id,
           created_at: ts,
           is_milestone: true,
-          change_summary: `Restored from version ${ancestor.version_number}`,
+          change_summary: change_summary ?? `Restored from version ${ancestor.version_number}`,
         };
 
         session.current_version_id = new_version_id;
