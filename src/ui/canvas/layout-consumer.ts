@@ -5,7 +5,7 @@ import type { FrameVersion } from "@/schema";
 
 export type LayoutConsumerStatus =
   | { kind: "idle" }
-  | { kind: "computing" }
+  | { kind: "computing"; previous_result: LayoutResult | null }
   | { kind: "ready"; result: LayoutResult }
   | { kind: "error"; error: Error; previous_result: LayoutResult | null };
 
@@ -14,7 +14,18 @@ function structuralHash(frame_version: FrameVersion, opts: LayoutOptions): strin
   const edge_ids = [...frame_version.edges.map((e) => `${e.source}-${e.type}-${e.target}`)]
     .sort()
     .join(",");
-  return `${node_ids}|${edge_ids}|${opts.direction}|${opts.honor_user_anchors}|${opts.collapse_subquestions}`;
+  // P0-10: include anchored (user-positioned) coordinates in the hash so a
+  // drag-stop patch triggers a re-layout. Without this, the structural hash
+  // was invariant under presentation.x/y changes; ELK never re-ran;
+  // buildRFNodes kept reading the stale layout_result.positions; and React
+  // Flow's controlled `nodes` prop overwrote the user's drag back to the
+  // pre-drag ELK position.
+  const anchors = [...frame_version.nodes]
+    .filter((n) => n.presentation?.x !== undefined || n.presentation?.y !== undefined)
+    .map((n) => `${n.id}@${n.presentation?.x ?? 0},${n.presentation?.y ?? 0}`)
+    .sort()
+    .join(",");
+  return `${node_ids}|${edge_ids}|${anchors}|${opts.direction}|${opts.honor_user_anchors}|${opts.collapse_subquestions}`;
 }
 
 export function useLayoutResult(
@@ -44,7 +55,10 @@ export function useLayoutResult(
     if (hash === lastHashRef.current) return;
 
     lastHashRef.current = hash;
-    setStatus({ kind: "computing" });
+    // P0-9: carry the prior layout into the computing status so the canvas
+    // can render against the last-known-good positions instead of falling
+    // through to (0,0) for every node during the 100–500ms ELK pass.
+    setStatus({ kind: "computing", previous_result: lastResultRef.current });
 
     let cancelled = false;
     layout(frame_version_ref.current, merged_opts_ref.current).then(

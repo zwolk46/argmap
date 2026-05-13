@@ -75,10 +75,13 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const cascade_confirmation = useCascadeConfirmation();
   const canvas_ref = React.useRef<FrameCanvasHandle>(null);
   const layout_status = useLayoutResult(snapshot.frame_version ?? EMPTY_FRAME_VERSION);
+  // P0-9: fall through to the prior result while ELK recomputes (the
+  // "computing" status now carries previous_result) so the canvas doesn't
+  // slam every node to (0,0) for the 100–500ms layout pass.
   const layout_result =
     layout_status.kind === "ready"
       ? layout_status.result
-      : layout_status.kind === "error"
+      : layout_status.kind === "computing" || layout_status.kind === "error"
         ? layout_status.previous_result
         : null;
 

@@ -72,7 +72,7 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
   const layout_result =
     layout_status.kind === "ready"
       ? layout_status.result
-      : layout_status.kind === "error"
+      : layout_status.kind === "computing" || layout_status.kind === "error"
         ? layout_status.previous_result
         : null;
 

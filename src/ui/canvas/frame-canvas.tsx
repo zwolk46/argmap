@@ -77,7 +77,15 @@ function buildRFNodes(
   read_only: boolean,
 ): RFNode<FrameCanvasNodeData>[] {
   return frame_version.nodes.map((node) => {
-    const pos = layout_result?.positions.find((p) => p.node_id === node.id);
+    // P0-10: prefer the node's own anchored coordinates (set by a drag) over
+    // the layout result. This pins user drags immediately even when the
+    // layout consumer's structural hash hasn't caused ELK to re-run, AND
+    // overrides the (0,0) fallback when layout_result is null.
+    const anchor =
+      node.presentation?.x !== undefined && node.presentation?.y !== undefined
+        ? { x: node.presentation.x, y: node.presentation.y }
+        : null;
+    const pos = anchor ?? layout_result?.positions.find((p) => p.node_id === node.id);
     const status = status_map?.[node.id];
     const is_indeterminate = status?.failed_conditions?.includes("inputs_indeterminate") ?? false;
 
