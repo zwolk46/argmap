@@ -34,6 +34,11 @@ export function IconButton({
     variant === "accent" || active
       ? "var(--color-mode-current-accent)"
       : "var(--color-text-secondary)";
+  // P1: hover is now CSS-driven via .argmap-icon-btn:hover in global.css
+  // instead of inline JS mutating style on mouseenter/leave. The old
+  // approach kept the hover background stuck after the cursor moved
+  // away if the user happened to focus the button via Tab (mouseleave
+  // never fired), and was redundant with the existing CSS transition.
   return (
     <button
       type="button"
@@ -43,6 +48,8 @@ export function IconButton({
       onClick={onClick}
       disabled={disabled}
       data-testid={dataTestId}
+      className="argmap-icon-btn"
+      data-active={active ? "true" : undefined}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -58,17 +65,6 @@ export function IconButton({
         transition:
           "background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
         padding: 0,
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled) {
-          (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
-          (e.currentTarget as HTMLElement).style.color = "var(--color-text-primary)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.background = active ? "var(--color-surface-selected)" : accentBg;
-        el.style.color = accentColor;
       }}
     >
       {children}

@@ -44,15 +44,40 @@ export function Tooltip({ content, children, disabled }: TooltipProps): ReactEle
     if (e.key === "Escape") setOpen(false);
   }
 
+  // P1: merge with the child's existing handlers instead of overwriting.
+  // Before, wrapping `<Button onMouseEnter={...}>` in a `<Tooltip>` would
+  // silently lose the button's onMouseEnter — a latent footgun the
+  // moment any coachmark-on-a-primary-action came along.
+  const child_props = (
+    children as ReactElement<{
+      onMouseEnter?: (e: React.MouseEvent) => void;
+      onMouseLeave?: (e: React.MouseEvent) => void;
+      onFocus?: (e: React.FocusEvent) => void;
+      onBlur?: (e: React.FocusEvent) => void;
+      onKeyDown?: (e: React.KeyboardEvent) => void;
+    }>
+  ).props;
+  function compose<T extends React.SyntheticEvent>(
+    own: (e: T) => void,
+    childs: ((e: T) => void) | undefined,
+  ) {
+    return childs
+      ? (e: T) => {
+          childs(e);
+          own(e);
+        }
+      : own;
+  }
+
   const childWithProps = React.cloneElement(children, {
-    onMouseEnter: handleMouseEnter,
-    onMouseLeave: handleMouseLeave,
-    onFocus: handleFocus,
-    onBlur: handleBlur,
-    onKeyDown: handleKeyDown,
+    onMouseEnter: compose(handleMouseEnter, child_props.onMouseEnter),
+    onMouseLeave: compose(handleMouseLeave, child_props.onMouseLeave),
+    onFocus: compose(handleFocus, child_props.onFocus),
+    onBlur: compose(handleBlur, child_props.onBlur),
+    onKeyDown: compose(handleKeyDown, child_props.onKeyDown),
     "aria-describedby": open ? "tooltip-content" : undefined,
     ref,
-  });
+  } as React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement> });
 
   return (
     <>

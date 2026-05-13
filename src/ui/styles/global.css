@@ -385,6 +385,16 @@ select.argmap-input {
   animation: argmap-dialog-pop-in var(--duration-medium) var(--ease-emphasized);
 }
 
+/* P1: IconButton hover via CSS (replaces inline JS mutation that got
+   stuck when the user Tab'd off a hovered button). */
+.argmap-icon-btn:hover:not(:disabled) {
+  background: var(--color-surface-hover) !important;
+  color: var(--color-text-primary) !important;
+}
+.argmap-icon-btn[data-active="true"]:hover:not(:disabled) {
+  background: var(--color-surface-selected) !important;
+}
+
 /* P0-17: path-to-conclusion animation. When the session reaches a
    determinate state, overlay edges on the primary path fade in from source
    toward conclusion (staggered by --path-index × 120ms). After the trace

@@ -31,6 +31,10 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
           border: "none",
           padding: 0,
           cursor: "pointer",
+          // P1: align the :focus-visible outline with the inner Pill shape
+          // so the focus ring traces the pill instead of an awkward
+          // rectangle around it.
+          borderRadius: "var(--radius-pill, 999px)",
         }}
       >
         <Pill
@@ -59,6 +63,10 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
           border: "none",
           padding: 0,
           cursor: "pointer",
+          // P1: align the :focus-visible outline with the inner Pill shape
+          // so the focus ring traces the pill instead of an awkward
+          // rectangle around it.
+          borderRadius: "var(--radius-pill, 999px)",
         }}
       >
         <Pill
