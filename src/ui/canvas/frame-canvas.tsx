@@ -128,14 +128,17 @@ function buildRFNodes(
         enable_connector_handle: !read_only && operating_mode === "frame_building",
         legal_mode,
         gate_glyph:
+          // P0-8: schema gate_type is "AND"|"OR"|"NOT"|"IF_THEN"|"UNLESS";
+          // the old map used the never-matching "AndGate" forms so every
+          // gate rendered as the fallback "⊕".
           node.type === "LogicalGate" && "gate_type" in node
             ? ((
                 {
-                  AndGate: "∧",
-                  OrGate: "∨",
-                  NotGate: "¬",
-                  IfThenGate: "→",
-                  UnlessGate: "⊘",
+                  AND: "∧",
+                  OR: "∨",
+                  NOT: "¬",
+                  IF_THEN: "→",
+                  UNLESS: "⊘",
                 } as Record<string, "∧" | "∨" | "¬" | "→" | "⊘">
               )[(node as { gate_type: string }).gate_type] ?? "⊕")
             : undefined,

@@ -63,3 +63,63 @@ describe("candidateLabel", () => {
     }
   });
 });
+
+describe("validEdgeTypesFor — LogicalGate slot candidates per variant (P0-8 regression)", () => {
+  function makeGateFrame(gate_id: string, gate_type: string): FrameVersion {
+    return {
+      id: "v-1",
+      frame_id: "f-1",
+      version_number: 1,
+      nodes: [
+        { id: "src", type: "Interpretation" } as unknown as Node,
+        { id: gate_id, type: "LogicalGate", gate_type } as unknown as Node,
+      ],
+      edges: [],
+      created_at: "2026-01-01T00:00:00Z",
+      is_milestone: false,
+    };
+  }
+
+  it("AND gate offers an `inputs` slot candidate", () => {
+    const fv = makeGateFrame("g-and", "AND");
+    const candidates = validEdgeTypesFor("src", "g-and", fv);
+    const slot_candidates = candidates.filter((c) => c.kind === "logical_gate_slot");
+    expect(slot_candidates.some((c) => c.kind === "logical_gate_slot" && c.slot === "inputs")).toBe(
+      true,
+    );
+  });
+
+  it("OR gate offers an `inputs` slot candidate", () => {
+    const fv = makeGateFrame("g-or", "OR");
+    const candidates = validEdgeTypesFor("src", "g-or", fv);
+    expect(
+      candidates.some((c) => c.kind === "logical_gate_slot" && c.slot === "inputs"),
+    ).toBe(true);
+  });
+
+  it("NOT gate offers an `input` slot candidate", () => {
+    const fv = makeGateFrame("g-not", "NOT");
+    const candidates = validEdgeTypesFor("src", "g-not", fv);
+    expect(candidates.some((c) => c.kind === "logical_gate_slot" && c.slot === "input")).toBe(true);
+  });
+
+  it("IF_THEN gate offers `antecedent` and `consequent` slot candidates", () => {
+    const fv = makeGateFrame("g-if", "IF_THEN");
+    const candidates = validEdgeTypesFor("src", "g-if", fv);
+    expect(
+      candidates.some((c) => c.kind === "logical_gate_slot" && c.slot === "antecedent"),
+    ).toBe(true);
+    expect(
+      candidates.some((c) => c.kind === "logical_gate_slot" && c.slot === "consequent"),
+    ).toBe(true);
+  });
+
+  it("UNLESS gate offers `main` and `exception` slot candidates", () => {
+    const fv = makeGateFrame("g-unless", "UNLESS");
+    const candidates = validEdgeTypesFor("src", "g-unless", fv);
+    expect(candidates.some((c) => c.kind === "logical_gate_slot" && c.slot === "main")).toBe(true);
+    expect(candidates.some((c) => c.kind === "logical_gate_slot" && c.slot === "exception")).toBe(
+      true,
+    );
+  });
+});

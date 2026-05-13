@@ -55,21 +55,26 @@ export function validEdgeTypesFor(
         (e) => e.type === "GATES" && e.target === target,
       );
 
-      if (gate_type === "AndGate" || gate_type === "OrGate") {
+      // P0-8: schema gate_type is "AND" | "OR" | "NOT" | "IF_THEN" | "UNLESS"
+      // (per src/schema/nodes.ts). Previous string comparisons used the
+      // human-friendly "AndGate"/"OrGate"/etc. forms that never match the
+      // canonical enum, so NO slot candidates were ever emitted. Wiring INTO
+      // a LogicalGate via drag-edge was impossible.
+      if (gate_type === "AND" || gate_type === "OR") {
         candidates.push({
           kind: "logical_gate_slot",
           gate_id: target,
           slot: "inputs",
           source_node: source,
         });
-      } else if (gate_type === "NotGate" && !existing_inputs.some((e) => e.source === source)) {
+      } else if (gate_type === "NOT" && !existing_inputs.some((e) => e.source === source)) {
         candidates.push({
           kind: "logical_gate_slot",
           gate_id: target,
           slot: "input",
           source_node: source,
         });
-      } else if (gate_type === "IfThenGate") {
+      } else if (gate_type === "IF_THEN") {
         const has_antecedent = existing_inputs.some(
           (e) => (e as { slot?: string }).slot === "antecedent",
         );
@@ -92,7 +97,7 @@ export function validEdgeTypesFor(
             source_node: source,
           });
         }
-      } else if (gate_type === "UnlessGate") {
+      } else if (gate_type === "UNLESS") {
         const has_main = existing_inputs.some((e) => (e as { slot?: string }).slot === "main");
         const has_exception = existing_inputs.some(
           (e) => (e as { slot?: string }).slot === "exception",
