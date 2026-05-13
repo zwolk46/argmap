@@ -1,7 +1,13 @@
 import type { FrameVersion, NodeRef, EdgeType } from "@/schema";
 import { VALID_EDGE_PAIRS } from "@/schema";
 
-export type LogicalGateSlot = "inputs" | "input" | "antecedent" | "consequent" | "main" | "exception";
+export type LogicalGateSlot =
+  | "inputs"
+  | "input"
+  | "antecedent"
+  | "consequent"
+  | "main"
+  | "exception";
 
 export type EdgeCreationCandidate =
   | { kind: "edge"; edge_type: EdgeType; source: NodeRef; target: NodeRef }

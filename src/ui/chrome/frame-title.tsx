@@ -21,7 +21,9 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
 
   function commit() {
     if (draft.trim()) {
-      frame_store.getState().applyPatch({ kind: "metadata_edited", partial: { title: draft.trim() } });
+      frame_store
+        .getState()
+        .applyPatch({ kind: "metadata_edited", partial: { title: draft.trim() } });
     }
     setEditing(false);
   }

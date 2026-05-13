@@ -6,7 +6,10 @@ export interface VersionHistoryButtonProps {
   onToggle?: () => void;
 }
 
-export function VersionHistoryButton({ active, onToggle }: VersionHistoryButtonProps): ReactElement {
+export function VersionHistoryButton({
+  active,
+  onToggle,
+}: VersionHistoryButtonProps): ReactElement {
   return (
     <IconButton aria-label="Version history" active={active} onClick={onToggle}>
       ↺

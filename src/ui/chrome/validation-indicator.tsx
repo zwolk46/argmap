@@ -8,14 +8,15 @@ export interface ValidationIndicatorProps {
   onOpenDrawer?: (results: ReadonlyArray<ValidationResult>) => void;
 }
 
-export function ValidationIndicator({ surface, onOpenDrawer }: ValidationIndicatorProps): ReactElement {
+export function ValidationIndicator({
+  surface,
+  onOpenDrawer,
+}: ValidationIndicatorProps): ReactElement {
   const frame_validation = useFrameStore((s) => s.validation);
   const compute_result = useSessionStore((s) => s.compute_result);
 
   const results: ReadonlyArray<ValidationResult> =
-    surface === "frame_building"
-      ? frame_validation
-      : (compute_result?.validation_results ?? []);
+    surface === "frame_building" ? frame_validation : (compute_result?.validation_results ?? []);
 
   const severity = severityFromValidation(results);
 

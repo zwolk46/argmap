@@ -4,18 +4,18 @@ React UI layer for the argument mapping application. Implemented in session I.9a
 
 ## Module structure
 
-| Sub-directory | Contents |
-|---|---|
-| `primitives/` | Stateless design-system atoms: `TypeIcon`, `SeverityIcon`, `Tooltip`, `GlossaryTooltip`, `Dialog`, `Drawer`, `SegmentedToggle`, `StatusBadge`, `AiAttributionChip` |
-| `chrome/` | Top-bar chrome: `AppChrome`, `FrameTitle`, `ModeFavorChip`, `OperatingModeToggle`, `ValidationIndicator`, `CascadeConfirmationDialog` |
-| `canvas/` | React Flow canvas layer: `FrameCanvas`, node renderers, edge renderers, `StatusBadgeOverlay`, `EdgeCreationPopup`, layout consumer |
-| `ai-suggestion/` | `SuggestionDrawer` — AI hook result display and accept/reject UI |
-| `hooks/` | `useAiSuggestion`, `useCascadeConfirmation`, `useKeyboardShortcuts`, `useReduceMotion` |
-| `styles/` | CSS design tokens (`tokens.css`, `animations.css`) |
-| `routing.ts` | Hash-based routing: `routeFromHash`, `hashFromRoute`, `navigate`, `useRoute`, `useNavigate` |
-| `pages.tsx` | Page stubs: `FrameBuildingPage`, `ArgumentRunningPage`, `VersionHistoryPane`, `OnboardingWizard` |
-| `App.tsx` | Root component; accepts `AppProps` (dependency-injected via `RepositoryProvider`) |
-| `error-boundary.tsx` | `AppErrorBoundary` class component |
+| Sub-directory        | Contents                                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `primitives/`        | Stateless design-system atoms: `TypeIcon`, `SeverityIcon`, `Tooltip`, `GlossaryTooltip`, `Dialog`, `Drawer`, `SegmentedToggle`, `StatusBadge`, `AiAttributionChip` |
+| `chrome/`            | Top-bar chrome: `AppChrome`, `FrameTitle`, `ModeFavorChip`, `OperatingModeToggle`, `ValidationIndicator`, `CascadeConfirmationDialog`                              |
+| `canvas/`            | React Flow canvas layer: `FrameCanvas`, node renderers, edge renderers, `StatusBadgeOverlay`, `EdgeCreationPopup`, layout consumer                                 |
+| `ai-suggestion/`     | `SuggestionDrawer` — AI hook result display and accept/reject UI                                                                                                   |
+| `hooks/`             | `useAiSuggestion`, `useCascadeConfirmation`, `useKeyboardShortcuts`, `useReduceMotion`                                                                             |
+| `styles/`            | CSS design tokens (`tokens.css`, `animations.css`)                                                                                                                 |
+| `routing.ts`         | Hash-based routing: `routeFromHash`, `hashFromRoute`, `navigate`, `useRoute`, `useNavigate`                                                                        |
+| `pages.tsx`          | Page stubs: `FrameBuildingPage`, `ArgumentRunningPage`, `VersionHistoryPane`, `OnboardingWizard`                                                                   |
+| `App.tsx`            | Root component; accepts `AppProps` (dependency-injected via `RepositoryProvider`)                                                                                  |
+| `error-boundary.tsx` | `AppErrorBoundary` class component                                                                                                                                 |
 
 ## Public API
 
@@ -30,7 +30,12 @@ export * from "./canvas";
 export * from "./ai-suggestion";
 export * from "./hooks";
 export { useRoute, useNavigate } from "./routing";
-export { FrameBuildingPage, ArgumentRunningPage, VersionHistoryPane, OnboardingWizard } from "./pages";
+export {
+  FrameBuildingPage,
+  ArgumentRunningPage,
+  VersionHistoryPane,
+  OnboardingWizard,
+} from "./pages";
 ```
 
 ## Key design decisions
@@ -48,6 +53,7 @@ export { FrameBuildingPage, ArgumentRunningPage, VersionHistoryPane, OnboardingW
 ## Import boundaries
 
 `src/ui/` may:
+
 - Value-import from `@/schema`, `@/state`, `@/layout`.
 - Type-only import from `@/runtime` and `@/llm-hooks`.
 

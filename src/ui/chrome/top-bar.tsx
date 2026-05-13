@@ -29,16 +29,10 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
         transition: `border-color var(--duration-slow) var(--ease-standard)`,
       }}
     >
-      {slots.modeToggle && (
-        <div style={{ flexShrink: 0 }}>{slots.modeToggle}</div>
-      )}
-      {slots.title && (
-        <div style={{ flex: 1, minWidth: 0 }}>{slots.title}</div>
-      )}
+      {slots.modeToggle && <div style={{ flexShrink: 0 }}>{slots.modeToggle}</div>}
+      {slots.title && <div style={{ flex: 1, minWidth: 0 }}>{slots.title}</div>}
       {slots.chips && (
-        <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>
-          {slots.chips}
-        </div>
+        <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>{slots.chips}</div>
       )}
       {slots.indicators && (
         <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
@@ -46,9 +40,7 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
         </div>
       )}
       {slots.buttons && (
-        <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>
-          {slots.buttons}
-        </div>
+        <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>{slots.buttons}</div>
       )}
     </header>
   );

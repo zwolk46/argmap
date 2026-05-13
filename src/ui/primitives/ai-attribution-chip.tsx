@@ -66,8 +66,7 @@ export function AiAttributionChip({ record }: AiAttributionChipProps): ReactElem
           transition: `border-color var(--duration-fast) var(--ease-standard)`,
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor =
-            "var(--color-ai-accent-strong)";
+          (e.currentTarget as HTMLElement).style.borderColor = "var(--color-ai-accent-strong)";
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLElement).style.borderColor = "transparent";

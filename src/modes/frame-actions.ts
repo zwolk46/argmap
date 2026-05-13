@@ -1,4 +1,4 @@
-import type { Frame, FrameVersion, Node, Edge, Position } from "@/schema";
+import type { Frame, FrameVersion, Node, Edge, Position, NodeType } from "@/schema";
 import type {
   FrameActionDispatchTable,
   FrameTransformResult,
@@ -205,6 +205,22 @@ export const frameActions: FrameActionDispatchTable = {
       return rest as Node;
     });
     return { next_version: nextFrameVersion(fv, nodes) };
+  },
+
+  default_policy_edited(
+    frame: Frame,
+    fv: FrameVersion,
+    patch: Extract<FramePatch, { kind: "default_policy_edited" }>,
+    _opts: DispatchOpts,
+  ): FrameTransformResult {
+    const updated = {
+      ...frame.default_satisfaction_policies,
+      [patch.node_type as NodeType]: patch.policy,
+    };
+    return {
+      next_version: { ...fv },
+      frame_partial: { default_satisfaction_policies: updated },
+    };
   },
 
   architectural_mode_changed(

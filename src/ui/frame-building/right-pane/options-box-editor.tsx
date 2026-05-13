@@ -1,0 +1,174 @@
+import * as React from "react";
+import type { ReactElement } from "react";
+import type { Node, NodeType, SatisfactionPolicy } from "@/schema";
+import { resolveEffectivePolicy, CONDITION_KIND_PRIORITY, toModeFlavor } from "@/schema";
+import type { SatisfactionPolicyKey } from "@/schema";
+import { useFrameStore, useRepository } from "@/state";
+import { ConditionList } from "./condition-list";
+
+export type OptionsBoxEditMode = "instance" | "frame_default";
+
+export interface OptionsBoxEditorProps {
+  node: Node;
+  edit_mode: OptionsBoxEditMode;
+  on_change_edit_mode: (next: OptionsBoxEditMode) => void;
+}
+
+const PER_INSTANCE_ALLOWED_TYPES: ReadonlySet<NodeType> = new Set([
+  "Checkpoint",
+  "RootQuestion",
+  "SubQuestion",
+  "Interpretation",
+]);
+
+function policyToString(policy: SatisfactionPolicy): string {
+  const kinds = (policy.all_of ?? []).map((c) => c.kind);
+  const sorted = [...kinds].sort(
+    (a, b) => CONDITION_KIND_PRIORITY.indexOf(a) - CONDITION_KIND_PRIORITY.indexOf(b),
+  );
+  const label = sorted.join(", ") || "(empty)";
+  if (policy.any_of && policy.any_of.length > 0) {
+    return `${label} | any-of(${policy.any_of.map((c) => c.kind).join(", ")})`;
+  }
+  return label;
+}
+
+export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
+  const { node, edit_mode, on_change_edit_mode } = props;
+  const frame = useFrameStore((s) => s.frame);
+  const { frame_store } = useRepository();
+
+  if (!frame) {
+    return (
+      <div
+        style={{
+          fontSize: "var(--font-size-sm, 13px)",
+          color: "var(--color-text-tertiary, #9ca3af)",
+        }}
+      >
+        Loading…
+      </div>
+    );
+  }
+
+  const node_type = node.type as SatisfactionPolicyKey;
+  const per_instance = (node as { options_box?: SatisfactionPolicy }).options_box;
+  const frame_default = (
+    frame.default_satisfaction_policies as Record<string, SatisfactionPolicy | undefined>
+  )[node_type];
+  const effective = resolveEffectivePolicy(node_type, per_instance, frame_default);
+
+  const source_label = per_instance
+    ? "per-instance"
+    : frame_default
+      ? "frame-default"
+      : "library-default";
+
+  const mode_flavor = toModeFlavor(frame.mode, frame.flavor);
+
+  const active_policy =
+    edit_mode === "instance" ? (per_instance ?? effective) : (frame_default ?? effective);
+
+  function handlePolicyChange(next: SatisfactionPolicy) {
+    if (edit_mode === "instance") {
+      frame_store.getState().applyPatch({
+        kind: "options_box_edited",
+        node_id: node.id,
+        policy: next,
+      });
+    } else {
+      frame_store.getState().applyPatch({
+        kind: "default_policy_edited",
+        node_type: node_type as SatisfactionPolicyKey,
+        policy: next,
+      });
+    }
+  }
+
+  const allows_per_instance = PER_INSTANCE_ALLOWED_TYPES.has(node.type);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2, 8px)" }}>
+      <div style={SECTION_LABEL_STYLE}>Satisfaction policy</div>
+
+      {/* Tier 1: Effective policy (read-only summary) */}
+      <div
+        style={{
+          padding: "6px 8px",
+          background: "var(--color-surface-pane, #f9fafb)",
+          borderRadius: "var(--radius-sm, 4px)",
+          fontSize: "var(--font-size-xs, 11px)",
+          color: "var(--color-text-secondary, #6b7280)",
+        }}
+        title={`Effective: ${policyToString(effective)}`}
+      >
+        <span style={{ fontWeight: 500, color: "var(--color-text-primary, #111827)" }}>
+          Effective:{" "}
+        </span>
+        {policyToString(effective)}
+      </div>
+
+      {/* Tier 2: Source chip */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <span
+          style={{
+            padding: "2px 8px",
+            background: "var(--color-surface-hover, rgba(0,0,0,0.05))",
+            borderRadius: "9999px",
+            fontSize: "var(--font-size-xs, 11px)",
+            color: "var(--color-text-secondary, #6b7280)",
+          }}
+        >
+          source: {source_label}
+        </span>
+      </div>
+
+      {/* Tier 3: Edit surface */}
+      {allows_per_instance ? (
+        <>
+          <div style={{ display: "flex", gap: "4px" }}>
+            {(["instance", "frame_default"] as OptionsBoxEditMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => on_change_edit_mode(m)}
+                style={{
+                  padding: "3px 10px",
+                  background: edit_mode === m ? "var(--color-accent, #6366f1)" : "transparent",
+                  color: edit_mode === m ? "#fff" : "var(--color-text-secondary, #6b7280)",
+                  border: "1px solid var(--color-border, #e5e7eb)",
+                  borderRadius: "var(--radius-sm, 4px)",
+                  cursor: "pointer",
+                  fontSize: "var(--font-size-xs, 11px)",
+                }}
+              >
+                {m === "instance" ? "Edit this instance" : "Edit frame default"}
+              </button>
+            ))}
+          </div>
+          <ConditionList
+            policy={active_policy}
+            on_change={handlePolicyChange}
+            mode_flavor={mode_flavor}
+          />
+        </>
+      ) : (
+        <div
+          style={{
+            fontSize: "var(--font-size-xs, 11px)",
+            color: "var(--color-text-secondary, #6b7280)",
+          }}
+        >
+          This node type uses the frame default. Edit it under Frame Settings → Default policies.
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SECTION_LABEL_STYLE: React.CSSProperties = {
+  textTransform: "uppercase",
+  fontSize: "var(--font-size-xs, 11px)",
+  color: "var(--color-text-secondary, #6b7280)",
+  letterSpacing: "0.05em",
+};

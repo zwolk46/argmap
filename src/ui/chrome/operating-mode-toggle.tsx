@@ -49,11 +49,7 @@ export function OperatingModeToggle({
 
   return (
     <>
-      <SegmentedToggle
-        options={OPTIONS}
-        value={current_mode}
-        onChange={handleChange}
-      />
+      <SegmentedToggle options={OPTIONS} value={current_mode} onChange={handleChange} />
       {show_warning_dialog && (
         <div
           role="dialog"

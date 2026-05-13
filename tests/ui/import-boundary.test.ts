@@ -16,7 +16,8 @@ function collectFiles(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-const VALUE_IMPORT_RE = /^import\s+(?!type\s)[^'"]*from\s+['"](@\/runtime|@\/persistence|@\/modes)['"];?/gm;
+const VALUE_IMPORT_RE =
+  /^import\s+(?!type\s)[^'"]*from\s+['"](@\/runtime|@\/persistence|@\/modes)['"];?/gm;
 const LLMHOOKS_VALUE_RE = /^import\s+(?!type\s)[^'"]*from\s+['"]@\/llm-hooks['"];?/gm;
 
 describe("src/ui/ import boundary", () => {

@@ -1,0 +1,225 @@
+import * as React from "react";
+import type { NodeRef, Term, Interpretation, Node, Edge } from "@/schema";
+import { useSessionStore, useRepository, useFrameStore } from "@/state";
+import { PremiseAuthoringSection, type PremiseAuthoringResult } from "./premise-authoring-section";
+import { AuthorityAttachmentSection } from "./authority-attachment-section";
+import { NotesField } from "./notes-field";
+
+export interface TermItemEditorProps {
+  node: Term;
+  on_close: () => void;
+  on_saved: () => void;
+}
+
+export function listTermInterpretations(
+  term: Term,
+  nodes_by_id: ReadonlyMap<NodeRef, Node>,
+  edges: ReadonlyArray<Edge>,
+): ReadonlyArray<Interpretation> {
+  const interpretation_ids = edges
+    .filter((e) => e.type === "INTERPRETED_AS" && e.source === term.id)
+    .map((e) => e.target);
+  const interpretations: Interpretation[] = [];
+  for (const id of interpretation_ids) {
+    const n = nodes_by_id.get(id);
+    if (n && n.type === "Interpretation") interpretations.push(n);
+  }
+  return [...interpretations].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
+  const { node, on_close, on_saved } = props;
+  const { session_store } = useRepository();
+  const frame_version = useFrameStore((s) => s.frame_version);
+  const session = useSessionStore((s) => s.session);
+
+  const [selected_interpretation_id, setSelectedInterpretationId] = React.useState<NodeRef | null>(
+    null,
+  );
+  const [premise_result, setPremiseResult] = React.useState<PremiseAuthoringResult | null>(null);
+  const [authority_id, setAuthorityId] = React.useState<string | null>(null);
+  const [notes, setNotes] = React.useState("");
+
+  const interpretations = React.useMemo(() => {
+    const fv = session?.frame_version_snapshot ?? frame_version;
+    if (!fv) return [] as ReadonlyArray<Interpretation>;
+    const nodes_by_id = new Map<NodeRef, Node>(fv.nodes.map((n) => [n.id, n]));
+    return listTermInterpretations(node, nodes_by_id, fv.edges);
+  }, [node, session, frame_version]);
+
+  const can_save = selected_interpretation_id !== null;
+
+  function on_save(): void {
+    const store = session_store.getState();
+    // Pre-dispatch new premise if any so we can pass its id forward.
+    if (premise_result && premise_result.kind === "new") {
+      store.applyPatch({ kind: "premise_added", premise: premise_result.premise });
+    }
+    store.applyPatch({
+      kind: "interpretation_selected",
+      term_id: node.id,
+      interpretation_id: selected_interpretation_id!,
+    });
+    void authority_id;
+    void notes;
+    on_saved();
+  }
+
+  return (
+    <div
+      data-testid="term-item-editor"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-3, 12px)",
+        padding: "var(--space-3, 12px)",
+      }}
+    >
+      <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-1, 4px)" }}>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "var(--font-size-base, 14px)",
+            color: "var(--color-text-primary, #111827)",
+          }}
+        >
+          {node.name}
+        </h3>
+        <span
+          style={{
+            fontSize: "10px",
+            color: "var(--color-text-tertiary, #9ca3af)",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
+          Term
+        </span>
+      </header>
+
+      {node.linked_to ? (
+        <div
+          data-testid="term-linked-notice"
+          style={{
+            padding: "var(--space-2, 8px)",
+            background: "var(--color-background-warning, #fef3c7)",
+            color: "var(--color-text-warning, #92400e)",
+            borderRadius: "var(--border-radius-md, 6px)",
+            fontSize: "var(--font-size-xs, 11px)",
+          }}
+        >
+          This term is linked to another. Selecting an interpretation here will not affect the
+          linked target.
+        </div>
+      ) : null}
+
+      <fieldset
+        style={{
+          border: "var(--border-thin) solid var(--color-border-tertiary)",
+          borderRadius: "var(--border-radius-md, 6px)",
+          padding: "var(--space-2, 8px)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-1, 4px)",
+        }}
+      >
+        <legend
+          style={{
+            fontSize: "var(--font-size-xs, 11px)",
+            color: "var(--color-text-secondary, #6b7280)",
+            padding: "0 var(--space-1, 4px)",
+          }}
+        >
+          Interpretations
+        </legend>
+        {interpretations.length === 0 ? (
+          <span
+            style={{
+              fontSize: "var(--font-size-xs, 11px)",
+              color: "var(--color-text-tertiary, #9ca3af)",
+            }}
+          >
+            No interpretations attached to this term.
+          </span>
+        ) : (
+          interpretations.map((i) => (
+            <label
+              key={i.id}
+              data-testid={`term-interpretation-${i.id}`}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "var(--space-1, 4px)",
+                fontSize: "var(--font-size-xs, 11px)",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name={`term-${node.id}`}
+                checked={selected_interpretation_id === i.id}
+                onChange={() => setSelectedInterpretationId(i.id)}
+              />
+              <span>{i.statement}</span>
+            </label>
+          ))
+        )}
+      </fieldset>
+
+      <PremiseAuthoringSection
+        value={premise_result}
+        on_change={setPremiseResult}
+        default_kind="found"
+        reuse_context={node.name}
+      />
+      <AuthorityAttachmentSection value={authority_id} on_change={setAuthorityId} />
+      <NotesField value={notes} on_change={setNotes} />
+
+      <footer
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "var(--space-1, 4px)",
+        }}
+      >
+        <button
+          type="button"
+          data-testid="term-editor-cancel"
+          onClick={on_close}
+          style={{
+            background: "transparent",
+            border: "var(--border-thin) solid var(--color-border-tertiary)",
+            borderRadius: "var(--border-radius-md, 6px)",
+            cursor: "pointer",
+            fontSize: "var(--font-size-xs, 11px)",
+            padding: "4px 10px",
+            color: "var(--color-text-secondary, #6b7280)",
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          data-testid="term-editor-save"
+          onClick={on_save}
+          disabled={!can_save}
+          style={{
+            background: can_save
+              ? "var(--color-background-accent, #dbeafe)"
+              : "var(--color-background-secondary, #f3f4f6)",
+            color: can_save
+              ? "var(--color-text-accent, #1d4ed8)"
+              : "var(--color-text-tertiary, #9ca3af)",
+            border: "none",
+            borderRadius: "var(--border-radius-md, 6px)",
+            cursor: can_save ? "pointer" : "default",
+            fontSize: "var(--font-size-xs, 11px)",
+            padding: "4px 10px",
+          }}
+        >
+          Save
+        </button>
+      </footer>
+    </div>
+  );
+}

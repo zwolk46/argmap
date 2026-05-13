@@ -126,7 +126,13 @@ export function Dialog({
         justifyContent: "center",
         background: "var(--color-surface-overlay)",
       }}
-      onClick={dismiss_on_click_outside ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
+      onClick={
+        dismiss_on_click_outside
+          ? (e) => {
+              if (e.target === e.currentTarget) onClose();
+            }
+          : undefined
+      }
     >
       <div
         ref={dialogRef}

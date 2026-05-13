@@ -40,7 +40,21 @@ describe("AiAttributionChip", () => {
 });
 
 describe("hookShortName", () => {
-  const CANONICAL_HOOKS = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12", "G13"];
+  const CANONICAL_HOOKS = [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5",
+    "G6",
+    "G7",
+    "G8",
+    "G9",
+    "G10",
+    "G11",
+    "G12",
+    "G13",
+  ];
 
   for (const hook_id of CANONICAL_HOOKS) {
     it(`has a short name for ${hook_id}`, () => {

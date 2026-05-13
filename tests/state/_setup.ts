@@ -109,6 +109,7 @@ export function makeFrameDispatch(
     }),
     presentation_hints_reset_all:
       identity as FrameActionDispatchTable["presentation_hints_reset_all"],
+    default_policy_edited: identity as FrameActionDispatchTable["default_policy_edited"],
     architectural_mode_changed: identity as FrameActionDispatchTable["architectural_mode_changed"],
     ...overrides,
   };

@@ -35,5 +35,7 @@ export function SuggestionEditPanel<TOut>({
   );
 }
 
-export const SUGGESTION_EDIT_PANELS: ReadonlyMap<string, React.ComponentType<SuggestionEditPanelProps<never>>> =
-  new Map();
+export const SUGGESTION_EDIT_PANELS: ReadonlyMap<
+  string,
+  React.ComponentType<SuggestionEditPanelProps<never>>
+> = new Map();

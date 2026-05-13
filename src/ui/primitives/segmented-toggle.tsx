@@ -67,9 +67,7 @@ export function SegmentedToggle<T extends string>({
               borderRadius: "var(--radius-pill)",
               border: "none",
               background: is_active ? "var(--color-mode-current-accent-bg)" : "transparent",
-              color: is_active
-                ? "var(--color-mode-current-accent)"
-                : "var(--color-text-secondary)",
+              color: is_active ? "var(--color-mode-current-accent)" : "var(--color-text-secondary)",
               fontSize: "var(--font-size-sm)",
               fontWeight: "var(--font-weight-medium)",
               fontFamily: "var(--font-sans)",

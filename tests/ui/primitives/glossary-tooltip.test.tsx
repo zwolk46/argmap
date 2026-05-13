@@ -17,8 +17,15 @@ vi.mock("@/state", async (importOriginal) => {
 
 describe("GLOSSARY_DICTIONARY", () => {
   const NODE_TYPES = [
-    "RootQuestion", "SubQuestion", "Term", "Interpretation",
-    "Checkpoint", "LogicalGate", "Conclusion", "Authority", "Premise",
+    "RootQuestion",
+    "SubQuestion",
+    "Term",
+    "Interpretation",
+    "Checkpoint",
+    "LogicalGate",
+    "Conclusion",
+    "Authority",
+    "Premise",
   ];
 
   for (const node_type of NODE_TYPES) {
@@ -29,7 +36,12 @@ describe("GLOSSARY_DICTIONARY", () => {
     });
   }
 
-  const LEGAL_CONCEPTS = ["jurisdiction", "binding_authority", "persuasive_authority", "burden_of_proof"];
+  const LEGAL_CONCEPTS = [
+    "jurisdiction",
+    "binding_authority",
+    "persuasive_authority",
+    "burden_of_proof",
+  ];
   for (const concept of LEGAL_CONCEPTS) {
     it(`has a legal-only entry for ${concept}`, () => {
       expect(GLOSSARY_DICTIONARY[concept]).toBeDefined();

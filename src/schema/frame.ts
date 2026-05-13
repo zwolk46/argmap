@@ -6,6 +6,14 @@ import type { SatisfactionPolicy } from "./satisfaction-policy";
 export type Mode = "legal" | "general";
 export type Flavor = "personal" | "academic";
 
+// Flattened mode+flavor discriminant for table lookup (matches PREMISE_KIND_VOCABULARIES keys).
+export type ModeFlavor = "legal" | "general_academic" | "general_personal";
+
+export function toModeFlavor(mode: Mode, flavor?: Flavor): ModeFlavor {
+  if (mode === "legal") return "legal";
+  return flavor === "academic" ? "general_academic" : "general_personal";
+}
+
 export interface Jurisdiction {
   level: "federal" | "state" | "tribal" | "territory" | "international";
   region?: string;

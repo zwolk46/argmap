@@ -23,9 +23,12 @@ export function useAiSuggestion<TOut>(
 
   const { frame_store, session_store } = useRepository();
 
-  const pending = (store_kind === "frame" ? frame_pending : session_pending) as SuggestionResult<TOut> | null;
-  const status: AiSuggestionStatus =
-    (store_kind === "frame" ? frame_status : session_status) as AiSuggestionStatus;
+  const pending = (
+    store_kind === "frame" ? frame_pending : session_pending
+  ) as SuggestionResult<TOut> | null;
+  const status: AiSuggestionStatus = (
+    store_kind === "frame" ? frame_status : session_status
+  ) as AiSuggestionStatus;
 
   const invoke = React.useCallback(
     async (hook_id: HookId, args: unknown) => {

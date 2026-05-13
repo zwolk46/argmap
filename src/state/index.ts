@@ -59,10 +59,34 @@ export {
   selectValidationWarnings,
   selectNodeStatus,
   selectOpenGates,
+  selectNodeStatusCounts,
   selectStatusSummary,
+  selectInterviewItems,
+  selectFrameVersionDrift,
+  selectOutputForView,
+  selectStatusBadge,
   selectCascadeSummary,
+  selectValidationByNode,
+  selectValidationByEdge,
+  selectValidationDrawer,
+  selectFrameCanCommitTransition,
   selectPinnedFrames,
   selectFirstLaunchDismissed,
   selectNewFeatureNoticeSeen,
 } from "./selectors";
-export type { StatusSummary } from "./selectors";
+export type {
+  NodeStatusCounts,
+  StatusSummary,
+  SessionShape,
+  FrameVersionDriftSummary,
+  OutputViewTab,
+  OutputViewPayload,
+  StatusBadgeData,
+  ValidationDrawerEntry,
+} from "./selectors";
+
+// Re-exported for I.9b cascade UI (Contract 8 boundary: @/state is the value-import path)
+export type { CascadeReport } from "@/runtime";
+
+// Re-exported for I.9c argument-running UI per F-022 (state is the broker).
+export type { InterviewItem } from "@/modes";

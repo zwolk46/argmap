@@ -11,8 +11,12 @@ vi.mock("@/state", async (importOriginal) => {
     useFrameStore: vi.fn((selector: (s: { validation: ValidationResult[] }) => unknown) =>
       selector({ validation: FRAME_VALIDATION }),
     ),
-    useSessionStore: vi.fn((selector: (s: { compute_result: { validation_results: ValidationResult[] } | null }) => unknown) =>
-      selector({ compute_result: { validation_results: SESSION_VALIDATION } }),
+    useSessionStore: vi.fn(
+      (
+        selector: (s: {
+          compute_result: { validation_results: ValidationResult[] } | null;
+        }) => unknown,
+      ) => selector({ compute_result: { validation_results: SESSION_VALIDATION } }),
     ),
   };
 });

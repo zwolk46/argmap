@@ -70,9 +70,7 @@ describe("useKeyboardShortcuts", () => {
 
   it("allows rebinding zoom_in to a custom key", () => {
     const onZoomIn = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts({ onZoomIn }, { zoom_in: "=" }),
-    );
+    renderHook(() => useKeyboardShortcuts({ onZoomIn }, { zoom_in: "=" }));
     fireKey("=");
     expect(onZoomIn).toHaveBeenCalled();
   });

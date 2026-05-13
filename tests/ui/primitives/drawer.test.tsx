@@ -7,8 +7,12 @@ function TestDrawer({ open, onClose }: { open: boolean; onClose?: () => void }) 
   return (
     <Drawer open={open} dismiss_on_escape={!!onClose} onClose={onClose}>
       <DrawerHeader>Drawer Title</DrawerHeader>
-      <DrawerBody><p data-testid="drawer-body">Drawer body</p></DrawerBody>
-      <DrawerFooter><button>Action</button></DrawerFooter>
+      <DrawerBody>
+        <p data-testid="drawer-body">Drawer body</p>
+      </DrawerBody>
+      <DrawerFooter>
+        <button>Action</button>
+      </DrawerFooter>
     </Drawer>
   );
 }
@@ -33,7 +37,14 @@ describe("Drawer", () => {
 
   it("calls onClose on Escape when dismiss_on_escape=true", () => {
     let closed = false;
-    render(<TestDrawer open onClose={() => { closed = true; }} />);
+    render(
+      <TestDrawer
+        open
+        onClose={() => {
+          closed = true;
+        }}
+      />,
+    );
     fireEvent.keyDown(document, { key: "Escape" });
     expect(closed).toBe(true);
   });

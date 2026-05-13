@@ -109,11 +109,7 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
       </ul>
     ) : null;
 
-  const wrappedBadge = tooltipContent ? (
-    <Tooltip content={tooltipContent}>{badge}</Tooltip>
-  ) : (
-    badge
-  );
+  const wrappedBadge = tooltipContent ? <Tooltip content={tooltipContent}>{badge}</Tooltip> : badge;
 
   if (!showSubflag) return wrappedBadge;
 
@@ -130,9 +126,7 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
           background: isBinding
             ? "var(--color-subflag-binding-bg)"
             : "var(--color-subflag-persuasive-bg)",
-          color: isBinding
-            ? "var(--color-subflag-binding)"
-            : "var(--color-subflag-persuasive)",
+          color: isBinding ? "var(--color-subflag-binding)" : "var(--color-subflag-persuasive)",
           fontSize: "var(--font-size-2xs)",
           fontWeight: "var(--font-weight-medium)",
         }}

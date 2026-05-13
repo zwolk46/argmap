@@ -20,13 +20,11 @@ export const GLOSSARY_DICTIONARY: Record<string, GlossaryTerm> = {
   },
   Term: {
     term: "Term",
-    definition:
-      "A defined term that governs interpretation. Terms branch into Interpretations.",
+    definition: "A defined term that governs interpretation. Terms branch into Interpretations.",
   },
   Interpretation: {
     term: "Interpretation",
-    definition:
-      "One reading of a Term. The argument selects one Interpretation per Term.",
+    definition: "One reading of a Term. The argument selects one Interpretation per Term.",
   },
   Checkpoint: {
     term: "Checkpoint",
@@ -66,8 +64,7 @@ export const GLOSSARY_DICTIONARY: Record<string, GlossaryTerm> = {
   },
   persuasive_authority: {
     term: "Persuasive Authority",
-    definition:
-      "Authority that a court may consider but is not required to follow.",
+    definition: "Authority that a court may consider but is not required to follow.",
     legal_only: true,
   },
   burden_of_proof: {

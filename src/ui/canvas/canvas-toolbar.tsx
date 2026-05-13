@@ -51,12 +51,22 @@ export function CanvasToolbar({
         padding: "var(--space-1)",
       }}
     >
-      <IconButton aria-label="Zoom in" onClick={() => zoomIn()}>+</IconButton>
-      <IconButton aria-label="Zoom out" onClick={() => zoomOut()}>−</IconButton>
-      <IconButton aria-label="Fit to screen" onClick={() => fitView()}>⊞</IconButton>
-      <IconButton aria-label="Zoom to 100%" onClick={() => zoomTo(1)}>100%</IconButton>
+      <IconButton aria-label="Zoom in" onClick={() => zoomIn()}>
+        +
+      </IconButton>
+      <IconButton aria-label="Zoom out" onClick={() => zoomOut()}>
+        −
+      </IconButton>
+      <IconButton aria-label="Fit to screen" onClick={() => fitView()}>
+        ⊞
+      </IconButton>
+      <IconButton aria-label="Zoom to 100%" onClick={() => zoomTo(1)}>
+        100%
+      </IconButton>
       {onAutoArrange && (
-        <IconButton aria-label="Auto-arrange" onClick={onAutoArrange}>⟐</IconButton>
+        <IconButton aria-label="Auto-arrange" onClick={onAutoArrange}>
+          ⟐
+        </IconButton>
       )}
       <IconButton
         aria-label="Toggle FORECLOSES layer"

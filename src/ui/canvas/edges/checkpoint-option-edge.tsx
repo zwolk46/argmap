@@ -4,15 +4,16 @@ import type { EdgeProps, Edge as RFEdge } from "@xyflow/react";
 import type { FrameCanvasEdgeData } from "./types";
 
 export function CheckpointOptionEdge(props: EdgeProps<RFEdge<FrameCanvasEdgeData>>): ReactElement {
-  const {
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition, targetPosition,
-    data, markerEnd,
-  } = props;
+  const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, markerEnd } =
+    props;
 
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX, sourceY, sourcePosition,
-    targetX, targetY, targetPosition,
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
   });
 
   return (

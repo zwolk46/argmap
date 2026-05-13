@@ -78,6 +78,56 @@ export const DEFAULT_SATISFACTION_POLICIES: Readonly<{
 
 export type SatisfactionPolicyKey = keyof typeof DEFAULT_SATISFACTION_POLICIES;
 
+export type ConditionKind = Condition["kind"];
+
+// Canonical rendering order: structural → quality → authority → procedural → universal.
+// ConditionList renders all_of entries in this order for git-diff stability (Article II § 2).
+export const CONDITION_KIND_PRIORITY: readonly ConditionKind[] = [
+  "premise_attached",
+  "interpretation_selected",
+  "all_children_resolved",
+  "path_complete",
+  "not_contradicted",
+  "premise_kind_in",
+  "burden_met",
+  "authority_required",
+  "authority_binding",
+  "not_distinguished",
+  "standard_of_review_applied",
+  "not_foreclosed",
+] as const;
+
+// Conditions offered in the picker per mode/flavor per D4/D5.
+// authority_* and standard_of_review_applied are legal-only;
+// authority_* are also offered as opt-in for academic flavor.
+// burden_met is legal-only.
+export const OFFERED_CONDITIONS_BY_MODE_FLAVOR: Readonly<
+  Record<"legal" | "general_academic" | "general_personal", readonly ConditionKind[]>
+> = {
+  legal: CONDITION_KIND_PRIORITY,
+  general_academic: [
+    "premise_attached",
+    "interpretation_selected",
+    "all_children_resolved",
+    "path_complete",
+    "not_contradicted",
+    "premise_kind_in",
+    "authority_required",
+    "authority_binding",
+    "not_distinguished",
+    "not_foreclosed",
+  ],
+  general_personal: [
+    "premise_attached",
+    "interpretation_selected",
+    "all_children_resolved",
+    "path_complete",
+    "not_contradicted",
+    "premise_kind_in",
+    "not_foreclosed",
+  ],
+};
+
 // Per A3: the per-instance options_box replaces the frame-default policy
 // entirely; merging is intentionally NOT supported.
 export function resolveEffectivePolicy(

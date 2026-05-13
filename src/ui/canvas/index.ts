@@ -29,9 +29,5 @@ export type {
 export { NodeFrame } from "./nodes";
 
 export { edgeTypes, edgeTypeFor } from "./edges";
-export type {
-  FrameCanvasEdgeData,
-  EdgeCreationCandidate,
-  LogicalGateSlot,
-} from "./edges";
+export type { FrameCanvasEdgeData, EdgeCreationCandidate, LogicalGateSlot } from "./edges";
 export { validEdgeTypesFor, candidateLabel } from "./edges";

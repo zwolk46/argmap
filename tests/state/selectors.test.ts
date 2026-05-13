@@ -4,7 +4,7 @@ import {
   selectValidationWarnings,
   selectNodeStatus,
   selectOpenGates,
-  selectStatusSummary,
+  selectNodeStatusCounts,
   selectCascadeSummary,
   selectPinnedFrames,
   selectFirstLaunchDismissed,
@@ -66,12 +66,12 @@ describe("selectOpenGates", () => {
   });
 });
 
-describe("selectStatusSummary", () => {
-  it("returns zeros for empty status_map", () => {
+describe("selectNodeStatusCounts", () => {
+  it("returns per-status counts matching status_map size", () => {
     const session = makeSession();
     const result = driver.runFor(session);
-    const summary = selectStatusSummary(result);
-    expect(summary.total).toBe(result.status_map.size);
+    const counts = selectNodeStatusCounts(result);
+    expect(counts.total).toBe(result.status_map.size);
   });
 });
 

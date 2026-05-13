@@ -6,9 +6,11 @@ the React Context provider, the action-runner orchestration layer, and the selec
 
 ## Import boundary
 
-`src/state/` may import from `@/schema`, `@/runtime`, `@/persistence`, `react`, and
-`zustand`. It must not import from `@/ui`, `@/llm-hooks`, `@/modes`, or `@/layout`.
-Enforced by ESLint (`no-restricted-imports`).
+`src/state/` may import from `@/schema`, `@/runtime`, `@/persistence`, `@/modes`,
+`react`, and `zustand`. It must not import from `@/ui`, `@/llm-hooks`, or `@/layout`.
+Enforced by ESLint (`no-restricted-imports`). The `@/modes` dependency was added in
+I.9c (F-022) so that `selectInterviewItems` can wrap `computeInterviewOrder` for the
+argument-running UI; `@/modes` continues to import `@/state` only for type signatures.
 
 ## Public API surface
 
@@ -209,15 +211,22 @@ import {
   selectValidationWarnings,
   selectNodeStatus,
   selectOpenGates,
-  selectStatusSummary, // { satisfied, open, contested, foreclosed, not_applicable, total }
+  selectNodeStatusCounts, // { satisfied, open, contested, foreclosed, not_applicable, total }
+  selectStatusSummary, // (snapshot) => { shape, resolved_count, total_count, conclusion_label? } | null
+  selectInterviewItems, // (snapshot) => InterviewItem[] — wraps computeInterviewOrder
+  selectFrameVersionDrift, // (session_snapshot, frame_snapshot) => FrameVersionDriftSummary | null
+  selectOutputForView, // (snapshot, tab) => OutputViewPayload | null
+  selectStatusBadge, // (snapshot, node_id) => StatusBadgeData | null
   selectCascadeSummary, // wraps computeCascadeReport
   selectPinnedFrames,
-  selectFirstLaunchDismissed, // checks app_state.dismissed_warnings["first_launch"]
-  selectNewFeatureNoticeSeen, // checks app_state.seen_new_feature_notices[feature_id]
+  selectFirstLaunchDismissed,
+  selectNewFeatureNoticeSeen,
 } from "@/state";
 ```
 
-`selectInterviewItems` (wraps `computeInterviewOrder` from modes) is deferred to I.6.
+The pre-I.9c selector named `selectStatusSummary` (per-status counts) was renamed
+`selectNodeStatusCounts` to free the spec-canonical name for the I.9c argument-running
+status-summary chip. See F-022.
 
 ---
 

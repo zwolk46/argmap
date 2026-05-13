@@ -5,8 +5,15 @@ import { TypeIcon, typeIconFor } from "@/ui/primitives/type-icon";
 import type { NodeType } from "@/schema";
 
 const ALL_NODE_TYPES: Array<NodeType> = [
-  "RootQuestion", "SubQuestion", "Term", "Interpretation",
-  "Checkpoint", "LogicalGate", "Conclusion", "Authority", "Premise",
+  "RootQuestion",
+  "SubQuestion",
+  "Term",
+  "Interpretation",
+  "Checkpoint",
+  "LogicalGate",
+  "Conclusion",
+  "Authority",
+  "Premise",
 ];
 
 describe("TypeIcon", () => {

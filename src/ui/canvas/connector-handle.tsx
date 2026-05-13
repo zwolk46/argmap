@@ -37,7 +37,9 @@ export function ConnectorHandle({
 
     function handleMouseMove(ev: MouseEvent) {
       const target_el = document.elementFromPoint(ev.clientX, ev.clientY);
-      const target_node_id = target_el?.closest("[data-node-id]")?.getAttribute("data-node-id") as NodeRef | null;
+      const target_node_id = target_el
+        ?.closest("[data-node-id]")
+        ?.getAttribute("data-node-id") as NodeRef | null;
       onTargetCandidate({
         source: node_id,
         target: target_node_id,
@@ -49,7 +51,9 @@ export function ConnectorHandle({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       const target_el = document.elementFromPoint(ev.clientX, ev.clientY);
-      const target_node_id = target_el?.closest("[data-node-id]")?.getAttribute("data-node-id") as NodeRef | null;
+      const target_node_id = target_el
+        ?.closest("[data-node-id]")
+        ?.getAttribute("data-node-id") as NodeRef | null;
       onEdgeRelease({
         source: node_id,
         target: target_node_id,

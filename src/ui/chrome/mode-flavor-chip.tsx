@@ -8,7 +8,11 @@ export interface ModeFlavorChipProps {
   onOpenSettings?: () => void;
 }
 
-export function ModeFlavorChip({ mode, flavor, onOpenSettings }: ModeFlavorChipProps): ReactElement {
+export function ModeFlavorChip({
+  mode,
+  flavor,
+  onOpenSettings,
+}: ModeFlavorChipProps): ReactElement {
   const label =
     mode === "legal"
       ? "legal"
@@ -17,15 +21,8 @@ export function ModeFlavorChip({ mode, flavor, onOpenSettings }: ModeFlavorChipP
         : "general · academic";
 
   return (
-    <Pill
-      size="xs"
-      bg="var(--color-surface-pane)"
-      color="var(--color-text-secondary)"
-    >
-      <span
-        style={{ cursor: onOpenSettings ? "pointer" : "default" }}
-        onClick={onOpenSettings}
-      >
+    <Pill size="xs" bg="var(--color-surface-pane)" color="var(--color-text-secondary)">
+      <span style={{ cursor: onOpenSettings ? "pointer" : "default" }} onClick={onOpenSettings}>
         {label}
       </span>
     </Pill>

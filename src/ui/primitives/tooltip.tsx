@@ -1,7 +1,6 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 
-
 const TooltipCtx = React.createContext<null>(null);
 
 export function TooltipProvider(props: { children: ReactNode }): ReactElement {

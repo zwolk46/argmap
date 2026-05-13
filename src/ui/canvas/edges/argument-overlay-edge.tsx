@@ -10,15 +10,16 @@ const EDGE_COLORS: Partial<Record<string, string>> = {
 };
 
 export function ArgumentOverlayEdge(props: EdgeProps<RFEdge<FrameCanvasEdgeData>>): ReactElement {
-  const {
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition, targetPosition,
-    data, markerEnd,
-  } = props;
+  const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, markerEnd } =
+    props;
 
   const [edgePath] = getBezierPath({
-    sourceX, sourceY, sourcePosition,
-    targetX, targetY, targetPosition,
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
   });
 
   const color = EDGE_COLORS[data?.edge_type ?? ""] ?? "var(--color-edge-answers)";

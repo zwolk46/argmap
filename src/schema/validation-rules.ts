@@ -1480,5 +1480,10 @@ export const VALIDATION_RULES: ReadonlyArray<ValidationRule> = [
   V_ARG_8,
 ];
 
+// Priority map: rule_id → index, for canonical ordering of ValidationResults.
+export const VALIDATION_RULE_PRIORITY: Readonly<Record<string, number>> = Object.fromEntries(
+  VALIDATION_RULES.map((r, i) => [r.id, i]),
+);
+
 // Re-export for tests
 export type { NodeStatus };

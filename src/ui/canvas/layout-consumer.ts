@@ -11,7 +11,9 @@ export type LayoutConsumerStatus =
 
 function structuralHash(frame_version: FrameVersion, opts: LayoutOptions): string {
   const node_ids = [...frame_version.nodes.map((n) => n.id)].sort().join(",");
-  const edge_ids = [...frame_version.edges.map((e) => `${e.source}-${e.type}-${e.target}`)].sort().join(",");
+  const edge_ids = [...frame_version.edges.map((e) => `${e.source}-${e.type}-${e.target}`)]
+    .sort()
+    .join(",");
   return `${node_ids}|${edge_ids}|${opts.direction}|${opts.honor_user_anchors}|${opts.collapse_subquestions}`;
 }
 

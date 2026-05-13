@@ -1,13 +1,21 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { StatusBadge, failedConditionMessage, FAILED_CONDITION_MESSAGES } from "@/ui/primitives/status-badge";
+import {
+  StatusBadge,
+  failedConditionMessage,
+  FAILED_CONDITION_MESSAGES,
+} from "@/ui/primitives/status-badge";
 import type { NodeStatus } from "@/schema";
 
 const EVALUATED_AT = "2026-01-01T00:00:00Z";
 
 const ALL_STATUSES: Array<NodeStatus["status"]> = [
-  "open", "satisfied", "contested", "foreclosed", "not_applicable",
+  "open",
+  "satisfied",
+  "contested",
+  "foreclosed",
+  "not_applicable",
 ];
 
 describe("StatusBadge — all statuses render", () => {

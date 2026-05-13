@@ -1,11 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import {
-  ReactFlow,
-  Background,
-  useReactFlow,
-  ReactFlowProvider,
-} from "@xyflow/react";
+import { ReactFlow, Background, useReactFlow, ReactFlowProvider } from "@xyflow/react";
 import type { Node as RFNode, Edge as RFEdge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FrameVersion, NodeRef } from "@/schema";
@@ -52,7 +47,10 @@ export interface FrameCanvasProps {
   handle?: React.Ref<FrameCanvasHandle>;
 }
 
-function defaultDisplayFlags(node_id: NodeRef, selection?: ReadonlyArray<NodeRef>): NodeDisplayFlags {
+function defaultDisplayFlags(
+  node_id: NodeRef,
+  selection?: ReadonlyArray<NodeRef>,
+): NodeDisplayFlags {
   return {
     selected: selection?.includes(node_id) ?? false,
     hovered: false,
@@ -74,8 +72,7 @@ function buildRFNodes(
   return frame_version.nodes.map((node) => {
     const pos = layout_result?.positions.find((p) => p.node_id === node.id);
     const status = status_map?.[node.id];
-    const is_indeterminate =
-      status?.failed_conditions?.includes("inputs_indeterminate") ?? false;
+    const is_indeterminate = status?.failed_conditions?.includes("inputs_indeterminate") ?? false;
 
     const primary_text =
       "question" in node
@@ -117,15 +114,15 @@ function buildRFNodes(
         legal_mode,
         gate_glyph:
           node.type === "LogicalGate" && "gate_type" in node
-            ? (({
-                AndGate: "∧",
-                OrGate: "∨",
-                NotGate: "¬",
-                IfThenGate: "→",
-                UnlessGate: "⊘",
-              } as Record<string, "∧" | "∨" | "¬" | "→" | "⊘">)[
-                (node as { gate_type: string }).gate_type
-              ] ?? "⊕")
+            ? ((
+                {
+                  AndGate: "∧",
+                  OrGate: "∨",
+                  NotGate: "¬",
+                  IfThenGate: "→",
+                  UnlessGate: "⊘",
+                } as Record<string, "∧" | "∨" | "¬" | "→" | "⊘">
+              )[(node as { gate_type: string }).gate_type] ?? "⊕")
             : undefined,
       } satisfies FrameCanvasNodeData,
     };
@@ -156,15 +153,17 @@ function buildRFEdges(
       type: edge.type,
       data: {
         edge_type: edge.type,
-        foreclosure_visibility:
-          edge.type === "FORECLOSES" ? foreclosure_visibility : undefined,
+        foreclosure_visibility: edge.type === "FORECLOSES" ? foreclosure_visibility : undefined,
       },
     });
   }
 
   for (const node of frame_version.nodes) {
     if (node.type === "Checkpoint" && "options" in node) {
-      const checkpoint = node as { id: string; options: Array<{ id: string; target_node_id?: string; label: string }> };
+      const checkpoint = node as {
+        id: string;
+        options: Array<{ id: string; target_node_id?: string; label: string }>;
+      };
       for (const opt of checkpoint.options) {
         if (opt.target_node_id) {
           edges.push({
@@ -216,9 +215,8 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   } = props;
 
   const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
-  const [fc_visibility, setFcVisibility] = React.useState<ForeclosureVisibility>(
-    foreclosure_visibility,
-  );
+  const [fc_visibility, setFcVisibility] =
+    React.useState<ForeclosureVisibility>(foreclosure_visibility);
 
   React.useImperativeHandle(handle, () => ({
     fitToScreen: () => fitView(),
@@ -233,7 +231,12 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   }));
 
   const rf_nodes = buildRFNodes(
-    frame_version, layout_result, status_map, operating_mode, legal_mode, selection,
+    frame_version,
+    layout_result,
+    status_map,
+    operating_mode,
+    legal_mode,
+    selection,
   );
   const rf_edges = buildRFEdges(frame_version, operating_mode, fc_visibility, argument_overlay);
 
@@ -246,10 +249,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   }
 
   return (
-    <div
-      data-testid="frame-canvas"
-      style={{ width: "100%", height: "100%", position: "relative" }}
-    >
+    <div data-testid="frame-canvas" style={{ width: "100%", height: "100%", position: "relative" }}>
       <ReactFlow
         nodes={rf_nodes}
         edges={rf_edges}

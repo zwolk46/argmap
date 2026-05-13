@@ -1,28 +1,28 @@
 /* React Flow CSS variable bindings from stream_e_visual_polish_v1.html § React Flow integration */
 
 .react-flow {
-  --xy-background-color:           var(--color-surface-canvas);
-  --xy-node-background-color:      var(--color-surface-elevated);
-  --xy-node-border:                var(--border-thin) solid var(--color-border-default);
-  --xy-node-color:                 var(--color-text-primary);
-  --xy-node-border-radius:         var(--radius-md);
-  --xy-node-boxshadow-default:     var(--shadow-sm);
-  --xy-node-boxshadow-selected:    var(--shadow-md);
+  --xy-background-color: var(--color-surface-canvas);
+  --xy-node-background-color: var(--color-surface-elevated);
+  --xy-node-border: var(--border-thin) solid var(--color-border-default);
+  --xy-node-color: var(--color-text-primary);
+  --xy-node-border-radius: var(--radius-md);
+  --xy-node-boxshadow-default: var(--shadow-sm);
+  --xy-node-boxshadow-selected: var(--shadow-md);
 
-  --xy-edge-stroke:                var(--color-edge-structural);
-  --xy-edge-stroke-width:          1px;
-  --xy-edge-stroke-selected:       var(--color-mode-current-accent);
+  --xy-edge-stroke: var(--color-edge-structural);
+  --xy-edge-stroke-width: 1px;
+  --xy-edge-stroke-selected: var(--color-mode-current-accent);
 
-  --xy-handle-background-color:    var(--color-mode-current-accent);
-  --xy-handle-border-color:        var(--color-surface-elevated);
+  --xy-handle-background-color: var(--color-mode-current-accent);
+  --xy-handle-border-color: var(--color-surface-elevated);
 
-  --xy-controls-button-background-color:        var(--color-surface-elevated);
-  --xy-controls-button-background-color-hover:  var(--color-surface-hover);
-  --xy-controls-button-color:                   var(--color-text-primary);
-  --xy-controls-box-shadow:                     var(--shadow-md);
+  --xy-controls-button-background-color: var(--color-surface-elevated);
+  --xy-controls-button-background-color-hover: var(--color-surface-hover);
+  --xy-controls-button-color: var(--color-text-primary);
+  --xy-controls-box-shadow: var(--shadow-md);
 
-  --xy-minimap-background-color:   var(--color-surface-pane);
-  --xy-minimap-mask-background-color: hsla(30 8% 12% / 0.10);
-  --xy-minimap-mask-stroke-color:  var(--color-mode-current-accent);
-  --xy-minimap-mask-stroke-width:  1.5px;
+  --xy-minimap-background-color: var(--color-surface-pane);
+  --xy-minimap-mask-background-color: hsla(30 8% 12% / 0.1);
+  --xy-minimap-mask-stroke-color: var(--color-mode-current-accent);
+  --xy-minimap-mask-stroke-width: 1.5px;
 }

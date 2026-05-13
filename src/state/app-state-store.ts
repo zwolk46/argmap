@@ -22,6 +22,7 @@ interface AppStateStoreActions {
   pinFrame(frame_id: FrameId, pinned: boolean): void;
   setRecent(frame_id: FrameId): void;
   dismissWarning(warning_id: string): void;
+  undismissWarning(warning_id: string): void;
   resetCoachmarks(): void;
   markNewFeatureNoticeSeen(feature_id: string): void;
   setOutputViewTabChoice(frame_id: FrameId, tab: string): void;
@@ -136,6 +137,14 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
         ...app_state,
         dismissed_warnings: { ...(app_state.dismissed_warnings ?? {}), [warning_id]: true },
       };
+      set({ app_state: next_state });
+      scheduleAppStateSave(next_state);
+    },
+
+    undismissWarning(warning_id: string): void {
+      const { app_state } = get();
+      const { [warning_id]: _removed, ...rest } = app_state.dismissed_warnings ?? {};
+      const next_state: AppState = { ...app_state, dismissed_warnings: rest };
       set({ app_state: next_state });
       scheduleAppStateSave(next_state);
     },

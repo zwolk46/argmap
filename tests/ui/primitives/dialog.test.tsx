@@ -7,8 +7,12 @@ function TestDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogHeader>Header</DialogHeader>
-      <DialogBody><p>Body content</p></DialogBody>
-      <DialogFooter><button onClick={onClose}>Close</button></DialogFooter>
+      <DialogBody>
+        <p>Body content</p>
+      </DialogBody>
+      <DialogFooter>
+        <button onClick={onClose}>Close</button>
+      </DialogFooter>
     </Dialog>
   );
 }
@@ -26,14 +30,28 @@ describe("Dialog", () => {
 
   it("calls onClose on Escape key", () => {
     let closed = false;
-    const { container } = render(<TestDialog open onClose={() => { closed = true; }} />);
+    const { container } = render(
+      <TestDialog
+        open
+        onClose={() => {
+          closed = true;
+        }}
+      />,
+    );
     fireEvent.keyDown(container, { key: "Escape" });
     expect(closed).toBe(true);
   });
 
   it("calls onClose when clicking backdrop", () => {
     let closed = false;
-    const { getByRole } = render(<TestDialog open onClose={() => { closed = true; }} />);
+    const { getByRole } = render(
+      <TestDialog
+        open
+        onClose={() => {
+          closed = true;
+        }}
+      />,
+    );
     const dialog = getByRole("dialog");
     // Click the dialog backdrop (the outer overlay, not the panel)
     const backdrop = dialog.parentElement;

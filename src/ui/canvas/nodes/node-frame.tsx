@@ -46,7 +46,8 @@ const VARIANT_STYLES: Record<NodeFrameVariant, React.CSSProperties> = {
   checkpoint: {
     border: "var(--border-thin) solid var(--color-border-default)",
     borderRadius: "var(--radius-md)",
-    clipPath: "polygon(10px 0%, calc(100% - 10px) 0%, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0% 50%)",
+    clipPath:
+      "polygon(10px 0%, calc(100% - 10px) 0%, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0% 50%)",
   },
   logical_gate: {
     border: "var(--border-thin) solid var(--color-border-default)",
@@ -89,15 +90,16 @@ export function NodeFrame({
 
   const variantStyle = VARIANT_STYLES[variant] ?? VARIANT_STYLES.sub_question;
 
-  const dataState = [
-    display.selected && "selected",
-    (hovered || display.hovered) && "hovered",
-    display.not_applicable_dim && "not-applicable",
-    display.foreclosed_strikethrough && "foreclosed",
-    display.recommended_next_pulse && "recommended-next",
-  ]
-    .filter(Boolean)
-    .join(" ") || undefined;
+  const dataState =
+    [
+      display.selected && "selected",
+      (hovered || display.hovered) && "hovered",
+      display.not_applicable_dim && "not-applicable",
+      display.foreclosed_strikethrough && "foreclosed",
+      display.recommended_next_pulse && "recommended-next",
+    ]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
   const isGate = variant === "logical_gate";
 
@@ -111,27 +113,23 @@ export function NodeFrame({
         position: "relative",
         minWidth: isGate ? "60px" : "120px",
         padding: isGate ? "var(--space-3)" : "var(--space-3) var(--space-4)",
-        background:
-          display.selected
-            ? "var(--color-surface-selected)"
-            : hovered || display.hovered
-              ? "var(--color-surface-hover)"
-              : "var(--color-surface-elevated)",
+        background: display.selected
+          ? "var(--color-surface-selected)"
+          : hovered || display.hovered
+            ? "var(--color-surface-hover)"
+            : "var(--color-surface-elevated)",
         boxShadow: display.selected ? "var(--shadow-md)" : "var(--shadow-sm)",
         cursor: "default",
         opacity: display.not_applicable_dim ? 0.3 : display.foreclosed_strikethrough ? 0.45 : 1,
-        animation:
-          display.recommended_next_pulse
-            ? `pulse-recommended var(--duration-pulse) var(--ease-soft) infinite`
-            : undefined,
+        animation: display.recommended_next_pulse
+          ? `pulse-recommended var(--duration-pulse) var(--ease-soft) infinite`
+          : undefined,
         transition: `opacity var(--duration-base) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard)`,
         ...variantStyle,
         ...(display.selected
           ? { outline: "var(--border-medium) solid var(--color-mode-current-accent)" }
           : {}),
-        ...(isGate && display.indeterminate_gate_dashed
-          ? { borderStyle: "dashed" }
-          : {}),
+        ...(isGate && display.indeterminate_gate_dashed ? { borderStyle: "dashed" } : {}),
       }}
     >
       <div
@@ -143,9 +141,7 @@ export function NodeFrame({
         }}
       >
         <TypeIcon node_type={node_type} size={12} />
-        {attributions && attributions.length > 0 && (
-          <AiAttributionChip record={attributions[0]} />
-        )}
+        {attributions && attributions.length > 0 && <AiAttributionChip record={attributions[0]} />}
       </div>
       <div
         style={{
@@ -155,8 +151,7 @@ export function NodeFrame({
           display: "-webkit-box",
           WebkitLineClamp: 3,
           WebkitBoxOrient: "vertical",
-          textDecoration:
-            display.foreclosed_strikethrough ? "line-through" : undefined,
+          textDecoration: display.foreclosed_strikethrough ? "line-through" : undefined,
           ...variantStyle,
           border: "none",
           background: "none",
@@ -167,7 +162,8 @@ export function NodeFrame({
           padding: 0,
           minWidth: "unset",
           fontSize: (variantStyle.fontSize as string | undefined) ?? "var(--font-size-base)",
-          fontWeight: (variantStyle.fontWeight as string | undefined) ?? "var(--font-weight-medium)",
+          fontWeight:
+            (variantStyle.fontWeight as string | undefined) ?? "var(--font-weight-medium)",
         }}
       >
         {isGate ? children : primary_text}

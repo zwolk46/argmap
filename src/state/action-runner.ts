@@ -8,6 +8,7 @@ import type {
   NodeRef,
   EdgeRef,
   SatisfactionPolicy,
+  SatisfactionPolicyKey,
   Premise,
   Authority,
   Mode,
@@ -71,6 +72,7 @@ export type FramePatch =
       >;
     }
   | { kind: "presentation_hints_reset_all" }
+  | { kind: "default_policy_edited"; node_type: SatisfactionPolicyKey; policy: SatisfactionPolicy }
   | {
       kind: "architectural_mode_changed";
       target_mode: Mode;
@@ -114,6 +116,7 @@ export interface FrameTransformResult {
       | "flavor"
       | "mode"
       | "archived"
+      | "default_satisfaction_policies"
     >
   >;
   change_summary?: string;
@@ -179,6 +182,12 @@ export interface FrameActionDispatchTable {
     frame: Frame,
     fv: FrameVersion,
     patch: Extract<FramePatch, { kind: "presentation_hints_reset_all" }>,
+    opts: DispatchOpts,
+  ) => FrameTransformResult;
+  default_policy_edited: (
+    frame: Frame,
+    fv: FrameVersion,
+    patch: Extract<FramePatch, { kind: "default_policy_edited" }>,
     opts: DispatchOpts,
   ) => FrameTransformResult;
   architectural_mode_changed: (

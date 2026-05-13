@@ -10,11 +10,13 @@ vi.mock("@/state", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/state")>();
   return {
     ...actual,
-    useFrameStore: vi.fn((selector: (s: { pending_suggestion: unknown; suggestion_status: string }) => unknown) =>
-      selector({ pending_suggestion: null, suggestion_status: "idle" }),
+    useFrameStore: vi.fn(
+      (selector: (s: { pending_suggestion: unknown; suggestion_status: string }) => unknown) =>
+        selector({ pending_suggestion: null, suggestion_status: "idle" }),
     ),
-    useSessionStore: vi.fn((selector: (s: { pending_suggestion: unknown; suggestion_status: string }) => unknown) =>
-      selector({ pending_suggestion: null, suggestion_status: "idle" }),
+    useSessionStore: vi.fn(
+      (selector: (s: { pending_suggestion: unknown; suggestion_status: string }) => unknown) =>
+        selector({ pending_suggestion: null, suggestion_status: "idle" }),
     ),
     useRepository: vi.fn(() => ({
       frame_store: {

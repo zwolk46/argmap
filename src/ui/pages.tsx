@@ -1,5 +1,10 @@
+export { FrameBuildingPage } from "./frame-building";
+export type { FrameBuildingPageProps } from "./frame-building";
+
+export { ArgumentRunningPage } from "./argument-running";
+export type { ArgumentRunningPageProps } from "./argument-running";
+
 import type { ReactElement } from "react";
-import type { FrameId, SessionId } from "@/schema";
 
 function PlaceholderPage({ label }: { label: string }): ReactElement {
   return (
@@ -11,17 +16,9 @@ function PlaceholderPage({ label }: { label: string }): ReactElement {
         fontSize: "var(--font-size-sm)",
       }}
     >
-      {label} — page not yet implemented (coming in I.9b/c/d)
+      {label} — page not yet implemented (coming in I.9d)
     </div>
   );
-}
-
-export function FrameBuildingPage(props: { frame_id: FrameId }): ReactElement {
-  return <PlaceholderPage label={`Frame Building (${props.frame_id})`} />;
-}
-
-export function ArgumentRunningPage(props: { session_id: SessionId }): ReactElement {
-  return <PlaceholderPage label={`Argument Running (${props.session_id})`} />;
 }
 
 export function VersionHistoryPane(props: {

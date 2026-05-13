@@ -10,4 +10,10 @@ export * from "./hooks";
 export { useRoute, useNavigate } from "./routing";
 export type { Route } from "./routing";
 
-export { FrameBuildingPage, ArgumentRunningPage, VersionHistoryPane, OnboardingWizard } from "./pages";
+export {
+  FrameBuildingPage,
+  ArgumentRunningPage,
+  VersionHistoryPane,
+  OnboardingWizard,
+} from "./pages";
+export type { ArgumentRunningPageProps } from "./argument-running";

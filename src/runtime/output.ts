@@ -71,7 +71,9 @@ function fnv1a32(s: string): number {
 
 function deterministicId(input: string): string {
   const a = fnv1a32(input).toString(16).padStart(8, "0");
-  const b = fnv1a32(input + "\x01").toString(16).padStart(8, "0");
+  const b = fnv1a32(input + "\x01")
+    .toString(16)
+    .padStart(8, "0");
   return a + b;
 }
 

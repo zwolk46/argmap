@@ -15,9 +15,7 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
   const frame_entries = Object.entries(GLOSSARY_DICTIONARY).filter(
     ([, entry]) => !entry.legal_only,
   );
-  const legal_entries = Object.entries(GLOSSARY_DICTIONARY).filter(
-    ([, entry]) => entry.legal_only,
-  );
+  const legal_entries = Object.entries(GLOSSARY_DICTIONARY).filter(([, entry]) => entry.legal_only);
 
   return (
     <Drawer open={open} onClose={onClose} width="320px">

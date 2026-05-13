@@ -60,7 +60,8 @@ export default [
       "@typescript-eslint/consistent-type-imports": "off",
     },
   },
-  // State module boundary: src/state/ imports from @/schema, @/runtime, @/persistence only.
+  // State module boundary: src/state/ imports from @/schema, @/runtime, @/persistence,
+  // and @/modes (F-022: state wraps computeInterviewOrder for the I.9c UI surface).
   {
     files: ["src/state/**/*.{ts,tsx}"],
     rules: {
@@ -69,18 +70,9 @@ export default [
         {
           patterns: [
             {
-              group: [
-                "@/ui",
-                "@/ui/*",
-                "@/llm-hooks",
-                "@/llm-hooks/*",
-                "@/modes",
-                "@/modes/*",
-                "@/layout",
-                "@/layout/*",
-              ],
+              group: ["@/ui", "@/ui/*", "@/llm-hooks", "@/llm-hooks/*", "@/layout", "@/layout/*"],
               message:
-                "src/state/ may only import from @/schema, @/runtime, @/persistence, react, and zustand.",
+                "src/state/ may only import from @/schema, @/runtime, @/persistence, @/modes, react, and zustand.",
             },
           ],
         },
