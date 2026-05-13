@@ -11,9 +11,29 @@ import {
 } from "./version-history";
 import { OnboardingWizard } from "./onboarding";
 import { HomePage } from "./home";
+import { LoadingScreen } from "./primitives";
 import { useAppStateStore, useRepository, selectFirstLaunchDismissed } from "@/state";
 
+/**
+ * Boots the app's persistent AppState (pins, recents, coachmark dismissals,
+ * dismissed warnings, output-view tab choices, etc.) before any UI mutates it.
+ * Without this gate, every reload painted DEFAULT_APP_STATE first and the
+ * first stray patch autosaved that default over the on-disk record. P0-1.
+ */
+function useBootAppState(): boolean {
+  const is_loaded = useAppStateStore((s) => s.is_loaded);
+  const { app_state_store } = useRepository();
+  React.useEffect(() => {
+    if (!is_loaded) {
+      void app_state_store.getState().loadAppState();
+    }
+  }, [app_state_store, is_loaded]);
+  return is_loaded;
+}
+
 export function AppRoutes(): ReactElement {
+  const is_loaded = useBootAppState();
+  if (!is_loaded) return <LoadingScreen label="Loading your workspace…" />;
   return (
     <VersionHistoryPreviewProvider>
       <RoutedView />

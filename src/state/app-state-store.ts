@@ -6,6 +6,13 @@ export interface AppStateStoreSnapshot {
   app_state: AppState;
   frames: FrameSummary[];
   is_loading: boolean;
+  /**
+   * True after the first call to loadAppState has resolved (either with
+   * persisted state or with a fresh-default seed). UI surfaces that mutate
+   * AppState should gate on this flag so the first paint never autosaves
+   * DEFAULT_APP_STATE over the user's real on-disk state. P0-1.
+   */
+  is_loaded: boolean;
   error: string | null;
 }
 
@@ -58,15 +65,31 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
     app_state: DEFAULT_APP_STATE,
     frames: [],
     is_loading: false,
+    is_loaded: false,
     error: null,
 
     async loadAppState(): Promise<void> {
       set({ is_loading: true, error: null });
       try {
         const app_state = await repo.loadAppState();
-        set({ app_state, is_loading: false });
+        set({ app_state, is_loading: false, is_loaded: true });
       } catch (e) {
-        set({ error: (e as Error).message, is_loading: false });
+        const msg = (e as Error).message;
+        // First-launch users have no AppState singleton. The repository throws
+        // a RepositoryError with "AppState singleton missing"; seed defaults
+        // and persist them so subsequent boots take the fast path.
+        if (typeof msg === "string" && msg.includes("AppState singleton missing")) {
+          try {
+            await repo.saveAppState(DEFAULT_APP_STATE);
+          } catch (saveErr) {
+            // If the seed save fails (e.g., quota), still mark loaded so the
+            // UI is interactive; subsequent saves will surface the real error.
+            void saveErr;
+          }
+          set({ app_state: DEFAULT_APP_STATE, is_loading: false, is_loaded: true });
+          return;
+        }
+        set({ error: msg, is_loading: false, is_loaded: true });
       }
     },
 
