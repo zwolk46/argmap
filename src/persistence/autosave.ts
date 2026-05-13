@@ -147,7 +147,16 @@ class AutosaveControllerImpl implements AutosaveController {
         id: frame_id,
         version_id: versioned.new_version.id,
       });
-      this.frame_slots.delete(frame_id);
+      slot.in_flight = false;
+      // P0-3: if a newer payload arrived during the await, reschedule instead
+      // of deleting the slot. Before this fix, the trailing keystroke was lost
+      // (`delete` discarded the slot whose freshly-armed idle_timer then
+      // looked up an empty map and silently no-op'd).
+      if (slot.payload !== payload) {
+        this.scheduleFrameSave(slot.payload);
+      } else {
+        this.frame_slots.delete(frame_id);
+      }
     } catch (e) {
       const err = e as Error;
       this.emit("save_failed", {
@@ -184,7 +193,13 @@ class AutosaveControllerImpl implements AutosaveController {
         id: session_id,
         version_id: versioned.new_version.id,
       });
-      this.session_slots.delete(session_id);
+      slot.in_flight = false;
+      // P0-3: same race fix as flushFrame above.
+      if (slot.payload !== payload) {
+        this.scheduleSessionSave(slot.payload);
+      } else {
+        this.session_slots.delete(session_id);
+      }
     } catch (e) {
       const err = e as Error;
       this.emit("save_failed", {
