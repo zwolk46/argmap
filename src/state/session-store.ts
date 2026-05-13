@@ -160,7 +160,13 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
       const { session, session_version } = get();
       if (!session || !session_version) return [];
       const target_frame_version = await repo.loadFrameVersion(target_frame_version_id);
-      return enumerateOrphanCandidates(session_version, target_frame_version);
+      // P0-25: pass the session's prior frame snapshot so the reattach
+      // heuristic in runtime/extras.ts can populate reattach_candidates.
+      return enumerateOrphanCandidates(
+        session_version,
+        target_frame_version,
+        session.frame_version_snapshot,
+      );
     },
 
     async migrateToFrameVersion(

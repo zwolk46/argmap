@@ -6,8 +6,6 @@ export {
   migrateSession,
   restoreFrameVersion,
   restoreSessionVersion,
-  enumerateOrphanCandidates,
-  type OrphanCandidate,
 } from "./orchestration";
 export {
   attemptTransition,
