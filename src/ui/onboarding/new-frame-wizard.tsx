@@ -13,7 +13,10 @@ export interface NewFrameWizardSubmitArgs {
 export interface NewFrameWizardProps {
   onSubmit: (args: NewFrameWizardSubmitArgs) => void;
   onCancel: () => void;
-  start_at_template_step?: boolean;
+  // `start_at_template_step` was declared on this surface for a planned
+  // "New frame from template" entry point. The template flow itself ships
+  // in v1.5 (see Open questions in current_state.html); the prop was never
+  // read by any component. Removed to stop hinting at unbuilt functionality.
 }
 
 interface WizardState {

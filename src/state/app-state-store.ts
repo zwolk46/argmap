@@ -54,6 +54,25 @@ const DEFAULT_APP_STATE: AppState = {
   last_known_schema_version: 1,
 };
 
+/**
+ * P1: cap on number of pinned frames. Prior to this there was no cap and
+ * `pinFrame` accepted unbounded growth; the Home page's horizontal-scroll
+ * Pinned row would lose usefulness past ~8 entries.
+ */
+export const MAX_PINNED_FRAMES = 8;
+
+/**
+ * Error thrown by AppStateStore.pinFrame when the cap is hit. Toast bridge
+ * (or any UI consumer) can render its message verbatim.
+ */
+export class PinnedCapReached extends Error {
+  readonly kind = "pinned_cap_reached" as const;
+  constructor() {
+    super(`You can pin up to ${MAX_PINNED_FRAMES} frames. Unpin one before adding another.`);
+    this.name = "PinnedCapReached";
+  }
+}
+
 export interface CreateAppStateStoreOpts {
   repo: Repository;
   autosave: AutosaveController;
@@ -153,6 +172,11 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
     pinFrame(frame_id: FrameId, pinned: boolean): void {
       const { app_state } = get();
       const existing_pinned = app_state.pinned;
+      if (pinned && !existing_pinned.includes(frame_id) && existing_pinned.length >= MAX_PINNED_FRAMES) {
+        // P1: cap enforcement. Caller (FrameSummaryCard) catches and
+        // surfaces a toast.
+        throw new PinnedCapReached();
+      }
       const next_pinned = pinned
         ? existing_pinned.includes(frame_id)
           ? existing_pinned

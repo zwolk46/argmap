@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import type { FrameVersionId } from "@/schema";
 import type { OrphanResolution } from "@/state";
 import { useRepository } from "@/state";
-import { Dialog, DialogHeader, DialogBody, DialogFooter, Button } from "../primitives";
+import { Dialog, DialogHeader, DialogBody, DialogFooter, Button, useToast } from "../primitives";
 import { MigrationDialogBody, type MigrationBodyPhase } from "./migration-dialog-body";
 import { usePreviewMigration } from "./use-preview-migration";
 
@@ -16,6 +16,7 @@ export interface SessionMigrationDialogProps {
 export function SessionMigrationDialog(props: SessionMigrationDialogProps): ReactElement | null {
   const { open, onClose, target_frame_version_id } = props;
   const { session_store } = useRepository();
+  const toast = useToast();
 
   const preview = usePreviewMigration({
     target_frame_version_id,
@@ -81,6 +82,9 @@ export function SessionMigrationDialog(props: SessionMigrationDialogProps): Reac
       await session_store.getState().migrateToFrameVersion(target_frame_version_id, ordered);
       setMigrating(false);
       onClose();
+      // P1: confirm the migration succeeded — previously the dialog just
+      // closed and the user had to guess whether anything happened.
+      toast.push({ kind: "success", message: "Session migrated to the new frame version." });
     } catch (e: unknown) {
       const err = e as { kind?: string; message?: string };
       setMigrating(false);

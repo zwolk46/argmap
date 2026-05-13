@@ -36,7 +36,7 @@ export { createSessionStore } from "./session-store";
 export type { SessionStore, SessionStoreSnapshot, CreateSessionStoreOpts } from "./session-store";
 
 // App state store
-export { createAppStateStore } from "./app-state-store";
+export { createAppStateStore, MAX_PINNED_FRAMES, PinnedCapReached } from "./app-state-store";
 export type {
   AppStateStore,
   AppStateStoreSnapshot,

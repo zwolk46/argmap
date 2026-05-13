@@ -50,6 +50,14 @@ export function ModeFlavorSection({
 
   const can_change = on_open_mode_change_dialog !== undefined;
   const disabled_title = "Coming in I.9d";
+  // P1: in legal mode, flavor doesn't apply (the flavor-change dialog
+  // returns null for legal frames). Disabling the button explicitly here
+  // — rather than letting the user click and see a flicker — communicates
+  // the constraint up-front.
+  const flavor_disabled = frame.mode === "legal";
+  const flavor_disabled_title = flavor_disabled
+    ? "Flavor applies only in general mode. Change the mode first."
+    : disabled_title;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
@@ -75,10 +83,13 @@ export function ModeFlavorSection({
           <span style={VALUE_STYLE}>{flavor_label}</span>
           <button
             type="button"
-            style={can_change ? CHANGE_BTN_STYLE : DISABLED_BTN_STYLE}
-            disabled={!can_change}
-            title={can_change ? undefined : disabled_title}
-            onClick={() => on_open_mode_change_dialog?.("flavor")}
+            style={can_change && !flavor_disabled ? CHANGE_BTN_STYLE : DISABLED_BTN_STYLE}
+            disabled={!can_change || flavor_disabled}
+            title={!can_change ? disabled_title : flavor_disabled ? flavor_disabled_title : undefined}
+            onClick={() => {
+              if (flavor_disabled) return;
+              on_open_mode_change_dialog?.("flavor");
+            }}
           >
             Change flavor
           </button>

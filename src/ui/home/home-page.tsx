@@ -1,9 +1,9 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { FrameId } from "@/schema";
-import { useAppStateStore, useRepository } from "@/state";
+import { useAppStateStore, useRepository, PinnedCapReached } from "@/state";
 import { useNavigate } from "../routing";
-import { Dialog, Button, EmptyState } from "../primitives";
+import { Dialog, Button, EmptyState, useToast } from "../primitives";
 import { NewFrameWizard, type NewFrameWizardSubmitArgs } from "../onboarding";
 import { FrameSummaryCard, type FrameSummary } from "./frame-summary-card";
 
@@ -23,6 +23,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
   const pinned_ids = useAppStateStore((s) => s.app_state.pinned);
   const { app_state_store } = useRepository();
   const navigate = useNavigate();
+  const toast = useToast();
   const [wizard_open, setWizardOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -52,7 +53,17 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
     navigate({ kind: "frame_building", frame_id });
   }
   function onTogglePin(frame_id: FrameId, pinned: boolean): void {
-    app_state_store.getState().pinFrame(frame_id, pinned);
+    try {
+      app_state_store.getState().pinFrame(frame_id, pinned);
+    } catch (err) {
+      // P1: surface the pin cap as a warning toast instead of throwing
+      // up into React's error boundary.
+      if (err instanceof PinnedCapReached) {
+        toast.push({ kind: "warning", message: err.message });
+        return;
+      }
+      throw err;
+    }
   }
 
   async function onSubmitWizard(args: NewFrameWizardSubmitArgs): Promise<void> {
@@ -220,7 +231,16 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
         aria_label="New frame"
         size="md"
       >
-        <NewFrameWizard onSubmit={onSubmitWizard} onCancel={() => setWizardOpen(false)} />
+        {/* P1: key by `wizard_open` so the wizard remounts each time it
+            opens, clearing any prior in-progress title/mode/flavor input.
+            Without this key, the wizard's internal useState survived the
+            Dialog's open/close cycle and the user saw stale form state on
+            the next open. */}
+        <NewFrameWizard
+          key={String(wizard_open)}
+          onSubmit={onSubmitWizard}
+          onCancel={() => setWizardOpen(false)}
+        />
       </Dialog>
     </main>
   );
