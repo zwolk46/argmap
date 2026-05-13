@@ -1,15 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import type { LlmSettings } from "@/schema";
-import { IndexedDbRepository, createAutosaveController, createCrossTabBus } from "@/persistence";
+import {
+  SupabaseRepository,
+  createAutosaveController,
+  createCrossTabBus,
+} from "@/persistence";
 import { frameActions, sessionActions } from "@/modes";
 import { App } from "./App";
-
-const repo = new IndexedDbRepository();
-const crosstab = createCrossTabBus();
-// P0-2: autosave publishes typed events (frame_saved / session_saved /
-// app_state_changed) on every successful flush so peer tabs can refresh.
-const autosave = createAutosaveController({ repo, crosstab });
+import { getSupabaseClient, SupabaseConfigError } from "./supabase-client";
+import { AuthProvider, useAuth, SignInScreen } from "./ui/auth";
 
 const llm_settings_default: LlmSettings = {
   build_time_hooks_enabled: false,
@@ -21,68 +21,71 @@ const llm_settings_default: LlmSettings = {
 const now = (): string => new Date().toISOString();
 const generateId = (): string => crypto.randomUUID();
 
-function BootError({ message }: { message: string }): React.ReactElement {
+function BootError({ message, hint }: { message: string; hint?: string }): React.ReactElement {
   return (
     <div
       style={{
-        padding: "var(--space-6)",
-        maxWidth: 480,
+        padding: 24,
+        maxWidth: 520,
         margin: "10vh auto",
-        background: "var(--color-severity-error-bg, #fee2e2)",
-        color: "var(--color-severity-error, #b91c1c)",
-        borderLeft: "var(--border-thick, 3px) solid var(--color-severity-error, #dc2626)",
-        borderRadius: "var(--radius-md, 6px)",
-        fontFamily: "var(--font-sans, sans-serif)",
-        fontSize: "var(--font-size-sm, 13px)",
+        background: "#fee2e2",
+        color: "#b91c1c",
+        borderLeft: "3px solid #dc2626",
+        borderRadius: 6,
+        fontFamily: "system-ui, sans-serif",
+        fontSize: 13,
         lineHeight: 1.6,
       }}
     >
-      <h1
-        style={{
-          fontSize: "var(--font-size-md, 14px)",
-          fontWeight: "var(--font-weight-semibold, 600)",
-          margin: 0,
-          marginBottom: "var(--space-2, 8px)",
-        }}
-      >
-        We couldn't open your local storage
+      <h1 style={{ fontSize: 14, fontWeight: 600, margin: 0, marginBottom: 8 }}>
+        argmap couldn't start
       </h1>
       <p style={{ margin: 0 }}>{message}</p>
-      <p style={{ margin: "var(--space-2, 8px) 0 0" }}>
-        Try reloading the page. If the problem persists, your browser may be in private mode or out
-        of storage.
-      </p>
+      {hint ? (
+        <p style={{ margin: "8px 0 0", color: "#7f1d1d" }}>
+          <strong>Hint:</strong> {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function BootGate(): React.ReactElement {
-  const [status, setStatus] = React.useState<"loading" | "ready" | { error: string }>("loading");
-  React.useEffect(() => {
-    let cancelled = false;
-    repo
-      .openOrUpgrade()
-      .then(() => {
-        if (!cancelled) setStatus("ready");
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          const msg = err instanceof Error ? err.message : String(err);
-          setStatus({ error: msg });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+/**
+ * Gate: render the sign-in screen until auth resolves; once signed in,
+ * build the per-user repository + autosave + crosstab and mount <App>.
+ *
+ * SupabaseRepository, autosave, and crosstab are all per-user — the user_id
+ * is baked into the repo at construction so RLS works. Re-mounted on user
+ * change via `key={user.id}` below.
+ */
+function AuthGate(): React.ReactElement {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return <div style={{ padding: 24 }}>Loading…</div>;
+  }
+  if (!user) {
+    return <SignInScreen />;
+  }
+  return <SignedInApp key={user.id} user_id={user.id} />;
+}
 
-  if (status === "loading") {
-    // Plain text — design tokens may not have loaded yet on cold boot.
-    return <div style={{ padding: 24 }}>Loading your workspace…</div>;
-  }
-  if (typeof status === "object") {
-    return <BootError message={status.error} />;
-  }
+function SignedInApp({ user_id }: { user_id: string }): React.ReactElement {
+  const client = getSupabaseClient();
+  const repo = React.useMemo(
+    () => new SupabaseRepository({ client, user_id, now, generateId }),
+    [client, user_id],
+  );
+  // Channel-name suffix scopes broadcast to a single user so a multi-account
+  // browser doesn't leak peer-tab events across accounts.
+  const crosstab = React.useMemo(
+    () => createCrossTabBus(`argmap_v1__crosstab__${user_id}`),
+    [user_id],
+  );
+  const autosave = React.useMemo(
+    () => createAutosaveController({ repo, crosstab }),
+    [repo, crosstab],
+  );
+
   return (
     <App
       repo={repo}
@@ -97,8 +100,30 @@ function BootGate(): React.ReactElement {
   );
 }
 
+function Root(): React.ReactElement {
+  let client;
+  try {
+    client = getSupabaseClient();
+  } catch (err) {
+    if (err instanceof SupabaseConfigError) {
+      return (
+        <BootError
+          message={err.message}
+          hint="Install the Supabase Vercel marketplace integration (see SETUP.md) — it sets VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY automatically."
+        />
+      );
+    }
+    return <BootError message={err instanceof Error ? err.message : String(err)} />;
+  }
+  return (
+    <AuthProvider client={client}>
+      <AuthGate />
+    </AuthProvider>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <BootGate />
+    <Root />
   </React.StrictMode>,
 );

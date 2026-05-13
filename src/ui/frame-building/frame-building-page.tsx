@@ -13,6 +13,7 @@ import {
   ModeFlavorChip,
   ValidationIndicator,
   OperatingModeToggle,
+  SignOutButton,
 } from "../chrome";
 import type { TopBarSlots } from "../chrome";
 import { FrameCanvas, useLayoutResult } from "../canvas";
@@ -194,6 +195,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
         />
         <FrameSettingsButton onOpen={() => setSettingsPanelOpen(true)} />
         <HelpButton active={help_pane_open} onToggle={() => setHelpPaneOpen((v) => !v)} />
+        <SignOutButton />
       </>
     ),
   };

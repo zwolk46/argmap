@@ -9,6 +9,7 @@ import {
   HomeButton,
   VersionHistoryButton,
   HelpButton,
+  SignOutButton,
 } from "@/ui";
 import type { TopBarSlots } from "@/ui";
 import { useFrameStore, useRepository } from "@/state";
@@ -82,6 +83,7 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
         />
         <FrameSettingsButton onOpen={deps.on_open_session_settings} />
         <HelpButton active={deps.help_pane_open} onToggle={deps.on_toggle_help} />
+        <SignOutButton />
       </>
     ),
   };

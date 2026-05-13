@@ -27,3 +27,5 @@ export type { HomeButtonProps } from "./home-button";
 
 export { HelpGlossaryPane } from "./help-glossary-pane";
 export type { HelpGlossaryPaneProps } from "./help-glossary-pane";
+
+export { SignOutButton } from "./sign-out-button";
