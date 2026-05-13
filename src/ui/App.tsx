@@ -4,7 +4,9 @@ import type { RepositoryProviderProps } from "@/state";
 import { RouterProvider } from "./routing";
 import { AppErrorBoundary } from "./error-boundary";
 import { TooltipProvider } from "./primitives/tooltip";
+import { ToastProvider } from "./primitives/toast";
 import { AppRoutes } from "./app-routes";
+import { SaveFailureToastBridge } from "./save-failure-toast-bridge";
 import "./styles/tokens.css";
 import "./styles/global.css";
 import "./styles/react-flow.css";
@@ -18,7 +20,10 @@ export function App(props: AppProps): ReactElement {
       <RepositoryProvider {...props}>
         <RouterProvider>
           <TooltipProvider>
-            <AppRoutes />
+            <ToastProvider>
+              <SaveFailureToastBridge />
+              <AppRoutes />
+            </ToastProvider>
           </TooltipProvider>
         </RouterProvider>
       </RepositoryProvider>
