@@ -53,4 +53,18 @@ describe("Drawer", () => {
     const { getByTestId } = render(<TestDrawer open />);
     expect(getByTestId("drawer-body")).toBeTruthy();
   });
+
+  // P0-24 regression: a closed Drawer's content is still in DOM (so the
+  // slide-out transition works), but it must not be reachable via Tab.
+  it("applies `inert` to the root when closed, removing children from the tab order", () => {
+    const { container } = render(<TestDrawer open={false} />);
+    const drawer = container.querySelector("[data-testid='drawer']") as HTMLElement;
+    expect(drawer.hasAttribute("inert")).toBe(true);
+  });
+
+  it("does NOT apply `inert` when open", () => {
+    const { container } = render(<TestDrawer open />);
+    const drawer = container.querySelector("[data-testid='drawer']") as HTMLElement;
+    expect(drawer.hasAttribute("inert")).toBe(false);
+  });
 });

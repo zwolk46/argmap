@@ -122,6 +122,12 @@ export function Drawer({
     };
   }
 
+  // P0-24: when closed, the drawer slides off-screen via transform but its
+  // children remain in DOM (so the slide-out animation works). `aria-hidden`
+  // alone hides them from screen readers but NOT from the keyboard tab
+  // order — sighted keyboard users would Tab into the void and lose focus.
+  // The `inert` attribute removes the subtree from both tab order and
+  // pointer events while keeping it in the DOM for the transition.
   return (
     <div
       data-testid="drawer"
@@ -130,6 +136,9 @@ export function Drawer({
       role="dialog"
       aria-label={aria_label}
       aria-hidden={!open}
+      // React passes `inert` straight through to the DOM element since
+      // React 19 / TS lib.dom; for older typings we coerce.
+      {...(!open ? ({ inert: "" } as { inert: string }) : {})}
       style={{ ...baseStyle, ...positionalStyle }}
     >
       {children}
