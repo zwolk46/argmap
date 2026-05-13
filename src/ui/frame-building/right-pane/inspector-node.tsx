@@ -164,6 +164,17 @@ function useEditMode(
   const [mode, setMode] = React.useState<"instance" | "frame_default">(
     has_instance ? "instance" : "frame_default",
   );
+  // P1: reset edit_mode when the selected node changes; the initial
+  // useState was previously evaluated only once and the toggle stuck on
+  // the first-selected node's state even after switching to a node with
+  // a different options_box presence.
+  const last_node_id_ref = React.useRef<string | undefined>(node?.id);
+  React.useEffect(() => {
+    if (node?.id !== last_node_id_ref.current) {
+      last_node_id_ref.current = node?.id;
+      setMode(has_instance ? "instance" : "frame_default");
+    }
+  }, [node?.id, has_instance]);
   return [mode, setMode];
 }
 

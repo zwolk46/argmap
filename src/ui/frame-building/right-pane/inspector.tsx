@@ -36,7 +36,13 @@ export function Inspector(props: InspectorProps): ReactElement {
       {!frame_version || selection.kind === "empty" ? (
         <InspectorEmpty on_open_settings={on_open_settings} />
       ) : selection.kind === "node" ? (
+        // P1: key by node_id so React remounts InspectorNode on selection
+        // change. The textareas inside use `defaultValue` (uncontrolled);
+        // remounting flushes uncommitted in-flight edits AND eliminates
+        // the "previous node's text appears in the new node's textarea"
+        // hazard where React reused the same DOM input.
         <InspectorNode
+          key={selection.node_id}
           node_id={selection.node_id}
           on_request_delete={() => on_request_delete(selection.node_id)}
           on_navigate_to_node={(id) => on_select({ kind: "node", node_id: id })}
