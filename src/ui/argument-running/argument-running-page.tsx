@@ -52,6 +52,20 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
     (s) => (s.frame_version?.id ?? null) as FrameVersionId | null,
   );
 
+  // P1: bump the recompute-indicator dot whenever compute_result changes,
+  // not just on item-editor save. Premise add/edit/delete from the bottom
+  // panel and session-authority operations all change compute_result via
+  // applyPatch but previously bypassed bumpRecompute, so the indicator
+  // never fired for those paths.
+  const compute_result_ref = useSessionStore((s) => s.compute_result);
+  const last_compute_ref = React.useRef(compute_result_ref);
+  React.useEffect(() => {
+    if (last_compute_ref.current !== compute_result_ref) {
+      last_compute_ref.current = compute_result_ref;
+      setRecomputeCounter((c) => c + 1);
+    }
+  }, [compute_result_ref]);
+
   // P0-17 ride-along: the interview pane and canvas both want the
   // recommended-next item id. Compute it at the page level so the canvas
   // pulse animation and the interview-pane highlight stay in sync.

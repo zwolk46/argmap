@@ -57,21 +57,31 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
   const [reused_id, setReusedId] = React.useState<NodeRef | null>(
     value && value.kind === "reused" ? value.premise_id : null,
   );
+  // P1: stabilize Premise.id + created_at across keystrokes. Without this,
+  // every keystroke minted a fresh id and a fresh timestamp, producing
+  // churn (parent re-renders) and a created_at that reflected the last
+  // keystroke rather than the original draft. We seed the first non-empty
+  // statement and reuse those values for the lifetime of the draft.
+  const draft_meta_ref = React.useRef<{ id: string; created_at: string } | null>(null);
 
   function emit_new(next_statement: string, next_kind: PremiseKind): void {
     if (next_statement.trim().length === 0) {
       on_change(null);
+      // Reset the draft seed when the draft is cleared.
+      draft_meta_ref.current = null;
       return;
     }
-    const ts = now();
+    if (!draft_meta_ref.current) {
+      draft_meta_ref.current = { id: generateId(), created_at: now() };
+    }
     const premise: Premise = {
-      id: generateId(),
+      id: draft_meta_ref.current.id,
       type: "Premise",
       layer: "argument",
       statement: next_statement,
       kind: next_kind,
-      created_at: ts,
-      updated_at: ts,
+      created_at: draft_meta_ref.current.created_at,
+      updated_at: now(),
     };
     on_change({ kind: "new", premise });
   }
