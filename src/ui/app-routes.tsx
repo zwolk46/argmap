@@ -1,45 +1,109 @@
+import * as React from "react";
 import type { ReactElement } from "react";
-import { useRoute } from "./routing";
+import { useRoute, useNavigate } from "./routing";
 import { FrameBuildingPage, ArgumentRunningPage } from "./pages";
+import {
+  VersionHistoryPane,
+  VersionHistoryPreviewProvider,
+  FramePreviewView,
+  SessionPreviewView,
+  useVersionHistoryPreview,
+} from "./version-history";
+import { OnboardingWizard } from "./onboarding";
+import { HomePage } from "./home";
+import { useAppStateStore, useRepository, selectFirstLaunchDismissed } from "@/state";
 
-function HomePage(): ReactElement {
+export function AppRoutes(): ReactElement {
   return (
-    <main
-      data-testid="home-page"
-      style={{
-        padding: "var(--space-6)",
-        fontFamily: "var(--font-sans)",
-        color: "var(--color-text-primary)",
-        background: "var(--color-surface-canvas)",
-        minHeight: "100vh",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: "var(--font-size-xl)",
-          fontWeight: "var(--font-weight-semibold)",
-          margin: "0 0 var(--space-3)",
-        }}
-      >
-        argmap
-      </h1>
-      <p style={{ fontSize: "var(--font-size-base)", color: "var(--color-text-secondary)" }}>
-        Select a frame to begin argument mapping.
-      </p>
-    </main>
+    <VersionHistoryPreviewProvider>
+      <RoutedView />
+    </VersionHistoryPreviewProvider>
   );
 }
 
-export function AppRoutes(): ReactElement {
+function RoutedView(): ReactElement {
   const route = useRoute();
+  const [version_history_open, setVersionHistoryOpen] = React.useState(false);
+  const onToggle = React.useCallback(() => setVersionHistoryOpen((v) => !v), []);
+  const onClose = React.useCallback(() => setVersionHistoryOpen(false), []);
+  const preview = useVersionHistoryPreview();
 
-  switch (route.kind) {
-    case "frame_building":
-      return <FrameBuildingPage frame_id={route.frame_id} />;
-    case "argument_running":
-      return <ArgumentRunningPage session_id={route.session_id} />;
-    case "home":
-    default:
-      return <HomePage />;
+  let page: ReactElement;
+  if (preview.state.kind === "frame") {
+    page = (
+      <FramePreviewView
+        frame_id={preview.state.frame_id}
+        version_id={preview.state.version_id}
+        version_number={preview.state.version_number}
+      />
+    );
+  } else if (preview.state.kind === "session") {
+    page = (
+      <SessionPreviewView
+        session_id={preview.state.session_id}
+        version_id={preview.state.version_id}
+        version_number={preview.state.version_number}
+      />
+    );
+  } else {
+    switch (route.kind) {
+      case "frame_building":
+        page = (
+          <FrameBuildingPage
+            frame_id={route.frame_id}
+            onToggleVersionHistory={onToggle}
+            version_history_open={version_history_open}
+          />
+        );
+        break;
+      case "argument_running":
+        page = (
+          <ArgumentRunningPage
+            session_id={route.session_id}
+            on_toggle_version_history={onToggle}
+            version_history_open={version_history_open}
+          />
+        );
+        break;
+      case "home":
+      default:
+        page = <HomePage />;
+    }
   }
+
+  return (
+    <>
+      {page}
+      <VersionHistoryPane open={version_history_open} onClose={onClose} />
+      <AppOnboardingMount />
+    </>
+  );
+}
+
+function AppOnboardingMount(): ReactElement | null {
+  const dismissed = useAppStateStore((s) => selectFirstLaunchDismissed(s.app_state));
+  const { app_state_store } = useRepository();
+  const navigate = useNavigate();
+
+  const onSkip = React.useCallback(() => {
+    app_state_store.getState().dismissWarning("first_launch");
+  }, [app_state_store]);
+
+  const onSubmit = React.useCallback(
+    async (args: {
+      title: string;
+      description?: string;
+      mode: "legal" | "general";
+      flavor?: "personal" | "academic";
+    }) => {
+      const result = await app_state_store
+        .getState()
+        .createFrame({ title: args.title, mode: args.mode, flavor: args.flavor });
+      app_state_store.getState().dismissWarning("first_launch");
+      navigate({ kind: "frame_building", frame_id: result.frame.id });
+    },
+    [app_state_store, navigate],
+  );
+
+  return <OnboardingWizard open={!dismissed} onSkip={onSkip} onSubmit={onSubmit} />;
 }

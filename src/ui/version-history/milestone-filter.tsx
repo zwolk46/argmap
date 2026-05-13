@@ -1,0 +1,82 @@
+import type { ReactElement } from "react";
+import { Pill } from "../primitives";
+
+export type MilestoneFilterValue = "milestones_only" | "all";
+
+export interface MilestoneFilterProps {
+  value: MilestoneFilterValue;
+  onChange: (next: MilestoneFilterValue) => void;
+}
+
+export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): ReactElement {
+  const is_milestones = value === "milestones_only";
+  return (
+    <div
+      role="group"
+      aria-label="Milestone filter"
+      style={{
+        display: "inline-flex",
+        gap: "var(--space-1, 4px)",
+        padding: "var(--space-2, 8px) 0",
+      }}
+    >
+      <button
+        type="button"
+        data-testid="milestone-filter-all"
+        onClick={() => onChange("all")}
+        aria-pressed={!is_milestones}
+        title="Show every saved version including auto-saves"
+        style={{
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+        }}
+      >
+        <Pill
+          bg={
+            !is_milestones
+              ? "var(--color-mode-current-accent-bg, #dbeafe)"
+              : "var(--color-status-open-bg, #f3f4f6)"
+          }
+          color={
+            !is_milestones
+              ? "var(--color-mode-current-accent, #1d4ed8)"
+              : "var(--color-text-secondary, #6b7280)"
+          }
+        >
+          All
+        </Pill>
+      </button>
+      <button
+        type="button"
+        data-testid="milestone-filter-milestones"
+        onClick={() => onChange("milestones_only")}
+        aria-pressed={is_milestones}
+        title="Hide auto-saves"
+        style={{
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+        }}
+      >
+        <Pill
+          bg={
+            is_milestones
+              ? "var(--color-mode-current-accent-bg, #dbeafe)"
+              : "var(--color-status-open-bg, #f3f4f6)"
+          }
+          color={
+            is_milestones
+              ? "var(--color-mode-current-accent, #1d4ed8)"
+              : "var(--color-text-secondary, #6b7280)"
+          }
+        >
+          <span style={{ color: "var(--color-milestone-star, #d97706)", marginRight: 4 }}>★</span>
+          Milestones only
+        </Pill>
+      </button>
+    </div>
+  );
+}

@@ -24,6 +24,7 @@ interface AppStateStoreActions {
   dismissWarning(warning_id: string): void;
   undismissWarning(warning_id: string): void;
   resetCoachmarks(): void;
+  dismissCoachmark(coachmark_id: string, dismissed?: boolean): void;
   markNewFeatureNoticeSeen(feature_id: string): void;
   setOutputViewTabChoice(frame_id: FrameId, tab: string): void;
   dispose(): void;
@@ -152,6 +153,19 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
     resetCoachmarks(): void {
       const { app_state } = get();
       const next_state: AppState = { ...app_state, coachmark_dismissals: {} };
+      set({ app_state: next_state });
+      scheduleAppStateSave(next_state);
+    },
+
+    dismissCoachmark(coachmark_id: string, dismissed: boolean = true): void {
+      const { app_state } = get();
+      const next_state: AppState = {
+        ...app_state,
+        coachmark_dismissals: {
+          ...app_state.coachmark_dismissals,
+          [coachmark_id]: dismissed,
+        },
+      };
       set({ app_state: next_state });
       scheduleAppStateSave(next_state);
     },

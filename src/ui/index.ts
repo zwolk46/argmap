@@ -14,6 +14,46 @@ export {
   FrameBuildingPage,
   ArgumentRunningPage,
   VersionHistoryPane,
+  VersionHistoryPreviewProvider,
+  useVersionHistoryPreview,
+  VersionHistoryPreviewProviderMissingError,
+  FramePreviewView,
+  SessionPreviewView,
   OnboardingWizard,
 } from "./pages";
-export type { ArgumentRunningPageProps } from "./argument-running";
+export type {
+  ArgumentRunningPageProps,
+  FrameBuildingPageProps,
+  VersionHistoryPaneProps,
+  PreviewState,
+  VersionHistoryPreviewControls,
+  FramePreviewViewProps,
+  SessionPreviewViewProps,
+  OnboardingWizardProps,
+} from "./pages";
+
+export {
+  Coachmark,
+  NewFeatureNotice,
+  useCoachmark,
+  useNewFeatureNotice,
+  OnboardingPreferencesSection,
+  WelcomeScreen,
+  NewFrameWizard,
+  WELCOME_SCREEN_COPY,
+  COACHMARK_IDS,
+  COACHMARK_MESSAGES,
+  FIRST_LAUNCH_COACHMARK_ID,
+  isCoachmarkId,
+  type CoachmarkId,
+} from "./onboarding";
+
+export {
+  HomePage,
+  FrameSummaryCard,
+  relativeTime as homeRelativeTime,
+  EMPTY_COPY as HOME_EMPTY_COPY,
+  type HomePageProps,
+  type FrameSummaryCardProps,
+  type FrameSummary,
+} from "./home";

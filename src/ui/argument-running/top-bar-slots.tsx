@@ -9,7 +9,7 @@ import { StatusSummaryChip } from "./status-summary-chip";
 export interface ArgumentRunningTopBarDeps {
   on_switch_to_frame: () => void;
   on_open_migration_dialog: () => void;
-  on_toggle_version_history?: () => void;
+  on_toggle_version_history: () => void;
   on_open_session_settings?: () => void;
   on_toggle_help: () => void;
   version_history_open: boolean;
@@ -71,7 +71,6 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
           data-testid="argument-running-version-history"
           onClick={deps.on_toggle_version_history}
           aria-pressed={deps.version_history_open}
-          disabled={!deps.on_toggle_version_history}
           title="Version history"
           style={icon_btn_style()}
         >

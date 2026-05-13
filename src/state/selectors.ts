@@ -298,6 +298,13 @@ export function selectFirstLaunchDismissed(app_state: AppState): boolean {
   return app_state.dismissed_warnings?.["first_launch"] === true;
 }
 
+export function selectCoachmarkDismissed(
+  app_state: AppState,
+  coachmark_id: string,
+): boolean {
+  return app_state.coachmark_dismissals?.[coachmark_id] === true;
+}
+
 export function selectNewFeatureNoticeSeen(app_state: AppState, feature_id: string): boolean {
   return app_state.seen_new_feature_notices?.[feature_id] === true;
 }

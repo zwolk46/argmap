@@ -5,6 +5,7 @@ import type {
   FrameId,
   FrameVersionId,
   SessionId,
+  SessionVersionId,
 } from "@/schema";
 import type {
   Repository,
@@ -15,6 +16,7 @@ import type {
 import type { ComputeResult } from "@/runtime";
 import { enumerateOrphanCandidates } from "@/runtime";
 import type { OrphanCandidate } from "@/runtime";
+import type { OrphanResolution } from "@/persistence";
 import type { SessionActionDispatchTable, SessionPatch } from "./action-runner";
 import { runSessionAction } from "./action-runner";
 import type { ComputeDriver } from "./compute-driver";
@@ -37,7 +39,12 @@ interface SessionStoreActions {
   loadSession(session_id: SessionId): Promise<void>;
   applyPatch(patch: SessionPatch): void;
   saveSessionMilestone(change_summary?: string): Promise<void>;
+  restoreVersion(ancestor_version_id: SessionVersionId, change_summary?: string): Promise<void>;
   previewMigration(target_frame_version_id: FrameVersionId): Promise<OrphanCandidate[]>;
+  migrateToFrameVersion(
+    target_frame_version_id: FrameVersionId,
+    resolutions: OrphanResolution[],
+  ): Promise<void>;
   invokeHook(hook_id: string, args: unknown): Promise<void>;
   resolveSuggestion(decision: unknown): Promise<void>;
   clearPendingSuggestion(): void;
@@ -129,11 +136,48 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
       });
     },
 
+    async restoreVersion(
+      ancestor_version_id: SessionVersionId,
+      change_summary?: string,
+    ): Promise<void> {
+      const { session } = get();
+      if (!session) return;
+      const new_version = await repo.restoreSessionVersion(session.id, ancestor_version_id);
+      const stamped: ArgumentSessionVersion =
+        change_summary && change_summary.length > 0
+          ? { ...new_version, change_summary }
+          : new_version;
+      if (change_summary && change_summary.length > 0) {
+        await repo.saveSessionVersion(stamped);
+      }
+      const next_session = await repo.loadSession(session.id);
+      const computed_at = now();
+      const compute_result = compute_driver.runFor(next_session, computed_at);
+      set({ session: next_session, session_version: stamped, compute_result });
+    },
+
     async previewMigration(target_frame_version_id: FrameVersionId): Promise<OrphanCandidate[]> {
       const { session, session_version } = get();
       if (!session || !session_version) return [];
       const target_frame_version = await repo.loadFrameVersion(target_frame_version_id);
       return enumerateOrphanCandidates(session_version, target_frame_version);
+    },
+
+    async migrateToFrameVersion(
+      target_frame_version_id: FrameVersionId,
+      resolutions: OrphanResolution[],
+    ): Promise<void> {
+      const { session } = get();
+      if (!session) return;
+      const new_version = await repo.migrateSession(
+        session.id,
+        target_frame_version_id,
+        resolutions,
+      );
+      const next_session = await repo.loadSession(session.id);
+      const computed_at = now();
+      const compute_result = compute_driver.runFor(next_session, computed_at);
+      set({ session: next_session, session_version: new_version, compute_result });
     },
 
     async invokeHook(hook_id: string, args: unknown): Promise<void> {

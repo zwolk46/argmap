@@ -56,8 +56,10 @@ class AutosaveControllerImpl implements AutosaveController {
 
   constructor(opts: AutosaveControllerOptions) {
     this.repo = opts.repo;
-    this.setTimeoutFn = opts.setTimeoutFn ?? setTimeout;
-    this.clearTimeoutFn = opts.clearTimeoutFn ?? clearTimeout;
+    // Bind to globalThis — bare setTimeout/clearTimeout must be invoked with
+    // `this === window` in browsers (otherwise: "Illegal invocation").
+    this.setTimeoutFn = opts.setTimeoutFn ?? setTimeout.bind(globalThis);
+    this.clearTimeoutFn = opts.clearTimeoutFn ?? clearTimeout.bind(globalThis);
   }
 
   scheduleFrameSave(payload: PendingFrameSave): void {

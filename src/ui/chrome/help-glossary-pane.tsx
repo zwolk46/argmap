@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
 import { GLOSSARY_DICTIONARY } from "../primitives/glossary-tooltip";
 import { Drawer, DrawerHeader, DrawerBody } from "../primitives/drawer";
+import { OnboardingPreferencesSection } from "../onboarding/onboarding-preferences-section";
 
 export interface HelpGlossaryPaneProps {
   open: boolean;
@@ -112,6 +113,7 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
             ))}
           </section>
         )}
+        <OnboardingPreferencesSection />
       </DrawerBody>
     </Drawer>
   );

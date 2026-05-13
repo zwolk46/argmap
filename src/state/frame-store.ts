@@ -1,5 +1,5 @@
 import { createStore } from "zustand/vanilla";
-import type { Frame, FrameVersion, ValidationResult, FrameId } from "@/schema";
+import type { Frame, FrameVersion, ValidationResult, FrameId, FrameVersionId } from "@/schema";
 import type { Repository, AutosaveController, CrossTabBus } from "@/persistence";
 import type { FrameActionDispatchTable, FramePatch } from "./action-runner";
 import { runFrameAction, validateOnly } from "./action-runner";
@@ -21,6 +21,7 @@ interface FrameStoreActions {
   loadFrame(frame_id: FrameId): Promise<void>;
   applyPatch(patch: FramePatch): void;
   saveFrameMilestone(change_summary?: string): Promise<void>;
+  restoreVersion(ancestor_version_id: FrameVersionId, change_summary?: string): Promise<void>;
   invokeHook(hook_id: string, args: unknown): Promise<void>;
   resolveSuggestion(decision: unknown): Promise<void>;
   clearPendingSuggestion(): void;
@@ -99,6 +100,25 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
         frame,
         new_version: { ...frame_version, is_milestone: true, change_summary },
       });
+    },
+
+    async restoreVersion(
+      ancestor_version_id: FrameVersionId,
+      change_summary?: string,
+    ): Promise<void> {
+      const { frame } = get();
+      if (!frame) return;
+      const new_version = await repo.restoreFrameVersion(frame.id, ancestor_version_id);
+      const stamped: FrameVersion =
+        change_summary && change_summary.length > 0
+          ? { ...new_version, change_summary }
+          : new_version;
+      if (change_summary && change_summary.length > 0) {
+        await repo.saveFrameVersion(stamped);
+      }
+      const next_frame: Frame = { ...frame, current_version_id: new_version.id };
+      const validation = validateOnly(stamped, compute_driver);
+      set({ frame: next_frame, frame_version: stamped, validation });
     },
 
     async invokeHook(hook_id: string, args: unknown): Promise<void> {

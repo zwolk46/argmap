@@ -1,8 +1,11 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { SessionId, NodeRef } from "@/schema";
+import type { SessionId, NodeRef, FrameVersionId } from "@/schema";
 import { useRepository, useSessionStore, useFrameStore } from "@/state";
-import { HelpGlossaryPane, SuggestionDrawer, Dialog, type FrameCanvasHandle } from "@/ui";
+import { HelpGlossaryPane, SuggestionDrawer, type FrameCanvasHandle } from "@/ui";
+import { SessionMigrationDialog } from "../session-migration";
+import { SessionSettingsPanel } from "../session-settings";
+import { useNavigate } from "../routing";
 import { ArgumentRunningTopBar } from "./top-bar-slots";
 import { TwoPaneLayout } from "./two-pane-layout";
 import {
@@ -16,14 +19,13 @@ import { BottomPanel } from "./bottom-panel";
 
 export interface ArgumentRunningPageProps {
   session_id: SessionId;
-  on_open_migration_dialog?: () => void;
-  on_toggle_version_history?: () => void;
-  version_history_open?: boolean;
+  on_toggle_version_history: () => void;
+  version_history_open: boolean;
 }
 
 export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactElement {
   const { session_id } = props;
-  const { session_store, frame_store } = useRepository();
+  const { session_store, frame_store, app_state_store } = useRepository();
   const snapshot = useSessionStore((s) => s);
   const session = snapshot.session;
   const frame_id = session?.frame_id ?? null;
@@ -33,11 +35,16 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
   const [help_pane_open, setHelpPaneOpen] = React.useState(false);
   const [filter, setFilter] = React.useState<InterviewFilterState>(DEFAULT_INTERVIEW_FILTER);
   const [search_text, setSearchText] = React.useState("");
-  const [migration_placeholder_open, setMigrationPlaceholderOpen] = React.useState(false);
+  const [migration_dialog_open, setMigrationDialogOpen] = React.useState(false);
+  const [session_settings_open, setSessionSettingsOpen] = React.useState(false);
   const [recompute_counter, setRecomputeCounter] = React.useState(0);
+  const navigate = useNavigate();
 
   const canvas_ref = React.useRef<FrameCanvasHandle | null>(null);
   const is_legal = useFrameStore((s) => s.frame?.mode === "legal");
+  const frame_current_version_id = useFrameStore(
+    (s) => (s.frame_version?.id ?? null) as FrameVersionId | null,
+  );
 
   // Mount: load session, then load parent frame for drift comparison.
   React.useEffect(() => {
@@ -51,11 +58,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
   }, [frame_id, frame_store]);
 
   function on_open_migration_dialog(): void {
-    if (props.on_open_migration_dialog) {
-      props.on_open_migration_dialog();
-    } else {
-      setMigrationPlaceholderOpen(true);
-    }
+    if (frame_current_version_id) setMigrationDialogOpen(true);
   }
 
   function on_switch_to_frame(): void {
@@ -114,9 +117,10 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
           deps={{
             on_switch_to_frame,
             on_open_migration_dialog,
+            on_open_session_settings: () => setSessionSettingsOpen(true),
             on_toggle_version_history: props.on_toggle_version_history,
             on_toggle_help: () => setHelpPaneOpen((v) => !v),
-            version_history_open: props.version_history_open ?? false,
+            version_history_open: props.version_history_open,
             help_pane_open,
             title: session.title,
           }}
@@ -185,41 +189,29 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
         <HelpGlossaryPane open={help_pane_open} onClose={() => setHelpPaneOpen(false)} />
       ) : null}
       <SuggestionDrawer store_kind="session" />
-      <Dialog
-        open={migration_placeholder_open}
-        onClose={() => setMigrationPlaceholderOpen(false)}
-        aria_label="Session migration"
-      >
-        <div
-          data-testid="migration-placeholder-dialog"
-          style={{
-            padding: "var(--space-4, 16px)",
-            maxWidth: 360,
-            fontSize: "var(--font-size-sm, 13px)",
-            color: "var(--color-text-secondary, #6b7280)",
-          }}
-        >
-          Session migration UI lands in I.9d. The session continues to operate against its current
-          frame version snapshot; data integrity is preserved.
-          <div style={{ marginTop: "var(--space-3, 12px)" }}>
-            <button
-              type="button"
-              onClick={() => setMigrationPlaceholderOpen(false)}
-              style={{
-                background: "var(--color-background-accent, #dbeafe)",
-                color: "var(--color-text-accent, #1d4ed8)",
-                border: "none",
-                borderRadius: "var(--border-radius-md, 6px)",
-                cursor: "pointer",
-                fontSize: "var(--font-size-xs, 11px)",
-                padding: "4px 10px",
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </Dialog>
+      {migration_dialog_open && frame_current_version_id ? (
+        <SessionMigrationDialog
+          open={true}
+          onClose={() => setMigrationDialogOpen(false)}
+          target_frame_version_id={frame_current_version_id}
+        />
+      ) : null}
+      <SessionSettingsPanel
+        open={session_settings_open}
+        on_close={() => setSessionSettingsOpen(false)}
+        on_open_frame_settings={() => {
+          setSessionSettingsOpen(false);
+          if (frame_id) navigate({ kind: "frame_building", frame_id });
+        }}
+        on_delete_session={async () => {
+          setSessionSettingsOpen(false);
+          if (session) {
+            await app_state_store.getState().deleteSession(session.id);
+            if (frame_id) navigate({ kind: "frame_building", frame_id });
+            else navigate({ kind: "home" });
+          }
+        }}
+      />
     </React.Fragment>
   );
 }

@@ -1,0 +1,74 @@
+import type { ReactElement } from "react";
+import type { NodeRef } from "@/schema";
+import type { OrphanCandidate, OrphanResolution } from "@/state";
+import { ResolutionPicker } from "./resolution-picker";
+
+export interface OrphanCandidateRowProps {
+  candidate: OrphanCandidate;
+  resolution: OrphanResolution;
+  onResolutionChanged: (resolution: OrphanResolution) => void;
+}
+
+function defaultReattachTarget(candidate: OrphanCandidate): NodeRef | undefined {
+  return candidate.reattach_candidates && candidate.reattach_candidates.length > 0
+    ? (candidate.reattach_candidates[0].target_node_id as NodeRef)
+    : undefined;
+}
+
+export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement {
+  const { candidate, resolution, onResolutionChanged } = props;
+
+  function handleKindChange(kind: OrphanResolution["kind"]): void {
+    if (kind === "reattach") {
+      onResolutionChanged({
+        kind: "reattach",
+        target_node_id: defaultReattachTarget(candidate),
+      });
+    } else {
+      onResolutionChanged({ kind });
+    }
+  }
+
+  function handleTargetChange(target_node_id: NodeRef): void {
+    onResolutionChanged({ kind: "reattach", target_node_id });
+  }
+
+  return (
+    <div
+      data-testid="orphan-candidate-row"
+      data-carrier-id={candidate.carrier_id}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-1, 4px)",
+        padding: "var(--space-2, 8px) var(--space-3, 12px)",
+        borderTop: "var(--border-hairline, 1px) solid var(--color-border-subtle, #e5e7eb)",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3, 12px)" }}>
+        <span
+          data-testid="candidate-display-summary"
+          style={{ flex: 1, fontSize: "var(--font-size-sm, 13px)" }}
+        >
+          {candidate.display_summary}
+        </span>
+        <ResolutionPicker value={resolution.kind} onChange={handleKindChange} />
+      </div>
+      {resolution.kind === "reattach" && candidate.reattach_candidates &&
+      candidate.reattach_candidates.length > 1 ? (
+        <select
+          data-testid="reattach-target-select"
+          value={resolution.target_node_id ?? ""}
+          onChange={(e) => handleTargetChange(e.target.value as NodeRef)}
+          style={{ alignSelf: "flex-end", fontSize: "var(--font-size-sm, 13px)" }}
+        >
+          {candidate.reattach_candidates.map((c) => (
+            <option key={c.target_node_id} value={c.target_node_id}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </div>
+  );
+}

@@ -40,6 +40,7 @@ export interface FrameCanvasProps {
   foreclosure_visibility?: ForeclosureVisibility;
   selection?: ReadonlyArray<NodeRef>;
   legal_mode?: boolean;
+  read_only?: boolean;
   on_node_moved?: (node_id: NodeRef, x: number, y: number) => void;
   on_edge_created?: (source: NodeRef, target: NodeRef, edge_type: string) => void;
   onSelectionChange?: (node_ids: ReadonlyArray<NodeRef>) => void;
@@ -68,6 +69,7 @@ function buildRFNodes(
   operating_mode: string,
   legal_mode: boolean,
   selection: ReadonlyArray<NodeRef> | undefined,
+  read_only: boolean,
 ): RFNode<FrameCanvasNodeData>[] {
   return frame_version.nodes.map((node) => {
     const pos = layout_result?.positions.find((p) => p.node_id === node.id);
@@ -110,7 +112,7 @@ function buildRFNodes(
         variant: variant_map[node.type] ?? "sub_question",
         status,
         display,
-        enable_connector_handle: operating_mode === "frame_building",
+        enable_connector_handle: !read_only && operating_mode === "frame_building",
         legal_mode,
         gate_glyph:
           node.type === "LogicalGate" && "gate_type" in node
@@ -209,6 +211,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     foreclosure_visibility = "visible",
     selection,
     legal_mode = false,
+    read_only = false,
     on_node_moved,
     onSelectionChange,
     handle,
@@ -237,10 +240,12 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     operating_mode,
     legal_mode,
     selection,
+    read_only,
   );
   const rf_edges = buildRFEdges(frame_version, operating_mode, fc_visibility, argument_overlay);
 
   function handleNodeDragStop(_: React.MouseEvent, node: RFNode<FrameCanvasNodeData>) {
+    if (read_only) return;
     on_node_moved?.(node.data.node_id, node.position.x, node.position.y);
   }
 
@@ -249,7 +254,11 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   }
 
   return (
-    <div data-testid="frame-canvas" style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div
+      data-testid="frame-canvas"
+      data-read-only={read_only}
+      style={{ width: "100%", height: "100%", position: "relative" }}
+    >
       <ReactFlow
         nodes={rf_nodes}
         edges={rf_edges}
@@ -257,6 +266,9 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         edgeTypes={edgeTypes as never}
         onNodeDragStop={handleNodeDragStop}
         onSelectionChange={handleSelectionChange as never}
+        nodesDraggable={!read_only}
+        edgesReconnectable={!read_only}
+        nodesConnectable={!read_only}
         fitView
         style={{ background: "var(--color-surface-canvas)" }}
       >

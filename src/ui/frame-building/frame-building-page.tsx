@@ -1,14 +1,15 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { FrameId, NodeRef, Node } from "@/schema";
+import type { FrameId, NodeRef, Node, Flavor } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { TopBar, HelpGlossaryPane } from "../chrome";
+import { TopBar, HelpGlossaryPane, VersionHistoryButton } from "../chrome";
 import type { TopBarSlots } from "../chrome";
 import { FrameCanvas, useLayoutResult } from "../canvas";
 import type { FrameCanvasHandle } from "../canvas";
 import { SuggestionDrawer } from "../ai-suggestion";
 import { useCascadeConfirmation } from "../hooks";
 import { useNavigate } from "../routing";
+import { ArchitecturalModeChangeDialog, FlavorChangeDialog } from "../mode-change";
 import { ThreePaneLayout } from "./three-pane-layout";
 import { NodePalette, OutlineTree } from "./left-pane";
 import { Inspector } from "./right-pane";
@@ -20,8 +21,17 @@ import { AutoArrangeFlow } from "./auto-arrange";
 
 export interface FrameBuildingPageProps {
   frame_id: FrameId;
-  onOpenModeChangeDialog?: () => void;
-  onToggleVersionHistory?: () => void;
+  onToggleVersionHistory: () => void;
+  version_history_open: boolean;
+}
+
+type ModeChangeDialogState =
+  | { open: false }
+  | { open: true; target: "mode" }
+  | { open: true; target: "flavor" };
+
+function inverseFlavor(current: Flavor | undefined): Flavor {
+  return current === "personal" ? "academic" : "personal";
 }
 
 export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
@@ -35,6 +45,10 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const [settings_panel_open, setSettingsPanelOpen] = React.useState(false);
   const [help_pane_open, setHelpPaneOpen] = React.useState(false);
   const [auto_arrange_open, setAutoArrangeOpen] = React.useState(false);
+  const [mode_change_dialog, setModeChangeDialog] = React.useState<ModeChangeDialogState>({
+    open: false,
+  });
+  const current_flavor = useFrameStore((s) => s.frame?.flavor);
 
   const cascade_confirmation = useCascadeConfirmation();
   const canvas_ref = React.useRef<FrameCanvasHandle>(null);
@@ -82,6 +96,10 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     ),
     buttons: (
       <>
+        <VersionHistoryButton
+          active={props.version_history_open}
+          onToggle={props.onToggleVersionHistory}
+        />
         <button
           type="button"
           onClick={() => setSettingsPanelOpen(true)}
@@ -189,11 +207,26 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
       <FrameSettingsPanel
         open={settings_panel_open}
         on_close={() => setSettingsPanelOpen(false)}
-        on_open_mode_change_dialog={
-          props.onOpenModeChangeDialog ? (_target) => props.onOpenModeChangeDialog?.() : undefined
+        on_open_mode_change_dialog={(target) =>
+          setModeChangeDialog({ open: true, target })
         }
         on_delete_frame={handleDeleteFrame}
       />
+
+      {mode_change_dialog.open && mode_change_dialog.target === "mode" ? (
+        <ArchitecturalModeChangeDialog
+          open={true}
+          onClose={() => setModeChangeDialog({ open: false })}
+          target="mode"
+        />
+      ) : null}
+      {mode_change_dialog.open && mode_change_dialog.target === "flavor" ? (
+        <FlavorChangeDialog
+          open={true}
+          onClose={() => setModeChangeDialog({ open: false })}
+          target_flavor={inverseFlavor(current_flavor)}
+        />
+      ) : null}
 
       <HelpGlossaryPane open={help_pane_open} onClose={() => setHelpPaneOpen(false)} />
 

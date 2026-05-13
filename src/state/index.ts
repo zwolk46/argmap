@@ -72,6 +72,7 @@ export {
   selectFrameCanCommitTransition,
   selectPinnedFrames,
   selectFirstLaunchDismissed,
+  selectCoachmarkDismissed,
   selectNewFeatureNoticeSeen,
 } from "./selectors";
 export type {
@@ -90,3 +91,25 @@ export type { CascadeReport } from "@/runtime";
 
 // Re-exported for I.9c argument-running UI per F-022 (state is the broker).
 export type { InterviewItem } from "@/modes";
+
+// Re-exported for I.9d2 session-migration UI per F-007 (state is the broker).
+export type { OrphanCandidate } from "@/runtime";
+export type { OrphanResolution } from "@/persistence";
+
+// Re-exported for I.9d2 mode-change UI per F-007 (state is the broker so UI
+// avoids a direct @/modes value-import).
+export { attemptTransition, scanFlavorChange, scanArchitecturalModeChange } from "@/modes";
+export type { TransitionResult, ConclusionDirectionEditor } from "@/modes";
+
+// Re-exported for I.9d1 version-history UI per F-006 (state is the broker so UI
+// avoids a direct @/persistence value-import).
+export { diffFrameVersions, diffSessionVersions } from "@/persistence";
+export type {
+  FrameVersionSummary,
+  ArgumentSessionVersionSummary,
+  StructuralDiff,
+  SessionStructuralDiff,
+  NodeEditEntry,
+  EdgeEditEntry,
+  MetadataChange,
+} from "@/persistence";
