@@ -27,6 +27,7 @@ export {
   RepositoryError,
 } from "./repository";
 export { IndexedDbRepository, type IndexedDbRepositoryOptions } from "./indexeddb-repository";
+export { SupabaseRepository, type SupabaseRepositoryOpts } from "./supabase-repository";
 export {
   createAutosaveController,
   AUTOSAVE_IDLE_MS,
