@@ -43,6 +43,46 @@ const FIELD_NAME_LABELS: Readonly<Record<string, string>> = {
   selected_option_id: "selected option",
   premise_type: "premise type",
   burden_of_proof: "burden of proof",
+  // P1 humanization gaps from audit
+  linked_to: "linked term",
+  is_jurisdictional: "jurisdictional flag",
+  requires_premise: "premise requirement",
+  requires_authority: "authority requirement",
+  answer_type: "answer type",
+  output_target: "gate output",
+  jurisdiction_override: "jurisdiction override",
+};
+
+// Internal terminology that leaks into validation messages and reads like
+// machine output to a law student. Each entry is a phrase replacement (run
+// before the field-name pass so multi-word terms collapse first).
+const PHRASE_REPLACEMENTS: ReadonlyArray<[RegExp, string]> = [
+  // V-EDGE-3 / V-FR-* — "Argument-layer edge" is internal jargon.
+  [/\bArgument-layer edge\b/g, "Argument-running edge"],
+  // V-EDGE-3 — "Frame Version.edges" / "FrameVersion.edges" → "the frame's edges".
+  [/\bFrame ?Version\.edges\b/g, "the frame's edges"],
+  // V-NODE-8 — "satisfies but has no target" → "marked satisfying but with no target node".
+  [/\bsatisfies\s+but\s+has\s+no\s+target\b/g, "is marked satisfying but has no target node"],
+  // V-FR-3 trailing fragment artifact "(s)".
+  [/\bInterpretation\(s\)\b/g, "Interpretations"],
+  // V-FR-2 awkward "Orphan node" jargon.
+  [/\bOrphan node\b/g, "Disconnected node"],
+];
+
+// Edge-type enum codes that show up in V-EDGE-1 messages naked.
+const EDGE_TYPE_LABELS: Readonly<Record<string, string>> = {
+  DECOMPOSES_INTO: "decomposes into",
+  TURNS_ON: "turns on",
+  INTERPRETED_AS: "interpreted as",
+  LEADS_TO: "leads to",
+  FORECLOSES: "forecloses",
+  GATES: "gates",
+  ANSWERS: "answers",
+  SUPPORTS: "supports",
+  CONTRADICTS: "contradicts",
+  CITES: "cites",
+  BINDING_IN: "binding in",
+  DISTINGUISHED_BY: "distinguished by",
 };
 
 export function humanizeFieldName(name: string): string {
@@ -85,6 +125,12 @@ export function humanizeValidationMessage(
     });
   }
 
+  // Phrase replacements first so "Frame Version.edges" collapses before
+  // "FrameVersion" gets eaten by individual node-type replacements.
+  for (const [re, label] of PHRASE_REPLACEMENTS) {
+    out = out.replace(re, label);
+  }
+
   for (const code of Object.keys(NODE_TYPE_LABELS) as NodeType[]) {
     const re = new RegExp(`\\b${code}\\b`, "g");
     out = out.replace(re, NODE_TYPE_LABELS[code]);
@@ -92,6 +138,11 @@ export function humanizeValidationMessage(
 
   for (const [field, label] of Object.entries(FIELD_NAME_LABELS)) {
     const re = new RegExp(`\\b${field}\\b`, "g");
+    out = out.replace(re, label);
+  }
+
+  for (const [code, label] of Object.entries(EDGE_TYPE_LABELS)) {
+    const re = new RegExp(`\\b${code}\\b`, "g");
     out = out.replace(re, label);
   }
 

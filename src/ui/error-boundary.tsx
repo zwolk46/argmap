@@ -15,6 +15,14 @@ export class AppErrorBoundary extends React.Component<{ children: ReactNode }, S
     return { error };
   }
 
+  override componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    // P1: log to the console so production errors are recoverable from
+    // browser devtools. Without this, the error boundary swallowed every
+    // crash silently — the user saw "Something went wrong" with no way
+    // to surface the underlying message.
+    console.error("[AppErrorBoundary]", error, info);
+  }
+
   handleReload = () => {
     window.location.reload();
   };

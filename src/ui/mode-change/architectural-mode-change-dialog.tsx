@@ -39,6 +39,7 @@ export function ArchitecturalModeChangeDialog(
     Map<NodeRef, ConclusionDirection>
   >(new Map());
   const [committing, setCommitting] = React.useState(false);
+  const [commit_error, setCommitError] = React.useState<string | null>(null);
 
   // Reset on open transition.
   const last_open_ref = React.useRef(false);
@@ -103,28 +104,37 @@ export function ArchitecturalModeChangeDialog(
 
   async function handleCommit(): Promise<void> {
     setCommitting(true);
-    const conclusion_direction_resolutions: ConclusionDirectionResolution[] = [];
-    for (const [node_id, direction] of [...direction_resolutions.entries()].sort((a, b) =>
-      a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
-    )) {
-      conclusion_direction_resolutions.push({ node_id, direction });
+    setCommitError(null);
+    try {
+      const conclusion_direction_resolutions: ConclusionDirectionResolution[] = [];
+      for (const [node_id, direction] of [...direction_resolutions.entries()].sort((a, b) =>
+        a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0,
+      )) {
+        conclusion_direction_resolutions.push({ node_id, direction });
+      }
+      const change_summary = buildModeChangeSummary(
+        current_mode,
+        current_flavor,
+        target_mode,
+        target_flavor,
+      );
+      frame_store.getState().applyPatch({
+        kind: "architectural_mode_changed",
+        target_mode,
+        target_flavor,
+        positions_added: staged_positions.length > 0 ? staged_positions : undefined,
+        conclusion_direction_resolutions,
+        change_summary,
+      });
+      onClose();
+    } catch (err) {
+      // P1: without this try/catch, an applyPatch throw left the dialog
+      // wedged on committing=true with no feedback — Commit stayed
+      // disabled forever and the user had to refresh.
+      setCommitError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCommitting(false);
     }
-    const change_summary = buildModeChangeSummary(
-      current_mode,
-      current_flavor,
-      target_mode,
-      target_flavor,
-    );
-    frame_store.getState().applyPatch({
-      kind: "architectural_mode_changed",
-      target_mode,
-      target_flavor,
-      positions_added: staged_positions.length > 0 ? staged_positions : undefined,
-      conclusion_direction_resolutions,
-      change_summary,
-    });
-    setCommitting(false);
-    onClose();
   }
 
   const available_positions: Position[] = [...current_positions, ...staged_positions];
@@ -157,6 +167,22 @@ export function ArchitecturalModeChangeDialog(
           conclusion_title_by_id={conclusion_title_by_id}
           available_positions={target_mode === "general" ? available_positions : undefined}
         />
+        {commit_error ? (
+          <div
+            data-testid="mode-change-error"
+            style={{
+              marginTop: "var(--space-3)",
+              padding: "var(--space-3) var(--space-4)",
+              color: "var(--color-severity-error)",
+              background: "var(--color-severity-error-bg)",
+              borderLeft: "var(--border-thick) solid var(--color-severity-error)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-sm)",
+            }}
+          >
+            Couldn't commit the mode change: {commit_error}
+          </div>
+        ) : null}
       </DialogBody>
       <DialogFooter>
         <Button variant="secondary" data-testid="mode-change-cancel" onClick={onClose}>

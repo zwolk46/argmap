@@ -42,6 +42,20 @@ export const LEGAL_DIRECTION_VALUES = [
   "reverse",
 ] as const;
 
+// P1: user-facing labels for each legal-mode direction. The mode-change
+// dialog used to render raw enum values ("affirm", "favors_plaintiff") in
+// the direction picker; a law student expects legal phrasing.
+export const LEGAL_DIRECTION_LABELS: Readonly<Record<(typeof LEGAL_DIRECTION_VALUES)[number], string>> =
+  {
+    affirm: "Affirm",
+    custom: "Custom direction",
+    dismiss: "Dismiss",
+    favors_defendant: "Favors defendant",
+    favors_plaintiff: "Favors plaintiff",
+    remand: "Remand",
+    reverse: "Reverse",
+  };
+
 export function attemptTransition(
   kind: TransitionKind,
   current: {
@@ -136,7 +150,7 @@ export function scanArchitecturalModeChange(
           required_direction_kind: required_kind,
           options:
             required_kind === "legal"
-              ? LEGAL_DIRECTION_VALUES.map((v) => ({ value: v, label: v }))
+              ? LEGAL_DIRECTION_VALUES.map((v) => ({ value: v, label: LEGAL_DIRECTION_LABELS[v] }))
               : (positions ?? []).map((p) => ({ value: p.id, label: p.label })),
         });
       }
