@@ -186,11 +186,44 @@ export class IndexedDbRepository implements Repository {
             `Parent Frame missing: ${version.frame_id}`,
           );
         }
-        await this.db.frame_versions.put(version);
-        frame.current_version_id = version.id;
+        // P0-4: Re-chain parent_version_id and version_number against the
+        // on-disk current version when this is a brand new id. Without this,
+        // rapid edits inside the autosave debounce window each mint a fresh
+        // in-memory chain (v1 → A → B → C) but only the last (C) reaches
+        // disk; C.parent_version_id points at the in-memory B, which never
+        // existed on disk. Traversing the chain (Compare view, restore)
+        // then throws "FrameVersion not found." Re-stamping inside the
+        // transaction guarantees: prior.id → next.parent_version_id and
+        // prior.version_number + 1 → next.version_number.
+        const existing = await this.db.frame_versions.get(version.id);
+        let to_write: FrameVersion;
+        if (existing) {
+          // In-place update for an already-persisted id (e.g.,
+          // restoreFrameVersion stamping a change_summary). Preserve chain.
+          to_write = {
+            ...version,
+            parent_version_id: existing.parent_version_id,
+            version_number: existing.version_number,
+          };
+        } else {
+          const prior_id = frame.current_version_id;
+          const prior = prior_id ? await this.db.frame_versions.get(prior_id) : undefined;
+          if (prior && prior.id !== version.id) {
+            to_write = {
+              ...version,
+              parent_version_id: prior.id,
+              version_number: prior.version_number + 1,
+            };
+          } else {
+            // First version on a frame that doesn't have one yet.
+            to_write = { ...version, parent_version_id: undefined, version_number: 1 };
+          }
+        }
+        await this.db.frame_versions.put(to_write);
+        frame.current_version_id = to_write.id;
         frame.updated_at = this.now();
         await this.db.frames.put(frame);
-        const entry = buildSearchIndexEntry(frame, version);
+        const entry = buildSearchIndexEntry(frame, to_write);
         await this.db.search_index.put(entry);
         this.search_cache.upsert(entry);
       },
@@ -278,8 +311,32 @@ export class IndexedDbRepository implements Repository {
             `Parent ArgumentSession missing: ${version.session_id}`,
           );
         }
-        await this.db.argument_session_versions.put(version);
-        session.current_version_id = version.id;
+        // P0-4: same parent_version_id chain repair as saveFrameVersion above.
+        const existing = await this.db.argument_session_versions.get(version.id);
+        let to_write: ArgumentSessionVersion;
+        if (existing) {
+          to_write = {
+            ...version,
+            parent_version_id: existing.parent_version_id,
+            version_number: existing.version_number,
+          };
+        } else {
+          const prior_id = session.current_version_id;
+          const prior = prior_id
+            ? await this.db.argument_session_versions.get(prior_id)
+            : undefined;
+          if (prior && prior.id !== version.id) {
+            to_write = {
+              ...version,
+              parent_version_id: prior.id,
+              version_number: prior.version_number + 1,
+            };
+          } else {
+            to_write = { ...version, parent_version_id: undefined, version_number: 1 };
+          }
+        }
+        await this.db.argument_session_versions.put(to_write);
+        session.current_version_id = to_write.id;
         session.updated_at = this.now();
         await this.db.argument_sessions.put(session);
       },
