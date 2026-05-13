@@ -1,6 +1,7 @@
 import {
   type AutosaveController,
   type AutosaveEvent,
+  type CrossTabBus,
   type PendingFrameSave,
   type PendingSessionSave,
   type SaveEvent,
@@ -31,6 +32,13 @@ interface SessionSlot {
 
 export interface AutosaveControllerOptions {
   repo: Repository;
+  /**
+   * Optional cross-tab bus. P0-2: when supplied, every successful flush
+   * publishes a typed event so peer tabs can refresh their in-memory
+   * state. BroadcastChannel does not deliver to the same context, so
+   * publish-from-self does not cause an echo loop.
+   */
+  crosstab?: CrossTabBus;
   setTimeoutFn?: typeof setTimeout;
   clearTimeoutFn?: typeof clearTimeout;
 }
@@ -41,6 +49,7 @@ export function createAutosaveController(opts: AutosaveControllerOptions): Autos
 
 class AutosaveControllerImpl implements AutosaveController {
   private readonly repo: Repository;
+  private readonly crosstab: CrossTabBus | undefined;
   private readonly setTimeoutFn: typeof setTimeout;
   private readonly clearTimeoutFn: typeof clearTimeout;
   private readonly frame_slots = new Map<FrameId, FrameSlot>();
@@ -56,6 +65,7 @@ class AutosaveControllerImpl implements AutosaveController {
 
   constructor(opts: AutosaveControllerOptions) {
     this.repo = opts.repo;
+    this.crosstab = opts.crosstab;
     // Bind to globalThis — bare setTimeout/clearTimeout must be invoked with
     // `this === window` in browsers (otherwise: "Illegal invocation").
     this.setTimeoutFn = opts.setTimeoutFn ?? setTimeout.bind(globalThis);
@@ -147,6 +157,11 @@ class AutosaveControllerImpl implements AutosaveController {
         id: frame_id,
         version_id: versioned.new_version.id,
       });
+      // P0-2: broadcast to peer tabs so they can refresh.
+      this.crosstab?.publish("frame_saved", {
+        frame_id,
+        version_id: versioned.new_version.id,
+      });
       slot.in_flight = false;
       // P0-3: if a newer payload arrived during the await, reschedule instead
       // of deleting the slot. Before this fix, the trailing keystroke was lost
@@ -193,6 +208,11 @@ class AutosaveControllerImpl implements AutosaveController {
         id: session_id,
         version_id: versioned.new_version.id,
       });
+      // P0-2: broadcast to peer tabs.
+      this.crosstab?.publish("session_saved", {
+        session_id,
+        version_id: versioned.new_version.id,
+      });
       slot.in_flight = false;
       // P0-3: same race fix as flushFrame above.
       if (slot.payload !== payload) {
@@ -226,6 +246,9 @@ class AutosaveControllerImpl implements AutosaveController {
     try {
       await this.repo.saveAppState(state);
       this.emit("save_succeeded", { kind: "app_state" });
+      // P0-5: broadcast so peer tabs re-read AppState and absorb the
+      // change (pin, recent, dismissal, etc.).
+      this.crosstab?.publish("app_state_changed", {});
     } catch (e) {
       const err = e as Error;
       this.emit("save_failed", {

@@ -66,7 +66,7 @@ export interface CreateSessionStoreOpts {
 }
 
 export function createSessionStore(opts: CreateSessionStoreOpts) {
-  const { repo, autosave, dispatch, compute_driver, now, generateId } = opts;
+  const { repo, autosave, crosstab, dispatch, compute_driver, now, generateId } = opts;
 
   const store = createStore<SessionStoreState>()((set, get) => ({
     session: null,
@@ -224,10 +224,46 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
     }
   });
 
+  // P0-2: refresh on peer-tab session_saved for the OPEN session id.
+  const unsubSessionSaved = crosstab.subscribe("session_saved", ({ session_id, version_id }) => {
+    const { session, session_version } = store.getState();
+    if (!session || session.id !== session_id) return;
+    if (session_version && session_version.id === version_id) return;
+    void store.getState().loadSession(session_id);
+  });
+
+  // P0-2: if a peer deletes the session we're viewing, drop our snapshot.
+  const unsubSessionDeleted = crosstab.subscribe("session_deleted", ({ session_id }) => {
+    const { session } = store.getState();
+    if (!session || session.id !== session_id) return;
+    store.setState({
+      session: null,
+      session_version: null,
+      compute_result: null,
+      error: "This session was deleted in another tab.",
+    });
+  });
+
+  // P0-2: if a peer deletes the parent FRAME of our open session, the
+  // session is unreachable too — drop in-memory state.
+  const unsubFrameDeletedForSession = crosstab.subscribe("frame_deleted", ({ frame_id }) => {
+    const { session } = store.getState();
+    if (!session || session.frame_id !== frame_id) return;
+    store.setState({
+      session: null,
+      session_version: null,
+      compute_result: null,
+      error: "The parent frame was deleted in another tab.",
+    });
+  });
+
   const originalDispose = store.getState().dispose;
   store.setState({
     dispose: () => {
       unsubSaveFailed();
+      unsubSessionSaved();
+      unsubSessionDeleted();
+      unsubFrameDeletedForSession();
       originalDispose();
     },
   });

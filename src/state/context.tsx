@@ -87,6 +87,7 @@ export function RepositoryProvider(props: RepositoryProviderProps): ReactElement
       createAppStateStore({
         repo,
         autosave,
+        crosstab,
         now,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps

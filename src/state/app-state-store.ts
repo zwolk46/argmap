@@ -1,6 +1,12 @@
 import { createStore } from "zustand/vanilla";
 import type { Frame, FrameVersion, FrameId, SessionId, Mode, Flavor } from "@/schema";
-import type { Repository, AutosaveController, AppState, FrameSummary } from "@/persistence";
+import type {
+  Repository,
+  AutosaveController,
+  AppState,
+  FrameSummary,
+  CrossTabBus,
+} from "@/persistence";
 
 export interface AppStateStoreSnapshot {
   app_state: AppState;
@@ -51,11 +57,18 @@ const DEFAULT_APP_STATE: AppState = {
 export interface CreateAppStateStoreOpts {
   repo: Repository;
   autosave: AutosaveController;
+  /**
+   * Optional cross-tab bus. P0-5: when supplied, the store publishes
+   * `frame_deleted` / `session_deleted` after the corresponding repo
+   * call resolves, and subscribes to peer events to reflect changes
+   * peer tabs made (pin, dismissal, deletion).
+   */
+  crosstab?: CrossTabBus;
   now: () => string;
 }
 
 export function createAppStateStore(opts: CreateAppStateStoreOpts) {
-  const { repo, autosave } = opts;
+  const { repo, autosave, crosstab } = opts;
 
   function scheduleAppStateSave(state: AppState): void {
     autosave.scheduleAppStateSave(state);
@@ -125,10 +138,16 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
       };
       set({ frames, app_state: next_state });
       scheduleAppStateSave(next_state);
+      // P0-5: tell peer tabs so they drop the deleted frame from their
+      // in-memory recents/pinned. Without this, a stale tab would re-save
+      // its blob and resurrect the deleted id (cross-tab recents
+      // resurrection bug).
+      crosstab?.publish("frame_deleted", { frame_id });
     },
 
     async deleteSession(session_id: SessionId): Promise<void> {
       await repo.deleteSession(session_id);
+      crosstab?.publish("session_deleted", { session_id });
     },
 
     pinFrame(frame_id: FrameId, pinned: boolean): void {
@@ -220,9 +239,50 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
     },
 
     dispose(): void {
-      // no subscriptions to clean up at the moment
+      // unsubscribes registered below at creation time
     },
   }));
+
+  // P0-2 / P0-5: cross-tab subscriptions. When a peer tab deletes a frame
+  // or session, drop the id from in-memory recents/pinned and refresh the
+  // frames list. When AppState changes elsewhere (pin, dismissal,
+  // coachmark, etc.), re-read from disk so the local snapshot reflects
+  // the other tab's change. Without these, two tabs diverge silently and
+  // the next blob-save races.
+  const unsub_frame_deleted = crosstab?.subscribe("frame_deleted", ({ frame_id }) => {
+    const { app_state } = store.getState();
+    const next_state: AppState = {
+      ...app_state,
+      recents: app_state.recents.filter((id) => id !== frame_id),
+      pinned: app_state.pinned.filter((id) => id !== frame_id),
+    };
+    store.setState({ app_state: next_state });
+    // Refresh the frames list since the peer just removed a row.
+    void store.getState().loadFrames();
+  });
+  const unsub_app_state_changed = crosstab?.subscribe("app_state_changed", () => {
+    // Re-read AppState from disk so we absorb peer pins / dismissals /
+    // recents reorderings. Don't push a save back — that would cause a
+    // publish loop (BroadcastChannel doesn't self-deliver, but two peers
+    // re-publishing back and forth would). loadAppState already handles
+    // the "missing singleton" case.
+    void store.getState().loadAppState();
+  });
+  const unsub_session_deleted = crosstab?.subscribe("session_deleted", () => {
+    // Sessions don't appear in AppState today, but refresh the frames
+    // list in case the deletion's parent-frame summary changed.
+    void store.getState().loadFrames();
+  });
+
+  const originalDispose = store.getState().dispose;
+  store.setState({
+    dispose: () => {
+      unsub_frame_deleted?.();
+      unsub_app_state_changed?.();
+      unsub_session_deleted?.();
+      originalDispose();
+    },
+  });
 
   return store;
 }

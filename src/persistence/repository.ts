@@ -298,6 +298,15 @@ export interface SessionStructuralDiff {
 export interface BroadcastEvents {
   frame_saved: { frame_id: FrameId; version_id: FrameVersionId };
   session_saved: { session_id: SessionId; version_id: SessionVersionId };
+  /** P0-5: a frame was deleted in another tab. Peers drop it from their
+   *  in-memory AppState.recents / .pinned and refresh the frames list. */
+  frame_deleted: { frame_id: FrameId };
+  /** P0-2: a session was deleted in another tab. Peers refresh their
+   *  in-memory state so they don't render a tombstoned session id. */
+  session_deleted: { session_id: SessionId };
+  /** P0-5: AppState was rewritten in another tab (pin, recent, dismissal,
+   *  coachmark, etc.). Peers re-read AppState from disk to absorb it. */
+  app_state_changed: Record<string, never>;
 }
 
 export interface CrossTabBus {

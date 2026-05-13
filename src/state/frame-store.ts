@@ -43,7 +43,7 @@ export interface CreateFrameStoreOpts {
 }
 
 export function createFrameStore(opts: CreateFrameStoreOpts) {
-  const { repo, autosave, dispatch, compute_driver, now, generateId } = opts;
+  const { repo, autosave, crosstab, dispatch, compute_driver, now, generateId } = opts;
 
   const store = createStore<FrameStoreState>()((set, get) => ({
     frame: null,
@@ -159,10 +159,36 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
     }
   });
 
+  // P0-2: when a peer tab saves the SAME frame we're viewing, refresh our
+  // snapshot from disk so we don't render a stale version. BroadcastChannel
+  // doesn't self-deliver, so this never fires for our own saves.
+  const unsubFrameSaved = crosstab.subscribe("frame_saved", ({ frame_id, version_id }) => {
+    const { frame, frame_version } = store.getState();
+    if (!frame || frame.id !== frame_id) return;
+    // Already at this version (or newer) — skip the round-trip.
+    if (frame_version && frame_version.id === version_id) return;
+    void store.getState().loadFrame(frame_id);
+  });
+
+  // P0-5: when a peer tab deletes the frame we're viewing, drop our
+  // in-memory snapshot so the UI no longer renders a deleted entity.
+  const unsubFrameDeleted = crosstab.subscribe("frame_deleted", ({ frame_id }) => {
+    const { frame } = store.getState();
+    if (!frame || frame.id !== frame_id) return;
+    store.setState({
+      frame: null,
+      frame_version: null,
+      validation: [],
+      error: "This frame was deleted in another tab.",
+    });
+  });
+
   const originalDispose = store.getState().dispose;
   store.setState({
     dispose: () => {
       unsubSaveFailed();
+      unsubFrameSaved();
+      unsubFrameDeleted();
       originalDispose();
     },
   });

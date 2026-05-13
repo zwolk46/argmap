@@ -6,8 +6,10 @@ import { frameActions, sessionActions } from "@/modes";
 import { App } from "./App";
 
 const repo = new IndexedDbRepository();
-const autosave = createAutosaveController({ repo });
 const crosstab = createCrossTabBus();
+// P0-2: autosave publishes typed events (frame_saved / session_saved /
+// app_state_changed) on every successful flush so peer tabs can refresh.
+const autosave = createAutosaveController({ repo, crosstab });
 
 void repo.openOrUpgrade();
 
