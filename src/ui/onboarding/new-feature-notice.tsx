@@ -65,11 +65,7 @@ export function NewFeatureNotice(props: NewFeatureNoticeProps): ReactElement {
             Tell me more
           </button>
         ) : null}
-        <button
-          type="button"
-          data-testid="new-feature-dismiss"
-          onClick={props.on_dismiss}
-        >
+        <button type="button" data-testid="new-feature-dismiss" onClick={props.on_dismiss}>
           Dismiss
         </button>
       </div>

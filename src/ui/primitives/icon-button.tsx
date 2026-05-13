@@ -24,14 +24,16 @@ export function IconButton({
   "data-testid": dataTestId,
 }: IconButtonProps): ReactElement {
   const dim = size === "sm" ? "26px" : "32px";
-  const accentBg = variant === "accent"
-    ? "var(--color-mode-current-accent-bg)"
-    : variant === "subtle"
-      ? "var(--color-surface-pane)"
-      : "transparent";
-  const accentColor = variant === "accent" || active
-    ? "var(--color-mode-current-accent)"
-    : "var(--color-text-secondary)";
+  const accentBg =
+    variant === "accent"
+      ? "var(--color-mode-current-accent-bg)"
+      : variant === "subtle"
+        ? "var(--color-surface-pane)"
+        : "transparent";
+  const accentColor =
+    variant === "accent" || active
+      ? "var(--color-mode-current-accent)"
+      : "var(--color-text-secondary)";
   return (
     <button
       type="button"

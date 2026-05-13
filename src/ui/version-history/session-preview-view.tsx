@@ -37,11 +37,7 @@ export function buildArgumentOverlayFromSessionVersion(
   type OverlayEdge = ArgumentOverlay["edges"][number];
   const out: OverlayEdge[] = [];
   for (const ae of v.argument_edges ?? []) {
-    if (
-      ae.type === "ANSWERS" ||
-      ae.type === "SUPPORTS" ||
-      ae.type === "CONTRADICTS"
-    ) {
+    if (ae.type === "ANSWERS" || ae.type === "SUPPORTS" || ae.type === "CONTRADICTS") {
       out.push({
         id: ae.id,
         type: ae.type,
@@ -58,9 +54,7 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
   const { version_id, version_number } = props;
   const result = useVersionFullLoad({ kind: "session", version_id });
   const preview = useVersionHistoryPreview();
-  const frame_version_snapshot = useSessionStore(
-    (s) => s.session?.frame_version_snapshot ?? null,
-  );
+  const frame_version_snapshot = useSessionStore((s) => s.session?.frame_version_snapshot ?? null);
   const [selected, setSelected] = React.useState<ReadonlyArray<NodeRef>>([]);
 
   const session_version =

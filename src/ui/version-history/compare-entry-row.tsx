@@ -53,9 +53,9 @@ const VALID_NODE_TYPES = new Set([
 ]);
 
 function safeNodeType(t: string): Parameters<typeof TypeIcon>[0]["node_type"] {
-  return (VALID_NODE_TYPES.has(t)
-    ? t
-    : "SubQuestion") as Parameters<typeof TypeIcon>[0]["node_type"];
+  return (VALID_NODE_TYPES.has(t) ? t : "SubQuestion") as Parameters<
+    typeof TypeIcon
+  >[0]["node_type"];
 }
 
 export function CompareEntryRow({
@@ -65,7 +65,11 @@ export function CompareEntryRow({
   const clickable = isClickable(descriptor);
 
   function handleClick(): void {
-    if (descriptor.kind === "node_added" || descriptor.kind === "node_removed" || descriptor.kind === "node_edited") {
+    if (
+      descriptor.kind === "node_added" ||
+      descriptor.kind === "node_removed" ||
+      descriptor.kind === "node_edited"
+    ) {
       on_navigate_to_entity(descriptor.node_id);
     } else if (
       descriptor.kind === "edge_added" ||

@@ -19,35 +19,35 @@ import {
 // or from the top-level barrel: import { ... } from "@/ui";
 ```
 
-| Surface                          | Role                                                                                                                                                            |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VersionHistoryPane`             | Drawer-shaped pane mounted once at the App level (`app-routes.tsx`). Scopes by current Route: Frame Building → single panel; Argument Running → two-tab variant |
-| `VersionHistoryPreviewProvider`  | Context provider that owns preview state via `useReducer`. Wraps the App tree                                                                                   |
-| `useVersionHistoryPreview()`     | Hook returning `{ state, enterFramePreview, enterSessionPreview, exit }`; throws `VersionHistoryPreviewProviderMissingError` outside the provider               |
-| `FramePreviewView`               | Read-only frame canvas, rendered _in place of_ `FrameBuildingPage` when preview state is `{ kind: "frame" }`                                                    |
-| `SessionPreviewView`             | Read-only argument canvas, rendered _in place of_ `ArgumentRunningPage` when preview state is `{ kind: "session" }`                                             |
+| Surface                         | Role                                                                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VersionHistoryPane`            | Drawer-shaped pane mounted once at the App level (`app-routes.tsx`). Scopes by current Route: Frame Building → single panel; Argument Running → two-tab variant |
+| `VersionHistoryPreviewProvider` | Context provider that owns preview state via `useReducer`. Wraps the App tree                                                                                   |
+| `useVersionHistoryPreview()`    | Hook returning `{ state, enterFramePreview, enterSessionPreview, exit }`; throws `VersionHistoryPreviewProviderMissingError` outside the provider               |
+| `FramePreviewView`              | Read-only frame canvas, rendered _in place of_ `FrameBuildingPage` when preview state is `{ kind: "frame" }`                                                    |
+| `SessionPreviewView`            | Read-only argument canvas, rendered _in place of_ `ArgumentRunningPage` when preview state is `{ kind: "session" }`                                             |
 
 ## Sub-module structure
 
-| File                          | Purpose                                                                                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `version-history-pane.tsx`    | Top-level `Drawer`; dispatches by Route; owns selected-version / compare / restore-dialog local state                                       |
-| `pane-tabs.tsx`               | Argument-Running two-tab `SegmentedToggle` ("Sessions" / "Frames (read-only)")                                                              |
-| `milestone-filter.tsx`        | "All / Milestones only" pill toggle                                                                                                         |
-| `version-tree.tsx`            | Renders the version list; consumes `buildVersionTreeShape` + `filterByMilestone`; auto-scrolls the current row into view                    |
-| `version-tree-row.tsx`        | One row: marker glyph, version number, relative timestamp, change_summary or `auto-save` italic fallback, optional "session was authored here" pill |
-| `version-tree-shape.ts`       | **Pure helper.** DFS-walks summaries by `version_number` ascending; `filterByMilestone` retains milestones and re-parents survivors         |
-| `selection-footer.tsx`        | Footer with "[Selected: vN]" label + Preview / Restore / Compare buttons. Disabled gates per spec                                           |
-| `preview-context.tsx`         | React Context + reducer for preview state. Discriminated union `{ kind: "none" \| "frame" \| "session" }`                                   |
-| `frame-preview-view.tsx`      | Reads `useVersionFullLoad({ kind: "frame", ... })`; renders read-only `FrameCanvas` + sticky `PreviewBanner`                                |
-| `session-preview-view.tsx`    | Reads `useVersionFullLoad({ kind: "session", ... })` + current session's `frame_version_snapshot`; renders read-only canvas with overlay   |
-| `preview-banner.tsx`          | Sticky banner above previewed canvas; renders "Previewing version N (read-only)" + Exit button                                              |
-| `compare-view.tsx`            | Replaces the version list when active. Loads both versions in parallel via `Promise.all`; runs `diffFrameVersions` / `diffSessionVersions` |
-| `compare-entry-list.tsx`      | Per-section list; empty sections render `null`; layout-only kind renders an expand/collapse affordance                                      |
-| `compare-entry-row.tsx`       | Renders one diff entry; node/edge rows are clickable; metadata / layout-only-summary rows are not                                           |
-| `restore-confirm-dialog.tsx`  | Wraps `ConfirmDialog`; dispatches to `frame_store.restoreVersion` or `session_store.restoreVersion`                                         |
-| `use-version-summaries.ts`    | Async data hook for `Repository.listFrameVersionSummaries` / `listSessionVersionSummaries`; re-fetches when current-version-id changes      |
-| `use-version-full-load.ts`    | Async data hook for `Repository.loadFrameVersion` / `loadSessionVersion`. Module-scoped LRU cache (max 8 entries) keyed by `version_id`     |
+| File                         | Purpose                                                                                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version-history-pane.tsx`   | Top-level `Drawer`; dispatches by Route; owns selected-version / compare / restore-dialog local state                                               |
+| `pane-tabs.tsx`              | Argument-Running two-tab `SegmentedToggle` ("Sessions" / "Frames (read-only)")                                                                      |
+| `milestone-filter.tsx`       | "All / Milestones only" pill toggle                                                                                                                 |
+| `version-tree.tsx`           | Renders the version list; consumes `buildVersionTreeShape` + `filterByMilestone`; auto-scrolls the current row into view                            |
+| `version-tree-row.tsx`       | One row: marker glyph, version number, relative timestamp, change_summary or `auto-save` italic fallback, optional "session was authored here" pill |
+| `version-tree-shape.ts`      | **Pure helper.** DFS-walks summaries by `version_number` ascending; `filterByMilestone` retains milestones and re-parents survivors                 |
+| `selection-footer.tsx`       | Footer with "[Selected: vN]" label + Preview / Restore / Compare buttons. Disabled gates per spec                                                   |
+| `preview-context.tsx`        | React Context + reducer for preview state. Discriminated union `{ kind: "none" \| "frame" \| "session" }`                                           |
+| `frame-preview-view.tsx`     | Reads `useVersionFullLoad({ kind: "frame", ... })`; renders read-only `FrameCanvas` + sticky `PreviewBanner`                                        |
+| `session-preview-view.tsx`   | Reads `useVersionFullLoad({ kind: "session", ... })` + current session's `frame_version_snapshot`; renders read-only canvas with overlay            |
+| `preview-banner.tsx`         | Sticky banner above previewed canvas; renders "Previewing version N (read-only)" + Exit button                                                      |
+| `compare-view.tsx`           | Replaces the version list when active. Loads both versions in parallel via `Promise.all`; runs `diffFrameVersions` / `diffSessionVersions`          |
+| `compare-entry-list.tsx`     | Per-section list; empty sections render `null`; layout-only kind renders an expand/collapse affordance                                              |
+| `compare-entry-row.tsx`      | Renders one diff entry; node/edge rows are clickable; metadata / layout-only-summary rows are not                                                   |
+| `restore-confirm-dialog.tsx` | Wraps `ConfirmDialog`; dispatches to `frame_store.restoreVersion` or `session_store.restoreVersion`                                                 |
+| `use-version-summaries.ts`   | Async data hook for `Repository.listFrameVersionSummaries` / `listSessionVersionSummaries`; re-fetches when current-version-id changes              |
+| `use-version-full-load.ts`   | Async data hook for `Repository.loadFrameVersion` / `loadSessionVersion`. Module-scoped LRU cache (max 8 entries) keyed by `version_id`             |
 
 ## State-layer additions (F-006)
 

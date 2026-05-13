@@ -71,10 +71,7 @@ export function InspectorValidationBlock(
             }}
           >
             <SeverityIcon severity={r.severity} />
-            <span
-              style={{ color: "var(--color-text-primary)", flex: 1 }}
-              title={r.rule_id}
-            >
+            <span style={{ color: "var(--color-text-primary)", flex: 1 }} title={r.rule_id}>
               {humanizeValidationMessage(r.message, frame_version)}
             </span>
           </div>

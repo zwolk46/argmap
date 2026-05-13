@@ -75,9 +75,7 @@ export function PreviewBanner({ version_number, kind }: PreviewBannerProps): Rea
           ((e.currentTarget as HTMLElement).style.background =
             "var(--color-mode-current-accent-bg)")
         }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLElement).style.background = "transparent")
-        }
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
       >
         Exit preview
       </button>

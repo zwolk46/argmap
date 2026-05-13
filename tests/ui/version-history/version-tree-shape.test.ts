@@ -33,25 +33,22 @@ describe("buildVersionTreeShape", () => {
   });
 
   it("single branch off a milestone yields depth-1 child", () => {
-    const summaries = [
-      fv("a", 1, undefined, true),
-      fv("b", 2, "a"),
-      fv("c", 3, "a"),
-    ];
+    const summaries = [fv("a", 1, undefined, true), fv("b", 2, "a"), fv("c", 3, "a")];
     const out = buildVersionTreeShape(summaries);
     // a is root; b and c are both children of a.
     expect(out[0].summary.id).toBe("a");
     expect(out[0].depth).toBe(0);
     expect(out[0].has_branch_children).toBe(true);
-    expect(out.filter((e) => e.depth === 1).map((e) => e.summary.id).sort()).toEqual(["b", "c"]);
+    expect(
+      out
+        .filter((e) => e.depth === 1)
+        .map((e) => e.summary.id)
+        .sort(),
+    ).toEqual(["b", "c"]);
   });
 
   it("DFS orders children by version_number ascending", () => {
-    const summaries = [
-      fv("root", 1, undefined),
-      fv("c2", 3, "root"),
-      fv("c1", 2, "root"),
-    ];
+    const summaries = [fv("root", 1, undefined), fv("c2", 3, "root"), fv("c1", 2, "root")];
     const out = buildVersionTreeShape(summaries);
     expect(out.map((e) => e.summary.id)).toEqual(["root", "c1", "c2"]);
   });
@@ -69,11 +66,7 @@ describe("buildVersionTreeShape", () => {
   });
 
   it("is_last_child_of_parent flag is true only for terminal siblings", () => {
-    const summaries = [
-      fv("root", 1, undefined),
-      fv("a", 2, "root"),
-      fv("b", 3, "root"),
-    ];
+    const summaries = [fv("root", 1, undefined), fv("a", 2, "root"), fv("b", 3, "root")];
     const out = buildVersionTreeShape(summaries);
     const a = out.find((e) => e.summary.id === "a")!;
     const b = out.find((e) => e.summary.id === "b")!;
@@ -82,10 +75,7 @@ describe("buildVersionTreeShape", () => {
   });
 
   it("handles roots with missing parent_version_id", () => {
-    const summaries = [
-      fv("orphan-child", 5, "missing"),
-      fv("root", 1, undefined, true),
-    ];
+    const summaries = [fv("orphan-child", 5, "missing"), fv("root", 1, undefined, true)];
     const out = buildVersionTreeShape(summaries);
     // Both treated as roots since their parents are not in the summary list.
     expect(out.map((e) => e.summary.id).sort()).toEqual(["orphan-child", "root"]);
@@ -95,11 +85,7 @@ describe("buildVersionTreeShape", () => {
 
 describe("filterByMilestone", () => {
   it("retains only milestones", () => {
-    const summaries = [
-      fv("a", 1, undefined, true),
-      fv("b", 2, "a", false),
-      fv("c", 3, "b", true),
-    ];
+    const summaries = [fv("a", 1, undefined, true), fv("b", 2, "a", false), fv("c", 3, "b", true)];
     const out = filterByMilestone(summaries);
     expect(out.map((s) => s.id)).toEqual(["a", "c"]);
   });

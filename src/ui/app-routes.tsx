@@ -53,8 +53,7 @@ function RoutedView(): ReactElement {
   // resolves correctly outside of the top bar.
   React.useEffect(() => {
     if (typeof document === "undefined") return;
-    const mode =
-      route.kind === "argument_running" ? "argument-running" : "frame-building";
+    const mode = route.kind === "argument_running" ? "argument-running" : "frame-building";
     document.documentElement.dataset.mode = mode;
     document.body.dataset.mode = mode;
   }, [route.kind]);

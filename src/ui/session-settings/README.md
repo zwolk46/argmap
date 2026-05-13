@@ -21,15 +21,15 @@ import {
 } from "@/ui/session-settings";
 ```
 
-| Surface | Role |
-| --- | --- |
-| `SessionSettingsPanel` | Drawer-shaped panel composing the four sections. Open state owned by `ArgumentRunningPage` (page-local mount per F-007/F-024). |
-| `MetadataSection` | Title + description inputs (dispatch `session_metadata_edited`). Archived banner with Unarchive when `session.archived === true`. |
-| `G6RemoveRewriteSection` | Read-only preview of `current_version.output_overrides.rewritten_prose` + destructive `Remove rewrite` button that dispatches the new `output_overrides_cleared` SessionPatch. |
-| `G12AdvisoryToggleSection` | **Read-only** display of frame-scope `llm_settings.runtime_hooks_enabled` + `per_hook_enabled.cross_implications`, with a "frame settings" link the page wires. |
-| `ArchiveDeleteSection` | Archive toggle (dispatches `session_metadata_edited({ archived })`); destructive Delete with type-the-title guard. |
-| `g12EffectiveEnabled` | Pure helper. `per_hook_enabled.cross_implications` wins when defined; otherwise `runtime_hooks_enabled`. |
-| `previewProse` | Pure helper: truncate-with-ellipsis at 120 chars by default. |
+| Surface                    | Role                                                                                                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SessionSettingsPanel`     | Drawer-shaped panel composing the four sections. Open state owned by `ArgumentRunningPage` (page-local mount per F-007/F-024).                                                 |
+| `MetadataSection`          | Title + description inputs (dispatch `session_metadata_edited`). Archived banner with Unarchive when `session.archived === true`.                                              |
+| `G6RemoveRewriteSection`   | Read-only preview of `current_version.output_overrides.rewritten_prose` + destructive `Remove rewrite` button that dispatches the new `output_overrides_cleared` SessionPatch. |
+| `G12AdvisoryToggleSection` | **Read-only** display of frame-scope `llm_settings.runtime_hooks_enabled` + `per_hook_enabled.cross_implications`, with a "frame settings" link the page wires.                |
+| `ArchiveDeleteSection`     | Archive toggle (dispatches `session_metadata_edited({ archived })`); destructive Delete with type-the-title guard.                                                             |
+| `g12EffectiveEnabled`      | Pure helper. `per_hook_enabled.cross_implications` wins when defined; otherwise `runtime_hooks_enabled`.                                                                       |
+| `previewProse`             | Pure helper: truncate-with-ellipsis at 120 chars by default.                                                                                                                   |
 
 ## State-layer + schema (already in place, F-008)
 

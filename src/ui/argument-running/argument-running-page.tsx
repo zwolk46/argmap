@@ -2,7 +2,13 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { SessionId, NodeRef, FrameVersionId } from "@/schema";
 import { useRepository, useSessionStore, useFrameStore } from "@/state";
-import { HelpGlossaryPane, SuggestionDrawer, type FrameCanvasHandle, LoadingScreen, EmptyState } from "@/ui";
+import {
+  HelpGlossaryPane,
+  SuggestionDrawer,
+  type FrameCanvasHandle,
+  LoadingScreen,
+  EmptyState,
+} from "@/ui";
 import { SessionMigrationDialog } from "../session-migration";
 import { SessionSettingsPanel } from "../session-settings";
 import { useNavigate } from "../routing";

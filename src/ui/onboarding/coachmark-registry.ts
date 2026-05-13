@@ -18,10 +18,8 @@ export const COACHMARK_MESSAGES: Record<CoachmarkId, string> = {
     "This panel shows the fields for whatever you've selected. Mode-specific fields appear or hide automatically.",
   edge_create:
     "Drag from this handle to another node to create an edge. Only valid edge types will be offered.",
-  switch_to_argument:
-    "If your frame has errors, the switch is blocked. Warnings let you proceed.",
-  version_history_open:
-    "Every save is preserved. Star icons mark milestones you've named.",
+  switch_to_argument: "If your frame has errors, the switch is blocked. Warnings let you proceed.",
+  version_history_open: "Every save is preserved. Star icons mark milestones you've named.",
   argument_pane_open:
     "These are the open items. Top is recommended next, but you can address any of them.",
 };

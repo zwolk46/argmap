@@ -1,12 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type {
-  NodeRef,
-  Mode,
-  Flavor,
-  Position,
-  ConclusionDirection,
-} from "@/schema";
+import type { NodeRef, Mode, Flavor, Position, ConclusionDirection } from "@/schema";
 import { useFrameStore, useRepository, type ConclusionDirectionResolution } from "@/state";
 import { Dialog, DialogHeader, DialogBody, DialogFooter, Button } from "../primitives";
 import { TargetModePicker } from "./target-mode-picker";
@@ -87,9 +81,7 @@ export function ArchitecturalModeChangeDialog(
   const need_positions =
     target_mode === "general" && has_conclusions && current_positions.length === 0;
   const has_positions = !need_positions || staged_positions.length > 0;
-  const all_resolved = inline_editors.every((e) =>
-    direction_resolutions.has(e.node_id as NodeRef),
-  );
+  const all_resolved = inline_editors.every((e) => direction_resolutions.has(e.node_id as NodeRef));
   const flavor_ok = target_mode === "legal" || target_flavor !== undefined;
   const can_commit = !committing && has_positions && all_resolved && flavor_ok;
 
@@ -167,11 +159,7 @@ export function ArchitecturalModeChangeDialog(
         />
       </DialogBody>
       <DialogFooter>
-        <Button
-          variant="secondary"
-          data-testid="mode-change-cancel"
-          onClick={onClose}
-        >
+        <Button variant="secondary" data-testid="mode-change-cancel" onClick={onClose}>
           Cancel
         </Button>
         <Button

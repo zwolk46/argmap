@@ -1,12 +1,5 @@
 import type { ReactElement } from "react";
-import {
-  Drawer,
-  DrawerHeader,
-  DrawerBody,
-  DrawerFooter,
-  IconButton,
-  Button,
-} from "../primitives";
+import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, IconButton, Button } from "../primitives";
 import { MetadataSection } from "./metadata-section";
 import { G6RemoveRewriteSection } from "./g6-remove-rewrite-section";
 import { G12AdvisoryToggleSection } from "./g12-advisory-toggle-section";
@@ -22,12 +15,7 @@ export interface SessionSettingsPanelProps {
 export function SessionSettingsPanel(props: SessionSettingsPanelProps): ReactElement | null {
   if (!props.open) return null;
   return (
-    <Drawer
-      open={props.open}
-      onClose={props.on_close}
-      width="420px"
-      aria_label="Session settings"
-    >
+    <Drawer open={props.open} onClose={props.on_close} width="420px" aria_label="Session settings">
       <DrawerHeader>
         <span data-testid="session-settings-title">Session settings</span>
         <IconButton
@@ -59,11 +47,7 @@ export function SessionSettingsPanel(props: SessionSettingsPanelProps): ReactEle
         </div>
       </DrawerBody>
       <DrawerFooter>
-        <Button
-          variant="secondary"
-          data-testid="session-settings-done"
-          onClick={props.on_close}
-        >
+        <Button variant="secondary" data-testid="session-settings-done" onClick={props.on_close}>
           Done
         </Button>
       </DrawerFooter>

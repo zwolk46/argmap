@@ -19,15 +19,13 @@ export function SaveFailureToastBridge(): ReactElement | null {
   React.useEffect(() => {
     const unsubscribe = autosave.on("save_failed", (e) => {
       const error = e.error;
-      const where =
-        e.kind === "frame" ? "frame" : e.kind === "session" ? "session" : "app state";
+      const where = e.kind === "frame" ? "frame" : e.kind === "session" ? "session" : "app state";
       let message: string;
       // Discriminate by `error.kind` rather than instanceof, so the UI
       // doesn't have to take a value import from @/persistence
       // (Article II § 2 / Stream I import-boundary).
       if (error?.kind === "quota_exceeded") {
-        message =
-          `Couldn't save your ${where}: browser storage is full. Free space by deleting old frames or exporting them.`;
+        message = `Couldn't save your ${where}: browser storage is full. Free space by deleting old frames or exporting them.`;
       } else if (error) {
         message = `Couldn't save your ${where}: ${error.message}`;
       } else {

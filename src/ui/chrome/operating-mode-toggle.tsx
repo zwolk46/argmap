@@ -67,8 +67,8 @@ export function OperatingModeToggle({
           onSwitchWithWarnings?.();
         }}
       >
-        The frame has validation warnings. You can still switch to Argument
-        Running, but ungated paths may produce incomplete results.
+        The frame has validation warnings. You can still switch to Argument Running, but ungated
+        paths may produce incomplete results.
       </ConfirmDialog>
     </>
   );

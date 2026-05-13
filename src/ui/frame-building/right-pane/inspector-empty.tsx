@@ -38,8 +38,8 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
         }}
         aria-label="Inspector hint"
       >
-        Click a node on the canvas to edit its settings here. With nothing
-        selected, this panel shows the frame's overall settings.
+        Click a node on the canvas to edit its settings here. With nothing selected, this panel
+        shows the frame's overall settings.
       </section>
 
       <section>

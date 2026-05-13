@@ -27,8 +27,7 @@ export function useVersionSummaries(arg: VersionSummariesArg): VersionSummariesR
   // Re-fetch when the current version id changes (local save or peer-tab save).
   const frame_current_id = useFrameStore((s) => s.frame_version?.id ?? null);
   const session_current_id = useSessionStore((s) => s.session?.current_version_id ?? null);
-  const dependency =
-    arg.kind === "frame" ? frame_current_id : session_current_id;
+  const dependency = arg.kind === "frame" ? frame_current_id : session_current_id;
 
   const arg_key = arg.kind === "frame" ? `frame:${arg.frame_id}` : `session:${arg.session_id}`;
 

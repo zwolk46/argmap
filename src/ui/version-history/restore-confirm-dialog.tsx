@@ -42,9 +42,7 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
       if (entity_kind === "frame") {
         await frame_store.getState().restoreVersion(ancestor_version_id as FrameVersionId);
       } else {
-        await session_store
-          .getState()
-          .restoreVersion(ancestor_version_id as SessionVersionId);
+        await session_store.getState().restoreVersion(ancestor_version_id as SessionVersionId);
       }
       setPending(false);
       on_restored();

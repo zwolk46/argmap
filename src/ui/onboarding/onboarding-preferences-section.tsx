@@ -55,9 +55,7 @@ export function OnboardingPreferencesSection(): ReactElement {
         onConfirm={handleReset}
         onCancel={() => setConfirmOpen(false)}
       >
-        <div>
-          All coachmarks and the welcome screen will re-appear. Your data is not affected.
-        </div>
+        <div>All coachmarks and the welcome screen will re-appear. Your data is not affected.</div>
       </ConfirmDialog>
     </section>
   );

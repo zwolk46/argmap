@@ -113,18 +113,14 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            color: summary.pinned
-              ? "var(--color-milestone-star)"
-              : "var(--color-text-tertiary)",
+            color: summary.pinned ? "var(--color-milestone-star)" : "var(--color-text-tertiary)",
             borderRadius: "var(--radius-md)",
             transition: "background-color var(--duration-fast) var(--ease-standard)",
           }}
           onMouseEnter={(e) =>
             ((e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)")
           }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "transparent")
-          }
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
         >
           {summary.pinned ? (
             <svg width={14} height={14} viewBox="0 0 16 16" fill="currentColor" aria-hidden>

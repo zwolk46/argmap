@@ -279,9 +279,7 @@ describe("persistence/atomicity", () => {
           answered_at: "2026-05-13T00:00:00.000Z",
         },
       ],
-      session_authorities: [
-        ...(session_export.current_version.session_authorities ?? []),
-      ],
+      session_authorities: [...(session_export.current_version.session_authorities ?? [])],
     };
     await repo.saveSession({
       ...session_export.session,

@@ -70,9 +70,7 @@ export function buildVersionTreeShape(
   return out;
 }
 
-export function filterByMilestone(
-  summaries: ReadonlyArray<AnySummary>,
-): ReadonlyArray<AnySummary> {
+export function filterByMilestone(summaries: ReadonlyArray<AnySummary>): ReadonlyArray<AnySummary> {
   const by_id = new Map<string, AnySummary>();
   for (const s of summaries) by_id.set(s.id, s);
 

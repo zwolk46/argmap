@@ -16,9 +16,7 @@ export function g12EffectiveEnabled(llm: LlmSettings | undefined): boolean {
   return runtime_on;
 }
 
-export function G12AdvisoryToggleSection(
-  props: G12AdvisoryToggleSectionProps,
-): ReactElement {
+export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): ReactElement {
   const llm = useFrameStore((s) => s.frame?.llm_settings);
   const enabled = g12EffectiveEnabled(llm);
   return (
@@ -40,14 +38,10 @@ export function G12AdvisoryToggleSection(
           gap: "var(--space-2, 8px)",
         }}
       >
-        <span style={{ fontSize: "var(--font-size-sm, 13px)" }}>
-          Cross-implication advisories
-        </span>
+        <span style={{ fontSize: "var(--font-size-sm, 13px)" }}>Cross-implication advisories</span>
         <Pill
           color={
-            enabled
-              ? "var(--color-text-success, #166534)"
-              : "var(--color-text-secondary, #6b7280)"
+            enabled ? "var(--color-text-success, #166534)" : "var(--color-text-secondary, #6b7280)"
           }
           bg={
             enabled

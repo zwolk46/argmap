@@ -105,11 +105,7 @@ export function WelcomeScreen(props: WelcomeScreenProps): ReactElement {
         <Button variant="ghost" data-testid="welcome-skip" onClick={props.onSkip}>
           {WELCOME_SCREEN_COPY.skip_label}
         </Button>
-        <Button
-          variant="primary"
-          data-testid="welcome-start"
-          onClick={props.onStart}
-        >
+        <Button variant="primary" data-testid="welcome-start" onClick={props.onStart}>
           {WELCOME_SCREEN_COPY.start_label}
         </Button>
       </div>

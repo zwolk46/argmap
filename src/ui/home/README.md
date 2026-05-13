@@ -21,12 +21,12 @@ import {
 } from "@/ui/home";
 ```
 
-| Surface | Role |
-| --- | --- |
-| `HomePage` | Page-level composition. Reads `app_state.recents`, `app_state.pinned`, and `frames` from `AppStateStore`. Calls `app_state_store.loadFrames()` on mount. |
+| Surface            | Role                                                                                                                                                           |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HomePage`         | Page-level composition. Reads `app_state.recents`, `app_state.pinned`, and `frames` from `AppStateStore`. Calls `app_state_store.loadFrames()` on mount.       |
 | `FrameSummaryCard` | Card primitive: title button (opens via `navigate({ kind: "frame_building", frame_id })` + `setRecent`), `ModeFlavorChip`, relative timestamp, ★/☆ pin toggle. |
-| `relativeTime` | Pure helper: "Ns ago" / "Nm ago" / "Nh ago" / "Nd ago". |
-| `EMPTY_COPY` | Frozen empty-state copy `{ title, body }`. |
+| `relativeTime`     | Pure helper: "Ns ago" / "Nm ago" / "Nh ago" / "Nd ago".                                                                                                        |
+| `EMPTY_COPY`       | Frozen empty-state copy `{ title, body }`.                                                                                                                     |
 
 ## Sections (internal, not exported)
 

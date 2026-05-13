@@ -42,7 +42,11 @@ export interface FrameCanvasProps {
   legal_mode?: boolean;
   read_only?: boolean;
   on_node_moved?: (node_id: NodeRef, x: number, y: number) => void;
-  on_edge_created?: (source: NodeRef, target: NodeRef, drop_position?: { x: number; y: number }) => void;
+  on_edge_created?: (
+    source: NodeRef,
+    target: NodeRef,
+    drop_position?: { x: number; y: number },
+  ) => void;
   onSelectionChange?: (node_ids: ReadonlyArray<NodeRef>) => void;
   onAutoArrange?: () => void;
   search?: string;

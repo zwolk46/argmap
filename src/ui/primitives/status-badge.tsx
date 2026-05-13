@@ -54,13 +54,7 @@ const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
   },
 };
 
-function StatusGlyph({
-  status,
-  px,
-}: {
-  status: string;
-  px: number;
-}): React.ReactElement {
+function StatusGlyph({ status, px }: { status: string; px: number }): React.ReactElement {
   const stroke = 1.6;
   const common = {
     width: px,
@@ -211,7 +205,9 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
           lineHeight: 1,
         }}
       >
-        <span aria-hidden style={{ fontSize: "11px" }}>⚖</span>
+        <span aria-hidden style={{ fontSize: "11px" }}>
+          ⚖
+        </span>
         {isBinding ? "B" : "P"}
       </span>
     </span>

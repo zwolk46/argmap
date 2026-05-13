@@ -88,9 +88,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
       >
         <div data-testid="delete-confirm-body">
           <p>Deleting this session and all its versions cannot be undone.</p>
-          <label
-            style={{ display: "block", marginTop: "var(--space-2, 8px)" }}
-          >
+          <label style={{ display: "block", marginTop: "var(--space-2, 8px)" }}>
             Type the session title to confirm:
             <input
               data-testid="delete-confirm-input"

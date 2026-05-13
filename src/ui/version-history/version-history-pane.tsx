@@ -91,9 +91,7 @@ interface SessionVariantProps {
 function SessionVariant(props: SessionVariantProps): ReactElement {
   const session_title = useSessionStore((s) => s.session?.title ?? "");
   const session_current_id = useSessionStore((s) => s.session?.current_version_id ?? null);
-  const session_current_number = useSessionStore(
-    (s) => s.session_version?.version_number ?? null,
-  );
+  const session_current_number = useSessionStore((s) => s.session_version?.version_number ?? null);
   const session_authored_against = useSessionStore(
     (s) => (s.session?.frame_version_id ?? null) as FrameVersionId | null,
   );
@@ -108,9 +106,7 @@ function SessionVariant(props: SessionVariantProps): ReactElement {
     session_id: props.session_id,
   });
   const frame_summaries = useVersionSummaries(
-    frame_id
-      ? { kind: "frame", frame_id }
-      : { kind: "frame", frame_id: "__unused__" as FrameId },
+    frame_id ? { kind: "frame", frame_id } : { kind: "frame", frame_id: "__unused__" as FrameId },
   );
 
   return (
@@ -120,16 +116,12 @@ function SessionVariant(props: SessionVariantProps): ReactElement {
       header_title={`Version history${session_title ? ` · ${session_title}` : ""}`}
       entity_kind={active_tab === "sessions" ? "session" : "frame"}
       summaries={
-        active_tab === "sessions"
-          ? session_summaries.summaries
-          : frame_summaries.summaries
+        active_tab === "sessions" ? session_summaries.summaries : frame_summaries.summaries
       }
       summaries_status={
         active_tab === "sessions" ? session_summaries.status : frame_summaries.status
       }
-      current_version_id={
-        active_tab === "sessions" ? session_current_id : frame_current_id
-      }
+      current_version_id={active_tab === "sessions" ? session_current_id : frame_current_id}
       current_version_number={
         active_tab === "sessions" ? session_current_number : frame_current_number
       }
@@ -169,8 +161,7 @@ interface PaneShellProps {
 
 function PaneShell(props: PaneShellProps): ReactElement {
   const preview = useVersionHistoryPreview();
-  const [milestone_filter, setMilestoneFilter] =
-    React.useState<MilestoneFilterValue>("all");
+  const [milestone_filter, setMilestoneFilter] = React.useState<MilestoneFilterValue>("all");
   const [selected_version_id, setSelectedVersionId] = React.useState<string | null>(null);
   const [compare_state, setCompareState] = React.useState<{
     from_id: string;
@@ -193,8 +184,7 @@ function PaneShell(props: PaneShellProps): ReactElement {
     setMilestoneFilter("all");
   }, [route_key, props.active_tab]);
 
-  const selected_summary =
-    props.summaries.find((s) => s.id === selected_version_id) ?? null;
+  const selected_summary = props.summaries.find((s) => s.id === selected_version_id) ?? null;
 
   function handlePreviewClicked(): void {
     if (!selected_summary) return;
@@ -203,7 +193,7 @@ function PaneShell(props: PaneShellProps): ReactElement {
       const frame_id =
         route.kind === "frame_building"
           ? route.frame_id
-          : (selected_summary as { frame_id?: FrameId }).frame_id ?? null;
+          : ((selected_summary as { frame_id?: FrameId }).frame_id ?? null);
       if (!frame_id) return;
       preview.enterFramePreview({
         frame_id,
@@ -226,8 +216,7 @@ function PaneShell(props: PaneShellProps): ReactElement {
   }
 
   function handleCompareClicked(): void {
-    if (!selected_summary || !props.current_version_id || !props.current_version_number)
-      return;
+    if (!selected_summary || !props.current_version_id || !props.current_version_number) return;
     setCompareState({
       from_id: selected_summary.id,
       from_version_number: selected_summary.version_number,
@@ -237,12 +226,7 @@ function PaneShell(props: PaneShellProps): ReactElement {
   }
 
   return (
-    <Drawer
-      open={props.open}
-      onClose={props.onClose}
-      width="520px"
-      aria_label="Version history"
-    >
+    <Drawer open={props.open} onClose={props.onClose} width="520px" aria_label="Version history">
       <DrawerHeader>
         <span data-testid="version-history-header-title">{props.header_title}</span>
         <IconButton
@@ -301,9 +285,7 @@ function PaneShell(props: PaneShellProps): ReactElement {
                 selected_version_id={selected_version_id as FrameVersionId | null}
                 on_select={(id) => setSelectedVersionId(id)}
                 milestone_filter={milestone_filter}
-                session_authored_against_version_id={
-                  props.session_authored_against ?? undefined
-                }
+                session_authored_against_version_id={props.session_authored_against ?? undefined}
               />
             )}
           </>

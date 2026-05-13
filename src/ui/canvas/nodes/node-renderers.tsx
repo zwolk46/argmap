@@ -7,7 +7,10 @@ import { Pill } from "../../primitives/pill";
 
 type ND = RFNode<FrameCanvasNodeData>;
 
-function makeNodeRenderer(variant: FrameCanvasNodeData["variant"], node_type: NodeType | "premise_pill") {
+function makeNodeRenderer(
+  variant: FrameCanvasNodeData["variant"],
+  node_type: NodeType | "premise_pill",
+) {
   return function NodeRenderer({ data, selected }: NodeProps<ND>): ReactElement {
     return (
       <NodeFrame

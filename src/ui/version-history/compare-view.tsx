@@ -33,7 +33,11 @@ export interface CompareViewProps {
 
 type LoadState =
   | { kind: "loading" }
-  | { kind: "ready"; a: FrameVersion | ArgumentSessionVersion; b: FrameVersion | ArgumentSessionVersion }
+  | {
+      kind: "ready";
+      a: FrameVersion | ArgumentSessionVersion;
+      b: FrameVersion | ArgumentSessionVersion;
+    }
   | { kind: "error"; error: Error };
 
 function nodeStatementPreview(node: SchemaNode | undefined): string {
@@ -120,7 +124,16 @@ function buildFrameRows(
       ? [{ kind: "layout_only_summary", node_count: diff.layout_changed_count }]
       : [];
 
-  return { added, removed, edited, edges_added, edges_removed, edges_edited, metadata, layout_only };
+  return {
+    added,
+    removed,
+    edited,
+    edges_added,
+    edges_removed,
+    edges_edited,
+    metadata,
+    layout_only,
+  };
 }
 
 function buildSessionRows(diff: SessionStructuralDiff): {
@@ -262,10 +275,7 @@ export function CompareView(props: CompareViewProps): ReactElement {
     setState({ kind: "loading" });
     const loader =
       entity_kind === "frame"
-        ? Promise.all([
-            repository.loadFrameVersion(from_id),
-            repository.loadFrameVersion(to_id),
-          ])
+        ? Promise.all([repository.loadFrameVersion(from_id), repository.loadFrameVersion(to_id)])
         : Promise.all([
             repository.loadSessionVersion(from_id),
             repository.loadSessionVersion(to_id),
@@ -342,18 +352,30 @@ export function CompareView(props: CompareViewProps): ReactElement {
 }
 
 function CompareBody(props: {
-  state: { kind: "ready"; a: FrameVersion | ArgumentSessionVersion; b: FrameVersion | ArgumentSessionVersion };
+  state: {
+    kind: "ready";
+    a: FrameVersion | ArgumentSessionVersion;
+    b: FrameVersion | ArgumentSessionVersion;
+  };
   entity_kind: "frame" | "session";
   on_navigate_to_entity: (ref: NodeRef | EdgeRef) => void;
 }): ReactElement {
   if (props.entity_kind === "frame") {
-    return <FrameCompareBody state={props.state} on_navigate_to_entity={props.on_navigate_to_entity} />;
+    return (
+      <FrameCompareBody state={props.state} on_navigate_to_entity={props.on_navigate_to_entity} />
+    );
   }
-  return <SessionCompareBody state={props.state} on_navigate_to_entity={props.on_navigate_to_entity} />;
+  return (
+    <SessionCompareBody state={props.state} on_navigate_to_entity={props.on_navigate_to_entity} />
+  );
 }
 
 function FrameCompareBody(props: {
-  state: { kind: "ready"; a: FrameVersion | ArgumentSessionVersion; b: FrameVersion | ArgumentSessionVersion };
+  state: {
+    kind: "ready";
+    a: FrameVersion | ArgumentSessionVersion;
+    b: FrameVersion | ArgumentSessionVersion;
+  };
   on_navigate_to_entity: (ref: NodeRef | EdgeRef) => void;
 }): ReactElement {
   const { state, on_navigate_to_entity } = props;
@@ -362,84 +384,88 @@ function FrameCompareBody(props: {
   const diff = React.useMemo(() => diffFrameVersions(a, b), [a, b]);
   const rows = React.useMemo(() => buildFrameRows(a, b, diff), [a, b, diff]);
   const total =
-      rows.added.length +
-      rows.removed.length +
-      rows.edited.length +
-      rows.edges_added.length +
-      rows.edges_removed.length +
-      rows.edges_edited.length +
-      rows.metadata.length +
-      rows.layout_only.length;
-    if (total === 0) {
-      return (
-        <div
-          data-testid="compare-view-empty"
-          style={{
-            padding: "var(--space-4, 16px)",
-            color: "var(--color-text-tertiary, #9ca3af)",
-            fontStyle: "italic",
-          }}
-        >
-          No differences
-        </div>
-      );
-    }
+    rows.added.length +
+    rows.removed.length +
+    rows.edited.length +
+    rows.edges_added.length +
+    rows.edges_removed.length +
+    rows.edges_edited.length +
+    rows.metadata.length +
+    rows.layout_only.length;
+  if (total === 0) {
     return (
-      <div style={{ overflowY: "auto", flex: 1 }}>
-        <CompareEntryList
-          title="Nodes added"
-          kind="added"
-          entries={rows.added}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
-        <CompareEntryList
-          title="Nodes removed"
-          kind="removed"
-          entries={rows.removed}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
-        <CompareEntryList
-          title="Nodes edited"
-          kind="edited"
-          entries={rows.edited}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
-        <CompareEntryList
-          title="Edges added"
-          kind="added"
-          entries={rows.edges_added}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
-        <CompareEntryList
-          title="Edges removed"
-          kind="removed"
-          entries={rows.edges_removed}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
-        <CompareEntryList
-          title="Edges edited"
-          kind="edited"
-          entries={rows.edges_edited}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
-        <CompareEntryList
-          title="Frame metadata"
-          kind="metadata"
-          entries={rows.metadata}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
-        <CompareEntryList
-          title="Layout-only changes"
-          kind="layout_only"
-          entries={rows.layout_only}
-          on_navigate_to_entity={on_navigate_to_entity}
-        />
+      <div
+        data-testid="compare-view-empty"
+        style={{
+          padding: "var(--space-4, 16px)",
+          color: "var(--color-text-tertiary, #9ca3af)",
+          fontStyle: "italic",
+        }}
+      >
+        No differences
       </div>
     );
+  }
+  return (
+    <div style={{ overflowY: "auto", flex: 1 }}>
+      <CompareEntryList
+        title="Nodes added"
+        kind="added"
+        entries={rows.added}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Nodes removed"
+        kind="removed"
+        entries={rows.removed}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Nodes edited"
+        kind="edited"
+        entries={rows.edited}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Edges added"
+        kind="added"
+        entries={rows.edges_added}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Edges removed"
+        kind="removed"
+        entries={rows.edges_removed}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Edges edited"
+        kind="edited"
+        entries={rows.edges_edited}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Frame metadata"
+        kind="metadata"
+        entries={rows.metadata}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Layout-only changes"
+        kind="layout_only"
+        entries={rows.layout_only}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+    </div>
+  );
 }
 
 function SessionCompareBody(props: {
-  state: { kind: "ready"; a: FrameVersion | ArgumentSessionVersion; b: FrameVersion | ArgumentSessionVersion };
+  state: {
+    kind: "ready";
+    a: FrameVersion | ArgumentSessionVersion;
+    b: FrameVersion | ArgumentSessionVersion;
+  };
   on_navigate_to_entity: (ref: NodeRef | EdgeRef) => void;
 }): ReactElement {
   const { state, on_navigate_to_entity } = props;
@@ -480,22 +506,102 @@ function SessionCompareBody(props: {
   }
   return (
     <div style={{ overflowY: "auto", flex: 1 }}>
-      <CompareEntryList title="Premises added" kind="added" entries={rows.premises_added} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Premises removed" kind="removed" entries={rows.premises_removed} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Premises edited" kind="edited" entries={rows.premises_edited} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Argument edges added" kind="added" entries={rows.argument_edges_added} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Argument edges removed" kind="removed" entries={rows.argument_edges_removed} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Argument edges edited" kind="edited" entries={rows.argument_edges_edited} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Checkpoint responses added" kind="added" entries={rows.checkpoint_added} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Checkpoint responses removed" kind="removed" entries={rows.checkpoint_removed} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Checkpoint responses edited" kind="edited" entries={rows.checkpoint_edited} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Session authorities added" kind="added" entries={rows.authorities_added} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Session authorities removed" kind="removed" entries={rows.authorities_removed} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Session authorities edited" kind="edited" entries={rows.authorities_edited} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Interpretation selections added" kind="added" entries={rows.interp_added} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Interpretation selections removed" kind="removed" entries={rows.interp_removed} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Interpretation selections edited" kind="edited" entries={rows.interp_edited} on_navigate_to_entity={on_navigate_to_entity} />
-      <CompareEntryList title="Session metadata" kind="metadata" entries={rows.metadata} on_navigate_to_entity={on_navigate_to_entity} />
+      <CompareEntryList
+        title="Premises added"
+        kind="added"
+        entries={rows.premises_added}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Premises removed"
+        kind="removed"
+        entries={rows.premises_removed}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Premises edited"
+        kind="edited"
+        entries={rows.premises_edited}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Argument edges added"
+        kind="added"
+        entries={rows.argument_edges_added}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Argument edges removed"
+        kind="removed"
+        entries={rows.argument_edges_removed}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Argument edges edited"
+        kind="edited"
+        entries={rows.argument_edges_edited}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Checkpoint responses added"
+        kind="added"
+        entries={rows.checkpoint_added}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Checkpoint responses removed"
+        kind="removed"
+        entries={rows.checkpoint_removed}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Checkpoint responses edited"
+        kind="edited"
+        entries={rows.checkpoint_edited}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Session authorities added"
+        kind="added"
+        entries={rows.authorities_added}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Session authorities removed"
+        kind="removed"
+        entries={rows.authorities_removed}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Session authorities edited"
+        kind="edited"
+        entries={rows.authorities_edited}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Interpretation selections added"
+        kind="added"
+        entries={rows.interp_added}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Interpretation selections removed"
+        kind="removed"
+        entries={rows.interp_removed}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Interpretation selections edited"
+        kind="edited"
+        entries={rows.interp_edited}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
+      <CompareEntryList
+        title="Session metadata"
+        kind="metadata"
+        entries={rows.metadata}
+        on_navigate_to_entity={on_navigate_to_entity}
+      />
     </div>
   );
 }

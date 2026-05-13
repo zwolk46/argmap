@@ -37,12 +37,7 @@ export type { IconButtonProps } from "./icon-button";
 export { Button } from "./button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./button";
 
-export {
-  LoadingScreen,
-  Spinner,
-  EmptyState,
-  CanvasEmptyState,
-} from "./loading-screen";
+export { LoadingScreen, Spinner, EmptyState, CanvasEmptyState } from "./loading-screen";
 export type { LoadingScreenProps, EmptyStateProps } from "./loading-screen";
 
 export {

@@ -11,13 +11,9 @@ export interface TargetModePickerProps {
 
 export function TargetModePicker(props: TargetModePickerProps): ReactElement {
   const current_label =
-    props.current_mode === "legal"
-      ? "legal"
-      : `general (${props.current_flavor ?? "personal"})`;
+    props.current_mode === "legal" ? "legal" : `general (${props.current_flavor ?? "personal"})`;
   const target_label =
-    props.target_mode === "legal"
-      ? "legal"
-      : `general (${props.target_flavor ?? "personal"})`;
+    props.target_mode === "legal" ? "legal" : `general (${props.target_flavor ?? "personal"})`;
 
   return (
     <div data-testid="target-mode-picker" style={{ padding: "var(--space-3, 12px) 0" }}>

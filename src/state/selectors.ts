@@ -298,10 +298,7 @@ export function selectFirstLaunchDismissed(app_state: AppState): boolean {
   return app_state.dismissed_warnings?.["first_launch"] === true;
 }
 
-export function selectCoachmarkDismissed(
-  app_state: AppState,
-  coachmark_id: string,
-): boolean {
+export function selectCoachmarkDismissed(app_state: AppState, coachmark_id: string): boolean {
   return app_state.coachmark_dismissals?.[coachmark_id] === true;
 }
 

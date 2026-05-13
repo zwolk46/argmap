@@ -58,9 +58,7 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
               padding: "var(--space-3) var(--space-2)",
               cursor: computing ? "default" : "pointer",
               fontSize: "var(--font-size-sm)",
-              fontWeight: active
-                ? "var(--font-weight-semibold)"
-                : "var(--font-weight-medium)",
+              fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
               transition:
                 "color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
               marginBottom: "-1px",

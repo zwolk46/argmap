@@ -46,7 +46,7 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
       title: state.title.trim(),
       description: state.description.trim() || undefined,
       mode: state.mode!,
-      flavor: state.mode === "general" ? state.flavor ?? "personal" : undefined,
+      flavor: state.mode === "general" ? (state.flavor ?? "personal") : undefined,
     });
   }
 
@@ -82,7 +82,12 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
       <Section title="Mode">
         <Choice
           options={[
-            { value: "legal", label: "Legal", testid: "wizard-mode-legal", hint: "Appellate, statutory, trial preparation." },
+            {
+              value: "legal",
+              label: "Legal",
+              testid: "wizard-mode-legal",
+              hint: "Appellate, statutory, trial preparation.",
+            },
             {
               value: "general",
               label: "General",
@@ -258,7 +263,9 @@ function Choice({
                 "border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard)",
             }}
           >
-            <span style={{ fontWeight: "var(--font-weight-semibold)", fontSize: "var(--font-size-sm)" }}>
+            <span
+              style={{ fontWeight: "var(--font-weight-semibold)", fontSize: "var(--font-size-sm)" }}
+            >
               {opt.label}
             </span>
             {opt.hint ? (

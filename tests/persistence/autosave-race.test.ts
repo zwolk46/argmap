@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { freshDb, flushPromises } from "./_setup";
 import { buildLegalModeFixture } from "../schema/fixtures/legal-mode-fixture";
-import {
-  createAutosaveController,
-  AUTOSAVE_IDLE_MS,
-  type SaveEvent,
-} from "@/persistence";
+import { createAutosaveController, AUTOSAVE_IDLE_MS, type SaveEvent } from "@/persistence";
 import type { IndexedDbRepository } from "@/persistence";
 
 /**

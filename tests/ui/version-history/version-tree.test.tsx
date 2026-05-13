@@ -51,11 +51,7 @@ describe("VersionTree", () => {
     const { getAllByTestId } = render(
       <VersionTree
         entity_kind="frame"
-        summaries={[
-          fv("a", 1, undefined, true),
-          fv("b", 2, "a", false),
-          fv("c", 3, "b", true),
-        ]}
+        summaries={[fv("a", 1, undefined, true), fv("b", 2, "a", false), fv("c", 3, "b", true)]}
         current_version_id="c"
         selected_version_id={null}
         on_select={() => {}}

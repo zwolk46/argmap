@@ -79,7 +79,8 @@ function ErrorGlyph({ size }: { size: number }): ReactElement {
 }
 
 export function SeverityIcon({ severity, size = 14 }: SeverityIconProps): ReactElement {
-  const Glyph = severity === "pass" ? PassGlyph : severity === "warning" ? WarningGlyph : ErrorGlyph;
+  const Glyph =
+    severity === "pass" ? PassGlyph : severity === "warning" ? WarningGlyph : ErrorGlyph;
   return (
     <span
       data-testid={`severity-icon-${severity}`}

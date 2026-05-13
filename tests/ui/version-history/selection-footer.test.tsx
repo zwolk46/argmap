@@ -55,9 +55,7 @@ describe("SelectionFooter", () => {
     );
     expect(getByTestId("footer-preview").hasAttribute("disabled")).toBe(false);
     expect(getByTestId("footer-restore").hasAttribute("disabled")).toBe(true);
-    expect(getByTestId("footer-restore").getAttribute("title")).toContain(
-      "Restore frame versions",
-    );
+    expect(getByTestId("footer-restore").getAttribute("title")).toContain("Restore frame versions");
     expect(getByTestId("footer-compare").hasAttribute("disabled")).toBe(false);
   });
 

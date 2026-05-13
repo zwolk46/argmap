@@ -1,10 +1,6 @@
 import * as React from "react";
 import { useAppStateStore, useRepository, selectCoachmarkDismissed } from "@/state";
-import {
-  type CoachmarkId,
-  isCoachmarkId,
-  UnknownCoachmarkIdError,
-} from "./coachmark-registry";
+import { type CoachmarkId, isCoachmarkId, UnknownCoachmarkIdError } from "./coachmark-registry";
 
 export interface UseCoachmarkReturn {
   visible: boolean;

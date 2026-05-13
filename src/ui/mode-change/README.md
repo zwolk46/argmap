@@ -16,25 +16,25 @@ import {
 } from "@/ui/mode-change";
 ```
 
-| Surface | Role |
-| --- | --- |
+| Surface                         | Role                                                                                                                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ArchitecturalModeChangeDialog` | Mounted page-locally by `FrameBuildingPage`. Stages target mode + flavor + per-Conclusion direction resolutions + optional new positions, then commits one atomic `architectural_mode_changed` `FramePatch`. |
-| `FlavorChangeDialog` | Light `ConfirmDialog` wrapping `scanFlavorChange` advisories; commits immediately via `metadata_edited({ flavor })`. |
-| `buildModeChangeSummary` | Pure helper producing the canonical change_summary string per E6. |
+| `FlavorChangeDialog`            | Light `ConfirmDialog` wrapping `scanFlavorChange` advisories; commits immediately via `metadata_edited({ flavor })`.                                                                                         |
+| `buildModeChangeSummary`        | Pure helper producing the canonical change_summary string per E6.                                                                                                                                            |
 
 ## Sub-modules
 
-| File | Purpose |
-| --- | --- |
-| `architectural-mode-change-dialog.tsx` | Top-level dialog; owns staging state; gates Commit on all blocking items resolved + positions present (if needed). |
-| `target-mode-picker.tsx` | Read-only current label + target label; flavor radios appear only when target = general. |
-| `positions-inline-editor.tsx` | Conditional editor surfaced when target = general and no positions exist; uses injected `generateId`. |
-| `scan-result-body.tsx` | Renders the modes-layer `TransitionResult` as blocking section (with inline editors) + advisory section. |
-| `conclusion-direction-editor.tsx` | Per-Conclusion editor row; constructs `{ kind: "legal", value }` or `{ kind: "general", position_id }`. |
-| `advisory-list.tsx` | Groups `ValidationResult[]` by rule_id preserving first-occurrence order. |
-| `flavor-change-dialog.tsx` | Confirms flavor switch with scanFlavorChange's advisories. |
-| `use-mode-change-scan.ts` | Memoizes `attemptTransition('architectural', ...)` on a stable input tuple; exposes `rescan()`. |
-| `change-summary.ts` | Pure `buildModeChangeSummary(current_mode, current_flavor, target_mode, target_flavor)` producing the E6 string template. |
+| File                                   | Purpose                                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `architectural-mode-change-dialog.tsx` | Top-level dialog; owns staging state; gates Commit on all blocking items resolved + positions present (if needed).        |
+| `target-mode-picker.tsx`               | Read-only current label + target label; flavor radios appear only when target = general.                                  |
+| `positions-inline-editor.tsx`          | Conditional editor surfaced when target = general and no positions exist; uses injected `generateId`.                     |
+| `scan-result-body.tsx`                 | Renders the modes-layer `TransitionResult` as blocking section (with inline editors) + advisory section.                  |
+| `conclusion-direction-editor.tsx`      | Per-Conclusion editor row; constructs `{ kind: "legal", value }` or `{ kind: "general", position_id }`.                   |
+| `advisory-list.tsx`                    | Groups `ValidationResult[]` by rule_id preserving first-occurrence order.                                                 |
+| `flavor-change-dialog.tsx`             | Confirms flavor switch with scanFlavorChange's advisories.                                                                |
+| `use-mode-change-scan.ts`              | Memoizes `attemptTransition('architectural', ...)` on a stable input tuple; exposes `rescan()`.                           |
+| `change-summary.ts`                    | Pure `buildModeChangeSummary(current_mode, current_flavor, target_mode, target_flavor)` producing the E6 string template. |
 
 ## Import boundary
 

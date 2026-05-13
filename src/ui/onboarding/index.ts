@@ -9,10 +9,7 @@ export {
 export { Coachmark, type CoachmarkProps } from "./coachmark";
 export { NewFeatureNotice, type NewFeatureNoticeProps } from "./new-feature-notice";
 export { useCoachmark, type UseCoachmarkReturn } from "./use-coachmark";
-export {
-  useNewFeatureNotice,
-  type UseNewFeatureNoticeReturn,
-} from "./use-new-feature-notice";
+export { useNewFeatureNotice, type UseNewFeatureNoticeReturn } from "./use-new-feature-notice";
 export { OnboardingPreferencesSection } from "./onboarding-preferences-section";
 export {
   COACHMARK_IDS,

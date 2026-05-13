@@ -46,9 +46,7 @@ export function useVersionFullLoad(arg: VersionFullLoadArg): VersionFullLoadResu
   const cached = cache.get(key);
 
   const [result, setResult] = React.useState<VersionFullLoadResult>(() =>
-    cached
-      ? { status: "ready", version: cached }
-      : { status: "loading", version: null },
+    cached ? { status: "ready", version: cached } : { status: "loading", version: null },
   );
 
   React.useEffect(() => {

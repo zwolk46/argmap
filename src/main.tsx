@@ -1,11 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import type { LlmSettings } from "@/schema";
-import {
-  IndexedDbRepository,
-  createAutosaveController,
-  createCrossTabBus,
-} from "@/persistence";
+import { IndexedDbRepository, createAutosaveController, createCrossTabBus } from "@/persistence";
 import { frameActions, sessionActions } from "@/modes";
 import { App } from "./App";
 

@@ -55,7 +55,9 @@ export function PositionsInlineEditor(props: PositionsInlineEditorProps): ReactE
           </button>
         </div>
       ))}
-      <div style={{ display: "flex", gap: "var(--space-2, 8px)", marginTop: "var(--space-2, 8px)" }}>
+      <div
+        style={{ display: "flex", gap: "var(--space-2, 8px)", marginTop: "var(--space-2, 8px)" }}
+      >
         <input
           type="text"
           data-testid="position-draft-input"

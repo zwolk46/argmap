@@ -1,16 +1,10 @@
 import type { ButtonHTMLAttributes, ReactElement, ReactNode } from "react";
 
-export type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "ghost"
-  | "destructive"
-  | "destructive-solid";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive" | "destructive-solid";
 
 export type ButtonSize = "sm" | "md" | "lg";
 
-export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> {
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   leading?: ReactNode;

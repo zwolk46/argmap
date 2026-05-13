@@ -10,7 +10,11 @@ describe("ToastProvider + useToast", () => {
     vi.useRealTimers();
   });
 
-  function makePusher(message: string, kind: "error" | "warning" | "info" | "success" = "info", duration_ms?: number) {
+  function makePusher(
+    message: string,
+    kind: "error" | "warning" | "info" | "success" = "info",
+    duration_ms?: number,
+  ) {
     function Pusher(): ReactElement | null {
       const { push } = useToast();
       React.useEffect(() => {

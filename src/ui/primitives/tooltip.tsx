@@ -78,8 +78,7 @@ export function Tooltip({ content, children, disabled }: TooltipProps): ReactEle
             fontFamily: "var(--font-sans)",
             maxWidth: "320px",
             pointerEvents: "none",
-            animation:
-              "argmap-overlay-fade-in var(--duration-fast) var(--ease-standard)",
+            animation: "argmap-overlay-fade-in var(--duration-fast) var(--ease-standard)",
           }}
         >
           {content}

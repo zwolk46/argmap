@@ -83,7 +83,13 @@ export function buildNodeDefaults(
     case "Premise":
       // Premise is an argument-layer node; not surfaced via the palette in
       // frame building, but we keep the branch defined for completeness.
-      return { ...base, type: "Premise", layer: "argument", statement: "", kind: "stipulated" } as Node;
+      return {
+        ...base,
+        type: "Premise",
+        layer: "argument",
+        statement: "",
+        kind: "stipulated",
+      } as Node;
   }
 }
 
@@ -185,4 +191,3 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
     </div>
   );
 }
-

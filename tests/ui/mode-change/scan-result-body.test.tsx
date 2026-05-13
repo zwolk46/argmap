@@ -42,7 +42,12 @@ describe("ScanResultBody", () => {
         ]}
         direction_resolutions={new Map()}
         onResolutionChanged={() => {}}
-        conclusion_title_by_id={new Map([["n1", "C1"], ["n2", "C2"]])}
+        conclusion_title_by_id={
+          new Map([
+            ["n1", "C1"],
+            ["n2", "C2"],
+          ])
+        }
       />,
     );
     expect(getByTestId("scan-result-blocking")).toBeTruthy();
@@ -54,9 +59,7 @@ describe("ScanResultBody", () => {
     const { getByTestId, queryByTestId } = render(
       <ScanResultBody
         blocking={[]}
-        advisory={[
-          { rule_id: "ADV-1", severity: "warning", node_id: "n1", message: "heads up" },
-        ]}
+        advisory={[{ rule_id: "ADV-1", severity: "warning", node_id: "n1", message: "heads up" }]}
         inline_editors={[]}
         direction_resolutions={new Map()}
         onResolutionChanged={() => {}}

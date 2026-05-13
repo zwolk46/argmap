@@ -1,13 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { SuggestionResult, ConfirmationDecision } from "@/llm-hooks";
-import {
-  Drawer,
-  DrawerHeader,
-  DrawerBody,
-  DrawerFooter,
-  Button,
-} from "../primitives";
+import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, Button } from "../primitives";
 import { useAiSuggestion } from "../hooks/use-ai-suggestion";
 
 export interface SuggestionDrawerProps {

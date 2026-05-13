@@ -51,9 +51,7 @@ export function SelectionFooter(props: SelectionFooterProps): ReactElement {
           fontVariantNumeric: "tabular-nums",
         }}
       >
-        {no_selection
-          ? "Select a version"
-          : `Selected: v${selected_version_number ?? "?"}`}
+        {no_selection ? "Select a version" : `Selected: v${selected_version_number ?? "?"}`}
       </span>
       <Button
         variant="ghost"

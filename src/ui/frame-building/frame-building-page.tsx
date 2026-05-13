@@ -289,9 +289,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
       <FrameSettingsPanel
         open={settings_panel_open}
         on_close={() => setSettingsPanelOpen(false)}
-        on_open_mode_change_dialog={(target) =>
-          setModeChangeDialog({ open: true, target })
-        }
+        on_open_mode_change_dialog={(target) => setModeChangeDialog({ open: true, target })}
         on_delete_frame={handleDeleteFrame}
       />
 
@@ -336,9 +334,8 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
           navigate({ kind: "home" });
         }}
       >
-        Running an argument requires an argument session for this frame.
-        Sessions are managed from the Home page. Switch there to open or
-        create one.
+        Running an argument requires an argument session for this frame. Sessions are managed from
+        the Home page. Switch there to open or create one.
       </ConfirmDialog>
 
       <SuggestionDrawer store_kind="frame" />
@@ -357,4 +354,3 @@ const EMPTY_FRAME_VERSION: FrameVersion = {
   edges: [],
   is_milestone: false,
 };
-

@@ -26,17 +26,17 @@ import {
 } from "@/ui/onboarding";
 ```
 
-| Surface | Role |
-| --- | --- |
-| `OnboardingWizard` | App-level mount in `app-routes.tsx`. Two stages: welcome → new-frame wizard. Open gated on `selectFirstLaunchDismissed(app_state)`. |
-| `WelcomeScreen` | First stage. Three-section copy + Start + Skip buttons. `WELCOME_SCREEN_COPY` exported for tests. |
-| `NewFrameWizard` | Single-form wizard collecting mode, flavor, title, description. Calls `onSubmit({ title, description?, mode, flavor? })`. |
-| `Coachmark` | Anchored popover. Positions via `anchor_ref.current.getBoundingClientRect()`; dismissible via Escape and "Got it" button. |
-| `NewFeatureNotice` | Static "New" pill notice; dismiss-only. |
-| `useCoachmark(id)` | Returns `{ visible, dismiss, dismiss_on_act, ref }`. Visible iff not in `coachmark_dismissals`. |
-| `useNewFeatureNotice(id)` | Returns `{ visible, dismiss }`. Visible iff not in `seen_new_feature_notices`. |
-| `OnboardingPreferencesSection` | Composed into HelpGlossaryPane. "Reset coachmarks" button clears `coachmark_dismissals` AND undismisses `first_launch` warning. |
-| `COACHMARK_MESSAGES` | Typed registry of E7-canonical copy keyed by `CoachmarkId`. |
+| Surface                        | Role                                                                                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `OnboardingWizard`             | App-level mount in `app-routes.tsx`. Two stages: welcome → new-frame wizard. Open gated on `selectFirstLaunchDismissed(app_state)`. |
+| `WelcomeScreen`                | First stage. Three-section copy + Start + Skip buttons. `WELCOME_SCREEN_COPY` exported for tests.                                   |
+| `NewFrameWizard`               | Single-form wizard collecting mode, flavor, title, description. Calls `onSubmit({ title, description?, mode, flavor? })`.           |
+| `Coachmark`                    | Anchored popover. Positions via `anchor_ref.current.getBoundingClientRect()`; dismissible via Escape and "Got it" button.           |
+| `NewFeatureNotice`             | Static "New" pill notice; dismiss-only.                                                                                             |
+| `useCoachmark(id)`             | Returns `{ visible, dismiss, dismiss_on_act, ref }`. Visible iff not in `coachmark_dismissals`.                                     |
+| `useNewFeatureNotice(id)`      | Returns `{ visible, dismiss }`. Visible iff not in `seen_new_feature_notices`.                                                      |
+| `OnboardingPreferencesSection` | Composed into HelpGlossaryPane. "Reset coachmarks" button clears `coachmark_dismissals` AND undismisses `first_launch` warning.     |
+| `COACHMARK_MESSAGES`           | Typed registry of E7-canonical copy keyed by `CoachmarkId`.                                                                         |
 
 ## State-layer additions (F-026)
 

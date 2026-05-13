@@ -59,7 +59,8 @@ export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement
         </span>
         <ResolutionPicker value={resolution.kind} onChange={handleKindChange} />
       </div>
-      {resolution.kind === "reattach" && candidate.reattach_candidates &&
+      {resolution.kind === "reattach" &&
+      candidate.reattach_candidates &&
       candidate.reattach_candidates.length > 1 ? (
         <select
           data-testid="reattach-target-select"

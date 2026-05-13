@@ -3,12 +3,7 @@ import type { ReactElement } from "react";
 import type { NodeRef, EdgeRef } from "@/schema";
 import { CompareEntryRow, type CompareEntryRowDescriptor } from "./compare-entry-row";
 
-export type CompareEntryListKind =
-  | "added"
-  | "removed"
-  | "edited"
-  | "layout_only"
-  | "metadata";
+export type CompareEntryListKind = "added" | "removed" | "edited" | "layout_only" | "metadata";
 
 export interface CompareEntryListProps {
   title: string;

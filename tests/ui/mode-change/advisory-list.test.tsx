@@ -22,9 +22,7 @@ describe("AdvisoryList", () => {
   it("renders pills as non-interactive when onNodeFocusRequested is undefined", () => {
     const { getByTestId } = render(
       <AdvisoryList
-        advisory={[
-          { rule_id: "X", severity: "warning", node_id: "n1", message: "msg" },
-        ]}
+        advisory={[{ rule_id: "X", severity: "warning", node_id: "n1", message: "msg" }]}
       />,
     );
     const pill = getByTestId("advisory-node-pill") as HTMLButtonElement;
@@ -35,9 +33,7 @@ describe("AdvisoryList", () => {
     const cb = vi.fn();
     const { getByTestId } = render(
       <AdvisoryList
-        advisory={[
-          { rule_id: "X", severity: "warning", node_id: "n1", message: "msg" },
-        ]}
+        advisory={[{ rule_id: "X", severity: "warning", node_id: "n1", message: "msg" }]}
         onNodeFocusRequested={cb}
       />,
     );

@@ -110,8 +110,7 @@ export function NodeFrame({
     : null;
 
   const fontSize = (variantStyle.fontSize as string | undefined) ?? "var(--font-size-base)";
-  const fontWeight =
-    (variantStyle.fontWeight as string | undefined) ?? "var(--font-weight-medium)";
+  const fontWeight = (variantStyle.fontWeight as string | undefined) ?? "var(--font-weight-medium)";
 
   // Build the inner card. For gate variants we counter-rotate the content
   // so labels remain upright while the box is rotated 45°.
@@ -283,8 +282,8 @@ export function NodeFrame({
       style={{
         ...cardStyle,
         boxShadow: display.selected
-          ? selectionShadow ?? "var(--shadow-md)"
-          : (variantStyle.boxShadow as string | undefined) ?? "var(--shadow-sm)",
+          ? (selectionShadow ?? "var(--shadow-md)")
+          : ((variantStyle.boxShadow as string | undefined) ?? "var(--shadow-sm)"),
       }}
     >
       {enable_connector_handle && (

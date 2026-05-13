@@ -76,9 +76,21 @@ describe("buildNodeDefaults — every node type carries layer + created_at + upd
     ["SubQuestion", { layer: "frame", statement: "", is_jurisdictional: false }],
     ["Term", { layer: "frame", name: "", order: 0, dispositive: false }],
     ["Interpretation", { layer: "frame", statement: "" }],
-    ["Checkpoint", { layer: "frame", question: "", answer_type: "boolean", requires_premise: false, requires_authority: false }],
+    [
+      "Checkpoint",
+      {
+        layer: "frame",
+        question: "",
+        answer_type: "boolean",
+        requires_premise: false,
+        requires_authority: false,
+      },
+    ],
     ["LogicalGate", { layer: "frame", gate_type: "AND", inputs: [] }],
-    ["Conclusion", { layer: "frame", statement: "", direction: { kind: "legal", value: "affirm" }, tags: [] }],
+    [
+      "Conclusion",
+      { layer: "frame", statement: "", direction: { kind: "legal", value: "affirm" }, tags: [] },
+    ],
     ["Authority", { layer: "frame", citation: "" }],
   ])("%s gets a fully-stamped Node", (node_type, expected_shape) => {
     const node = buildNodeDefaults(node_type, gid, now) as unknown as Record<string, unknown>;
@@ -99,7 +111,10 @@ describe("buildNodeDefaults — every node type carries layer + created_at + upd
   });
 
   it("does not produce a stray `name` field on Authority (regression: Authority has no `name` field in the schema)", () => {
-    const node = buildNodeDefaults("Authority", () => "a-1", now) as unknown as Record<string, unknown>;
+    const node = buildNodeDefaults("Authority", () => "a-1", now) as unknown as Record<
+      string,
+      unknown
+    >;
     expect("name" in node).toBe(false);
   });
 });
@@ -133,12 +148,17 @@ describe("NodePalette component", () => {
 
   it("clicking a palette item dispatches a `node_added` patch with the deterministic id from useRepository().generateId()", () => {
     const { container } = render(<NodePalette visible_types_override={["RootQuestion"]} />);
-    const button = container.querySelector('[aria-label="Node palette"] button') as HTMLButtonElement;
+    const button = container.querySelector(
+      '[aria-label="Node palette"] button',
+    ) as HTMLButtonElement;
     fireEvent.click(button);
 
     expect(generateId).toHaveBeenCalledTimes(1);
     expect(mockApplyPatch).toHaveBeenCalledTimes(1);
-    const call = mockApplyPatch.mock.calls[0]![0] as { kind: string; node: Record<string, unknown> };
+    const call = mockApplyPatch.mock.calls[0]![0] as {
+      kind: string;
+      node: Record<string, unknown>;
+    };
     expect(call.kind).toBe("node_added");
     expect(call.node.id).toBe("node-1");
     expect(call.node.type).toBe("RootQuestion");
@@ -150,7 +170,9 @@ describe("NodePalette component", () => {
 
   it("clicking a Checkpoint palette item dispatches with both requires_premise and requires_authority defaulted to false", () => {
     const { container } = render(<NodePalette visible_types_override={["Checkpoint"]} />);
-    const button = container.querySelector('[aria-label="Node palette"] button') as HTMLButtonElement;
+    const button = container.querySelector(
+      '[aria-label="Node palette"] button',
+    ) as HTMLButtonElement;
     fireEvent.click(button);
 
     const call = mockApplyPatch.mock.calls[0]![0] as { node: Record<string, unknown> };

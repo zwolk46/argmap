@@ -32,8 +32,7 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps): ReactElement | null {
   if (!open) return null;
-  const variant =
-    destructive || confirm_variant === "danger" ? "destructive-solid" : "primary";
+  const variant = destructive || confirm_variant === "danger" ? "destructive-solid" : "primary";
   return (
     <Dialog open={open} onClose={onCancel} aria_label={title} size={size}>
       <DialogHeader>{title}</DialogHeader>

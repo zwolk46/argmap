@@ -13,9 +13,7 @@ export interface SessionMigrationDialogProps {
   target_frame_version_id: FrameVersionId;
 }
 
-export function SessionMigrationDialog(
-  props: SessionMigrationDialogProps,
-): ReactElement | null {
+export function SessionMigrationDialog(props: SessionMigrationDialogProps): ReactElement | null {
   const { open, onClose, target_frame_version_id } = props;
   const { session_store } = useRepository();
 
@@ -24,9 +22,7 @@ export function SessionMigrationDialog(
     enabled: open,
   });
 
-  const [resolutions, setResolutions] = React.useState<Map<string, OrphanResolution>>(
-    new Map(),
-  );
+  const [resolutions, setResolutions] = React.useState<Map<string, OrphanResolution>>(new Map());
   const [migrating, setMigrating] = React.useState(false);
   const [migrate_error, setMigrateError] = React.useState<{
     kind: string;
@@ -92,8 +88,7 @@ export function SessionMigrationDialog(
     }
   }
 
-  const can_migrate =
-    !migrating && (phase.kind === "loaded" || phase.kind === "loaded_empty");
+  const can_migrate = !migrating && (phase.kind === "loaded" || phase.kind === "loaded_empty");
 
   return (
     <Dialog open={true} onClose={onClose} aria_label="Migrate session" size="md">

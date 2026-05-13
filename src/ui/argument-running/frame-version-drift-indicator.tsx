@@ -34,12 +34,8 @@ export function FrameVersionDriftIndicator(
         gap: "var(--space-1)",
         padding: "2px var(--space-2)",
         borderRadius: "var(--radius-pill)",
-        background: has_drift
-          ? "var(--color-severity-warning-bg)"
-          : "var(--color-surface-pane)",
-        color: has_drift
-          ? "var(--color-severity-warning)"
-          : "var(--color-text-secondary)",
+        background: has_drift ? "var(--color-severity-warning-bg)" : "var(--color-surface-pane)",
+        color: has_drift ? "var(--color-severity-warning)" : "var(--color-text-secondary)",
         border: has_drift
           ? "var(--border-thin) solid var(--color-severity-warning)"
           : "var(--border-thin) solid var(--color-border-subtle)",

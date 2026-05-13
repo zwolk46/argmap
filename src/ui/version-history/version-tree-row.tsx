@@ -24,15 +24,8 @@ function relativeTime(iso: string): string {
 }
 
 export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
-  const {
-    summary,
-    depth,
-    is_current,
-    is_milestone,
-    is_authored_against,
-    is_selected,
-    on_select,
-  } = props;
+  const { summary, depth, is_current, is_milestone, is_authored_against, is_selected, on_select } =
+    props;
 
   const marker_color = is_current
     ? "var(--color-mode-current-accent, #1d4ed8)"
@@ -68,9 +61,7 @@ export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
             ? "var(--color-mode-current-accent-bg)"
             : "transparent",
         border: "none",
-        borderLeft: depth > 0
-          ? "var(--border-hairline) solid var(--color-border-subtle)"
-          : "none",
+        borderLeft: depth > 0 ? "var(--border-hairline) solid var(--color-border-subtle)" : "none",
         textAlign: "left",
         cursor: "pointer",
         fontSize: "var(--font-size-sm)",
@@ -141,9 +132,7 @@ export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
       <span
         style={{
           flex: 1,
-          color: is_autosave
-            ? "var(--color-text-tertiary)"
-            : "var(--color-text-secondary)",
+          color: is_autosave ? "var(--color-text-tertiary)" : "var(--color-text-secondary)",
           fontStyle: is_autosave ? "italic" : "normal",
           overflow: "hidden",
           textOverflow: "ellipsis",
