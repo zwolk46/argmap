@@ -126,14 +126,16 @@ describe("ValidationDrawer", () => {
     expect(error_idx).toBeLessThan(warning_idx);
   });
 
-  it("renders dismissed warnings subgroup toggle when dismissed warnings exist", () => {
+  it("renders dismissed warnings subgroup toggle when dismissed warnings exist (P0-20)", () => {
     const warning = makeWarning("V-W-1");
-    const dismissed_key = "frame::V-W-1::n1";
+    // Use the REAL frame.id ("f1") to build the key, not the literal "frame".
+    // Before P0-20, the partition used the literal default and missed any
+    // dismissed entry keyed under a real frame_id.
+    const dismissed_key = "f1::V-W-1::n1";
     MOCK_FRAME_SNAPSHOT = {
       ...MOCK_FRAME_SNAPSHOT,
       validation: [warning],
     };
-    // Set the dismissed key in app state
     MOCK_APP_STATE = {
       ...MOCK_APP_STATE,
       app_state: {

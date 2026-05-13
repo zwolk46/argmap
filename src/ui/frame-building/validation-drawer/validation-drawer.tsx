@@ -35,7 +35,15 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
     edge_id: e.edge_id,
   }));
 
-  const { active, dismissed } = partitionByDismissal(as_results, dismissed_keys);
+  // P0-20: pass frame_id so the partition key matches what the dismiss
+  // onClick handlers below use. Falling back to "frame" when there's no
+  // open frame is a safety net (the drawer shouldn't render in that
+  // state anyway).
+  const { active, dismissed } = partitionByDismissal(
+    as_results,
+    dismissed_keys,
+    frame_id ?? "frame",
+  );
 
   const [show_dismissed, set_show_dismissed] = React.useState(false);
 
