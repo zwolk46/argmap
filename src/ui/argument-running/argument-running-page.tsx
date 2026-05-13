@@ -165,6 +165,13 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
                 is_expanded={bottom_panel_expanded}
                 on_toggle_expanded={() => setBottomPanelExpanded((v) => !v)}
                 operating_mode={is_legal ? "legal" : "general"}
+                // P0-18: wire the highlight-on-canvas affordance. The
+                // BottomPanel plumbs `on_highlight_on_canvas` through Premise
+                // and SessionAuthority rows, but the page never connected it,
+                // so clicking the crosshair icon on any row was a no-op.
+                on_highlight_on_canvas={(ids) =>
+                  ids.forEach((id) => canvas_ref.current?.zoomToNode(id))
+                }
               />
             }
             bottom_expanded={bottom_panel_expanded}
