@@ -14,6 +14,14 @@ export interface FrameSummary {
 
 export interface FrameSummaryCardProps {
   summary: FrameSummary;
+  /**
+   * Authoritative pin state for the visual. P0-14: `is_pinned` reads
+   * `Frame.pinned` (always false in this codebase — pinFrame writes to
+   * AppState.pinned[] only). The home page computes `is_pinned` from
+   * `pinned_set.has(frame.id)` and passes it explicitly so the star icon
+   * never desyncs from the actual pin state.
+   */
+  is_pinned: boolean;
   onOpen: (frame_id: FrameId) => void;
   onTogglePin: (frame_id: FrameId, pinned: boolean) => void;
 }
@@ -30,7 +38,7 @@ export function relativeTime(iso: string): string {
 }
 
 export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
-  const { summary, onOpen, onTogglePin } = props;
+  const { summary, is_pinned, onOpen, onTogglePin } = props;
 
   function handleKey(e: KeyboardEvent<HTMLElement>) {
     if (e.key === "Enter" || e.key === " ") {
@@ -97,13 +105,13 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         <button
           type="button"
           data-testid="frame-card-pin"
-          aria-pressed={summary.pinned}
-          aria-label={summary.pinned ? "Unpin frame" : "Pin frame"}
+          aria-pressed={is_pinned}
+          aria-label={is_pinned ? "Unpin frame" : "Pin frame"}
           onClick={(e) => {
             e.stopPropagation();
-            onTogglePin(summary.id, !summary.pinned);
+            onTogglePin(summary.id, !is_pinned);
           }}
-          title={summary.pinned ? "Unpin" : "Pin"}
+          title={is_pinned ? "Unpin" : "Pin"}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -113,7 +121,7 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
             background: "transparent",
             border: "none",
             cursor: "pointer",
-            color: summary.pinned ? "var(--color-milestone-star)" : "var(--color-text-tertiary)",
+            color: is_pinned ? "var(--color-milestone-star)" : "var(--color-text-tertiary)",
             borderRadius: "var(--radius-md)",
             transition: "background-color var(--duration-fast) var(--ease-standard)",
           }}
@@ -122,7 +130,7 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
           }
           onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
         >
-          {summary.pinned ? (
+          {is_pinned ? (
             <svg width={14} height={14} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
               <path d="M8 1.5l1.7 4 4.3.4-3.3 2.9.9 4.2L8 10.8l-3.6 2.2.9-4.2-3.3-2.9 4.3-.4z" />
             </svg>
@@ -154,7 +162,7 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
               border: 0,
             }}
           >
-            {summary.pinned ? "★" : "☆"}
+            {is_pinned ? "★" : "☆"}
           </span>
         </button>
       </header>

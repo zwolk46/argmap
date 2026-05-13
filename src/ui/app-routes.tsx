@@ -129,6 +129,9 @@ function AppOnboardingMount(): ReactElement | null {
       const result = await app_state_store
         .getState()
         .createFrame({ title: args.title, mode: args.mode, flavor: args.flavor });
+      // P0-13: record as Most Recent so the frame appears on Home when the
+      // user navigates back from frame-building.
+      app_state_store.getState().setRecent(result.frame.id);
       app_state_store.getState().dismissWarning("first_launch");
       navigate({ kind: "frame_building", frame_id: result.frame.id });
     },

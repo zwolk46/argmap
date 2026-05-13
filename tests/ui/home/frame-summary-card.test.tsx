@@ -31,7 +31,12 @@ describe("FrameSummaryCard", () => {
 
   it("renders title", () => {
     const { getByText } = render(
-      <FrameSummaryCard summary={summary} onOpen={() => {}} onTogglePin={() => {}} />,
+      <FrameSummaryCard
+        summary={summary}
+        is_pinned={false}
+        onOpen={() => {}}
+        onTogglePin={() => {}}
+      />,
     );
     expect(getByText("My Frame")).toBeTruthy();
   });
@@ -39,17 +44,23 @@ describe("FrameSummaryCard", () => {
   it("opens with click on title button", () => {
     const onOpen = vi.fn();
     const { getByTestId } = render(
-      <FrameSummaryCard summary={summary} onOpen={onOpen} onTogglePin={() => {}} />,
+      <FrameSummaryCard
+        summary={summary}
+        is_pinned={false}
+        onOpen={onOpen}
+        onTogglePin={() => {}}
+      />,
     );
     fireEvent.click(getByTestId("frame-card-open"));
     expect(onOpen).toHaveBeenCalledWith("f1");
   });
 
-  it("toggles pin with the right next state", () => {
+  it("toggles pin with the right next state — derives from is_pinned prop, not summary.pinned (P0-14)", () => {
     const onTogglePin = vi.fn();
     const { getByTestId } = render(
       <FrameSummaryCard
-        summary={{ ...summary, pinned: false }}
+        summary={{ ...summary, pinned: false /* stale Frame.pinned */ }}
+        is_pinned={false}
         onOpen={() => {}}
         onTogglePin={onTogglePin}
       />,
@@ -58,18 +69,50 @@ describe("FrameSummaryCard", () => {
     expect(onTogglePin).toHaveBeenCalledWith("f1", true);
   });
 
-  it("pin button shows ★ when pinned, ☆ otherwise", () => {
+  it("unpin path: is_pinned=true → click → next state false", () => {
+    const onTogglePin = vi.fn();
+    const { getByTestId } = render(
+      <FrameSummaryCard
+        summary={{ ...summary, pinned: false /* stale Frame.pinned */ }}
+        is_pinned={true}
+        onOpen={() => {}}
+        onTogglePin={onTogglePin}
+      />,
+    );
+    fireEvent.click(getByTestId("frame-card-pin"));
+    expect(onTogglePin).toHaveBeenCalledWith("f1", false);
+  });
+
+  it("pin button shows ★ when is_pinned, ☆ otherwise (visual derived from is_pinned, not summary.pinned)", () => {
     const { getByTestId, rerender } = render(
-      <FrameSummaryCard summary={summary} onOpen={() => {}} onTogglePin={() => {}} />,
+      <FrameSummaryCard
+        summary={summary}
+        is_pinned={false}
+        onOpen={() => {}}
+        onTogglePin={() => {}}
+      />,
     );
     expect(getByTestId("frame-card-pin").textContent).toBe("☆");
     rerender(
       <FrameSummaryCard
-        summary={{ ...summary, pinned: true }}
+        summary={summary /* Frame.pinned stays false */}
+        is_pinned={true}
         onOpen={() => {}}
         onTogglePin={() => {}}
       />,
     );
     expect(getByTestId("frame-card-pin").textContent).toBe("★");
+  });
+
+  it("regression: stale summary.pinned does NOT control the star (P0-14)", () => {
+    const { getByTestId } = render(
+      <FrameSummaryCard
+        summary={{ ...summary, pinned: true /* stale */ }}
+        is_pinned={false /* authoritative */}
+        onOpen={() => {}}
+        onTogglePin={() => {}}
+      />,
+    );
+    expect(getByTestId("frame-card-pin").textContent).toBe("☆");
   });
 });

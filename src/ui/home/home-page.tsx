@@ -59,6 +59,12 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
     const result = await app_state_store
       .getState()
       .createFrame({ title: args.title, mode: args.mode, flavor: args.flavor });
+    // P0-13: record the new frame as Most Recent so it appears on the Home
+    // page when the user navigates back. Before this fix, createFrame +
+    // navigate left the new frame reachable only via the URL hash; the Home
+    // page rebuilt Recents from app_state.recents only and the new frame
+    // never landed there.
+    app_state_store.getState().setRecent(result.frame.id);
     setWizardOpen(false);
     navigate({ kind: "frame_building", frame_id: result.frame.id });
   }
@@ -175,6 +181,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
                   <FrameSummaryCard
                     key={f.id}
                     summary={f}
+                    is_pinned={pinned_set.has(f.id)}
                     onOpen={onOpen}
                     onTogglePin={onTogglePin}
                   />
@@ -196,6 +203,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
                   <FrameSummaryCard
                     key={f.id}
                     summary={f}
+                    is_pinned={pinned_set.has(f.id)}
                     onOpen={onOpen}
                     onTogglePin={onTogglePin}
                   />
