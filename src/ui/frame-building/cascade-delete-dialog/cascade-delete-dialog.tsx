@@ -1,10 +1,20 @@
 import type { ReactElement } from "react";
-import { useCascadeConfirmation } from "../../hooks/use-cascade-confirmation";
+import type { CascadeConfirmationState } from "../../hooks/use-cascade-confirmation";
 import { ConfirmDialog } from "../../primitives";
 import { CascadeSummaryTree } from "./cascade-summary-tree";
 
-export function CascadeDeleteDialog(): ReactElement | null {
-  const { phase, summary, confirm, cancel } = useCascadeConfirmation();
+export interface CascadeDeleteDialogProps {
+  /**
+   * The cascade-confirmation state instance from the parent page. P0-7: the
+   * dialog must NOT call useCascadeConfirmation() itself — that would
+   * produce a second hook instance with its own useState, and the page's
+   * `.request(...)` calls would never reach this dialog's state.
+   */
+  cascade: CascadeConfirmationState;
+}
+
+export function CascadeDeleteDialog(props: CascadeDeleteDialogProps): ReactElement | null {
+  const { phase, summary, confirm, cancel } = props.cascade;
 
   if (phase === "idle" || !summary) return null;
 

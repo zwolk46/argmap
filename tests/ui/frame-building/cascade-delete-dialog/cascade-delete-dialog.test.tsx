@@ -2,6 +2,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { CascadeReport } from "@/state";
+import { CascadeDeleteDialog } from "@/ui/frame-building/cascade-delete-dialog/cascade-delete-dialog";
+import type { CascadeConfirmationState } from "@/ui/hooks/use-cascade-confirmation";
 
 const MOCK_REPORT: CascadeReport = {
   cascade_nodes: [
@@ -11,46 +13,35 @@ const MOCK_REPORT: CascadeReport = {
   cascade_edges: [{ edge_id: "e1", reason: { kind: "explicitly_requested" as const } }],
 };
 
-// Mutable state for the hook mock
-let mockPhase: "idle" | "confirming" = "idle";
-
-vi.mock("@/ui/hooks/use-cascade-confirmation", () => ({
-  useCascadeConfirmation: () => ({
-    phase: mockPhase,
-    summary: mockPhase === "confirming" ? MOCK_REPORT : null,
-    node_id: mockPhase === "confirming" ? "n1" : null,
+function makeCascade(phase: "idle" | "confirming"): CascadeConfirmationState {
+  return {
+    phase,
+    summary: phase === "confirming" ? MOCK_REPORT : null,
+    node_id: phase === "confirming" ? "n1" : null,
     request: vi.fn(),
     confirm: vi.fn(),
     cancel: vi.fn(),
-  }),
-}));
-
-import { CascadeDeleteDialog } from "@/ui/frame-building/cascade-delete-dialog/cascade-delete-dialog";
+  };
+}
 
 describe("CascadeDeleteDialog", () => {
   it("renders nothing (null) when phase === 'idle'", () => {
-    mockPhase = "idle";
-    const { container } = render(<CascadeDeleteDialog />);
+    const { container } = render(<CascadeDeleteDialog cascade={makeCascade("idle")} />);
     expect(container.firstChild).toBeNull();
   });
 
   it("renders dialog content when phase === 'confirming'", () => {
-    mockPhase = "confirming";
-    const { getByText } = render(<CascadeDeleteDialog />);
-    // The dialog title should be present
+    const { getByText } = render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
     expect(getByText("Delete and cascade?")).toBeTruthy();
   });
 
   it("shows the node and edge counts in the confirm button label when confirming", () => {
-    mockPhase = "confirming";
-    const { getByText } = render(<CascadeDeleteDialog />);
-    // n_nodes=2, n_edges=1
+    const { getByText } = render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
     expect(getByText(/Delete 2 nodes and 1 edge/)).toBeTruthy();
   });
 
   it("renders CascadeSummaryTree content when confirming", () => {
-    mockPhase = "confirming";
-    const { getByText } = render(<CascadeDeleteDialog />);
+    const { getByText } = render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
     expect(getByText(/The following nodes and edges will be permanently removed/)).toBeTruthy();
   });
 });

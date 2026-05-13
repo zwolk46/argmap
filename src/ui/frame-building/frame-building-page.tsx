@@ -284,7 +284,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
         </div>
       </div>
 
-      <CascadeDeleteDialog />
+      <CascadeDeleteDialog cascade={cascade_confirmation} />
 
       <FrameSettingsPanel
         open={settings_panel_open}
