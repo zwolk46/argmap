@@ -38,6 +38,19 @@ export interface OrphanCandidate {
     | "interpretation_selection"
     | "session_authority";
   carrier_id: string;
+  /**
+   * The key the repository's resolution map looks up when rewriting this
+   * carrier. For premises / session authorities, this is the carrier_id
+   * (the premise or authority id). For checkpoint answers and interpretation
+   * selections, this is the checkpoint_id / term_id (which is also a node
+   * id in the target frame's space). For argument_edges, this is the
+   * missing source-or-target node id — the one that caused the orphan.
+   *
+   * Required so the UI's `OrphanResolution.source_node_id` can be populated
+   * correctly (P0-6). Before threading this through, every migration
+   * silently no-op'd because the repository's resolution_map stayed empty.
+   */
+  source_node_id: NodeRef;
   display_summary: string;
   suggested_kind: "discard" | "reattach" | "no_op";
   reattach_candidates?: ReadonlyArray<{ target_node_id: NodeRef; label: string }>;
@@ -99,6 +112,7 @@ export function enumerateOrphanCandidates(
       out.push({
         carrier_kind: "premise",
         carrier_id: p.id,
+        source_node_id: p.id,
         display_summary: `Premise '${truncate(p.statement, 60)}' cites missing authority ${p.authority_ref}.`,
         suggested_kind: "discard",
       });
@@ -110,6 +124,9 @@ export function enumerateOrphanCandidates(
       out.push({
         carrier_kind: "argument_edge",
         carrier_id: e.id,
+        // Repository rewrites edge endpoints by node id, so the resolution
+        // key is the missing target (not the edge id).
+        source_node_id: e.target,
         display_summary: `${e.type} edge targets missing node ${e.target}.`,
         suggested_kind: "discard",
       });
@@ -121,6 +138,7 @@ export function enumerateOrphanCandidates(
       out.push({
         carrier_kind: "checkpoint_answer",
         carrier_id: r.checkpoint_id,
+        source_node_id: r.checkpoint_id,
         display_summary: `Answer for missing checkpoint ${r.checkpoint_id}.`,
         suggested_kind: "discard",
       });
@@ -132,6 +150,7 @@ export function enumerateOrphanCandidates(
       out.push({
         carrier_kind: "interpretation_selection",
         carrier_id: sel.term_id,
+        source_node_id: sel.term_id,
         display_summary: `Selection for missing term ${sel.term_id}.`,
         suggested_kind: "discard",
       });
@@ -153,6 +172,7 @@ export function enumerateOrphanCandidates(
       out.push({
         carrier_kind: "session_authority",
         carrier_id: a.id,
+        source_node_id: a.id,
         display_summary: `Session authority '${truncate(a.citation, 60)}' is unreferenced.`,
         suggested_kind: "no_op",
       });

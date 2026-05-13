@@ -244,4 +244,61 @@ describe("persistence/atomicity", () => {
     const updated_session = await repo.loadSession(session_export.session.id);
     expect(updated_session.frame_version_id).toBe("fv-2");
   });
+
+  it("migrateSession: discard with source_node_id actually removes the orphaned carrier (P0-6 regression)", async () => {
+    // Build a session whose argument layer references a node that the
+    // target frame version no longer contains, then migrate with discard
+    // and verify the carrier is actually removed.
+    const { frame_export, session_export } = buildLegalModeFixture();
+    await repo.saveFrame(frame_export.frame);
+    await repo.saveFrameVersion(frame_export.current_version);
+
+    // Build target FV missing the burden checkpoint node so any session
+    // reference to that node will orphan.
+    const removed_node_id: string = "node-cp-burden";
+    const fv2: FrameVersion = {
+      ...frame_export.current_version,
+      id: "fv-2",
+      version_number: 2,
+      nodes: frame_export.current_version.nodes.filter((n) => n.id !== removed_node_id),
+      edges: frame_export.current_version.edges.filter(
+        (e) => e.source !== removed_node_id && e.target !== removed_node_id,
+      ),
+    };
+    await repo.saveFrameVersion(fv2);
+
+    // Inject a checkpoint_response and a session_authority into the session
+    // version so we have concrete carriers to discard.
+    const prior_sv = {
+      ...session_export.current_version,
+      checkpoint_responses: [
+        {
+          checkpoint_id: removed_node_id,
+          selected_option_id: "opt_a",
+          premise_id: "p-1",
+          answered_at: "2026-05-13T00:00:00.000Z",
+        },
+      ],
+      session_authorities: [
+        ...(session_export.current_version.session_authorities ?? []),
+      ],
+    };
+    await repo.saveSession({
+      ...session_export.session,
+      checkpoint_responses: prior_sv.checkpoint_responses,
+    });
+    await repo.saveSessionVersion(prior_sv);
+
+    // Migrate with a discard resolution carrying source_node_id (the bug
+    // before P0-6 fix: this field was undefined and the repo's resolution
+    // map stayed empty, so the discard was a silent no-op).
+    const new_sv = await repo.migrateSession(session_export.session.id, "fv-2", [
+      { kind: "discard", source_node_id: removed_node_id },
+    ]);
+
+    // The checkpoint response keyed on the deleted node should be GONE.
+    expect(
+      new_sv.checkpoint_responses?.some((r) => r.checkpoint_id === removed_node_id) ?? false,
+    ).toBe(false);
+  });
 });

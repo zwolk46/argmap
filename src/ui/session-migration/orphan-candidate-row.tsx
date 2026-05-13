@@ -22,15 +22,20 @@ export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement
     if (kind === "reattach") {
       onResolutionChanged({
         kind: "reattach",
+        source_node_id: candidate.source_node_id,
         target_node_id: defaultReattachTarget(candidate),
       });
     } else {
-      onResolutionChanged({ kind });
+      onResolutionChanged({ kind, source_node_id: candidate.source_node_id });
     }
   }
 
   function handleTargetChange(target_node_id: NodeRef): void {
-    onResolutionChanged({ kind: "reattach", target_node_id });
+    onResolutionChanged({
+      kind: "reattach",
+      source_node_id: candidate.source_node_id,
+      target_node_id,
+    });
   }
 
   return (

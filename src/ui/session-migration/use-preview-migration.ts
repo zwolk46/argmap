@@ -26,6 +26,10 @@ export interface UsePreviewMigrationOutput {
 export function buildDefaultResolutions(
   candidates: OrphanCandidate[],
 ): Map<string, OrphanResolution> {
+  // P0-6: every resolution must carry source_node_id, otherwise the
+  // repository's resolution_map stays empty and the migration silently
+  // discards no carriers (data corruption — the session continues to
+  // reference deleted nodes).
   const out = new Map<string, OrphanResolution>();
   for (const c of candidates) {
     if (c.suggested_kind === "reattach") {
@@ -33,9 +37,13 @@ export function buildDefaultResolutions(
         c.reattach_candidates && c.reattach_candidates.length > 0
           ? c.reattach_candidates[0].target_node_id
           : undefined;
-      out.set(c.carrier_id, { kind: "reattach", target_node_id: default_target });
+      out.set(c.carrier_id, {
+        kind: "reattach",
+        source_node_id: c.source_node_id,
+        target_node_id: default_target,
+      });
     } else {
-      out.set(c.carrier_id, { kind: c.suggested_kind });
+      out.set(c.carrier_id, { kind: c.suggested_kind, source_node_id: c.source_node_id });
     }
   }
   return out;

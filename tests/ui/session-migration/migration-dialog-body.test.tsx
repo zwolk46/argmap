@@ -7,9 +7,9 @@ import type { OrphanCandidate } from "@/state";
 describe("partitionByKind", () => {
   it("buckets candidates by carrier_kind preserving order", () => {
     const candidates: OrphanCandidate[] = [
-      { carrier_kind: "argument_edge", carrier_id: "ae1", display_summary: "x", suggested_kind: "discard" },
-      { carrier_kind: "checkpoint_answer", carrier_id: "cp1", display_summary: "x", suggested_kind: "discard" },
-      { carrier_kind: "argument_edge", carrier_id: "ae2", display_summary: "x", suggested_kind: "discard" },
+      { carrier_kind: "argument_edge", carrier_id: "ae1", source_node_id: "n1", display_summary: "x", suggested_kind: "discard" },
+      { carrier_kind: "checkpoint_answer", carrier_id: "cp1", source_node_id: "cp1", display_summary: "x", suggested_kind: "discard" },
+      { carrier_kind: "argument_edge", carrier_id: "ae2", source_node_id: "n2", display_summary: "x", suggested_kind: "discard" },
     ];
     const out = partitionByKind(candidates);
     expect(out.get("argument_edge")!.map((c) => c.carrier_id)).toEqual(["ae1", "ae2"]);
@@ -46,12 +46,12 @@ describe("MigrationDialogBody", () => {
 
   it("renders loaded groups in canonical order, omitting empties", () => {
     const candidates: OrphanCandidate[] = [
-      { carrier_kind: "argument_edge", carrier_id: "ae1", display_summary: "x", suggested_kind: "discard" },
-      { carrier_kind: "checkpoint_answer", carrier_id: "cp1", display_summary: "x", suggested_kind: "discard" },
+      { carrier_kind: "argument_edge", carrier_id: "ae1", source_node_id: "n1", display_summary: "x", suggested_kind: "discard" },
+      { carrier_kind: "checkpoint_answer", carrier_id: "cp1", source_node_id: "cp1", display_summary: "x", suggested_kind: "discard" },
     ];
-    const resolutions = new Map<string, { kind: "discard" }>([
-      ["ae1", { kind: "discard" }],
-      ["cp1", { kind: "discard" }],
+    const resolutions = new Map<string, { kind: "discard"; source_node_id: string }>([
+      ["ae1", { kind: "discard", source_node_id: "n1" }],
+      ["cp1", { kind: "discard", source_node_id: "cp1" }],
     ]);
     const { getAllByTestId } = render(
       <MigrationDialogBody
