@@ -1,10 +1,11 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { FrameId, NodeRef, Node, Flavor } from "@/schema";
+import type { FrameId, NodeRef, Node, Edge, Flavor } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 import {
   TopBar,
   HelpGlossaryPane,
+  HomeButton,
   VersionHistoryButton,
   FrameSettingsButton,
   HelpButton,
@@ -16,11 +17,15 @@ import {
 import type { TopBarSlots } from "../chrome";
 import { FrameCanvas, useLayoutResult } from "../canvas";
 import type { FrameCanvasHandle } from "../canvas";
+import { EdgeCreationPopup } from "../canvas/edge-creation-popup";
+import { validEdgeTypesFor } from "../canvas/edges/edge-validity";
+import type { EdgeCreationCandidate } from "../canvas/edges/edge-validity";
 import { LoadingScreen, CanvasEmptyState } from "../primitives";
 import { SuggestionDrawer } from "../ai-suggestion";
 import { useCascadeConfirmation } from "../hooks";
 import { useNavigate } from "../routing";
 import { ArchitecturalModeChangeDialog, FlavorChangeDialog } from "../mode-change";
+import { ConfirmDialog } from "../primitives";
 import { ThreePaneLayout } from "./three-pane-layout";
 import { NodePalette, OutlineTree } from "./left-pane";
 import { Inspector } from "./right-pane";
@@ -47,7 +52,7 @@ function inverseFlavor(current: Flavor | undefined): Flavor {
 
 export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const { frame_id } = props;
-  const { frame_store } = useRepository();
+  const { frame_store, now, generateId } = useRepository();
   const snapshot = useFrameStore((s) => s);
   const navigate = useNavigate();
 
@@ -56,6 +61,12 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const [settings_panel_open, setSettingsPanelOpen] = React.useState(false);
   const [help_pane_open, setHelpPaneOpen] = React.useState(false);
   const [auto_arrange_open, setAutoArrangeOpen] = React.useState(false);
+  const [switch_to_argument_notice_open, setSwitchToArgumentNoticeOpen] = React.useState(false);
+  const [edge_popup, setEdgePopup] = React.useState<{
+    open: boolean;
+    position: { x: number; y: number };
+    candidates: ReadonlyArray<EdgeCreationCandidate>;
+  }>({ open: false, position: { x: 0, y: 0 }, candidates: [] });
   const [mode_change_dialog, setModeChangeDialog] = React.useState<ModeChangeDialogState>({
     open: false,
   });
@@ -79,14 +90,89 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     navigate({ kind: "home" });
   }
 
+  function applyCandidate(candidate: EdgeCreationCandidate): void {
+    const fv = frame_store.getState().frame_version;
+    if (!fv) return;
+
+    if (candidate.kind === "edge") {
+      const edge: Edge = {
+        id: generateId(),
+        type: candidate.edge_type,
+        layer: "frame",
+        source: candidate.source,
+        target: candidate.target,
+        created_at: now(),
+        updated_at: now(),
+      } as Edge;
+      frame_store.getState().applyPatch({ kind: "edge_added", edge });
+    } else if (candidate.kind === "logical_gate_slot") {
+      const edge: Edge = {
+        id: generateId(),
+        type: "GATES",
+        layer: "frame",
+        source: candidate.source_node,
+        target: candidate.gate_id,
+        created_at: now(),
+        updated_at: now(),
+        ...(candidate.slot ? { slot: candidate.slot } : {}),
+      } as Edge;
+      frame_store.getState().applyPatch({ kind: "edge_added", edge });
+    } else if (candidate.kind === "checkpoint_option_routing") {
+      const checkpoint = fv.nodes.find((n) => n.id === candidate.checkpoint_id);
+      if (!checkpoint || checkpoint.type !== "Checkpoint" || !("options" in checkpoint)) return;
+      const cp = checkpoint as { options: Array<{ id: string; target_node_id?: string }> };
+      const next_options = cp.options.map((o) =>
+        o.id === candidate.option_id ? { ...o, target_node_id: candidate.target } : o,
+      );
+      frame_store.getState().applyPatch({
+        kind: "node_edited",
+        node_id: candidate.checkpoint_id,
+        partial: { options: next_options } as unknown as Partial<Node>,
+      });
+    }
+  }
+
+  function handleEdgeCreated(
+    source: NodeRef,
+    target: NodeRef,
+    drop_position?: { x: number; y: number },
+  ): void {
+    const fv = frame_store.getState().frame_version;
+    if (!fv) return;
+    const candidates = validEdgeTypesFor(source, target, fv);
+    if (candidates.length === 0) return;
+    if (candidates.length === 1) {
+      applyCandidate(candidates[0]);
+      return;
+    }
+    setEdgePopup({
+      open: true,
+      position: drop_position ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      candidates,
+    });
+  }
+
+  function handleSelectionChange(node_ids: ReadonlyArray<NodeRef>): void {
+    if (node_ids.length === 0) {
+      setSelection({ kind: "empty" });
+    } else if (node_ids.length === 1) {
+      setSelection({ kind: "node", node_id: node_ids[0] });
+    } else {
+      setSelection({ kind: "multi", node_ids, edge_ids: [] });
+    }
+  }
+
   const frame_mode = snapshot.frame?.mode ?? "general";
   const frame_flavor = snapshot.frame?.flavor;
 
   const top_bar_slots: TopBarSlots = {
+    home: <HomeButton onClick={() => navigate({ kind: "home" })} />,
     modeToggle: (
       <OperatingModeToggle
         current_mode="frame_building"
         validation={snapshot.validation}
+        onSwitchToArgument={() => setSwitchToArgumentNoticeOpen(true)}
+        onSwitchWithWarnings={() => setSwitchToArgumentNoticeOpen(true)}
       />
     ),
     title: snapshot.frame ? <FrameTitle /> : null,
@@ -133,6 +219,13 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                   frame_version={frame_version}
                   layout_result={layout_result}
                   operating_mode="frame_building"
+                  selection={
+                    selection.kind === "node"
+                      ? [selection.node_id]
+                      : selection.kind === "multi"
+                        ? selection.node_ids
+                        : []
+                  }
                   on_node_moved={(node_id, x, y) => {
                     frame_store.getState().applyPatch({
                       kind: "node_edited",
@@ -140,11 +233,33 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                       partial: { presentation: { x, y } } as unknown as Partial<Node>,
                     });
                   }}
+                  on_edge_created={handleEdgeCreated}
+                  onSelectionChange={handleSelectionChange}
+                  onAutoArrange={() => setAutoArrangeOpen(true)}
                   handle={canvas_ref}
                 />
               ) : (
                 <CanvasEmptyState
-                  label={snapshot.error ? `Error: ${snapshot.error}` : "No frame loaded"}
+                  label={snapshot.error ? "We couldn't load this frame" : "No frame loaded"}
+                  description={snapshot.error ?? undefined}
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => navigate({ kind: "home" })}
+                      style={{
+                        padding: "6px 14px",
+                        background: "var(--color-mode-current-accent)",
+                        color: "var(--color-surface-elevated)",
+                        border: "none",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--font-size-sm)",
+                        fontWeight: "var(--font-weight-medium)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Back to Home
+                    </button>
+                  }
                 />
               )
             }
@@ -198,6 +313,33 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
       <HelpGlossaryPane open={help_pane_open} onClose={() => setHelpPaneOpen(false)} />
 
       <AutoArrangeFlow open={auto_arrange_open} on_close={() => setAutoArrangeOpen(false)} />
+
+      <EdgeCreationPopup
+        open={edge_popup.open}
+        position={edge_popup.position}
+        candidates={edge_popup.candidates}
+        onChoose={(candidate) => {
+          applyCandidate(candidate);
+          setEdgePopup({ open: false, position: { x: 0, y: 0 }, candidates: [] });
+        }}
+        onDismiss={() => setEdgePopup({ open: false, position: { x: 0, y: 0 }, candidates: [] })}
+      />
+
+      <ConfirmDialog
+        open={switch_to_argument_notice_open}
+        title="Argument-running needs a session"
+        confirm_label="Go to Home"
+        cancel_label="Stay here"
+        onCancel={() => setSwitchToArgumentNoticeOpen(false)}
+        onConfirm={() => {
+          setSwitchToArgumentNoticeOpen(false);
+          navigate({ kind: "home" });
+        }}
+      >
+        Running an argument requires an argument session for this frame.
+        Sessions are managed from the Home page. Switch there to open or
+        create one.
+      </ConfirmDialog>
 
       <SuggestionDrawer store_kind="frame" />
     </React.Fragment>

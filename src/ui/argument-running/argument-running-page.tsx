@@ -62,9 +62,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
   }
 
   function on_switch_to_frame(): void {
-    if (frame_id && typeof window !== "undefined") {
-      window.location.hash = `#/frame/${frame_id}`;
-    }
+    if (frame_id) navigate({ kind: "frame_building", frame_id });
   }
 
   function bumpRecompute(): void {
@@ -100,6 +98,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
             on_open_session_settings: () => setSessionSettingsOpen(true),
             on_toggle_version_history: props.on_toggle_version_history,
             on_toggle_help: () => setHelpPaneOpen((v) => !v),
+            on_go_home: () => navigate({ kind: "home" }),
             version_history_open: props.version_history_open,
             help_pane_open,
             title: session.title,

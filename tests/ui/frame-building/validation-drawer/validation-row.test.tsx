@@ -25,7 +25,7 @@ function makeError(node_id?: string): ValidationResult {
 describe("ValidationRow", () => {
   const noop = () => {};
 
-  it("renders the rule_id", () => {
+  it("exposes the rule_id as a tooltip (title attribute) rather than visible code", () => {
     const { getByText } = render(
       <ValidationRow
         result={makeWarning("n1")}
@@ -35,7 +35,8 @@ describe("ValidationRow", () => {
         on_restore={noop}
       />,
     );
-    expect(getByText("V-FR-1")).toBeTruthy();
+    const message_span = getByText("Frame is missing a conclusion");
+    expect(message_span.getAttribute("title")).toBe("V-FR-1");
   });
 
   it("renders the message", () => {

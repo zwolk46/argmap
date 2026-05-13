@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { ReactFlow, Background, useReactFlow, ReactFlowProvider } from "@xyflow/react";
-import type { Node as RFNode, Edge as RFEdge } from "@xyflow/react";
+import type { Node as RFNode, Edge as RFEdge, Connection } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FrameVersion, NodeRef } from "@/schema";
 import type { NodeStatus } from "@/schema";
@@ -42,8 +42,9 @@ export interface FrameCanvasProps {
   legal_mode?: boolean;
   read_only?: boolean;
   on_node_moved?: (node_id: NodeRef, x: number, y: number) => void;
-  on_edge_created?: (source: NodeRef, target: NodeRef, edge_type: string) => void;
+  on_edge_created?: (source: NodeRef, target: NodeRef, drop_position?: { x: number; y: number }) => void;
   onSelectionChange?: (node_ids: ReadonlyArray<NodeRef>) => void;
+  onAutoArrange?: () => void;
   search?: string;
   handle?: React.Ref<FrameCanvasHandle>;
 }
@@ -213,11 +214,14 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     legal_mode = false,
     read_only = false,
     on_node_moved,
+    on_edge_created,
     onSelectionChange,
+    onAutoArrange,
     handle,
   } = props;
 
   const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
+  const last_connect_position = React.useRef<{ x: number; y: number } | null>(null);
   const [fc_visibility, setFcVisibility] =
     React.useState<ForeclosureVisibility>(foreclosure_visibility);
 
@@ -253,6 +257,28 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     onSelectionChange?.(nodes.map((n) => n.data.node_id));
   }
 
+  function handleConnect(connection: Connection) {
+    if (read_only) return;
+    if (!connection.source || !connection.target) return;
+    if (connection.source === connection.target) return;
+    on_edge_created?.(
+      connection.source as NodeRef,
+      connection.target as NodeRef,
+      last_connect_position.current ?? undefined,
+    );
+    last_connect_position.current = null;
+  }
+
+  function handleConnectEnd(event: MouseEvent | TouchEvent) {
+    const point =
+      "clientX" in event
+        ? { x: event.clientX, y: event.clientY }
+        : event.changedTouches && event.changedTouches[0]
+          ? { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY }
+          : null;
+    last_connect_position.current = point;
+  }
+
   return (
     <div
       data-testid="frame-canvas"
@@ -266,6 +292,8 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         edgeTypes={edgeTypes as never}
         onNodeDragStop={handleNodeDragStop}
         onSelectionChange={handleSelectionChange as never}
+        onConnect={handleConnect}
+        onConnectEnd={handleConnectEnd}
         nodesDraggable={!read_only}
         edgesReconnectable={!read_only}
         nodesConnectable={!read_only}
@@ -278,6 +306,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         <CanvasToolbar
           foreclosure_visibility={fc_visibility}
           onForeclosureVisibilityChange={setFcVisibility}
+          onAutoArrange={onAutoArrange}
         />
       </ReactFlow>
     </div>

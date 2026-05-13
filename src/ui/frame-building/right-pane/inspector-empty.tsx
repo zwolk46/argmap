@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
+import { humanizeNodeType } from "../../primitives";
 
 export interface InspectorEmptyProps {
   on_open_settings: () => void;
@@ -25,6 +26,22 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
+      <section
+        style={{
+          padding: "var(--space-3) var(--space-3)",
+          background: "var(--color-surface-pane)",
+          border: "var(--border-hairline) solid var(--color-border-subtle)",
+          borderRadius: "var(--radius-md)",
+          color: "var(--color-text-secondary)",
+          fontSize: "var(--font-size-sm)",
+          lineHeight: "var(--line-height-snug)",
+        }}
+        aria-label="Inspector hint"
+      >
+        Click a node on the canvas to edit its settings here. With nothing
+        selected, this panel shows the frame's overall settings.
+      </section>
+
       <section>
         <div style={LABEL_STYLE}>Title</div>
         <div style={VALUE_STYLE}>{frame.title || "(untitled)"}</div>
@@ -80,7 +97,7 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
               key={type}
               style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}
             >
-              <span>{type}</span>
+              <span>{humanizeNodeType(type)}</span>
               <span>
                 {policy ? (policy.all_of?.length ?? 0) + " condition(s)" : "library default"}
               </span>

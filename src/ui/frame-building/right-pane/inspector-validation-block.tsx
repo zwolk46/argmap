@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import type { NodeRef } from "@/schema";
 import { useFrameStore } from "@/state";
 import { selectValidationByNode } from "@/state";
-import { SeverityIcon } from "../../primitives";
+import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
 
 export interface InspectorValidationBlockProps {
   node_id: NodeRef;
@@ -15,6 +15,7 @@ export function InspectorValidationBlock(
   const snapshot = useFrameStore((s) => s);
   const by_node = selectValidationByNode(snapshot);
   const results = by_node.get(node_id);
+  const frame_version = snapshot.frame_version;
 
   if (!results || results.length === 0) return null;
 
@@ -71,20 +72,11 @@ export function InspectorValidationBlock(
           >
             <SeverityIcon severity={r.severity} />
             <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--font-size-2xs)",
-                color: tone.fg,
-                flexShrink: 0,
-                padding: "1px var(--space-1)",
-                background: "var(--color-surface-elevated)",
-                borderRadius: "var(--radius-sm)",
-                letterSpacing: "0.02em",
-              }}
+              style={{ color: "var(--color-text-primary)", flex: 1 }}
+              title={r.rule_id}
             >
-              {r.rule_id}
+              {humanizeValidationMessage(r.message, frame_version)}
             </span>
-            <span style={{ color: "var(--color-text-primary)", flex: 1 }}>{r.message}</span>
           </div>
         );
       })}

@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { LogicalGate } from "@/schema";
+import { humanizeGateType } from "../../../primitives";
 
 export interface LogicalGateEditorProps {
   node: LogicalGate;
@@ -93,7 +94,9 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
       <div style={SECTION_STYLE}>
         <label style={LABEL_STYLE}>Gate Type</label>
         <div style={{ marginTop: "4px" }}>
-          <span style={GATE_TYPE_BADGE}>{node.gate_type}</span>
+          <span style={GATE_TYPE_BADGE} title={node.gate_type}>
+            {humanizeGateType(node.gate_type)}
+          </span>
         </div>
       </div>
 

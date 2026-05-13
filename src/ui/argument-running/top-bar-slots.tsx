@@ -6,6 +6,7 @@ import {
   OperatingModeToggle,
   FrameTitle,
   FrameSettingsButton,
+  HomeButton,
   VersionHistoryButton,
   HelpButton,
 } from "@/ui";
@@ -20,6 +21,7 @@ export interface ArgumentRunningTopBarDeps {
   on_toggle_version_history: () => void;
   on_open_session_settings?: () => void;
   on_toggle_help: () => void;
+  on_go_home: () => void;
   version_history_open: boolean;
   help_pane_open: boolean;
   title?: string;
@@ -31,6 +33,7 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
   const has_frame = useFrameStore((s) => s.frame !== null);
 
   return {
+    home: <HomeButton onClick={deps.on_go_home} />,
     modeToggle: (
       <OperatingModeToggle
         current_mode="argument_running"

@@ -29,6 +29,19 @@ const PREMISE_KIND_OPTIONS: ReadonlyArray<PremiseKind> = [
   "assumption",
 ];
 
+const PREMISE_KIND_LABELS: Readonly<Record<PremiseKind, string>> = {
+  stipulated: "Stipulated (agreed by parties)",
+  found: "Found (by fact-finder)",
+  disputed: "Disputed",
+  procedural: "Procedural",
+  empirical: "Empirical (factual)",
+  definitional: "Definitional",
+  normative: "Normative (value-based)",
+  observation: "Observation",
+  value: "Value judgment",
+  assumption: "Assumption",
+};
+
 export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): React.ReactElement {
   const { value, on_change, default_kind = "found", reuse_context, enable_g11 } = props;
   const { now, generateId } = useRepository();
@@ -148,7 +161,7 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
         >
           {PREMISE_KIND_OPTIONS.map((k) => (
             <option key={k} value={k}>
-              {k}
+              {PREMISE_KIND_LABELS[k]}
             </option>
           ))}
         </select>

@@ -142,6 +142,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
                   on_jump_to_node={on_jump_to_node}
                   on_dismiss={() => {}}
                   on_restore={() => {}}
+                  frame_version={snapshot.frame_version}
                 />
               ))}
             </div>
@@ -162,6 +163,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
                     app_store.getState().dismissWarning(key);
                   }}
                   on_restore={() => {}}
+                  frame_version={snapshot.frame_version}
                 />
               ))}
             </div>
@@ -202,6 +204,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
                       const key = dismissalKeyFor(r, frame_id ?? "frame");
                       app_store.getState().undismissWarning(key);
                     }}
+                    frame_version={snapshot.frame_version}
                   />
                 ))}
             </div>

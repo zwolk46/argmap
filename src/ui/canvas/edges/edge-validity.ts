@@ -132,13 +132,37 @@ export function validEdgeTypesFor(
   return candidates;
 }
 
+const EDGE_TYPE_LABELS: Readonly<Record<EdgeType, string>> = {
+  DECOMPOSES_INTO: "Decomposes into",
+  TURNS_ON: "Turns on",
+  INTERPRETED_AS: "Interpreted as",
+  LEADS_TO: "Leads to",
+  FORECLOSES: "Forecloses",
+  GATES: "Gates",
+  ANSWERS: "Answers",
+  SUPPORTS: "Supports",
+  CONTRADICTS: "Contradicts",
+  CITES: "Cites",
+  BINDING_IN: "Binding in",
+  DISTINGUISHED_BY: "Distinguished by",
+};
+
+const GATE_SLOT_LABELS: Readonly<Record<LogicalGateSlot, string>> = {
+  inputs: "Gate input",
+  input: "Negation input",
+  antecedent: "If antecedent",
+  consequent: "Then consequent",
+  main: "Main proposition",
+  exception: "Exception",
+};
+
 export function candidateLabel(candidate: EdgeCreationCandidate): string {
   switch (candidate.kind) {
     case "edge":
-      return candidate.edge_type.replace(/_/g, " ").toLowerCase();
+      return EDGE_TYPE_LABELS[candidate.edge_type] ?? candidate.edge_type;
     case "logical_gate_slot":
-      return `Gate input: ${candidate.slot}`;
+      return GATE_SLOT_LABELS[candidate.slot] ?? candidate.slot;
     case "checkpoint_option_routing":
-      return `Route option ${candidate.option_id} → here`;
+      return `Route checkpoint option here`;
   }
 }

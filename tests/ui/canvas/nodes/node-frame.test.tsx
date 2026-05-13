@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
+import { ReactFlowProvider } from "@xyflow/react";
 import { NodeFrame } from "@/ui/canvas/nodes/node-frame";
 import type { NodeDisplayFlags } from "@/ui/canvas/nodes/types";
 import type { HookInvocationRecord } from "@/llm-hooks";
@@ -29,18 +30,20 @@ const ATTRIBUTION: HookInvocationRecord = {
 
 function renderFrame(props: Partial<React.ComponentProps<typeof NodeFrame>> = {}) {
   return render(
-    <TooltipProvider>
-      <NodeFrame
-        node_id="n-1"
-        node_type="RootQuestion"
-        primary_text="Is this valid?"
-        variant="root_question"
-        display={DEFAULT_DISPLAY}
-        enable_connector_handle={false}
-        legal_mode={false}
-        {...props}
-      />
-    </TooltipProvider>,
+    <ReactFlowProvider>
+      <TooltipProvider>
+        <NodeFrame
+          node_id="n-1"
+          node_type="RootQuestion"
+          primary_text="Is this valid?"
+          variant="root_question"
+          display={DEFAULT_DISPLAY}
+          enable_connector_handle={false}
+          legal_mode={false}
+          {...props}
+        />
+      </TooltipProvider>
+    </ReactFlowProvider>,
   );
 }
 

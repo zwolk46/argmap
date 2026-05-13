@@ -22,5 +22,8 @@ export type { FrameSettingsButtonProps } from "./frame-settings-button";
 export { HelpButton } from "./help-button";
 export type { HelpButtonProps } from "./help-button";
 
+export { HomeButton } from "./home-button";
+export type { HomeButtonProps } from "./home-button";
+
 export { HelpGlossaryPane } from "./help-glossary-pane";
 export type { HelpGlossaryPaneProps } from "./help-glossary-pane";

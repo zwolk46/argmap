@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
-import type { ValidationResult } from "@/schema";
-import { SeverityIcon } from "../../primitives";
+import type { FrameVersion, ValidationResult } from "@/schema";
+import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
 
 export interface ValidationRowProps {
   result: ValidationResult;
@@ -8,10 +8,12 @@ export interface ValidationRowProps {
   on_jump_to_node: (node_id: string) => void;
   on_dismiss: () => void;
   on_restore: () => void;
+  frame_version?: FrameVersion | null;
 }
 
 export function ValidationRow(props: ValidationRowProps): ReactElement {
-  const { result, is_dismissed, on_jump_to_node, on_dismiss, on_restore } = props;
+  const { result, is_dismissed, on_jump_to_node, on_dismiss, on_restore, frame_version } = props;
+  const display_message = humanizeValidationMessage(result.message, frame_version ?? null);
 
   return (
     <div
@@ -35,24 +37,13 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
 
       <span
         style={{
-          fontFamily: "monospace",
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
-          flexShrink: 0,
-          paddingTop: "1px",
-        }}
-      >
-        {result.rule_id}
-      </span>
-
-      <span
-        style={{
           flex: 1,
           fontSize: "var(--font-size-sm, 13px)",
           color: "var(--color-text-primary, #111827)",
         }}
+        title={result.rule_id}
       >
-        {result.message}
+        {display_message}
       </span>
 
       {/* Jump to node */}

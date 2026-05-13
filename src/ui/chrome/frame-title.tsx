@@ -68,6 +68,7 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
     <span
       data-testid="frame-title"
       onClick={startEdit}
+      title={read_only ? undefined : "Click to rename"}
       style={{
         fontSize: "var(--font-size-lg)",
         fontWeight: "var(--font-weight-semibold)",
@@ -78,6 +79,18 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
+        padding: read_only ? "0" : "2px 6px",
+        margin: read_only ? "0" : "0 -6px",
+        borderRadius: "var(--radius-sm)",
+        transition: "background var(--duration-fast) var(--ease-standard)",
+      }}
+      onMouseEnter={(e) => {
+        if (!read_only) {
+          (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
       {title || "Untitled Frame"}

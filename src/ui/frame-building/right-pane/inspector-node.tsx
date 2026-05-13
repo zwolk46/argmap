@@ -2,7 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { TypeIcon } from "../../primitives";
+import { TypeIcon, humanizeNodeType } from "../../primitives";
 import { InspectorValidationBlock } from "./inspector-validation-block";
 import { NODE_TYPE_EDITORS } from "./editors";
 import { OptionsBoxEditor } from "./options-box-editor";
@@ -57,7 +57,9 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
         }}
       >
         <TypeIcon node_type={node.type} />
-        <span style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: 500 }}>{node.type}</span>
+        <span style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: 500 }}>
+          {humanizeNodeType(node.type)}
+        </span>
         {import.meta.env.DEV && (
           <span
             style={{

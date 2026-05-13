@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 
 export interface TopBarSlots {
+  home?: ReactNode;
   modeToggle?: ReactNode;
   title?: ReactNode;
   chips?: ReactNode;
@@ -29,6 +30,7 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
         transition: `border-color var(--duration-slow) var(--ease-standard)`,
       }}
     >
+      {slots.home && <div style={{ flexShrink: 0 }}>{slots.home}</div>}
       {slots.modeToggle && <div style={{ flexShrink: 0 }}>{slots.modeToggle}</div>}
       {slots.title && <div style={{ flex: 1, minWidth: 0 }}>{slots.title}</div>}
       {slots.chips && (

@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { Handle, Position } from "@xyflow/react";
 import type { NodeRef, NodeType } from "@/schema";
 import type { NodeStatus } from "@/schema";
 import type { HookInvocationRecord } from "@/llm-hooks";
@@ -123,7 +124,7 @@ export function NodeFrame({
       : hovered || display.hovered
         ? "var(--color-surface-hover)"
         : "var(--color-surface-elevated)",
-    cursor: "default",
+    cursor: "grab",
     opacity: display.not_applicable_dim ? 0.3 : display.foreclosed_strikethrough ? 0.45 : 1,
     animation: display.recommended_next_pulse
       ? "pulse-recommended var(--duration-pulse) var(--ease-soft) infinite"
@@ -179,6 +180,14 @@ export function NodeFrame({
         onMouseLeave={() => setHovered(false)}
         style={{ position: "relative", display: "inline-block" }}
       >
+        {enable_connector_handle && (
+          <Handle
+            type="target"
+            position={Position.Top}
+            style={handleTargetStyle}
+            isConnectableStart={false}
+          />
+        )}
         <div
           style={{
             ...cardStyle,
@@ -196,8 +205,14 @@ export function NodeFrame({
             <StatusBadgeOverlay status={status} legal_mode={legal_mode} />
           </div>
         )}
-        {enable_connector_handle && (hovered || display.hovered) && (
-          <div data-testid="connector-handle-indicator" style={connectorHandleStyle} />
+        {enable_connector_handle && (
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            style={handleSourceStyle((hovered || display.hovered) ?? false)}
+            data-testid="connector-handle-indicator"
+            isConnectableEnd={false}
+          />
         )}
       </div>
     );
@@ -218,6 +233,14 @@ export function NodeFrame({
           display: "inline-block",
         }}
       >
+        {enable_connector_handle && (
+          <Handle
+            type="target"
+            position={Position.Top}
+            style={handleTargetStyle}
+            isConnectableStart={false}
+          />
+        )}
         <div style={cardStyle}>
           <div
             style={{
@@ -237,8 +260,14 @@ export function NodeFrame({
             <StatusBadgeOverlay status={status} legal_mode={legal_mode} />
           </div>
         )}
-        {enable_connector_handle && (hovered || display.hovered) && (
-          <div data-testid="connector-handle-indicator" style={connectorHandleStyle} />
+        {enable_connector_handle && (
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            style={handleSourceStyle((hovered || display.hovered) ?? false)}
+            data-testid="connector-handle-indicator"
+            isConnectableEnd={false}
+          />
         )}
       </div>
     );
@@ -258,28 +287,52 @@ export function NodeFrame({
           : (variantStyle.boxShadow as string | undefined) ?? "var(--shadow-sm)",
       }}
     >
+      {enable_connector_handle && (
+        <Handle
+          type="target"
+          position={Position.Top}
+          style={handleTargetStyle}
+          isConnectableStart={false}
+        />
+      )}
       {innerContent}
       {status && (
         <div style={{ position: "absolute", top: "-8px", right: "-8px" }}>
           <StatusBadgeOverlay status={status} legal_mode={legal_mode} />
         </div>
       )}
-      {enable_connector_handle && (hovered || display.hovered) && (
-        <div data-testid="connector-handle-indicator" style={connectorHandleStyle} />
+      {enable_connector_handle && (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          style={handleSourceStyle((hovered || display.hovered) ?? false)}
+          data-testid="connector-handle-indicator"
+          isConnectableEnd={false}
+        />
       )}
     </div>
   );
 }
 
-const connectorHandleStyle: React.CSSProperties = {
-  position: "absolute",
-  bottom: "-5px",
-  left: "50%",
-  transform: "translateX(-50%)",
+const handleTargetStyle: React.CSSProperties = {
   width: "10px",
   height: "10px",
-  borderRadius: "50%",
-  background: "var(--color-mode-current-accent)",
-  border: "2px solid var(--color-surface-elevated)",
-  boxShadow: "var(--shadow-sm)",
+  background: "var(--color-surface-elevated)",
+  border: "2px solid var(--color-border-default)",
+  opacity: 0,
+  transition: "opacity var(--duration-fast) var(--ease-standard)",
 };
+
+function handleSourceStyle(visible: boolean): React.CSSProperties {
+  return {
+    width: "12px",
+    height: "12px",
+    borderRadius: "50%",
+    background: "var(--color-mode-current-accent)",
+    border: "2px solid var(--color-surface-elevated)",
+    boxShadow: "var(--shadow-sm)",
+    cursor: "crosshair",
+    opacity: visible ? 1 : 0,
+    transition: "opacity var(--duration-fast) var(--ease-standard)",
+  };
+}
