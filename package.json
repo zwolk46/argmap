@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",
+    "@supabase/supabase-js": "^2.105.4",
     "@xyflow/react": "^12.3.5",
     "dexie": "^4.0.10",
     "elkjs": "^0.9.3",
