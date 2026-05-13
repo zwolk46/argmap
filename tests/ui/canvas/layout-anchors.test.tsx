@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import * as React from "react";
 import { FrameCanvas } from "@/ui/canvas";
 import type { FrameVersion, Node } from "@/schema";
 
@@ -51,7 +50,9 @@ describe("FrameCanvas anchored-position contract (P0-10 + P0-9)", () => {
         layout_result={{
           // Layout says (0,0) for n1; the anchor must win.
           positions: [{ node_id: "n1", x: 0, y: 0 }],
-          collapsed_nodes: [],
+          width: 0,
+          height: 0,
+          computed_at: "2026-05-13T00:00:00.000Z",
         }}
         operating_mode="frame_building"
         legal_mode={false}

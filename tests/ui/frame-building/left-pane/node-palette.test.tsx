@@ -180,4 +180,18 @@ describe("NodePalette component", () => {
     expect(call.node.requires_authority).toBe(false);
     expect(call.node.answer_type).toBe("boolean");
   });
+
+  it("P0-12: clicking a palette item stamps a presentation.x/y so the node doesn't render at (0,0)", () => {
+    const { container } = render(<NodePalette visible_types_override={["RootQuestion"]} />);
+    const button = container.querySelector(
+      '[aria-label="Node palette"] button',
+    ) as HTMLButtonElement;
+    fireEvent.click(button);
+    const call = mockApplyPatch.mock.calls[0]![0] as {
+      node: Record<string, unknown> & { presentation?: { x?: number; y?: number } };
+    };
+    expect(call.node.presentation).toBeDefined();
+    expect(typeof call.node.presentation?.x).toBe("number");
+    expect(typeof call.node.presentation?.y).toBe("number");
+  });
 });

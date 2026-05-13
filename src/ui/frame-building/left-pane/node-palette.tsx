@@ -151,7 +151,22 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
   function handleClick(node_type: NodeType) {
     if (!frame_version) return;
     const defaults = buildNodeDefaults(node_type, generateId, now());
-    frame_store.getState().applyPatch({ kind: "node_added", node: defaults });
+    // P0-12: stamp a sensible initial position so multiple palette clicks
+    // don't stack every new node at (0,0). The stagger gives a grid layout
+    // (5 columns × 140px row height); ELK's anchor-honoring post-process
+    // keeps the position once placed. The user can drag from there.
+    const existing_count = frame_version.nodes.length;
+    const col = existing_count % 5;
+    const row = Math.floor(existing_count / 5);
+    const positioned: Node = {
+      ...defaults,
+      presentation: {
+        ...(defaults.presentation ?? {}),
+        x: 200 + col * 240,
+        y: 100 + row * 140,
+      },
+    } as Node;
+    frame_store.getState().applyPatch({ kind: "node_added", node: positioned });
   }
 
   function handleDragStart(node_type: NodeType) {
