@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import type { FrameVersionId } from "@/schema";
 import type { OrphanResolution } from "@/state";
 import { useRepository } from "@/state";
-import { Dialog, DialogHeader, DialogBody, DialogFooter } from "../primitives";
+import { Dialog, DialogHeader, DialogBody, DialogFooter, Button } from "../primitives";
 import { MigrationDialogBody, type MigrationBodyPhase } from "./migration-dialog-body";
 import { usePreviewMigration } from "./use-preview-migration";
 
@@ -96,7 +96,7 @@ export function SessionMigrationDialog(
     !migrating && (phase.kind === "loaded" || phase.kind === "loaded_empty");
 
   return (
-    <Dialog open={true} onClose={onClose} aria_label="Migrate session">
+    <Dialog open={true} onClose={onClose} aria_label="Migrate session" size="md">
       <DialogHeader>Migrate session</DialogHeader>
       <DialogBody>
         <MigrationDialogBody
@@ -108,9 +108,13 @@ export function SessionMigrationDialog(
           <div
             data-testid="migrate-error"
             style={{
-              color: "var(--color-severity-error, #dc2626)",
-              padding: "var(--space-2, 8px)",
-              fontSize: "var(--font-size-sm, 13px)",
+              color: "var(--color-severity-error)",
+              background: "var(--color-severity-error-bg)",
+              padding: "var(--space-3) var(--space-4)",
+              fontSize: "var(--font-size-sm)",
+              borderRadius: "var(--radius-md)",
+              borderLeft: "var(--border-thick) solid var(--color-severity-error)",
+              marginTop: "var(--space-3)",
             }}
           >
             {migrate_error.message}
@@ -118,17 +122,17 @@ export function SessionMigrationDialog(
         ) : null}
       </DialogBody>
       <DialogFooter>
-        <button type="button" data-testid="migration-cancel" onClick={onClose}>
+        <Button variant="secondary" data-testid="migration-cancel" onClick={onClose}>
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="primary"
           data-testid="migration-commit"
           disabled={!can_migrate}
           onClick={handleMigrate}
         >
           Migrate
-        </button>
+        </Button>
       </DialogFooter>
     </Dialog>
   );

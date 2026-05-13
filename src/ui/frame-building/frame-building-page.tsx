@@ -2,10 +2,21 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { FrameId, NodeRef, Node, Flavor } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { TopBar, HelpGlossaryPane, VersionHistoryButton } from "../chrome";
+import {
+  TopBar,
+  HelpGlossaryPane,
+  VersionHistoryButton,
+  FrameSettingsButton,
+  HelpButton,
+  FrameTitle,
+  ModeFlavorChip,
+  ValidationIndicator,
+  OperatingModeToggle,
+} from "../chrome";
 import type { TopBarSlots } from "../chrome";
 import { FrameCanvas, useLayoutResult } from "../canvas";
 import type { FrameCanvasHandle } from "../canvas";
+import { LoadingScreen, CanvasEmptyState } from "../primitives";
 import { SuggestionDrawer } from "../ai-suggestion";
 import { useCascadeConfirmation } from "../hooks";
 import { useNavigate } from "../routing";
@@ -68,31 +79,23 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     navigate({ kind: "home" });
   }
 
+  const frame_mode = snapshot.frame?.mode ?? "general";
+  const frame_flavor = snapshot.frame?.flavor;
+
   const top_bar_slots: TopBarSlots = {
-    title: snapshot.frame?.title ? (
-      <span style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: 500 }}>
-        {snapshot.frame.title}
-      </span>
-    ) : null,
+    modeToggle: (
+      <OperatingModeToggle
+        current_mode="frame_building"
+        validation={snapshot.validation}
+      />
+    ),
+    title: snapshot.frame ? <FrameTitle /> : null,
+    chips: <ModeFlavorChip mode={frame_mode} flavor={frame_flavor} />,
     indicators: (
-      <button
-        type="button"
-        onClick={() => setValidationDrawerOpen((v) => !v)}
-        style={{
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          fontSize: "var(--font-size-xs, 11px)",
-          color: snapshot.validation.some((v) => v.severity === "error")
-            ? "var(--color-danger, #dc2626)"
-            : "var(--color-text-secondary, #6b7280)",
-          padding: "4px 8px",
-        }}
-      >
-        {snapshot.validation.length > 0
-          ? `${snapshot.validation.length} issue${snapshot.validation.length !== 1 ? "s" : ""}`
-          : "No issues"}
-      </button>
+      <ValidationIndicator
+        surface="frame_building"
+        onOpenDrawer={() => setValidationDrawerOpen((v) => !v)}
+      />
     ),
     buttons: (
       <>
@@ -100,41 +103,14 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
           active={props.version_history_open}
           onToggle={props.onToggleVersionHistory}
         />
-        <button
-          type="button"
-          onClick={() => setSettingsPanelOpen(true)}
-          title="Frame settings"
-          style={ICON_BTN_STYLE}
-        >
-          ⚙
-        </button>
-        <button
-          type="button"
-          onClick={() => setHelpPaneOpen((v) => !v)}
-          title="Help"
-          style={ICON_BTN_STYLE}
-        >
-          ?
-        </button>
+        <FrameSettingsButton onOpen={() => setSettingsPanelOpen(true)} />
+        <HelpButton active={help_pane_open} onToggle={() => setHelpPaneOpen((v) => !v)} />
       </>
     ),
   };
 
   if (snapshot.is_loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
-        }}
-      >
-        Loading…
-      </div>
-    );
+    return <LoadingScreen label="Loading frame…" />;
   }
 
   const frame_version = snapshot.frame_version;
@@ -167,18 +143,9 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                   handle={canvas_ref}
                 />
               ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: "100%",
-                    color: "var(--color-text-secondary, #6b7280)",
-                    fontSize: "var(--font-size-sm, 13px)",
-                  }}
-                >
-                  {snapshot.error ? `Error: ${snapshot.error}` : "No frame loaded"}
-                </div>
+                <CanvasEmptyState
+                  label={snapshot.error ? `Error: ${snapshot.error}` : "No frame loaded"}
+                />
               )
             }
             right={
@@ -249,11 +216,3 @@ const EMPTY_FRAME_VERSION: FrameVersion = {
   is_milestone: false,
 };
 
-const ICON_BTN_STYLE: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  cursor: "pointer",
-  fontSize: "16px",
-  color: "var(--color-text-secondary, #6b7280)",
-  padding: "4px 8px",
-};

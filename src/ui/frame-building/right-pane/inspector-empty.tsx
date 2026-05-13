@@ -110,13 +110,15 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
 
 const LABEL_STYLE: React.CSSProperties = {
   textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-  marginBottom: "2px",
+  fontSize: "var(--font-size-xs)",
+  fontWeight: "var(--font-weight-medium)",
+  color: "var(--color-text-secondary)",
+  letterSpacing: "var(--letter-spacing-wide)",
+  marginBottom: "var(--space-1)",
 };
 
 const VALUE_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
+  fontSize: "var(--font-size-sm)",
+  color: "var(--color-text-primary)",
+  lineHeight: "var(--line-height-snug)",
 };

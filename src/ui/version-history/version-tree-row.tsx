@@ -54,32 +54,87 @@ export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
       data-is-authored-against={is_authored_against}
       aria-pressed={is_selected}
       onClick={() => on_select(summary.id)}
+      className="argmap-row-hover"
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "var(--space-2, 8px)",
+        gap: "var(--space-2)",
         width: "100%",
-        padding: "var(--space-2, 8px) var(--space-3, 12px)",
-        paddingLeft: `calc(var(--space-3, 12px) + ${depth} * var(--space-4, 16px))`,
+        padding: "var(--space-2) var(--space-3)",
+        paddingLeft: `calc(var(--space-3) + ${depth} * var(--space-4))`,
         background: is_selected
-          ? "var(--color-surface-selected, #eef2ff)"
+          ? "var(--color-surface-selected)"
           : is_current && is_milestone
-            ? "var(--color-mode-current-accent-bg, #dbeafe)"
+            ? "var(--color-mode-current-accent-bg)"
             : "transparent",
         border: "none",
+        borderLeft: depth > 0
+          ? "var(--border-hairline) solid var(--color-border-subtle)"
+          : "none",
         textAlign: "left",
         cursor: "pointer",
-        fontSize: "var(--font-size-sm, 13px)",
-        color: "var(--color-text-primary, #111827)",
+        fontSize: "var(--font-size-sm)",
+        color: "var(--color-text-primary)",
         position: "relative",
+        borderRadius: "var(--radius-sm)",
       }}
     >
-      <span aria-hidden="true" style={{ color: marker_color, width: "1em" }}>
-        {marker_glyph}
+      <span
+        aria-hidden="true"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "14px",
+          height: "14px",
+          color: marker_color,
+          flexShrink: 0,
+        }}
+      >
+        {is_milestone ? (
+          <svg width={12} height={12} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+            <path d="M8 1.5l1.7 4 4.3.4-3.3 2.9.9 4.2L8 10.8l-3.6 2.2.9-4.2-3.3-2.9 4.3-.4z" />
+          </svg>
+        ) : (
+          <svg width={8} height={8} viewBox="0 0 8 8" fill="currentColor" aria-hidden>
+            <circle cx="4" cy="4" r="3" />
+          </svg>
+        )}
+        <span
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            margin: -1,
+            padding: 0,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
+        >
+          {marker_glyph}
+        </span>
       </span>
-      <span style={{ fontWeight: 500 }}>v{summary.version_number}</span>
+      <span
+        style={{
+          fontWeight: "var(--font-weight-medium)",
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-primary)",
+        }}
+      >
+        v{summary.version_number}
+      </span>
       <Tooltip content={summary.created_at}>
-        <span style={{ color: "var(--color-text-secondary, #6b7280)", fontSize: "11px" }}>
+        <span
+          style={{
+            color: "var(--color-text-tertiary)",
+            fontSize: "var(--font-size-xs)",
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
           {rel}
         </span>
       </Tooltip>
@@ -87,8 +142,8 @@ export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
         style={{
           flex: 1,
           color: is_autosave
-            ? "var(--color-text-tertiary, #9ca3af)"
-            : "var(--color-text-secondary, #6b7280)",
+            ? "var(--color-text-tertiary)"
+            : "var(--color-text-secondary)",
           fontStyle: is_autosave ? "italic" : "normal",
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -98,8 +153,8 @@ export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
         {change_summary_text ?? "auto-save"}
       </span>
       {is_authored_against ? (
-        <Pill>
-          <span data-testid="authored-against-pill">session was authored here</span>
+        <Pill variant="mode_accent" size="xs">
+          <span data-testid="authored-against-pill">session here</span>
         </Pill>
       ) : null}
     </button>

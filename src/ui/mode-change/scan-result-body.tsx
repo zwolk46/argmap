@@ -3,6 +3,7 @@ import type { NodeRef, ConclusionDirection, Position, ValidationResult } from "@
 import type { ConclusionDirectionEditor } from "@/state";
 import { ConclusionDirectionEditorRow } from "./conclusion-direction-editor";
 import { AdvisoryList } from "./advisory-list";
+import { SeverityIcon } from "../primitives/severity-icon";
 
 export interface ScanResultBodyProps {
   blocking: ValidationResult[];
@@ -23,27 +24,39 @@ export function ScanResultBody(props: ScanResultBodyProps): ReactElement {
       <div
         data-testid="scan-result-empty"
         style={{
-          color: "var(--color-text-tertiary, #9ca3af)",
-          fontSize: "var(--font-size-sm, 13px)",
-          padding: "var(--space-3, 12px) 0",
+          color: "var(--color-status-satisfied)",
+          background: "var(--color-status-satisfied-bg)",
+          fontSize: "var(--font-size-sm)",
+          padding: "var(--space-3) var(--space-4)",
+          borderRadius: "var(--radius-md)",
+          marginTop: "var(--space-3)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
         }}
       >
+        <SeverityIcon severity="pass" size={14} />
         No items to address — mode change ready to commit.
       </div>
     );
   }
 
   return (
-    <div data-testid="scan-result-body">
+    <div data-testid="scan-result-body" style={{ marginTop: "var(--space-3)" }}>
       {has_blocking ? (
         <section data-testid="scan-result-blocking">
           <h3
             style={{
-              fontSize: "var(--font-size-sm, 13px)",
-              fontWeight: 500,
-              margin: "var(--space-2, 8px) 0",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-semibold)",
+              margin: "var(--space-3) 0 var(--space-2)",
+              color: "var(--color-severity-error)",
             }}
           >
+            <SeverityIcon severity="error" size={14} />
             Resolve before continuing ({props.blocking.length})
           </h3>
           {props.inline_editors.map((editor) => (
@@ -64,11 +77,16 @@ export function ScanResultBody(props: ScanResultBodyProps): ReactElement {
         <section data-testid="scan-result-advisory">
           <h3
             style={{
-              fontSize: "var(--font-size-sm, 13px)",
-              fontWeight: 500,
-              margin: "var(--space-3, 12px) 0 var(--space-2, 8px)",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-semibold)",
+              margin: "var(--space-4) 0 var(--space-2)",
+              color: "var(--color-severity-warning)",
             }}
           >
+            <SeverityIcon severity="warning" size={14} />
             Advisories ({props.advisory.length})
           </h3>
           <AdvisoryList advisory={props.advisory} />

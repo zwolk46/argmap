@@ -13,17 +13,38 @@ export function ModeFlavorChip({
   flavor,
   onOpenSettings,
 }: ModeFlavorChipProps): ReactElement {
-  const label =
-    mode === "legal"
-      ? "legal"
-      : flavor === "personal"
-        ? "general · personal"
-        : "general · academic";
+  const primary = mode === "legal" ? "Legal" : "General";
+  const secondary = mode === "legal" ? undefined : flavor === "personal" ? "Personal" : "Academic";
 
   return (
-    <Pill size="xs" bg="var(--color-surface-pane)" color="var(--color-text-secondary)">
-      <span style={{ cursor: onOpenSettings ? "pointer" : "default" }} onClick={onOpenSettings}>
-        {label}
+    <Pill variant="neutral" size="xs" title={onOpenSettings ? "Open frame settings" : undefined}>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+          cursor: onOpenSettings ? "pointer" : "default",
+          textTransform: "uppercase",
+          letterSpacing: "var(--letter-spacing-wide)",
+          fontWeight: "var(--font-weight-medium)",
+        }}
+        onClick={onOpenSettings}
+      >
+        <span>{primary}</span>
+        {secondary ? (
+          <>
+            <span
+              aria-hidden
+              style={{
+                opacity: 0.55,
+                marginInline: "1px",
+              }}
+            >
+              ·
+            </span>
+            <span>{secondary}</span>
+          </>
+        ) : null}
       </span>
     </Pill>
   );

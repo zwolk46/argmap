@@ -8,7 +8,7 @@ import type {
   ConclusionDirection,
 } from "@/schema";
 import { useFrameStore, useRepository, type ConclusionDirectionResolution } from "@/state";
-import { Dialog, DialogHeader, DialogBody, DialogFooter } from "../primitives";
+import { Dialog, DialogHeader, DialogBody, DialogFooter, Button } from "../primitives";
 import { TargetModePicker } from "./target-mode-picker";
 import { PositionsInlineEditor } from "./positions-inline-editor";
 import { ScanResultBody } from "./scan-result-body";
@@ -138,7 +138,7 @@ export function ArchitecturalModeChangeDialog(
   const available_positions: Position[] = [...current_positions, ...staged_positions];
 
   return (
-    <Dialog open={true} onClose={onClose} aria_label="Change architectural mode">
+    <Dialog open={true} onClose={onClose} aria_label="Change architectural mode" size="lg">
       <DialogHeader>Change architectural mode</DialogHeader>
       <DialogBody>
         <TargetModePicker
@@ -167,17 +167,21 @@ export function ArchitecturalModeChangeDialog(
         />
       </DialogBody>
       <DialogFooter>
-        <button type="button" data-testid="mode-change-cancel" onClick={onClose}>
+        <Button
+          variant="secondary"
+          data-testid="mode-change-cancel"
+          onClick={onClose}
+        >
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="primary"
           data-testid="mode-change-commit"
           disabled={!can_commit}
           onClick={handleCommit}
         >
           Commit mode change
-        </button>
+        </Button>
       </DialogFooter>
     </Dialog>
   );

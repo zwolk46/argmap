@@ -32,28 +32,30 @@ export function TwoPaneLayout(props: TwoPaneLayoutProps): ReactElement {
         overflow: "hidden",
       }}
     >
-      <div
+      <aside
         style={{
           gridRow: "1",
           gridColumn: "1",
           background: "var(--color-surface-pane)",
           overflow: "auto",
-          borderRight: "var(--border-thin) solid var(--color-border-tertiary)",
+          borderRight: "var(--border-hairline) solid var(--color-border-subtle)",
+          minHeight: 0,
         }}
       >
         {left}
-      </div>
-      <div
+      </aside>
+      <main
         style={{
           gridRow: "1",
           gridColumn: "2",
           background: "var(--color-surface-elevated)",
           overflow: "hidden",
           position: "relative",
+          minHeight: 0,
         }}
       >
         {right}
-      </div>
+      </main>
       {bottom != null && (
         <div
           style={{
@@ -61,7 +63,9 @@ export function TwoPaneLayout(props: TwoPaneLayoutProps): ReactElement {
             gridColumn: "1 / -1",
             overflow: "hidden",
             background: "var(--color-surface-pane)",
-            borderTop: "var(--border-thin) solid var(--color-border-tertiary)",
+            borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
+            boxShadow: "var(--shadow-sm)",
+            transition: "height var(--duration-medium) var(--ease-emphasized)",
           }}
         >
           {bottom}

@@ -8,19 +8,78 @@ export interface SeverityIconProps {
   size?: number;
 }
 
-const GLYPHS: Record<Severity, string> = {
-  pass: "✓",
-  warning: "⚠",
-  error: "✕",
-};
-
 const COLORS: Record<Severity, string> = {
   pass: "var(--color-severity-pass)",
   warning: "var(--color-severity-warning)",
   error: "var(--color-severity-error)",
 };
 
+const LABELS: Record<Severity, string> = {
+  pass: "✓",
+  warning: "⚠",
+  error: "✕",
+};
+
+function PassGlyph({ size }: { size: number }): ReactElement {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="6.25" />
+      <path d="m5.25 8.3 1.9 1.9 3.6-3.7" />
+    </svg>
+  );
+}
+
+function WarningGlyph({ size }: { size: number }): ReactElement {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M8 2.2 14.4 13H1.6Z" />
+      <path d="M8 6.5v3" />
+      <circle cx="8" cy="11.5" r="0.55" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ErrorGlyph({ size }: { size: number }): ReactElement {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="6.25" />
+      <path d="M5.3 5.3 10.7 10.7M10.7 5.3 5.3 10.7" />
+    </svg>
+  );
+}
+
 export function SeverityIcon({ severity, size = 14 }: SeverityIconProps): ReactElement {
+  const Glyph = severity === "pass" ? PassGlyph : severity === "warning" ? WarningGlyph : ErrorGlyph;
   return (
     <span
       data-testid={`severity-icon-${severity}`}
@@ -31,15 +90,28 @@ export function SeverityIcon({ severity, size = 14 }: SeverityIconProps): ReactE
         justifyContent: "center",
         width: size,
         height: size,
-        fontSize: size - 2,
         color: COLORS[severity],
-        fontFamily: "var(--font-sans)",
-        fontWeight: "var(--font-weight-semibold)",
         flexShrink: 0,
         lineHeight: 1,
       }}
     >
-      {GLYPHS[severity]}
+      <Glyph size={size} />
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          margin: -1,
+          padding: 0,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          whiteSpace: "nowrap",
+          border: 0,
+        }}
+      >
+        {LABELS[severity]}
+      </span>
     </span>
   );
 }

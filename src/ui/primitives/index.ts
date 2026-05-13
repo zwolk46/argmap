@@ -26,10 +26,21 @@ export { SegmentedToggle } from "./segmented-toggle";
 export type { SegmentedToggleProps, SegmentOption } from "./segmented-toggle";
 
 export { Pill } from "./pill";
-export type { PillProps } from "./pill";
+export type { PillProps, PillVariant, PillSize } from "./pill";
 
 export { ConfirmDialog } from "./confirm-dialog";
 export type { ConfirmDialogProps } from "./confirm-dialog";
 
 export { IconButton } from "./icon-button";
 export type { IconButtonProps } from "./icon-button";
+
+export { Button } from "./button";
+export type { ButtonProps, ButtonVariant, ButtonSize } from "./button";
+
+export {
+  LoadingScreen,
+  Spinner,
+  EmptyState,
+  CanvasEmptyState,
+} from "./loading-screen";
+export type { LoadingScreenProps, EmptyStateProps } from "./loading-screen";

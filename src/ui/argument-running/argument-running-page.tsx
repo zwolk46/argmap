@@ -2,7 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { SessionId, NodeRef, FrameVersionId } from "@/schema";
 import { useRepository, useSessionStore, useFrameStore } from "@/state";
-import { HelpGlossaryPane, SuggestionDrawer, type FrameCanvasHandle } from "@/ui";
+import { HelpGlossaryPane, SuggestionDrawer, type FrameCanvasHandle, LoadingScreen, EmptyState } from "@/ui";
 import { SessionMigrationDialog } from "../session-migration";
 import { SessionSettingsPanel } from "../session-settings";
 import { useNavigate } from "../routing";
@@ -73,36 +73,16 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
 
   if (snapshot.is_loading) {
     return (
-      <div
-        data-testid="argument-running-loading"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
-        }}
-      >
-        Loading session…
+      <div data-testid="argument-running-loading">
+        <LoadingScreen label="Loading session…" />
       </div>
     );
   }
 
   if (!session || !frame_id) {
     return (
-      <div
-        data-testid="argument-running-empty"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
-        }}
-      >
-        {snapshot.error ? `Error: ${snapshot.error}` : "No session loaded."}
+      <div data-testid="argument-running-empty">
+        <EmptyState label={snapshot.error ? `Error: ${snapshot.error}` : "No session loaded."} />
       </div>
     );
   }
@@ -155,11 +135,12 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
                     data-testid="item-editor-region"
                     style={{
                       flex: 1,
-                      minWidth: 320,
-                      maxWidth: 440,
+                      minWidth: 340,
+                      maxWidth: 460,
                       overflowY: "auto",
-                      borderLeft: "var(--border-thin) solid var(--color-border-tertiary)",
+                      borderLeft: "var(--border-hairline) solid var(--color-border-subtle)",
                       background: "var(--color-surface-pane)",
+                      boxShadow: "var(--shadow-sm)",
                     }}
                   >
                     <ItemEditorHost

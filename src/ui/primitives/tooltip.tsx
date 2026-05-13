@@ -70,12 +70,16 @@ export function Tooltip({ content, children, disabled }: TooltipProps): ReactEle
             background: "var(--color-surface-elevated)",
             boxShadow: "var(--shadow-md)",
             borderRadius: "var(--radius-md)",
+            border: "var(--border-hairline) solid var(--color-border-subtle)",
             padding: "var(--space-2) var(--space-3)",
             fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
+            color: "var(--color-text-primary)",
             lineHeight: "var(--line-height-normal)",
-            maxWidth: "280px",
+            fontFamily: "var(--font-sans)",
+            maxWidth: "320px",
             pointerEvents: "none",
+            animation:
+              "argmap-overlay-fade-in var(--duration-fast) var(--ease-standard)",
           }}
         >
           {content}

@@ -1,5 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import { Dialog, DialogHeader, DialogBody, DialogFooter } from "./dialog";
+import type { DialogSize } from "./dialog";
+import { Button } from "./button";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -8,6 +10,10 @@ export interface ConfirmDialogProps {
   confirm_label?: string;
   cancel_label?: string;
   confirm_variant?: "primary" | "danger";
+  /** Show a destructive treatment (e.g., delete). Same as `confirm_variant="danger"` plus subtle copy hints. */
+  destructive?: boolean;
+  confirm_disabled?: boolean;
+  size?: DialogSize;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,49 +25,26 @@ export function ConfirmDialog({
   confirm_label = "Confirm",
   cancel_label = "Cancel",
   confirm_variant = "primary",
+  destructive,
+  confirm_disabled,
+  size = "sm",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): ReactElement | null {
   if (!open) return null;
-  const confirmBg =
-    confirm_variant === "danger"
-      ? "var(--color-severity-error)"
-      : "var(--color-mode-current-accent)";
+  const variant =
+    destructive || confirm_variant === "danger" ? "destructive-solid" : "primary";
   return (
-    <Dialog open={open} onClose={onCancel}>
+    <Dialog open={open} onClose={onCancel} aria_label={title} size={size}>
       <DialogHeader>{title}</DialogHeader>
       <DialogBody>{children}</DialogBody>
       <DialogFooter>
-        <button
-          onClick={onCancel}
-          style={{
-            padding: "var(--space-2) var(--space-4)",
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-medium)",
-            background: "var(--color-surface-pane)",
-            color: "var(--color-text-secondary)",
-            border: "var(--border-thin) solid var(--color-border-default)",
-            borderRadius: "var(--radius-md)",
-            cursor: "pointer",
-          }}
-        >
+        <Button variant="secondary" onClick={onCancel}>
           {cancel_label}
-        </button>
-        <button
-          onClick={onConfirm}
-          style={{
-            padding: "var(--space-2) var(--space-4)",
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-medium)",
-            background: confirmBg,
-            color: "var(--color-text-on-accent)",
-            border: "none",
-            borderRadius: "var(--radius-md)",
-            cursor: "pointer",
-          }}
-        >
+        </Button>
+        <Button variant={variant} onClick={onConfirm} disabled={confirm_disabled}>
           {confirm_label}
-        </button>
+        </Button>
       </DialogFooter>
     </Dialog>
   );

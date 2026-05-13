@@ -28,6 +28,17 @@ function RoutedView(): ReactElement {
   const onClose = React.useCallback(() => setVersionHistoryOpen(false), []);
   const preview = useVersionHistoryPreview();
 
+  // Lift the operating-mode data-attribute onto the document root so the
+  // mode-accent cascade (focus rings, primary buttons, every chrome surface)
+  // resolves correctly outside of the top bar.
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const mode =
+      route.kind === "argument_running" ? "argument-running" : "frame-building";
+    document.documentElement.dataset.mode = mode;
+    document.body.dataset.mode = mode;
+  }, [route.kind]);
+
   let page: ReactElement;
   if (preview.state.kind === "frame") {
     page = (

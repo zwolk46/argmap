@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
 import { GLOSSARY_DICTIONARY } from "../primitives/glossary-tooltip";
 import { Drawer, DrawerHeader, DrawerBody } from "../primitives/drawer";
+import { IconButton } from "../primitives/icon-button";
 import { OnboardingPreferencesSection } from "../onboarding/onboarding-preferences-section";
 
 export interface HelpGlossaryPaneProps {
@@ -19,22 +20,28 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
   const legal_entries = Object.entries(GLOSSARY_DICTIONARY).filter(([, entry]) => entry.legal_only);
 
   return (
-    <Drawer open={open} onClose={onClose} width="320px">
+    <Drawer
+      open={open}
+      onClose={onClose}
+      width="360px"
+      aria_label="Help and glossary"
+    >
       <DrawerHeader>
         <span>Help & Glossary</span>
-        <button
-          aria-label="Close help"
-          onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "var(--font-size-md)",
-            color: "var(--color-text-secondary)",
-          }}
-        >
-          ×
-        </button>
+        <IconButton size="sm" aria-label="Close help" onClick={onClose}>
+          <svg
+            width={14}
+            height={14}
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            aria-hidden
+          >
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </IconButton>
       </DrawerHeader>
       <DrawerBody>
         <section>

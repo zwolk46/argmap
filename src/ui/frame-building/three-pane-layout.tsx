@@ -16,9 +16,9 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
     center,
     right,
     bottom = null,
-    left_width = "240px",
+    left_width = "256px",
     right_width = "360px",
-    bottom_height = "200px",
+    bottom_height = "220px",
   } = props;
 
   return (
@@ -29,48 +29,59 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
         gridTemplateRows: bottom ? `1fr ${bottom_height}` : "1fr",
         height: "100%",
         overflow: "hidden",
+        background: "var(--color-surface-canvas)",
       }}
     >
-      <div
+      <aside
         style={{
           gridRow: "1",
           gridColumn: "1",
           background: "var(--color-surface-pane)",
+          borderRight: "var(--border-hairline) solid var(--color-border-subtle)",
           overflow: "auto",
+          minHeight: 0,
         }}
       >
         {left}
-      </div>
-      <div
+      </aside>
+      <main
         style={{
           gridRow: "1",
           gridColumn: "2",
           overflow: "hidden",
           position: "relative",
+          background: "var(--color-surface-canvas)",
+          minHeight: 0,
         }}
       >
         {center}
-      </div>
-      <div
+      </main>
+      <aside
         style={{
           gridRow: "1",
           gridColumn: "3",
           overflow: "auto",
+          background: "var(--color-surface-pane)",
+          borderLeft: "var(--border-hairline) solid var(--color-border-subtle)",
+          minHeight: 0,
         }}
       >
         {right}
-      </div>
-      {bottom && (
+      </aside>
+      {bottom ? (
         <div
           style={{
             gridRow: "2",
             gridColumn: "1 / -1",
-            overflow: "auto",
+            overflow: "hidden",
+            background: "var(--color-surface-pane)",
+            borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
+            boxShadow: "var(--shadow-sm)",
           }}
         >
           {bottom}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

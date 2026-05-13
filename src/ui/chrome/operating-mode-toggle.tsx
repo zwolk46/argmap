@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { ValidationResult } from "@/schema";
 import { SegmentedToggle } from "../primitives/segmented-toggle";
+import { ConfirmDialog } from "../primitives/confirm-dialog";
 
 export interface OperatingModeToggleProps {
   current_mode: "frame_building" | "argument_running";
@@ -49,74 +50,26 @@ export function OperatingModeToggle({
 
   return (
     <>
-      <SegmentedToggle options={OPTIONS} value={current_mode} onChange={handleChange} />
-      {show_warning_dialog && (
-        <div
-          role="dialog"
-          aria-label="Validation warnings"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "var(--color-surface-overlay)",
-          }}
-        >
-          <div
-            style={{
-              background: "var(--color-surface-elevated)",
-              borderRadius: "var(--radius-lg)",
-              boxShadow: "var(--shadow-lg)",
-              padding: "var(--space-5)",
-              maxWidth: "400px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: "var(--font-size-sm)",
-                color: "var(--color-text-secondary)",
-                margin: "0 0 var(--space-4)",
-              }}
-            >
-              There are validation warnings. Proceed to Argument Running?
-            </p>
-            <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
-              <button
-                onClick={() => setShowWarningDialog(false)}
-                style={{
-                  padding: "var(--space-2) var(--space-4)",
-                  fontSize: "var(--font-size-sm)",
-                  background: "var(--color-surface-pane)",
-                  border: "var(--border-thin) solid var(--color-border-default)",
-                  borderRadius: "var(--radius-md)",
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowWarningDialog(false);
-                  onSwitchWithWarnings?.();
-                }}
-                style={{
-                  padding: "var(--space-2) var(--space-4)",
-                  fontSize: "var(--font-size-sm)",
-                  background: "var(--color-mode-current-accent)",
-                  color: "var(--color-text-on-accent)",
-                  border: "none",
-                  borderRadius: "var(--radius-md)",
-                  cursor: "pointer",
-                }}
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SegmentedToggle
+        options={OPTIONS}
+        value={current_mode}
+        onChange={handleChange}
+        aria_label="Operating mode"
+      />
+      <ConfirmDialog
+        open={show_warning_dialog}
+        title="Validation warnings"
+        confirm_label="Continue"
+        cancel_label="Cancel"
+        onCancel={() => setShowWarningDialog(false)}
+        onConfirm={() => {
+          setShowWarningDialog(false);
+          onSwitchWithWarnings?.();
+        }}
+      >
+        The frame has validation warnings. You can still switch to Argument
+        Running, but ungated paths may produce incomplete results.
+      </ConfirmDialog>
     </>
   );
 }

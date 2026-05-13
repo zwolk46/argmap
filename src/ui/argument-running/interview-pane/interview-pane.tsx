@@ -71,17 +71,17 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
         style={{
           display: "flex",
           alignItems: "center",
-          padding: "var(--space-2, 8px)",
-          borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
+          gap: "var(--space-2)",
+          padding: "var(--space-3) var(--space-4)",
+          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
+          background: "var(--color-surface-pane)",
         }}
       >
         <RecomputeIndicator counter={recompute_counter} />
         <span
+          className="argmap-section-heading"
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
+            color: "var(--color-text-secondary)",
           }}
         >
           Open items

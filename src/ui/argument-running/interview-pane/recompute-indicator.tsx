@@ -12,17 +12,18 @@ export function RecomputeIndicator(props: RecomputeIndicatorProps): ReactElement
       key={props.counter}
       data-testid="recompute-indicator"
       data-counter={props.counter}
+      aria-hidden
       style={{
         display: "inline-block",
         width: 8,
         height: 8,
-        marginRight: 6,
         borderRadius: "50%",
-        background: "var(--color-text-accent, #1d4ed8)",
+        background: "var(--color-mode-current-accent)",
         opacity: 0,
+        flexShrink: 0,
         animation: reduce
           ? "argmap-recompute-flash 600ms ease-out"
-          : "argmap-recompute-pulse 600ms ease-out",
+          : "argmap-recompute-pulse 600ms var(--ease-soft)",
       }}
     />
   );

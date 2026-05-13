@@ -1,13 +1,23 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 
+export type DialogSize = "sm" | "md" | "lg";
+
 export interface DialogProps {
   open: boolean;
   onClose: () => void;
   aria_label?: string;
   dismiss_on_click_outside?: boolean;
+  dismiss_on_escape?: boolean;
+  size?: DialogSize;
   children: ReactNode;
 }
+
+const DIALOG_MAX_WIDTH: Record<DialogSize, string> = {
+  sm: "400px",
+  md: "560px",
+  lg: "720px",
+};
 
 export function DialogHeader({ children }: { children: ReactNode }): ReactElement {
   return (
@@ -33,6 +43,9 @@ export function DialogBody({ children }: { children: ReactNode }): ReactElement 
         fontSize: "var(--font-size-sm)",
         color: "var(--color-text-secondary)",
         lineHeight: "var(--line-height-normal)",
+        overflowY: "auto",
+        flex: 1,
+        minHeight: 0,
       }}
     >
       {children}
@@ -61,6 +74,8 @@ export function Dialog({
   onClose,
   aria_label,
   dismiss_on_click_outside = true,
+  dismiss_on_escape = true,
+  size = "md",
   children,
 }: DialogProps): ReactElement | null {
   const dialogRef = React.useRef<HTMLDivElement>(null);
@@ -88,7 +103,7 @@ export function Dialog({
   React.useEffect(() => {
     if (!open) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && dismiss_on_escape) onClose();
       if (e.key === "Tab" && dialogRef.current) {
         const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -111,12 +126,13 @@ export function Dialog({
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, dismiss_on_escape]);
 
   if (!open) return null;
 
   return (
     <div
+      className="argmap-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -124,6 +140,7 @@ export function Dialog({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        padding: "var(--space-5)",
         background: "var(--color-surface-overlay)",
       }}
       onClick={
@@ -139,13 +156,18 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-label={aria_label}
+        className="argmap-dialog"
         style={{
           background: "var(--color-surface-elevated)",
           borderRadius: "var(--radius-lg)",
           boxShadow: "var(--shadow-lg)",
+          border: "var(--border-hairline) solid var(--color-border-subtle)",
           minWidth: "320px",
-          maxWidth: "520px",
+          maxWidth: DIALOG_MAX_WIDTH[size],
           width: "100%",
+          maxHeight: "calc(100vh - var(--space-8))",
+          display: "flex",
+          flexDirection: "column",
           outline: "none",
         }}
       >

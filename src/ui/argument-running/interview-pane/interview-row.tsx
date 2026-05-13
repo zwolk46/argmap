@@ -66,28 +66,59 @@ export function InterviewRow(props: InterviewRowProps): ReactElement {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "2px",
-        padding: "var(--space-2, 8px)",
+        gap: "var(--space-1)",
+        padding: "var(--space-2) var(--space-4)",
         width: "100%",
         textAlign: "left",
         border: "none",
         background: selected
-          ? "var(--color-background-accent, #dbeafe)"
+          ? "var(--color-surface-selected)"
           : recommended_next
-            ? "var(--color-background-secondary, #f3f4f6)"
+            ? "var(--color-mode-current-accent-bg)"
             : "transparent",
         cursor: "pointer",
-        borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
+        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
+        borderLeft: recommended_next
+          ? "var(--border-medium) solid var(--color-mode-current-accent)"
+          : "var(--border-medium) solid transparent",
+        transition:
+          "background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
+      }}
+      onMouseEnter={(e) => {
+        if (!selected && !recommended_next) {
+          (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!selected && !recommended_next) {
+          (e.currentTarget as HTMLElement).style.background = "transparent";
+        }
       }}
     >
+      {recommended_next ? (
+        <span
+          data-testid="recommended-next-pill"
+          style={{
+            fontSize: "var(--font-size-2xs)",
+            color: "var(--color-mode-current-accent)",
+            fontWeight: "var(--font-weight-semibold)",
+            letterSpacing: "var(--letter-spacing-wide)",
+            textTransform: "uppercase",
+          }}
+        >
+          Recommended next
+        </span>
+      ) : null}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-1, 4px)",
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-primary, #111827)",
-          fontWeight: recommended_next ? 500 : 400,
+          gap: "var(--space-2)",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-primary)",
+          fontWeight: recommended_next
+            ? "var(--font-weight-semibold)"
+            : "var(--font-weight-regular)",
         }}
       >
         {node ? <TypeIcon node_type={node.type} size={12} /> : null}
@@ -101,44 +132,21 @@ export function InterviewRow(props: InterviewRowProps): ReactElement {
         >
           {statement}
         </span>
-        {recommended_next ? (
-          <span
-            data-testid="recommended-next-pill"
-            style={{
-              fontSize: "10px",
-              padding: "1px 6px",
-              borderRadius: "999px",
-              background: "var(--color-background-accent, #dbeafe)",
-              color: "var(--color-text-accent, #1d4ed8)",
-            }}
-          >
-            recommended next
-          </span>
-        ) : null}
       </div>
       {breadcrumb ? (
         <span
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-tertiary, #9ca3af)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-tertiary)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            paddingLeft: "calc(12px + var(--space-2))",
           }}
         >
           {breadcrumb}
         </span>
       ) : null}
-      <span
-        style={{
-          fontSize: "10px",
-          color: "var(--color-text-tertiary, #9ca3af)",
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-        }}
-      >
-        {item.reason}
-      </span>
     </button>
   );
 }

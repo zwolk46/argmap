@@ -6,6 +6,7 @@ import { AppErrorBoundary } from "./error-boundary";
 import { TooltipProvider } from "./primitives/tooltip";
 import { AppRoutes } from "./app-routes";
 import "./styles/tokens.css";
+import "./styles/global.css";
 import "./styles/react-flow.css";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

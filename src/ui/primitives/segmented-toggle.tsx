@@ -11,6 +11,8 @@ export interface SegmentedToggleProps<T extends string = string> {
   value: T;
   onChange: (value: T) => void;
   disabled?: boolean;
+  size?: "sm" | "md";
+  aria_label?: string;
 }
 
 export function SegmentedToggle<T extends string>({
@@ -18,6 +20,8 @@ export function SegmentedToggle<T extends string>({
   value,
   onChange,
   disabled,
+  size = "md",
+  aria_label,
 }: SegmentedToggleProps<T>): ReactElement {
   const [focused_idx, setFocusedIdx] = React.useState<number>(-1);
 
@@ -38,13 +42,19 @@ export function SegmentedToggle<T extends string>({
     }
   }
 
+  const padY = size === "sm" ? "2px" : "var(--space-1)";
+  const padX = size === "sm" ? "var(--space-2)" : "var(--space-3)";
+  const fontSize = size === "sm" ? "var(--font-size-xs)" : "var(--font-size-sm)";
+
   return (
     <div
       role="group"
+      aria-label={aria_label}
       style={{
         display: "inline-flex",
         borderRadius: "var(--radius-pill)",
         background: "var(--color-surface-pane)",
+        border: "var(--border-hairline) solid var(--color-border-subtle)",
         padding: "2px",
         gap: "2px",
       }}
@@ -54,6 +64,7 @@ export function SegmentedToggle<T extends string>({
         return (
           <button
             key={opt.value}
+            type="button"
             role="radio"
             aria-checked={is_active}
             tabIndex={is_active ? 0 : -1}
@@ -63,18 +74,20 @@ export function SegmentedToggle<T extends string>({
             onFocus={() => setFocusedIdx(idx)}
             onBlur={() => setFocusedIdx(-1)}
             style={{
-              padding: "var(--space-1) var(--space-3)",
+              padding: `${padY} ${padX}`,
               borderRadius: "var(--radius-pill)",
               border: "none",
               background: is_active ? "var(--color-mode-current-accent-bg)" : "transparent",
               color: is_active ? "var(--color-mode-current-accent)" : "var(--color-text-secondary)",
-              fontSize: "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-medium)",
+              fontSize,
+              fontWeight: is_active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
               fontFamily: "var(--font-sans)",
               cursor: disabled ? "default" : "pointer",
-              transition: `background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard)`,
+              transition:
+                "background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard)",
               outline: focused_idx === idx ? "var(--focus-ring)" : "none",
               outlineOffset: "var(--focus-ring-offset)",
+              boxShadow: is_active ? "var(--shadow-sm)" : "none",
             }}
           >
             {opt.label}

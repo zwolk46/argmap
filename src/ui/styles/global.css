@@ -1,0 +1,398 @@
+/* Global stylesheet — what inline styles structurally cannot do.
+   - Body / html defaults so individual components don't need fontFamily/color/bg
+   - :focus-visible polish for keyboard users
+   - ::selection
+   - ::-webkit-scrollbar styling (warm-neutral)
+   - Default h1/h2/h3 styles (margin: 0; line-height; letter-spacing)
+   - Animation keyframes used across components
+   - reset: box-sizing, body margin
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-surface-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+#root {
+  height: 100%;
+  isolation: isolate;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+a {
+  color: var(--color-mode-current-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+::selection {
+  background: var(--color-mode-current-accent-bg);
+  color: var(--color-text-primary);
+}
+
+::-moz-selection {
+  background: var(--color-mode-current-accent-bg);
+  color: var(--color-text-primary);
+}
+
+/* Focus polish: hide on mouse click, show on keyboard tab. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: var(--border-medium) solid var(--color-mode-current-accent);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+/* Scrollbars — slim, warm-neutral, hover-darkens. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-default) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Hide scrollbars in canvas-overlay region cleanly. */
+.argmap-no-scrollbar {
+  scrollbar-width: none;
+}
+
+.argmap-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Helper classes for interactive primitives (used by Button, IconButton, cards, rows). */
+
+.argmap-row-hover {
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.argmap-row-hover:hover:not([aria-disabled="true"]):not(:disabled) {
+  background-color: var(--color-surface-hover);
+}
+
+/* Cards on the home page, settings panels — quiet hover lift. */
+.argmap-card {
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.argmap-card:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.argmap-card:active {
+  transform: translateY(0.5px);
+}
+
+/* Button primitive base — used by `Button` component. */
+.argmap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.argmap-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.argmap-btn[data-size="sm"] {
+  height: 26px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.argmap-btn[data-size="md"] {
+  height: 32px;
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.argmap-btn[data-size="lg"] {
+  height: 40px;
+  padding: 0 var(--space-5);
+  font-size: var(--font-size-base);
+}
+
+.argmap-btn[data-variant="primary"] {
+  background: var(--color-mode-current-accent);
+  color: var(--color-text-on-accent);
+  border: var(--border-thin) solid var(--color-mode-current-accent);
+}
+
+.argmap-btn[data-variant="primary"]:not(:disabled):hover {
+  background: var(--color-mode-current-accent);
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-sm);
+}
+
+.argmap-btn[data-variant="primary"]:not(:disabled):active {
+  filter: brightness(0.95);
+  box-shadow: none;
+}
+
+.argmap-btn[data-variant="secondary"] {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  border: var(--border-thin) solid var(--color-border-default);
+}
+
+.argmap-btn[data-variant="secondary"]:not(:disabled):hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.argmap-btn[data-variant="ghost"] {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: var(--border-thin) solid transparent;
+}
+
+.argmap-btn[data-variant="ghost"]:not(:disabled):hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.argmap-btn[data-variant="destructive"] {
+  background: var(--color-surface-elevated);
+  color: var(--color-severity-error);
+  border: var(--border-thin) solid var(--color-severity-error);
+}
+
+.argmap-btn[data-variant="destructive"]:not(:disabled):hover {
+  background: var(--color-severity-error-bg);
+}
+
+.argmap-btn[data-variant="destructive-solid"] {
+  background: var(--color-severity-error);
+  color: var(--color-text-on-accent);
+  border: var(--border-thin) solid var(--color-severity-error);
+}
+
+.argmap-btn[data-variant="destructive-solid"]:not(:disabled):hover {
+  filter: brightness(1.05);
+}
+
+/* Inputs / textareas / selects — quiet, consistent. */
+.argmap-input,
+input.argmap-input,
+textarea.argmap-input,
+select.argmap-input {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.argmap-input:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.argmap-input:focus,
+.argmap-input:focus-visible {
+  border-color: var(--color-mode-current-accent);
+  box-shadow: 0 0 0 3px var(--color-mode-current-accent-bg);
+  outline: none;
+}
+
+.argmap-input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.argmap-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Card surface — generic card pattern. */
+.argmap-surface {
+  background: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Section heading — uppercase, wide-spaced, secondary. */
+.argmap-section-heading {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* Status badge animation — soft fade-and-scale on status change. */
+@keyframes argmap-status-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.argmap-status-badge {
+  animation: argmap-status-pop var(--duration-base) var(--ease-standard);
+}
+
+/* Generic spinner keyframe (LoadingScreen, async buttons). */
+@keyframes argmap-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dialog mount fade-in. */
+@keyframes argmap-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes argmap-dialog-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.argmap-overlay {
+  animation: argmap-overlay-fade-in var(--duration-fast) var(--ease-standard);
+}
+
+.argmap-dialog {
+  animation: argmap-dialog-pop-in var(--duration-medium) var(--ease-emphasized);
+}
+
+/* Reduce motion — collapse keyframes to instant. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

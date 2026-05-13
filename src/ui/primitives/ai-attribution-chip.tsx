@@ -52,18 +52,20 @@ export function AiAttributionChip({ record }: AiAttributionChipProps): ReactElem
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "2px",
-          padding: "0 var(--space-1)",
-          height: "var(--space-4)",
+          gap: "3px",
+          padding: "1px var(--space-1)",
           borderRadius: "var(--radius-pill)",
           background: "var(--color-ai-accent-bg)",
           color: "var(--color-ai-accent)",
           fontSize: "var(--font-size-2xs)",
           fontWeight: "var(--font-weight-medium)",
           fontFamily: "var(--font-sans)",
+          letterSpacing: "var(--letter-spacing-wide)",
+          textTransform: "uppercase",
+          lineHeight: 1.4,
           cursor: "help",
-          border: "1px solid transparent",
-          transition: `border-color var(--duration-fast) var(--ease-standard)`,
+          border: "var(--border-thin) solid transparent",
+          transition: "border-color var(--duration-fast) var(--ease-standard)",
         }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLElement).style.borderColor = "var(--color-ai-accent-strong)";
@@ -72,7 +74,10 @@ export function AiAttributionChip({ record }: AiAttributionChipProps): ReactElem
           (e.currentTarget as HTMLElement).style.borderColor = "transparent";
         }}
       >
-        ✦ {short}
+        <span aria-hidden style={{ fontSize: "11px", lineHeight: 1 }}>
+          ✦
+        </span>
+        {short}
       </span>
     </Tooltip>
   );

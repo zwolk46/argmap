@@ -1,7 +1,13 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { SuggestionResult, ConfirmationDecision } from "@/llm-hooks";
-import { Drawer, DrawerHeader, DrawerBody, DrawerFooter } from "../primitives/drawer";
+import {
+  Drawer,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  Button,
+} from "../primitives";
 import { useAiSuggestion } from "../hooks/use-ai-suggestion";
 
 export interface SuggestionDrawerProps {
@@ -44,17 +50,37 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
   const result = pending as SuggestionResult<unknown>;
 
   return (
-    <Drawer open={is_open} width="400px">
+    <Drawer open={is_open} width="420px" aria_label="AI suggestion review">
       <DrawerHeader>
-        <span>AI Suggestion</span>
         <span
           style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-ai-accent)",
-            fontFamily: "var(--font-mono)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
           }}
         >
-          ✦ {result.hook_id}
+          <span aria-hidden style={{ color: "var(--color-ai-accent)" }}>
+            ✦
+          </span>
+          AI suggestion
+        </span>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
+            padding: "1px var(--space-2)",
+            borderRadius: "var(--radius-pill)",
+            background: "var(--color-ai-accent-bg)",
+            color: "var(--color-ai-accent)",
+            fontSize: "var(--font-size-2xs)",
+            fontWeight: "var(--font-weight-medium)",
+            fontFamily: "var(--font-mono)",
+            letterSpacing: "var(--letter-spacing-wide)",
+            textTransform: "uppercase",
+          }}
+        >
+          {result.hook_id}
         </span>
       </DrawerHeader>
       <DrawerBody>
@@ -63,15 +89,13 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
             data-testid="suggestion-edit-textarea"
             value={typeof edited_value === "string" ? edited_value : JSON.stringify(edited_value)}
             onChange={(e) => setEditedValue(e.target.value)}
+            className="argmap-input"
             style={{
               width: "100%",
-              minHeight: "120px",
-              padding: "var(--space-2)",
-              border: "var(--border-thin) solid var(--color-border-default)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "var(--font-size-sm)",
+              minHeight: "160px",
               fontFamily: "var(--font-sans)",
               resize: "vertical",
+              lineHeight: "var(--line-height-normal)",
             }}
           />
         ) : (
@@ -79,8 +103,16 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
             data-testid="suggestion-preview"
             style={{
               fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-secondary)",
+              color: "var(--color-text-primary)",
               lineHeight: "var(--line-height-normal)",
+              whiteSpace: "pre-wrap",
+              fontFamily:
+                typeof result.parsed === "string" ? "var(--font-sans)" : "var(--font-mono)",
+              fontSizeAdjust: "0.5",
+              padding: "var(--space-3)",
+              background: "var(--color-surface-pane)",
+              borderRadius: "var(--radius-md)",
+              border: "var(--border-hairline) solid var(--color-border-subtle)",
             }}
           >
             {typeof result.parsed === "string"
@@ -90,58 +122,30 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
         )}
       </DrawerBody>
       <DrawerFooter>
-        <button
+        <Button
+          variant="ghost"
           data-testid="suggestion-reject"
           onClick={handleReject}
           disabled={is_applying}
-          style={{
-            padding: "var(--space-2) var(--space-3)",
-            fontSize: "var(--font-size-sm)",
-            background: "transparent",
-            border: "var(--border-thin) solid var(--color-border-default)",
-            borderRadius: "var(--radius-md)",
-            cursor: is_applying ? "default" : "pointer",
-            opacity: is_applying ? 0.5 : 1,
-            fontFamily: "var(--font-sans)",
-          }}
         >
           Reject
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="secondary"
           data-testid="suggestion-edit"
           onClick={handleEdit}
           disabled={is_applying}
-          style={{
-            padding: "var(--space-2) var(--space-3)",
-            fontSize: "var(--font-size-sm)",
-            background: "var(--color-surface-pane)",
-            border: "var(--border-thin) solid var(--color-border-default)",
-            borderRadius: "var(--radius-md)",
-            cursor: is_applying ? "default" : "pointer",
-            opacity: is_applying ? 0.5 : 1,
-            fontFamily: "var(--font-sans)",
-          }}
         >
           {editing ? "Confirm edit" : "Edit"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="primary"
           data-testid="suggestion-accept"
           onClick={handleAccept}
           disabled={is_applying}
-          style={{
-            padding: "var(--space-2) var(--space-3)",
-            fontSize: "var(--font-size-sm)",
-            background: "var(--color-mode-current-accent)",
-            color: "var(--color-text-on-accent)",
-            border: "none",
-            borderRadius: "var(--radius-md)",
-            cursor: is_applying ? "default" : "pointer",
-            opacity: is_applying ? 0.5 : 1,
-            fontFamily: "var(--font-sans)",
-          }}
         >
           {is_applying ? "Applying…" : "Accept"}
-        </button>
+        </Button>
       </DrawerFooter>
     </Drawer>
   );

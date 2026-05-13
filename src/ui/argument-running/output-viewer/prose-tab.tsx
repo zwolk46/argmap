@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { OutputViewPayload, SessionShape } from "@/state";
 import { useAiSuggestion } from "@/ui";
+import { Button } from "../../primitives/button";
 
 export interface ProseTabProps {
   payload: OutputViewPayload | null;
@@ -34,9 +35,12 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
       <div
         data-testid="prose-tab-empty"
         style={{
-          padding: "var(--space-4, 16px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
-          fontSize: "var(--font-size-sm, 13px)",
+          padding: "var(--space-6)",
+          color: "var(--color-text-tertiary)",
+          fontSize: "var(--font-size-sm)",
+          fontFamily: "var(--font-serif)",
+          fontStyle: "italic",
+          textAlign: "center",
         }}
       >
         No prose available yet.
@@ -48,164 +52,147 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
   const rewritten = payload.prose.rewritten;
   const shape = payload.shape;
 
-  const heading =
-    shape === "determinate"
-      ? "Conclusion"
-      : shape === "conditional"
-        ? "Conditional conclusion"
-        : shape === "contested"
-          ? "Contested"
-          : "Indeterminate";
-
   return (
     <div
       data-testid="prose-tab"
       style={{
-        padding: "var(--space-4, 16px)",
+        padding: "var(--space-6) var(--space-6) var(--space-8)",
         overflow: "auto",
         height: "100%",
+        background: "var(--color-surface-canvas)",
       }}
     >
-      <div data-testid="prose-canonical-block">
+      <article
+        style={{
+          maxWidth: "640px",
+          margin: "0 auto",
+          position: "relative",
+        }}
+      >
+        {/* Floating action row — top right of column. Canonical surface itself remains unlabeled. */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "var(--space-2, 8px)",
+            justifyContent: "flex-end",
+            gap: "var(--space-1)",
+            marginBottom: "var(--space-3)",
           }}
         >
-          <h3
-            style={{
-              margin: 0,
-              fontSize: "var(--font-size-base, 14px)",
-              color: "var(--color-text-primary, #111827)",
-            }}
+          <Button
+            size="sm"
+            variant="ghost"
+            data-testid="prose-copy"
+            onClick={() => copyTextToClipboard(canonical)}
           >
-            {heading}
-          </h3>
-          <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
-            <button
-              type="button"
-              data-testid="prose-copy"
-              onClick={() => copyTextToClipboard(canonical)}
-              style={btn_style()}
+            Copy
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            data-testid="prose-copy-markdown"
+            onClick={() => copyTextToClipboard(proseToMarkdown(canonical, shape))}
+          >
+            Copy as Markdown
+          </Button>
+          {shape !== "incomplete" ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              data-testid="prose-suggest-rewrite"
+              onClick={() => aiSuggestion.invoke("G6", { canonical })}
+              disabled={aiSuggestion.status === "invoking"}
+              leading={
+                <span aria-hidden style={{ color: "var(--color-ai-accent)" }}>
+                  ✦
+                </span>
+              }
             >
-              Copy
-            </button>
-            <button
-              type="button"
-              data-testid="prose-copy-markdown"
-              onClick={() => copyTextToClipboard(proseToMarkdown(canonical, shape))}
-              style={btn_style()}
-            >
-              Copy as Markdown
-            </button>
-            {shape !== "incomplete" ? (
-              <button
-                type="button"
-                data-testid="prose-suggest-rewrite"
-                onClick={() => aiSuggestion.invoke("G6", { canonical })}
-                disabled={aiSuggestion.status === "invoking"}
-                style={btn_style()}
-              >
-                ✦ Suggest rewrite
-              </button>
-            ) : null}
-          </div>
+              Suggest rewrite
+            </Button>
+          ) : null}
         </div>
-        <p
-          style={{
-            margin: 0,
-            fontSize: "var(--font-size-sm, 13px)",
-            lineHeight: 1.65,
-            color: "var(--color-text-primary, #111827)",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {canonical}
-        </p>
-      </div>
-      {rewritten ? (
-        <div
-          data-testid="prose-rewritten-block"
-          style={{
-            marginTop: "var(--space-4, 16px)",
-            padding: "var(--space-3, 12px)",
-            background: "var(--color-surface-pane-secondary, #fafafa)",
-            borderRadius: "var(--border-radius-md, 6px)",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2, 8px)",
-              marginBottom: "var(--space-2, 8px)",
-            }}
-          >
-            <h4
-              style={{
-                margin: 0,
-                fontSize: "var(--font-size-sm, 13px)",
-                color: "var(--color-text-secondary, #6b7280)",
-              }}
-            >
-              Rewritten
-            </h4>
-            <span
-              data-testid="ai-attribution-rewritten"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "2px",
-                padding: "0 var(--space-1, 4px)",
-                height: "var(--space-4, 16px)",
-                borderRadius: "var(--radius-pill, 999px)",
-                background: "var(--color-ai-accent-bg, #ede9fe)",
-                color: "var(--color-ai-accent, #6d28d9)",
-                fontSize: "var(--font-size-2xs, 10px)",
-                fontWeight: 500,
-              }}
-              title="Rewritten by G6"
-            >
-              ✦ rewrite
-            </span>
-            <button
-              type="button"
-              data-testid="prose-copy-rewritten"
-              onClick={() => copyTextToClipboard(rewritten)}
-              style={btn_style()}
-            >
-              Copy rewritten
-            </button>
-          </div>
+
+        {/* Canonical prose — unlabeled, no chrome (F-002 carry: primary surface). */}
+        <div data-testid="prose-canonical-block">
           <p
             style={{
               margin: 0,
-              fontSize: "var(--font-size-xs, 11px)",
-              lineHeight: 1.65,
-              color: "var(--color-text-secondary, #6b7280)",
+              fontFamily: "var(--font-serif)",
+              fontSize: "var(--font-size-md)",
+              lineHeight: "var(--line-height-relaxed)",
+              color: "var(--color-text-primary)",
               whiteSpace: "pre-wrap",
+              letterSpacing: "var(--letter-spacing-normal)",
             }}
           >
-            {rewritten}
+            {canonical}
           </p>
         </div>
-      ) : null}
+
+        {rewritten ? (
+          <section
+            data-testid="prose-rewritten-block"
+            style={{
+              marginTop: "var(--space-6)",
+              maxWidth: "85%",
+              borderLeft: "var(--border-thick) solid var(--color-ai-accent)",
+              background: "var(--color-ai-accent-bg)",
+              borderRadius: "0 var(--radius-md) var(--radius-md) 0",
+              padding: "var(--space-4) var(--space-5)",
+            }}
+          >
+            <header
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "var(--space-2)",
+                marginBottom: "var(--space-2)",
+              }}
+            >
+              <div
+                data-testid="ai-attribution-rewritten"
+                title="Rewritten by G6"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "var(--space-1)",
+                  color: "var(--color-ai-accent)",
+                  fontSize: "var(--font-size-xs)",
+                  fontWeight: "var(--font-weight-medium)",
+                  letterSpacing: "var(--letter-spacing-wide)",
+                  textTransform: "uppercase",
+                }}
+              >
+                <span aria-hidden style={{ fontSize: "12px" }}>
+                  ✦
+                </span>
+                AI rewrite
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                data-testid="prose-copy-rewritten"
+                onClick={() => copyTextToClipboard(rewritten)}
+              >
+                Copy
+              </Button>
+            </header>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: "var(--font-serif)",
+                fontSize: "var(--font-size-base)",
+                lineHeight: "var(--line-height-relaxed)",
+                color: "var(--color-text-primary)",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {rewritten}
+            </p>
+          </section>
+        ) : null}
+      </article>
     </div>
   );
-}
-
-function btn_style(): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "var(--border-thin) solid var(--color-border-tertiary)",
-    borderRadius: "var(--border-radius-md, 6px)",
-    color: "var(--color-text-secondary, #6b7280)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
-    padding: "2px 8px",
-  };
 }

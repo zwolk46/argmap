@@ -1,17 +1,18 @@
 import type { ReactElement } from "react";
 import type { NodeProps, Node as RFNode } from "@xyflow/react";
+import type { NodeType } from "@/schema";
 import { NodeFrame } from "./node-frame";
 import type { FrameCanvasNodeData } from "./types";
 import { Pill } from "../../primitives/pill";
 
 type ND = RFNode<FrameCanvasNodeData>;
 
-function makeNodeRenderer(variant: FrameCanvasNodeData["variant"]) {
+function makeNodeRenderer(variant: FrameCanvasNodeData["variant"], node_type: NodeType | "premise_pill") {
   return function NodeRenderer({ data, selected }: NodeProps<ND>): ReactElement {
     return (
       <NodeFrame
         node_id={data.node_id}
-        node_type={data.node_id as never}
+        node_type={node_type}
         status={data.status}
         attributions={data.attributions}
         primary_text={data.primary_text}
@@ -24,11 +25,11 @@ function makeNodeRenderer(variant: FrameCanvasNodeData["variant"]) {
   };
 }
 
-export const RootQuestionNode = makeNodeRenderer("root_question");
-export const SubQuestionNode = makeNodeRenderer("sub_question");
-export const TermNode = makeNodeRenderer("term");
-export const InterpretationNode = makeNodeRenderer("interpretation");
-export const CheckpointNode = makeNodeRenderer("checkpoint");
+export const RootQuestionNode = makeNodeRenderer("root_question", "RootQuestion");
+export const SubQuestionNode = makeNodeRenderer("sub_question", "SubQuestion");
+export const TermNode = makeNodeRenderer("term", "Term");
+export const InterpretationNode = makeNodeRenderer("interpretation", "Interpretation");
+export const CheckpointNode = makeNodeRenderer("checkpoint", "Checkpoint");
 
 export function LogicalGateNode({ data, selected }: NodeProps<ND>): ReactElement {
   return (
@@ -56,7 +57,7 @@ export function LogicalGateNode({ data, selected }: NodeProps<ND>): ReactElement
   );
 }
 
-export const ConclusionNode = makeNodeRenderer("conclusion");
+export const ConclusionNode = makeNodeRenderer("conclusion", "Conclusion");
 
 export function AuthorityNode({ data, selected }: NodeProps<ND>): ReactElement {
   return (

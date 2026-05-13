@@ -21,49 +21,73 @@ export function InspectorValidationBlock(
   return (
     <div
       style={{
-        marginTop: "var(--space-3, 12px)",
+        marginTop: "var(--space-4)",
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-1, 4px)",
+        gap: "var(--space-2)",
       }}
     >
       <div
+        className="argmap-section-heading"
         style={{
           textTransform: "uppercase",
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
-          letterSpacing: "0.05em",
         }}
       >
         Validation
       </div>
-      {results.map((r, i) => (
-        <div
-          key={`${r.rule_id}-${i}`}
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "var(--space-2, 8px)",
-            padding: "var(--space-2, 8px)",
-            background: "var(--color-surface-pane, #f9fafb)",
-            borderRadius: "var(--radius-sm, 4px)",
-            fontSize: "var(--font-size-sm, 13px)",
-          }}
-        >
-          <SeverityIcon severity={r.severity} />
-          <span
+      {results.map((r, i) => {
+        const tone =
+          r.severity === "error"
+            ? {
+                fg: "var(--color-severity-error)",
+                bg: "var(--color-severity-error-bg)",
+                border: "var(--color-severity-error)",
+              }
+            : r.severity === "warning"
+              ? {
+                  fg: "var(--color-severity-warning)",
+                  bg: "var(--color-severity-warning-bg)",
+                  border: "var(--color-severity-warning)",
+                }
+              : {
+                  fg: "var(--color-text-secondary)",
+                  bg: "var(--color-surface-pane)",
+                  border: "var(--color-border-subtle)",
+                };
+        return (
+          <div
+            key={`${r.rule_id}-${i}`}
             style={{
-              fontFamily: "monospace",
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-tertiary, #9ca3af)",
-              flexShrink: 0,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "var(--space-2)",
+              padding: "var(--space-2) var(--space-3)",
+              background: tone.bg,
+              borderRadius: "var(--radius-md)",
+              borderLeft: `var(--border-thick) solid ${tone.border}`,
+              fontSize: "var(--font-size-sm)",
+              lineHeight: "var(--line-height-snug)",
             }}
           >
-            {r.rule_id}
-          </span>
-          <span style={{ color: "var(--color-text-primary, #111827)" }}>{r.message}</span>
-        </div>
-      ))}
+            <SeverityIcon severity={r.severity} />
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--font-size-2xs)",
+                color: tone.fg,
+                flexShrink: 0,
+                padding: "1px var(--space-1)",
+                background: "var(--color-surface-elevated)",
+                borderRadius: "var(--radius-sm)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {r.rule_id}
+            </span>
+            <span style={{ color: "var(--color-text-primary)", flex: 1 }}>{r.message}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

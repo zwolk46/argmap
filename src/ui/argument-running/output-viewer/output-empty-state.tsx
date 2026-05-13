@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { Spinner } from "../../primitives";
 
 export interface OutputEmptyStateProps {
   message?: string;
@@ -9,13 +10,20 @@ export function OutputEmptyState(props: OutputEmptyStateProps): ReactElement {
     <div
       data-testid="output-empty-state"
       style={{
-        padding: "var(--space-6, 24px)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "var(--space-3)",
+        padding: "var(--space-8) var(--space-5)",
+        height: "100%",
         textAlign: "center",
-        color: "var(--color-text-tertiary, #9ca3af)",
-        fontSize: "var(--font-size-sm, 13px)",
+        color: "var(--color-text-tertiary)",
+        fontSize: "var(--font-size-sm)",
       }}
     >
-      {props.message ?? "Computing…"}
+      <Spinner size={18} />
+      <span>{props.message ?? "Computing…"}</span>
     </div>
   );
 }

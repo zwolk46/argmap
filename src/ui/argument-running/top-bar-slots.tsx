@@ -1,8 +1,16 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { TopBar, ModeFlavorChip, OperatingModeToggle } from "@/ui";
+import {
+  TopBar,
+  ModeFlavorChip,
+  OperatingModeToggle,
+  FrameTitle,
+  FrameSettingsButton,
+  VersionHistoryButton,
+  HelpButton,
+} from "@/ui";
 import type { TopBarSlots } from "@/ui";
-import { useFrameStore } from "@/state";
+import { useFrameStore, useRepository } from "@/state";
 import { FrameVersionDriftIndicator } from "./frame-version-drift-indicator";
 import { StatusSummaryChip } from "./status-summary-chip";
 
@@ -18,9 +26,9 @@ export interface ArgumentRunningTopBarDeps {
 }
 
 export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): TopBarSlots {
-  // This is a hook-shaped helper — must be called from a component context.
   const frame_mode = useFrameStore((s) => s.frame?.mode ?? "general");
   const frame_flavor = useFrameStore((s) => s.frame?.flavor);
+  const has_frame = useFrameStore((s) => s.frame !== null);
 
   return {
     modeToggle: (
@@ -30,18 +38,31 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
         onSwitchToFrame={deps.on_switch_to_frame}
       />
     ),
-    title: deps.title ? (
-      <span
+    title: (
+      <div
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
-          fontWeight: 500,
-          color: "var(--color-text-primary, #111827)",
+          display: "flex",
+          alignItems: "baseline",
+          gap: "var(--space-2)",
+          minWidth: 0,
+          overflow: "hidden",
         }}
-        data-testid="argument-running-title"
       >
-        {deps.title}
-      </span>
-    ) : null,
+        {has_frame ? <FrameTitle read_only /> : null}
+        {has_frame && deps.title ? (
+          <span
+            aria-hidden
+            style={{
+              color: "var(--color-text-tertiary)",
+              fontSize: "var(--font-size-sm)",
+            }}
+          >
+            /
+          </span>
+        ) : null}
+        {deps.title ? <SessionTitleEditor title={deps.title} /> : null}
+      </div>
+    ),
     chips: (
       <>
         <ModeFlavorChip mode={frame_mode} flavor={frame_flavor} />
@@ -52,43 +73,80 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
     indicators: null,
     buttons: (
       <>
-        <button
-          type="button"
-          data-testid="argument-running-session-settings"
-          onClick={deps.on_open_session_settings}
-          disabled={!deps.on_open_session_settings}
-          title={
-            deps.on_open_session_settings
-              ? "Session settings"
-              : "Session settings — available in I.9d"
-          }
-          style={icon_btn_style()}
-        >
-          ⚙
-        </button>
-        <button
-          type="button"
-          data-testid="argument-running-version-history"
-          onClick={deps.on_toggle_version_history}
-          aria-pressed={deps.version_history_open}
-          title="Version history"
-          style={icon_btn_style()}
-        >
-          ⟳
-        </button>
-        <button
-          type="button"
-          data-testid="argument-running-help"
-          onClick={deps.on_toggle_help}
-          aria-pressed={deps.help_pane_open}
-          title="Help"
-          style={icon_btn_style()}
-        >
-          ?
-        </button>
+        <VersionHistoryButton
+          active={deps.version_history_open}
+          onToggle={deps.on_toggle_version_history}
+        />
+        <FrameSettingsButton onOpen={deps.on_open_session_settings} />
+        <HelpButton active={deps.help_pane_open} onToggle={deps.on_toggle_help} />
       </>
     ),
   };
+}
+
+function SessionTitleEditor({ title }: { title: string }): ReactElement {
+  const { session_store } = useRepository();
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(title);
+  React.useEffect(() => {
+    if (!editing) setDraft(title);
+  }, [title, editing]);
+
+  function commit() {
+    const next = draft.trim();
+    if (next && next !== title) {
+      session_store
+        .getState()
+        .applyPatch({ kind: "session_metadata_edited", partial: { title: next } });
+    }
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        data-testid="argument-running-title-input"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        onBlur={commit}
+        style={{
+          fontSize: "var(--font-size-base)",
+          fontWeight: "var(--font-weight-medium)",
+          fontFamily: "var(--font-sans)",
+          color: "var(--color-text-primary)",
+          background: "transparent",
+          border: "none",
+          borderBottom: "var(--border-medium) solid var(--color-mode-current-accent)",
+          outline: "none",
+          padding: "0",
+          width: "240px",
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      data-testid="argument-running-title"
+      onClick={() => setEditing(true)}
+      style={{
+        fontSize: "var(--font-size-base)",
+        fontWeight: "var(--font-weight-medium)",
+        color: "var(--color-text-primary)",
+        cursor: "text",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        maxWidth: "320px",
+      }}
+    >
+      {title}
+    </span>
+  );
 }
 
 export interface ArgumentRunningTopBarProps {
@@ -98,15 +156,4 @@ export interface ArgumentRunningTopBarProps {
 export function ArgumentRunningTopBar(props: ArgumentRunningTopBarProps): ReactElement {
   const slots = useArgumentRunningTopBarSlots(props.deps);
   return <TopBar slots={slots} mode="argument-running" />;
-}
-
-function icon_btn_style(): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    color: "var(--color-text-secondary, #6b7280)",
-    padding: "4px 8px",
-  };
 }

@@ -36,7 +36,7 @@ const VARIANT_STYLES: Record<NodeFrameVariant, React.CSSProperties> = {
   },
   term: {
     border: "var(--border-thin) solid var(--color-border-default)",
-    borderRadius: "2px",
+    borderRadius: "var(--radius-sm)",
   },
   interpretation: {
     border: "var(--border-thin) solid var(--color-border-default)",
@@ -46,19 +46,18 @@ const VARIANT_STYLES: Record<NodeFrameVariant, React.CSSProperties> = {
   checkpoint: {
     border: "var(--border-thin) solid var(--color-border-default)",
     borderRadius: "var(--radius-md)",
-    clipPath:
-      "polygon(10px 0%, calc(100% - 10px) 0%, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0% 50%)",
+    // clipPath would cut off the status badge; render outer hex shadow instead.
   },
   logical_gate: {
     border: "var(--border-thin) solid var(--color-border-default)",
-    borderRadius: "4px",
-    transform: "rotate(45deg)",
+    borderRadius: "var(--radius-sm)",
   },
   conclusion: {
-    border: "var(--border-thick) solid var(--color-border-strong)",
+    border: "var(--border-thin) solid var(--color-border-strong)",
     borderRadius: "var(--radius-md)",
-    outline: "var(--border-thin) solid var(--color-border-strong)",
-    outlineOffset: "3px",
+    // Double-border: outer ring rendered via box-shadow with the gap.
+    boxShadow:
+      "0 0 0 3px var(--color-surface-canvas), 0 0 0 calc(3px + var(--border-thick)) var(--color-border-strong), var(--shadow-sm)",
     fontSize: "var(--font-size-md)",
     fontWeight: "var(--font-weight-semibold)",
   },
@@ -67,7 +66,7 @@ const VARIANT_STYLES: Record<NodeFrameVariant, React.CSSProperties> = {
     borderRadius: "var(--radius-md)",
   },
   premise_pill: {
-    border: "none",
+    border: "var(--border-thin) solid var(--color-border-subtle)",
     borderRadius: "var(--radius-pill)",
     background: "var(--color-status-open-bg)",
     fontSize: "var(--font-size-sm)",
@@ -102,36 +101,44 @@ export function NodeFrame({
       .join(" ") || undefined;
 
   const isGate = variant === "logical_gate";
+  const isCheckpoint = variant === "checkpoint";
 
-  return (
-    <div
-      data-node-id={node_id}
-      data-state={dataState}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: "relative",
-        minWidth: isGate ? "60px" : "120px",
-        padding: isGate ? "var(--space-3)" : "var(--space-3) var(--space-4)",
-        background: display.selected
-          ? "var(--color-surface-selected)"
-          : hovered || display.hovered
-            ? "var(--color-surface-hover)"
-            : "var(--color-surface-elevated)",
-        boxShadow: display.selected ? "var(--shadow-md)" : "var(--shadow-sm)",
-        cursor: "default",
-        opacity: display.not_applicable_dim ? 0.3 : display.foreclosed_strikethrough ? 0.45 : 1,
-        animation: display.recommended_next_pulse
-          ? `pulse-recommended var(--duration-pulse) var(--ease-soft) infinite`
-          : undefined,
-        transition: `opacity var(--duration-base) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard)`,
-        ...variantStyle,
-        ...(display.selected
-          ? { outline: "var(--border-medium) solid var(--color-mode-current-accent)" }
-          : {}),
-        ...(isGate && display.indeterminate_gate_dashed ? { borderStyle: "dashed" } : {}),
-      }}
-    >
+  // Selection outline as box-shadow so it composes with variant box-shadow (e.g. Conclusion double-border).
+  const selectionShadow = display.selected
+    ? "0 0 0 var(--border-medium) var(--color-mode-current-accent), var(--shadow-md)"
+    : null;
+
+  const fontSize = (variantStyle.fontSize as string | undefined) ?? "var(--font-size-base)";
+  const fontWeight =
+    (variantStyle.fontWeight as string | undefined) ?? "var(--font-weight-medium)";
+
+  // Build the inner card. For gate variants we counter-rotate the content
+  // so labels remain upright while the box is rotated 45°.
+  const cardStyle: React.CSSProperties = {
+    position: "relative",
+    minWidth: isGate ? "64px" : "140px",
+    padding: isGate ? "var(--space-3)" : "var(--space-3) var(--space-4)",
+    background: display.selected
+      ? "var(--color-surface-selected)"
+      : hovered || display.hovered
+        ? "var(--color-surface-hover)"
+        : "var(--color-surface-elevated)",
+    cursor: "default",
+    opacity: display.not_applicable_dim ? 0.3 : display.foreclosed_strikethrough ? 0.45 : 1,
+    animation: display.recommended_next_pulse
+      ? "pulse-recommended var(--duration-pulse) var(--ease-soft) infinite"
+      : undefined,
+    transition:
+      "opacity var(--duration-base) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard)",
+    ...variantStyle,
+    ...(isGate ? { transform: "rotate(45deg)", width: "60px", height: "60px" } : {}),
+    ...(selectionShadow ? { boxShadow: selectionShadow } : {}),
+    ...(isGate && display.indeterminate_gate_dashed ? { borderStyle: "dashed" } : {}),
+  };
+
+  // Inner content (label area). For gates, counter-rotate to keep upright.
+  const innerContent = (
+    <>
       <div
         style={{
           display: "flex",
@@ -152,50 +159,127 @@ export function NodeFrame({
           WebkitLineClamp: 3,
           WebkitBoxOrient: "vertical",
           textDecoration: display.foreclosed_strikethrough ? "line-through" : undefined,
-          ...variantStyle,
-          border: "none",
-          background: "none",
-          boxShadow: "none",
-          borderRadius: "none",
-          outline: "none",
-          outlineOffset: "unset",
-          padding: 0,
-          minWidth: "unset",
-          fontSize: (variantStyle.fontSize as string | undefined) ?? "var(--font-size-base)",
-          fontWeight:
-            (variantStyle.fontWeight as string | undefined) ?? "var(--font-weight-medium)",
+          fontSize,
+          fontWeight,
         }}
       >
         {isGate ? children : primary_text}
       </div>
       {!isGate && children}
-      {status && (
+    </>
+  );
+
+  // Wrap with a non-clipping outer for Checkpoint so the status badge isn't cut off.
+  if (isCheckpoint) {
+    return (
+      <div
+        data-node-id={node_id}
+        data-state={dataState}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ position: "relative", display: "inline-block" }}
+      >
         <div
           style={{
-            position: "absolute",
-            top: "-8px",
-            right: "-8px",
+            ...cardStyle,
+            clipPath:
+              "polygon(10px 0%, calc(100% - 10px) 0%, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0% 50%)",
+            boxShadow: display.selected
+              ? "0 0 0 var(--border-medium) var(--color-mode-current-accent), var(--shadow-md)"
+              : "var(--shadow-sm)",
           }}
         >
+          {innerContent}
+        </div>
+        {status && (
+          <div style={{ position: "absolute", top: "-8px", right: "-8px" }}>
+            <StatusBadgeOverlay status={status} legal_mode={legal_mode} />
+          </div>
+        )}
+        {enable_connector_handle && (hovered || display.hovered) && (
+          <div data-testid="connector-handle-indicator" style={connectorHandleStyle} />
+        )}
+      </div>
+    );
+  }
+
+  // Gate: rotated card + counter-rotated content so glyph reads upright.
+  if (isGate) {
+    return (
+      <div
+        data-node-id={node_id}
+        data-state={dataState}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          position: "relative",
+          width: "60px",
+          height: "60px",
+          display: "inline-block",
+        }}
+      >
+        <div style={cardStyle}>
+          <div
+            style={{
+              transform: "rotate(-45deg)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            {innerContent}
+          </div>
+        </div>
+        {status && (
+          <div style={{ position: "absolute", top: "-8px", right: "-8px" }}>
+            <StatusBadgeOverlay status={status} legal_mode={legal_mode} />
+          </div>
+        )}
+        {enable_connector_handle && (hovered || display.hovered) && (
+          <div data-testid="connector-handle-indicator" style={connectorHandleStyle} />
+        )}
+      </div>
+    );
+  }
+
+  // Default path
+  return (
+    <div
+      data-node-id={node_id}
+      data-state={dataState}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        ...cardStyle,
+        boxShadow: display.selected
+          ? selectionShadow ?? "var(--shadow-md)"
+          : (variantStyle.boxShadow as string | undefined) ?? "var(--shadow-sm)",
+      }}
+    >
+      {innerContent}
+      {status && (
+        <div style={{ position: "absolute", top: "-8px", right: "-8px" }}>
           <StatusBadgeOverlay status={status} legal_mode={legal_mode} />
         </div>
       )}
       {enable_connector_handle && (hovered || display.hovered) && (
-        <div
-          data-testid="connector-handle-indicator"
-          style={{
-            position: "absolute",
-            bottom: "-5px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "10px",
-            height: "10px",
-            borderRadius: "50%",
-            background: "var(--color-mode-current-accent)",
-            border: "2px solid var(--color-surface-elevated)",
-          }}
-        />
+        <div data-testid="connector-handle-indicator" style={connectorHandleStyle} />
       )}
     </div>
   );
 }
+
+const connectorHandleStyle: React.CSSProperties = {
+  position: "absolute",
+  bottom: "-5px",
+  left: "50%",
+  transform: "translateX(-50%)",
+  width: "10px",
+  height: "10px",
+  borderRadius: "50%",
+  background: "var(--color-mode-current-accent)",
+  border: "2px solid var(--color-surface-elevated)",
+  boxShadow: "var(--shadow-sm)",
+};

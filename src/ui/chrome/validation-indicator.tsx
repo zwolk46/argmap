@@ -8,6 +8,12 @@ export interface ValidationIndicatorProps {
   onOpenDrawer?: (results: ReadonlyArray<ValidationResult>) => void;
 }
 
+const SEVERITY_TEXT: Record<string, string> = {
+  pass: "No issues",
+  warning: "warning",
+  error: "issue",
+};
+
 export function ValidationIndicator({
   surface,
   onOpenDrawer,
@@ -19,30 +25,51 @@ export function ValidationIndicator({
     surface === "frame_building" ? frame_validation : (compute_result?.validation_results ?? []);
 
   const severity = severityFromValidation(results);
+  const count = results.length;
+  const tone =
+    severity === "error"
+      ? "var(--color-severity-error)"
+      : severity === "warning"
+        ? "var(--color-severity-warning)"
+        : "var(--color-text-tertiary)";
+
+  const label =
+    count === 0
+      ? SEVERITY_TEXT.pass
+      : `${count} ${severity === "error" ? SEVERITY_TEXT.error : SEVERITY_TEXT.warning}${count !== 1 ? "s" : ""}`;
 
   return (
     <button
+      type="button"
       data-testid="validation-indicator"
-      aria-label={`Validation: ${severity}`}
+      aria-label={`Validation: ${label}`}
       onClick={() => onOpenDrawer?.(results)}
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: "var(--space-1)",
-        padding: "var(--space-1) var(--space-2)",
+        height: "26px",
+        padding: "0 var(--space-2)",
         background: "transparent",
-        border: "none",
-        borderRadius: "var(--radius-md)",
+        border: "var(--border-thin) solid transparent",
+        borderRadius: "var(--radius-pill)",
         cursor: "pointer",
         fontSize: "var(--font-size-xs)",
-        color: "var(--color-text-secondary)",
+        fontWeight: "var(--font-weight-medium)",
+        color: tone,
         fontFamily: "var(--font-sans)",
+        transition:
+          "background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
       <SeverityIcon severity={severity} size={14} />
-      <span style={{ fontSize: "var(--font-size-xs)" }}>
-        {results.length > 0 ? `${results.length}` : ""}
-      </span>
+      <span>{label}</span>
     </button>
   );
 }

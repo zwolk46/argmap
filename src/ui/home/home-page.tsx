@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import type { FrameId } from "@/schema";
 import { useAppStateStore, useRepository } from "@/state";
 import { useNavigate } from "../routing";
-import { Dialog } from "../primitives";
+import { Dialog, Button, EmptyState } from "../primitives";
 import { NewFrameWizard, type NewFrameWizardSubmitArgs } from "../onboarding";
 import { FrameSummaryCard, type FrameSummary } from "./frame-summary-card";
 
@@ -67,11 +67,11 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
     <main
       data-testid="home-page"
       style={{
-        padding: "var(--space-6, 24px)",
-        fontFamily: "var(--font-sans)",
-        color: "var(--color-text-primary)",
-        background: "var(--color-surface-canvas)",
+        padding: "var(--space-6) var(--space-6) var(--space-8)",
         minHeight: "100vh",
+        maxWidth: "1200px",
+        margin: "0 auto",
+        background: "var(--color-surface-canvas)",
       }}
     >
       <header
@@ -79,70 +79,96 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "var(--space-5, 20px)",
+          marginBottom: "var(--space-6)",
+          paddingBottom: "var(--space-4)",
+          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
         }}
       >
-        <h1
-          style={{
-            fontSize: "var(--font-size-xl, 20px)",
-            fontWeight: 500,
-            margin: 0,
-          }}
-        >
-          argmap
-        </h1>
-        <button
-          type="button"
+        <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
+          <h1
+            style={{
+              fontSize: "var(--font-size-xl)",
+              fontWeight: "var(--font-weight-semibold)",
+              letterSpacing: "var(--letter-spacing-tight)",
+              margin: 0,
+              color: "var(--color-text-primary)",
+            }}
+          >
+            argmap
+          </h1>
+          <span
+            style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
+              fontFamily: "var(--font-mono)",
+              letterSpacing: "var(--letter-spacing-wide)",
+              textTransform: "uppercase",
+            }}
+          >
+            v1
+          </span>
+        </div>
+        <Button
+          variant="primary"
           data-testid="home-new-frame"
           onClick={() => setWizardOpen(true)}
-          style={{
-            background: "var(--color-mode-current-accent, #1d4ed8)",
-            color: "var(--color-text-on-accent, #ffffff)",
-            border: "none",
-            borderRadius: "var(--radius-md, 6px)",
-            padding: "var(--space-2, 8px) var(--space-4, 16px)",
-            cursor: "pointer",
-          }}
+          leading={
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.7}
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <path d="M8 3v10M3 8h10" />
+            </svg>
+          }
         >
-          + New frame
-        </button>
+          New frame
+        </Button>
       </header>
 
       {is_empty ? (
-        <div
-          data-testid="home-empty-state"
-          style={{
-            textAlign: "center",
-            color: "var(--color-text-secondary, #6b7280)",
-            padding: "var(--space-6, 24px)",
-          }}
-        >
-          <p style={{ fontSize: "var(--font-size-base, 14px)", fontWeight: 500 }}>
-            {EMPTY_COPY.title}
-          </p>
-          <p style={{ fontSize: "var(--font-size-sm, 13px)" }}>{EMPTY_COPY.body}</p>
+        <div data-testid="home-empty-state" style={{ marginTop: "var(--space-8)" }}>
+          <EmptyState
+            label={EMPTY_COPY.title}
+            description={EMPTY_COPY.body}
+            icon={
+              <svg
+                width={48}
+                height={48}
+                viewBox="0 0 48 48"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <rect x="8" y="10" width="32" height="28" rx="3" />
+                <path d="M14 18h20M14 24h14M14 30h8" />
+              </svg>
+            }
+            action={
+              <Button variant="primary" onClick={() => setWizardOpen(true)}>
+                Create your first frame
+              </Button>
+            }
+          />
         </div>
       ) : (
         <>
           {pinned.length > 0 ? (
-            <section data-testid="pinned-section" style={{ marginBottom: "var(--space-5, 20px)" }}>
-              <h2
-                style={{
-                  fontSize: "var(--font-size-xs, 11px)",
-                  textTransform: "uppercase",
-                  color: "var(--color-text-secondary, #6b7280)",
-                  letterSpacing: "0.04em",
-                  margin: "0 0 var(--space-3, 12px)",
-                }}
-              >
-                Pinned
-              </h2>
+            <section data-testid="pinned-section" style={{ marginBottom: "var(--space-6)" }}>
+              <SectionHeading>Pinned</SectionHeading>
               <div
                 style={{
-                  display: "flex",
-                  gap: "var(--space-3, 12px)",
-                  overflowX: "auto",
-                  paddingBottom: "var(--space-2, 8px)",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                  gap: "var(--space-3)",
                 }}
               >
                 {pinned.map((f) => (
@@ -158,22 +184,12 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
           ) : null}
           {recents.length > 0 ? (
             <section data-testid="recents-section">
-              <h2
-                style={{
-                  fontSize: "var(--font-size-xs, 11px)",
-                  textTransform: "uppercase",
-                  color: "var(--color-text-secondary, #6b7280)",
-                  letterSpacing: "0.04em",
-                  margin: "0 0 var(--space-3, 12px)",
-                }}
-              >
-                Recent
-              </h2>
+              <SectionHeading>Recent</SectionHeading>
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                  gap: "var(--space-3, 12px)",
+                  gap: "var(--space-3)",
                 }}
               >
                 {recents.slice(0, 20).map((f) => (
@@ -190,10 +206,28 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
         </>
       )}
 
-      <Dialog open={wizard_open} onClose={() => setWizardOpen(false)} aria_label="New frame">
+      <Dialog
+        open={wizard_open}
+        onClose={() => setWizardOpen(false)}
+        aria_label="New frame"
+        size="md"
+      >
         <NewFrameWizard onSubmit={onSubmitWizard} onCancel={() => setWizardOpen(false)} />
       </Dialog>
     </main>
+  );
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }): ReactElement {
+  return (
+    <h2
+      className="argmap-section-heading"
+      style={{
+        marginBottom: "var(--space-3)",
+      }}
+    >
+      {children}
+    </h2>
   );
 }
 

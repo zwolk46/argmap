@@ -1,11 +1,16 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 
+export type DrawerSide = "right" | "left" | "bottom";
+
 export interface DrawerProps {
   open: boolean;
   onClose?: () => void;
   dismiss_on_escape?: boolean;
   width?: string;
+  height?: string;
+  side?: DrawerSide;
+  aria_label?: string;
   children: ReactNode;
 }
 
@@ -63,6 +68,9 @@ export function Drawer({
   onClose,
   dismiss_on_escape = true,
   width = "360px",
+  height = "260px",
+  side = "right",
+  aria_label,
   children,
 }: DrawerProps): ReactElement | null {
   React.useEffect(() => {
@@ -74,24 +82,55 @@ export function Drawer({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, dismiss_on_escape, onClose]);
 
+  const baseStyle: React.CSSProperties = {
+    position: "fixed",
+    background: "var(--color-surface-elevated)",
+    boxShadow: "var(--shadow-md)",
+    display: "flex",
+    flexDirection: "column",
+    transition: "transform var(--duration-medium) var(--ease-emphasized)",
+    zIndex: 100,
+  };
+
+  let positionalStyle: React.CSSProperties;
+  if (side === "right") {
+    positionalStyle = {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width,
+      borderLeft: "var(--border-hairline) solid var(--color-border-subtle)",
+      transform: open ? "translateX(0)" : "translateX(100%)",
+    };
+  } else if (side === "left") {
+    positionalStyle = {
+      top: 0,
+      left: 0,
+      bottom: 0,
+      width,
+      borderRight: "var(--border-hairline) solid var(--color-border-subtle)",
+      transform: open ? "translateX(0)" : "translateX(-100%)",
+    };
+  } else {
+    positionalStyle = {
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height,
+      borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
+      transform: open ? "translateY(0)" : "translateY(100%)",
+    };
+  }
+
   return (
     <div
       data-testid="drawer"
       data-open={open}
-      style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width,
-        background: "var(--color-surface-elevated)",
-        boxShadow: "var(--shadow-md)",
-        display: "flex",
-        flexDirection: "column",
-        transform: open ? "translateX(0)" : "translateX(100%)",
-        transition: `transform var(--duration-medium) var(--ease-emphasized)`,
-        zIndex: 100,
-      }}
+      data-side={side}
+      role="dialog"
+      aria-label={aria_label}
+      aria-hidden={!open}
+      style={{ ...baseStyle, ...positionalStyle }}
     >
       {children}
     </div>

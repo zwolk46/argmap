@@ -51,20 +51,36 @@ export function ConclusionDirectionEditorRow(
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "var(--space-2, 8px)",
-        padding: "var(--space-2, 8px) var(--space-3, 12px)",
-        borderLeft: "2px solid var(--color-severity-error, #dc2626)",
-        marginBottom: "var(--space-1, 4px)",
+        gap: "var(--space-2)",
+        padding: "var(--space-2) var(--space-3)",
+        borderLeft: "var(--border-thick) solid var(--color-severity-error)",
+        background: "var(--color-severity-error-bg)",
+        borderRadius: "0 var(--radius-md) var(--radius-md) 0",
+        marginBottom: "var(--space-2)",
       }}
     >
-      <span style={{ flex: 1, fontSize: "var(--font-size-sm, 13px)", fontWeight: 500 }}>
+      <span
+        style={{
+          flex: 1,
+          fontSize: "var(--font-size-sm)",
+          fontWeight: "var(--font-weight-medium)",
+          color: "var(--color-text-primary)",
+        }}
+      >
         {conclusion_title}
       </span>
       <span
         data-testid="current-kind-chip"
         style={{
-          fontSize: "var(--font-size-2xs, 10px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          fontSize: "var(--font-size-2xs)",
+          color: "var(--color-mode-current-accent)",
+          background: "var(--color-mode-current-accent-bg)",
+          padding: "1px var(--space-2)",
+          borderRadius: "var(--radius-pill)",
+          fontWeight: "var(--font-weight-medium)",
+          letterSpacing: "var(--letter-spacing-wide)",
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
         }}
       >
         {editor.current_direction_kind} → {editor.required_direction_kind}
@@ -73,7 +89,13 @@ export function ConclusionDirectionEditorRow(
         data-testid="direction-select"
         value={selected}
         onChange={handleChange}
-        style={{ fontSize: "var(--font-size-sm, 13px)" }}
+        className="argmap-input"
+        style={{
+          fontSize: "var(--font-size-sm)",
+          width: "auto",
+          minWidth: "180px",
+          padding: "var(--space-1) var(--space-2)",
+        }}
       >
         <option value="">Pick {editor.required_direction_kind} direction</option>
         {editor.options.map((opt) => (

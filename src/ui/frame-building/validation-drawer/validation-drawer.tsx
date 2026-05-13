@@ -2,7 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore, useAppStateStore, useRepository } from "@/state";
 import { selectValidationDrawer } from "@/state";
-import { Drawer } from "../../primitives";
+import { Drawer, Pill, IconButton, SeverityIcon } from "../../primitives";
 import { ValidationRow } from "./validation-row";
 import { dismissalKeyFor, partitionByDismissal } from "./dismissed-warnings";
 
@@ -40,77 +40,86 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
   const [show_dismissed, set_show_dismissed] = React.useState(false);
 
   return (
-    <Drawer open={open} onClose={on_close}>
+    <Drawer
+      open={open}
+      onClose={on_close}
+      side="bottom"
+      height="280px"
+      aria_label="Validation issues"
+    >
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "var(--space-3, 12px)",
-            padding: "var(--space-3, 12px) var(--space-4, 16px)",
-            borderBottom: "1px solid var(--color-border, #e5e7eb)",
+            gap: "var(--space-3)",
+            padding: "var(--space-3) var(--space-4)",
+            borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
+            background: "var(--color-surface-elevated)",
             flexShrink: 0,
           }}
         >
-          <span style={{ fontWeight: 600, fontSize: "var(--font-size-sm, 13px)" }}>Validation</span>
+          <span
+            style={{
+              fontWeight: "var(--font-weight-semibold)",
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-primary)",
+              letterSpacing: "var(--letter-spacing-tight)",
+            }}
+          >
+            Validation
+          </span>
           {errors.length > 0 && (
-            <span
-              style={{
-                padding: "1px 8px",
-                background: "var(--color-danger-subtle, #fef2f2)",
-                color: "var(--color-danger, #dc2626)",
-                borderRadius: "9999px",
-                fontSize: "var(--font-size-xs, 11px)",
-                fontWeight: 600,
-              }}
-            >
+            <Pill variant="severity_error">
+              <SeverityIcon severity="error" size={12} />
               {errors.length} error{errors.length !== 1 ? "s" : ""}
-            </span>
+            </Pill>
           )}
           {warnings.length > 0 && (
-            <span
-              style={{
-                padding: "1px 8px",
-                background: "var(--color-warning-subtle, #fffbeb)",
-                color: "var(--color-warning, #d97706)",
-                borderRadius: "9999px",
-                fontSize: "var(--font-size-xs, 11px)",
-                fontWeight: 600,
-              }}
-            >
+            <Pill variant="severity_warning">
+              <SeverityIcon severity="warning" size={12} />
               {warnings.length} warning{warnings.length !== 1 ? "s" : ""}
-            </span>
+            </Pill>
           )}
           <div style={{ marginLeft: "auto" }}>
-            <button
-              type="button"
-              onClick={on_close}
-              aria-label="Close validation drawer"
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "16px",
-                color: "var(--color-text-secondary, #6b7280)",
-              }}
-            >
-              ×
-            </button>
+            <IconButton size="sm" aria-label="Close validation drawer" onClick={on_close}>
+              <svg
+                width={14}
+                height={14}
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.7}
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </IconButton>
           </div>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflow: "auto" }}>
+        <div style={{ flex: 1, overflow: "auto", background: "var(--color-surface-pane)" }}>
           {entries.length === 0 && (
             <div
               style={{
-                padding: "var(--space-6, 24px)",
+                padding: "var(--space-6)",
                 textAlign: "center",
-                color: "var(--color-text-secondary, #6b7280)",
-                fontSize: "var(--font-size-sm, 13px)",
+                color: "var(--color-status-satisfied)",
+                background: "var(--color-status-satisfied-bg)",
+                fontSize: "var(--font-size-sm)",
+                fontWeight: "var(--font-weight-medium)",
+                margin: "var(--space-3)",
+                borderRadius: "var(--radius-md)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "var(--space-2)",
               }}
             >
+              <SeverityIcon severity="pass" size={14} />
               No validation issues
             </div>
           )}
@@ -204,10 +213,10 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
 }
 
 const GROUP_LABEL_STYLE: React.CSSProperties = {
-  padding: "8px 12px 4px",
+  padding: "var(--space-3) var(--space-4) var(--space-1)",
   textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-  fontWeight: 600,
+  fontSize: "var(--font-size-xs)",
+  color: "var(--color-text-secondary)",
+  letterSpacing: "var(--letter-spacing-wide)",
+  fontWeight: "var(--font-weight-semibold)",
 };

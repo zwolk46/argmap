@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, KeyboardEvent } from "react";
 import type { FrameId } from "@/schema";
 import { ModeFlavorChip } from "../chrome";
 
@@ -31,69 +31,159 @@ export function relativeTime(iso: string): string {
 
 export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
   const { summary, onOpen, onTogglePin } = props;
+
+  function handleKey(e: KeyboardEvent<HTMLElement>) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpen(summary.id);
+    }
+  }
+
   return (
     <article
       data-testid="frame-summary-card"
       data-frame-id={summary.id}
+      className="argmap-card"
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        // Ignore clicks on the pin button child.
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-testid="frame-card-pin"]')) return;
+        onOpen(summary.id);
+      }}
+      onKeyDown={handleKey}
       style={{
-        padding: "var(--space-4, 16px)",
-        borderRadius: "var(--radius-md, 6px)",
-        border: "var(--border-thin, 1px) solid var(--color-border-default, #e5e7eb)",
-        background: "var(--color-surface-elevated, #ffffff)",
+        padding: "var(--space-4)",
+        borderRadius: "var(--radius-md)",
+        border: "var(--border-thin) solid var(--color-border-subtle)",
+        background: "var(--color-surface-elevated)",
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-2, 8px)",
+        gap: "var(--space-3)",
         minWidth: 220,
+        boxShadow: "var(--shadow-sm)",
+        cursor: "pointer",
+        position: "relative",
       }}
     >
-      <header style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2, 8px)" }}>
-        <button
-          type="button"
+      <header
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "var(--space-2)",
+          minHeight: "44px",
+        }}
+      >
+        <h3
           data-testid="frame-card-open"
-          onClick={() => onOpen(summary.id)}
           style={{
             flex: 1,
-            textAlign: "left",
-            background: "transparent",
-            border: "none",
-            padding: 0,
-            cursor: "pointer",
-            fontSize: "var(--font-size-base, 14px)",
-            fontWeight: 500,
-            color: "var(--color-text-primary, #111827)",
+            fontSize: "var(--font-size-base)",
+            fontWeight: "var(--font-weight-semibold)",
+            color: "var(--color-text-primary)",
+            margin: 0,
+            lineHeight: "var(--line-height-snug)",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            wordBreak: "break-word",
+            letterSpacing: "var(--letter-spacing-tight)",
           }}
         >
-          {summary.title}
-        </button>
+          {summary.title || "Untitled frame"}
+        </h3>
         <button
           type="button"
           data-testid="frame-card-pin"
           aria-pressed={summary.pinned}
-          onClick={() => onTogglePin(summary.id, !summary.pinned)}
+          aria-label={summary.pinned ? "Unpin frame" : "Pin frame"}
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin(summary.id, !summary.pinned);
+          }}
           title={summary.pinned ? "Unpin" : "Pin"}
           style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "26px",
+            height: "26px",
             background: "transparent",
             border: "none",
             cursor: "pointer",
             color: summary.pinned
-              ? "var(--color-milestone-star, #d97706)"
-              : "var(--color-text-tertiary, #9ca3af)",
+              ? "var(--color-milestone-star)"
+              : "var(--color-text-tertiary)",
+            borderRadius: "var(--radius-md)",
+            transition: "background-color var(--duration-fast) var(--ease-standard)",
           }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLElement).style.background = "transparent")
+          }
         >
-          {summary.pinned ? "★" : "☆"}
+          {summary.pinned ? (
+            <svg width={14} height={14} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+              <path d="M8 1.5l1.7 4 4.3.4-3.3 2.9.9 4.2L8 10.8l-3.6 2.2.9-4.2-3.3-2.9 4.3-.4z" />
+            </svg>
+          ) : (
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M8 1.5l1.7 4 4.3.4-3.3 2.9.9 4.2L8 10.8l-3.6 2.2.9-4.2-3.3-2.9 4.3-.4z" />
+            </svg>
+          )}
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              width: 1,
+              height: 1,
+              margin: -1,
+              padding: 0,
+              overflow: "hidden",
+              clip: "rect(0 0 0 0)",
+              whiteSpace: "nowrap",
+              border: 0,
+            }}
+          >
+            {summary.pinned ? "★" : "☆"}
+          </span>
         </button>
       </header>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2, 8px)" }}>
+      <footer
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--space-2)",
+          marginTop: "auto",
+          paddingTop: "var(--space-1)",
+          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
+        }}
+      >
         <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
         <span
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-tertiary)",
+            fontVariantNumeric: "tabular-nums",
           }}
         >
           {relativeTime(summary.updated_at)}
         </span>
-      </div>
+      </footer>
     </article>
   );
 }

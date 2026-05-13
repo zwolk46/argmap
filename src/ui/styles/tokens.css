@@ -79,8 +79,41 @@
   --color-milestone-star: hsl(38 60% 48%);
 
   /* Focus ring */
-  --focus-ring: 2px solid var(--color-mode-current-accent);
+  --focus-ring: var(--border-medium) solid var(--color-mode-current-accent);
   --focus-ring-offset: 2px;
+
+  /* Aliases for legacy/consumer-side token names that components reference.
+     Map every legacy name to its canonical equivalent so missing-token
+     fallbacks (which were silently going to hex literals) resolve correctly. */
+  --color-border: var(--color-border-default);
+  --color-border-tertiary: var(--color-border-subtle);
+  --color-border-secondary: var(--color-border-default);
+  --color-danger: var(--color-severity-error);
+  --color-danger-subtle: var(--color-severity-error-bg);
+  --color-danger-border: var(--color-severity-error);
+  --color-warning: var(--color-severity-warning);
+  --color-warning-subtle: var(--color-severity-warning-bg);
+  --color-accent: var(--color-mode-current-accent);
+  --color-primary: var(--color-mode-current-accent);
+  --color-primary-subtle: var(--color-mode-current-accent-bg);
+  --color-text: var(--color-text-primary);
+  --color-text-accent: var(--color-mode-current-accent);
+  --color-text-danger: var(--color-severity-error);
+  --color-text-success: var(--color-status-satisfied);
+  --color-text-warning: var(--color-severity-warning);
+  --color-background-accent: var(--color-mode-current-accent-bg);
+  --color-background-danger: var(--color-severity-error-bg);
+  --color-background-secondary: var(--color-surface-pane);
+  --color-background-success: var(--color-status-satisfied-bg);
+  --color-background-warning: var(--color-severity-warning-bg);
+  --color-surface-muted: var(--color-surface-pane);
+  --color-surface-pane-secondary: var(--color-surface-pane);
+  --color-focus-ring: var(--color-mode-current-accent);
+  --border-radius-md: var(--radius-md);
+  --border-radius-sm: var(--radius-sm);
+  --border-radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-pill);
+  --space-7: 40px;
 
   /* Typography — font families */
   --font-sans:

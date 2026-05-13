@@ -28,10 +28,9 @@ export function Inspector(props: InspectorProps): ReactElement {
       style={{
         height: "100%",
         overflow: "auto",
-        background: "var(--color-surface-elevated, #fff)",
-        boxShadow: "var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1))",
-        borderRadius: "var(--radius-md, 8px)",
-        padding: "var(--space-4, 16px)",
+        background: "var(--color-surface-elevated)",
+        padding: "var(--space-4) var(--space-5)",
+        fontFamily: "var(--font-sans)",
       }}
     >
       {!frame_version || selection.kind === "empty" ? (

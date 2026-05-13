@@ -270,9 +270,10 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         edgesReconnectable={!read_only}
         nodesConnectable={!read_only}
         fitView
+        proOptions={{ hideAttribution: true }}
         style={{ background: "var(--color-surface-canvas)" }}
       >
-        <Background />
+        <Background gap={22} size={1} color="var(--color-border-subtle)" />
         <CanvasMinimap />
         <CanvasToolbar
           foreclosure_visibility={fc_visibility}
