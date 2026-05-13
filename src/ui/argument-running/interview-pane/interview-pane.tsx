@@ -50,11 +50,13 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
   const recommended_next_id = items.find((it) => it.recommended_next === true)?.node_id ?? null;
 
   // Render-time filter and search; preserves canonical order from the selector.
+  // P0-19: resolve each item's node_type so the Checkpoint/Term/Interpretation
+  // chips actually filter.
   const filtered = items.filter((item) => {
-    if (!passesFilter(item, filter)) return false;
+    const node = frame_version?.nodes.find((n) => n.id === item.node_id);
+    if (!passesFilter(item, filter, node?.type)) return false;
     if (search_text.length === 0) return true;
     if (!frame_version) return true;
-    const node = frame_version.nodes.find((n) => n.id === item.node_id);
     if (!node) return false;
     return searchMatches(statementPreviewFor(node), search_text);
   });

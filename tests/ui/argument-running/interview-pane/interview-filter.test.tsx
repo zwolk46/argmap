@@ -71,4 +71,43 @@ describe("passesFilter", () => {
     const state: InterviewFilterState = { ...DEFAULT_INTERVIEW_FILTER, reasons: [] };
     expect(passesFilter(makeItem({ reason: "contested" }), state)).toBe(true);
   });
+
+  // P0-19 regression: chips visibly toggled but the list never changed
+  // because passesFilter never honored state.node_types.
+  it("filters by node_types when chips are active (P0-19)", () => {
+    const state: InterviewFilterState = {
+      ...DEFAULT_INTERVIEW_FILTER,
+      node_types: ["Checkpoint"],
+    };
+    const item = makeItem();
+    expect(passesFilter(item, state, "Checkpoint")).toBe(true);
+    expect(passesFilter(item, state, "Term")).toBe(false);
+    expect(passesFilter(item, state, "Interpretation")).toBe(false);
+  });
+
+  it("treats an empty node_types array as 'allow all node types'", () => {
+    const state: InterviewFilterState = { ...DEFAULT_INTERVIEW_FILTER, node_types: [] };
+    expect(passesFilter(makeItem(), state, "Term")).toBe(true);
+    expect(passesFilter(makeItem(), state, "Checkpoint")).toBe(true);
+  });
+
+  it("with multiple chips active, passes any item whose type is in the set", () => {
+    const state: InterviewFilterState = {
+      ...DEFAULT_INTERVIEW_FILTER,
+      node_types: ["Checkpoint", "Interpretation"],
+    };
+    expect(passesFilter(makeItem(), state, "Checkpoint")).toBe(true);
+    expect(passesFilter(makeItem(), state, "Interpretation")).toBe(true);
+    expect(passesFilter(makeItem(), state, "Term")).toBe(false);
+  });
+
+  it("when node_type is undefined (legacy caller), skips node-type filtering — preserves backward compatibility", () => {
+    const state: InterviewFilterState = {
+      ...DEFAULT_INTERVIEW_FILTER,
+      node_types: ["Checkpoint"],
+    };
+    // Without a resolved node_type, the chip filter is a no-op (item passes
+    // unless something else excludes it).
+    expect(passesFilter(makeItem(), state)).toBe(true);
+  });
 });

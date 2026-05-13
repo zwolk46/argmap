@@ -104,12 +104,31 @@ export function InterviewFilter(props: InterviewFilterProps): ReactElement {
   );
 }
 
-export function passesFilter(item: InterviewItem, state: InterviewFilterState): boolean {
+export function passesFilter(
+  item: InterviewItem,
+  state: InterviewFilterState,
+  /**
+   * The resolved NodeType for `item.node_id` in the current frame_version.
+   * P0-19: InterviewItem only carries the id, so the caller must look up
+   * the type to apply the Checkpoint/Term/Interpretation filter chips.
+   * Pass undefined (or omit) to skip node-type filtering — handy for the
+   * existing pure-helper tests that don't need a frame_version in scope.
+   */
+  node_type?: "Checkpoint" | "Term" | "Interpretation" | string,
+): boolean {
   if (state.jurisdictional_scope === "jurisdictional_only" && !item.is_jurisdictional) {
     return false;
   }
   if (state.reasons.length > 0 && !state.reasons.includes(item.reason)) {
     return false;
+  }
+  // P0-19: chips visibly toggled but the list never changed because this
+  // branch wasn't here. Now: if any node-type chips are active, the item's
+  // resolved node_type must be in the allowed set. When `node_type` is
+  // undefined (test fixtures or pre-resolution callers), node-type
+  // filtering is skipped.
+  if (state.node_types.length > 0 && node_type !== undefined) {
+    if (!(state.node_types as ReadonlyArray<string>).includes(node_type)) return false;
   }
   return true;
 }
