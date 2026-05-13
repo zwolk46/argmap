@@ -218,29 +218,90 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
             }
             center={
               frame_version ? (
-                <FrameCanvas
-                  frame_version={frame_version}
-                  layout_result={layout_result}
-                  operating_mode="frame_building"
-                  selection={
-                    selection.kind === "node"
-                      ? [selection.node_id]
-                      : selection.kind === "multi"
-                        ? selection.node_ids
-                        : []
-                  }
-                  on_node_moved={(node_id, x, y) => {
-                    frame_store.getState().applyPatch({
-                      kind: "node_edited",
-                      node_id,
-                      partial: { presentation: { x, y } } as unknown as Partial<Node>,
-                    });
-                  }}
-                  on_edge_created={handleEdgeCreated}
-                  onSelectionChange={handleSelectionChange}
-                  onAutoArrange={() => setAutoArrangeOpen(true)}
-                  handle={canvas_ref}
-                />
+                <React.Fragment>
+                  <FrameCanvas
+                    frame_version={frame_version}
+                    layout_result={layout_result}
+                    operating_mode="frame_building"
+                    selection={
+                      selection.kind === "node"
+                        ? [selection.node_id]
+                        : selection.kind === "multi"
+                          ? selection.node_ids
+                          : []
+                    }
+                    on_node_moved={(node_id, x, y) => {
+                      frame_store.getState().applyPatch({
+                        kind: "node_edited",
+                        node_id,
+                        partial: { presentation: { x, y } } as unknown as Partial<Node>,
+                      });
+                    }}
+                    on_edge_created={handleEdgeCreated}
+                    on_node_delete_requested={(node_id) =>
+                      cascade_confirmation.request(node_id)
+                    }
+                    on_edge_delete_requested={(edge_id) =>
+                      frame_store.getState().applyPatch({ kind: "edge_removed", edge_id })
+                    }
+                    onSelectionChange={handleSelectionChange}
+                    onAutoArrange={() => setAutoArrangeOpen(true)}
+                    handle={canvas_ref}
+                  />
+                  {/* P1: empty-but-loaded frame has zero nodes — give the user
+                      a hint where to start. */}
+                  {frame_version.nodes.length === 0 ? (
+                    <div
+                      data-testid="empty-frame-hint"
+                      style={{
+                        position: "absolute",
+                        inset: "0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "var(--space-4) var(--space-5)",
+                          background: "var(--color-surface-elevated)",
+                          color: "var(--color-text-secondary)",
+                          borderRadius: "var(--radius-md)",
+                          boxShadow: "var(--shadow-sm)",
+                          fontSize: "var(--font-size-sm)",
+                          pointerEvents: "auto",
+                          maxWidth: "320px",
+                          textAlign: "center",
+                        }}
+                      >
+                        Add a Root Question from the palette on the left to begin.
+                      </div>
+                    </div>
+                  ) : null}
+                  {/* P1: surface layout-worker errors instead of swallowing
+                      them and showing a stale graph. */}
+                  {layout_status.kind === "error" ? (
+                    <div
+                      data-testid="layout-error-banner"
+                      style={{
+                        position: "absolute",
+                        top: "var(--space-3)",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        padding: "var(--space-2) var(--space-3)",
+                        background: "var(--color-severity-warning-bg)",
+                        color: "var(--color-severity-warning)",
+                        border: "var(--border-thin) solid var(--color-severity-warning)",
+                        borderRadius: "var(--radius-md)",
+                        fontSize: "var(--font-size-xs)",
+                        zIndex: 10,
+                      }}
+                    >
+                      Layout pass failed; showing last-known positions.
+                    </div>
+                  ) : null}
+                </React.Fragment>
               ) : (
                 <CanvasEmptyState
                   label={snapshot.error ? "We couldn't load this frame" : "No frame loaded"}

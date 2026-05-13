@@ -47,6 +47,12 @@ export interface FrameCanvasProps {
     target: NodeRef,
     drop_position?: { x: number; y: number },
   ) => void;
+  /** P1: keyboard Delete/Backspace on a selected node. Caller should run the
+   *  cascade-delete confirmation flow. */
+  on_node_delete_requested?: (node_id: NodeRef) => void;
+  /** P1: keyboard Delete/Backspace on a selected edge. Caller should dispatch
+   *  the matching edge_removed patch. */
+  on_edge_delete_requested?: (edge_id: string) => void;
   onSelectionChange?: (node_ids: ReadonlyArray<NodeRef>) => void;
   onAutoArrange?: () => void;
   search?: string;
@@ -370,16 +376,21 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     onSelectionChange?.(nodes.map((n) => n.data.node_id));
   }
 
+  // P1: handleConnect fires BEFORE handleConnectEnd, so last_connect_position
+  // was null when on_edge_created tried to use it — the popup opened at
+  // window center instead of near the drop. We now stash the validated
+  // connection here and fire on_edge_created from handleConnectEnd, by
+  // which point we have a drop position.
+  const pending_connection = React.useRef<{ source: NodeRef; target: NodeRef } | null>(null);
+
   function handleConnect(connection: Connection) {
     if (read_only) return;
     if (!connection.source || !connection.target) return;
     if (connection.source === connection.target) return;
-    on_edge_created?.(
-      connection.source as NodeRef,
-      connection.target as NodeRef,
-      last_connect_position.current ?? undefined,
-    );
-    last_connect_position.current = null;
+    pending_connection.current = {
+      source: connection.source as NodeRef,
+      target: connection.target as NodeRef,
+    };
   }
 
   function handleConnectEnd(event: MouseEvent | TouchEvent) {
@@ -390,6 +401,34 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
           ? { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY }
           : null;
     last_connect_position.current = point;
+    // Fire on_edge_created here so the drop position is available.
+    if (pending_connection.current) {
+      on_edge_created?.(
+        pending_connection.current.source,
+        pending_connection.current.target,
+        point ?? undefined,
+      );
+      pending_connection.current = null;
+    }
+  }
+
+  // P1: keyboard delete. React Flow's deleteKeyCode (default Backspace +
+  // Delete) emits onNodesDelete / onEdgesDelete when the user presses one
+  // with a selection. We forward both as cascade-delete requests for nodes
+  // and direct edge removals for edges.
+  function handleNodesDelete(deleted_nodes: RFNode<FrameCanvasNodeData>[]) {
+    if (read_only) return;
+    for (const n of deleted_nodes) {
+      props.on_node_delete_requested?.(n.data.node_id);
+    }
+  }
+  function handleEdgesDelete(deleted_edges: RFEdge<FrameCanvasEdgeData>[]) {
+    if (read_only) return;
+    for (const e of deleted_edges) {
+      // Skip overlay / option synthetic ids.
+      if (e.id.startsWith("overlay_") || e.id.startsWith("checkpoint_option_")) continue;
+      props.on_edge_delete_requested?.(e.id);
+    }
   }
 
   return (
@@ -407,6 +446,9 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         onSelectionChange={handleSelectionChange as never}
         onConnect={handleConnect}
         onConnectEnd={handleConnectEnd}
+        onNodesDelete={handleNodesDelete}
+        onEdgesDelete={handleEdgesDelete}
+        deleteKeyCode={read_only ? null : ["Delete", "Backspace"]}
         nodesDraggable={!read_only}
         edgesReconnectable={!read_only}
         nodesConnectable={!read_only}

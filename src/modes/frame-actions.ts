@@ -37,7 +37,20 @@ function nextFrameVersion(fv: FrameVersion, nodes?: Node[], edges?: Edge[]): Fra
 }
 
 function applyNodePartial(existing: Node, partial: Partial<Node>): Node {
-  return { ...existing, ...partial, id: existing.id, type: existing.type } as Node;
+  // P1: deep-merge `presentation` so a drag-stop patch that only carries
+  // {x, y} doesn't wipe `collapsed` and other presentation hints. Before
+  // this, dragging a collapsed SubQuestion silently un-collapsed it.
+  const merged_presentation =
+    "presentation" in partial && partial.presentation
+      ? { ...(existing.presentation ?? {}), ...partial.presentation }
+      : existing.presentation;
+  return {
+    ...existing,
+    ...partial,
+    id: existing.id,
+    type: existing.type,
+    presentation: merged_presentation,
+  } as Node;
 }
 
 function applyEdgePartial(existing: Edge, partial: Partial<Edge>): Edge {
