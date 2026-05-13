@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { SessionId, NodeRef, FrameVersionId } from "@/schema";
-import { useRepository, useSessionStore, useFrameStore } from "@/state";
+import { useRepository, useSessionStore, useFrameStore, selectInterviewItems } from "@/state";
 import {
   HelpGlossaryPane,
   SuggestionDrawer,
@@ -51,6 +51,13 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
   const frame_current_version_id = useFrameStore(
     (s) => (s.frame_version?.id ?? null) as FrameVersionId | null,
   );
+
+  // P0-17 ride-along: the interview pane and canvas both want the
+  // recommended-next item id. Compute it at the page level so the canvas
+  // pulse animation and the interview-pane highlight stay in sync.
+  const interview_items = useSessionStore((s) => selectInterviewItems(s));
+  const recommended_next_id =
+    interview_items.find((it) => it.recommended_next === true)?.node_id ?? null;
 
   // Mount: load session, then load parent frame for drift comparison.
   React.useEffect(() => {
@@ -132,7 +139,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
                     selected_item_id={selected_item_id}
                     on_node_clicked_in_overlay={(node_id) => setSelectedItemId(node_id)}
                     frame_canvas_handle={canvas_ref}
-                    recommended_next_id={null}
+                    recommended_next_id={recommended_next_id}
                   />
                 </div>
                 {selected_item_id !== null ? (

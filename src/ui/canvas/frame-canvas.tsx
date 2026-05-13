@@ -51,19 +51,55 @@ export interface FrameCanvasProps {
   onAutoArrange?: () => void;
   search?: string;
   handle?: React.Ref<FrameCanvasHandle>;
+  /**
+   * P0-17 — path-to-conclusion animation inputs. Ordered list of node ids
+   * the runtime resolved as the primary path. When this changes between
+   * renders, overlay edges replay their fade-in trace.
+   */
+  primary_path_node_ids?: ReadonlyArray<NodeRef>;
+  /**
+   * P0-17 — compute_result.active_set passed through. Nodes outside the
+   * set render desaturated (heatmap steady state).
+   */
+  active_set?: ReadonlySet<NodeRef> | ReadonlyArray<NodeRef>;
+  /**
+   * P0-17 — fingerprint of the primary-path sequence. Used as a stable
+   * react key on overlay edges so trace animation replays when path
+   * changes. Computed by ArgumentRunningPage from primary_path_node_ids.
+   */
+  path_fingerprint?: string;
+  /**
+   * P0-17 ride-along — the interview's recommended-next node id. When
+   * supplied, that node's display.recommended_next_pulse is true so the
+   * existing pulse-recommended keyframe actually fires (the infra was
+   * wired in node-frame.tsx but the flag was hardcoded false).
+   */
+  recommended_next_id?: NodeRef | null;
 }
 
 function defaultDisplayFlags(
   node_id: NodeRef,
   selection?: ReadonlyArray<NodeRef>,
+  primary_path_set?: ReadonlySet<NodeRef>,
+  active_set_set?: ReadonlySet<NodeRef>,
+  recommended_next_id?: NodeRef | null,
 ): NodeDisplayFlags {
+  // P0-17: on-primary-path / off-active-set determine the heatmap; when
+  // either input is absent, both flags stay false and the canvas renders
+  // exactly as before (back-compat for Frame Building, which doesn't
+  // compute primary_path).
+  const on_primary_path = primary_path_set !== undefined ? primary_path_set.has(node_id) : false;
+  const has_active_signal = active_set_set !== undefined && active_set_set.size > 0;
+  const off_active_set = has_active_signal ? !active_set_set!.has(node_id) : false;
   return {
     selected: selection?.includes(node_id) ?? false,
     hovered: false,
     not_applicable_dim: false,
     foreclosed_strikethrough: false,
-    recommended_next_pulse: false,
+    recommended_next_pulse: recommended_next_id === node_id,
     indeterminate_gate_dashed: false,
+    on_primary_path,
+    off_active_set,
   };
 }
 
@@ -75,6 +111,9 @@ function buildRFNodes(
   legal_mode: boolean,
   selection: ReadonlyArray<NodeRef> | undefined,
   read_only: boolean,
+  primary_path_set: ReadonlySet<NodeRef> | undefined,
+  active_set: ReadonlySet<NodeRef> | undefined,
+  recommended_next_id: NodeRef | null | undefined,
 ): RFNode<FrameCanvasNodeData>[] {
   return frame_version.nodes.map((node) => {
     // P0-10: prefer the node's own anchored coordinates (set by a drag) over
@@ -112,7 +151,13 @@ function buildRFNodes(
       Premise: "premise_pill",
     };
 
-    const display = defaultDisplayFlags(node.id as NodeRef, selection);
+    const display = defaultDisplayFlags(
+      node.id as NodeRef,
+      selection,
+      primary_path_set,
+      active_set,
+      recommended_next_id,
+    );
     display.indeterminate_gate_dashed = is_indeterminate && node.type === "LogicalGate";
 
     return {
@@ -152,7 +197,17 @@ function buildRFEdges(
   operating_mode: string,
   foreclosure_visibility: ForeclosureVisibility,
   argument_overlay: ArgumentOverlay | undefined,
+  primary_path: ReadonlyArray<NodeRef> | undefined,
+  path_fingerprint: string | undefined,
 ): RFEdge<FrameCanvasEdgeData>[] {
+  // Build a position map for primary-path nodes so we can stagger the
+  // trace animation and detect on-path overlay edges. P0-17.
+  const path_index_by_node = new Map<NodeRef, number>();
+  if (primary_path) {
+    for (let i = 0; i < primary_path.length; i++) {
+      path_index_by_node.set(primary_path[i]!, i);
+    }
+  }
   const edges: RFEdge<FrameCanvasEdgeData>[] = [];
 
   for (const edge of frame_version.edges) {
@@ -201,14 +256,30 @@ function buildRFEdges(
 
   if (operating_mode === "argument_running" && argument_overlay) {
     for (const ae of argument_overlay.edges) {
+      // P0-17: an overlay edge is "on the primary path" when both endpoints
+      // appear in compute_result.output.primary_path. The trace animation's
+      // stagger uses target's index in the path so each edge fades in in
+      // the same order the resolution actually flows. When the fingerprint
+      // changes, we incorporate it into the edge id so React Flow remounts
+      // the edge and the keyframe replays from the start.
+      const source_in_path = path_index_by_node.has(ae.source as NodeRef);
+      const target_in_path = path_index_by_node.has(ae.target as NodeRef);
+      const on_primary_path = source_in_path && target_in_path;
+      const path_index = on_primary_path ? path_index_by_node.get(ae.target as NodeRef) : undefined;
+      const edge_id = on_primary_path
+        ? `overlay_${ae.id}__${path_fingerprint ?? "init"}`
+        : `overlay_${ae.id}`;
       edges.push({
-        id: `overlay_${ae.id}`,
+        id: edge_id,
         source: ae.source,
         target: ae.target,
         type: ae.type,
         data: {
           edge_type: ae.type,
           weight_tier: (ae.weight ?? 1) as 0 | 1 | 2 | 3 | 4 | 5,
+          on_primary_path,
+          path_index,
+          path_fingerprint,
         },
       });
     }
@@ -233,7 +304,24 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     onSelectionChange,
     onAutoArrange,
     handle,
+    primary_path_node_ids,
+    active_set,
+    path_fingerprint,
+    recommended_next_id = null,
   } = props;
+
+  // Normalize to sets for O(1) membership lookup during render. The hook
+  // re-runs when the referenced array changes — fine because the page
+  // passes referentially-stable snapshots from useSessionStore.
+  const primary_path_set = React.useMemo(
+    () => (primary_path_node_ids ? new Set<NodeRef>(primary_path_node_ids) : undefined),
+    [primary_path_node_ids],
+  );
+  const active_set_set = React.useMemo(() => {
+    if (!active_set) return undefined;
+    if (active_set instanceof Set) return active_set;
+    return new Set<NodeRef>(active_set);
+  }, [active_set]);
 
   const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
   const last_connect_position = React.useRef<{ x: number; y: number } | null>(null);
@@ -260,8 +348,18 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     legal_mode,
     selection,
     read_only,
+    primary_path_set,
+    active_set_set,
+    recommended_next_id,
   );
-  const rf_edges = buildRFEdges(frame_version, operating_mode, fc_visibility, argument_overlay);
+  const rf_edges = buildRFEdges(
+    frame_version,
+    operating_mode,
+    fc_visibility,
+    argument_overlay,
+    primary_path_node_ids,
+    path_fingerprint,
+  );
 
   function handleNodeDragStop(_: React.MouseEvent, node: RFNode<FrameCanvasNodeData>) {
     if (read_only) return;

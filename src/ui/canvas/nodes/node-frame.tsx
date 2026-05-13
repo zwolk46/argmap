@@ -97,9 +97,25 @@ export function NodeFrame({
       display.not_applicable_dim && "not-applicable",
       display.foreclosed_strikethrough && "foreclosed",
       display.recommended_next_pulse && "recommended-next",
+      // P0-17: surface the heatmap states as data attributes so styles
+      // can hook them and tests can assert on them.
+      display.on_primary_path && "on-primary-path",
+      display.off_active_set && "off-active-set",
     ]
       .filter(Boolean)
       .join(" ") || undefined;
+
+  // P0-17: when a node is outside compute_result.active_set, the resolving
+  // path doesn't go through it — desaturate so the on-path nodes stand
+  // out. CSS class is keyed off the discriminated state; the keyframe lives
+  // in src/ui/styles/global.css. We skip the heatmap when the node is also
+  // on the primary path (paranoia: shouldn't happen, since on-path nodes
+  // are by definition in the active set, but defensive against runtime
+  // inconsistency).
+  const nodeFrameClassName =
+    display.off_active_set && !display.on_primary_path
+      ? "argmap-node-frame--off-active"
+      : undefined;
 
   const isGate = variant === "logical_gate";
   const isCheckpoint = variant === "checkpoint";
@@ -175,6 +191,7 @@ export function NodeFrame({
       <div
         data-node-id={node_id}
         data-state={dataState}
+        className={nodeFrameClassName}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{ position: "relative", display: "inline-block" }}
@@ -223,6 +240,7 @@ export function NodeFrame({
       <div
         data-node-id={node_id}
         data-state={dataState}
+        className={nodeFrameClassName}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -277,6 +295,7 @@ export function NodeFrame({
     <div
       data-node-id={node_id}
       data-state={dataState}
+      className={nodeFrameClassName}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

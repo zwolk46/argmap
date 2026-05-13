@@ -385,6 +385,42 @@ select.argmap-input {
   animation: argmap-dialog-pop-in var(--duration-medium) var(--ease-emphasized);
 }
 
+/* P0-17: path-to-conclusion animation. When the session reaches a
+   determinate state, overlay edges on the primary path fade in from source
+   toward conclusion (staggered by --path-index × 120ms). After the trace
+   completes the edge stays solid in the primary-path color — that's the
+   "heatmap" steady state. The .argmap-overlay-edge--trace class is
+   applied via inline styles by argument-overlay-edge.tsx; React's key
+   prop changes when the path fingerprint changes, remounting the edge
+   and replaying the animation from the start. */
+@keyframes argmap-edge-trace-in {
+  from {
+    opacity: 0;
+    stroke-width: 0.5;
+  }
+  to {
+    opacity: 1;
+    stroke-width: var(--trace-stroke-width, 2.5);
+  }
+}
+
+.argmap-overlay-edge--trace {
+  opacity: 0;
+  animation: argmap-edge-trace-in 200ms var(--ease-standard) forwards;
+  animation-delay: calc(var(--path-index, 0) * 120ms);
+}
+
+/* Off-active-set node heatmap. The runtime's compute_result.active_set
+   marks which nodes contribute to the resolution. Nodes outside the set
+   fade back so the resolving path reads cleanly. Smooth transition keeps
+   the visual quiet between recomputes. */
+.argmap-node-frame--off-active {
+  filter: saturate(0.35) opacity(0.6);
+  transition:
+    filter 300ms var(--ease-standard),
+    opacity 300ms var(--ease-standard);
+}
+
 /* Reduce motion — collapse keyframes to instant. */
 @media (prefers-reduced-motion: reduce) {
   *,

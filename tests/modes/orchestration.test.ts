@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  createFrameFromTemplate,
-  restoreFrameVersion,
-  restoreSessionVersion,
-} from "@/modes";
+import { createFrameFromTemplate, restoreFrameVersion, restoreSessionVersion } from "@/modes";
 import { mockRepository, makeFv } from "./_fixtures";
 import type { Frame } from "@/schema";
 

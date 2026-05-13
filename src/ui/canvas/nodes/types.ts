@@ -20,6 +20,18 @@ export interface NodeDisplayFlags {
   foreclosed_strikethrough: boolean;
   recommended_next_pulse: boolean;
   indeterminate_gate_dashed: boolean;
+  /**
+   * P0-17: this node sits on the primary path through to the conclusion.
+   * On-path nodes render at full saturation; off-active-set nodes apply a
+   * desaturation/opacity filter (the "heatmap" steady state) so the
+   * resolving path stands out from the rest of the graph.
+   */
+  on_primary_path?: boolean;
+  /**
+   * P0-17: this node is NOT in compute_result.active_set — the runtime
+   * decided it doesn't contribute to the resolution. Render desaturated.
+   */
+  off_active_set?: boolean;
 }
 
 export interface FrameCanvasNodeData {

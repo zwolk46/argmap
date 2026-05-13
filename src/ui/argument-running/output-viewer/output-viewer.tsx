@@ -16,6 +16,16 @@ import { OutputEmptyState } from "./output-empty-state";
 
 export type { OutputViewTab };
 
+/**
+ * P0-17: stable fingerprint of the primary-path node sequence. Used as the
+ * trace-animation replay key. Order matters (the trace plays in order), so
+ * we join rather than sort. Empty → "empty".
+ */
+function fingerprintPath(path: ReadonlyArray<NodeRef> | undefined): string {
+  if (!path || path.length === 0) return "empty";
+  return path.join(">");
+}
+
 export interface OutputViewerProps {
   frame_id: FrameId;
   selected_item_id: NodeRef | null;
@@ -83,6 +93,10 @@ export function OutputViewer(props: OutputViewerProps): React.ReactElement {
             session={session}
             on_node_clicked={on_node_clicked_in_overlay}
             canvas_ref={frame_canvas_handle}
+            primary_path_node_ids={compute_result.output?.primary_path}
+            active_set={compute_result.active_set}
+            path_fingerprint={fingerprintPath(compute_result.output?.primary_path)}
+            recommended_next_id={recommended_next_id}
           />
         ) : current_tab === "decision_tree" ? (
           <DecisionTreeTab
