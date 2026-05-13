@@ -1485,5 +1485,15 @@ export const VALIDATION_RULE_PRIORITY: Readonly<Record<string, number>> = Object
   VALIDATION_RULES.map((r, i) => [r.id, i]),
 );
 
+/**
+ * Rule-id → human description. P2: validation-row used to set the message
+ * span's title to the bare rule_id (e.g., "V-NODE-8"), which read like a
+ * compiler diagnostic. The lookup lets the UI show the rule's intent on
+ * hover instead.
+ */
+export const VALIDATION_RULE_DESCRIPTIONS: Readonly<Record<string, string>> = Object.fromEntries(
+  VALIDATION_RULES.map((r) => [r.id, r.description]),
+);
+
 // Re-export for tests
 export type { NodeStatus };

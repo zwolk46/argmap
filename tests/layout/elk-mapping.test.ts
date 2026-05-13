@@ -35,14 +35,17 @@ describe("layout/elk-mapping", () => {
       expect(out.children.find((c) => c.id === "auth_1")).toBeDefined();
     });
 
-    it("marks anchored nodes as fixed when honor_user_anchors is true", () => {
+    it("marks anchored nodes with an elk.position hint when honor_user_anchors is true", () => {
+      // P2: the previous assertion also checked for `elk.layered.fixed: "true"`,
+      // which is not a valid ELK option key. Anchored coordinates are
+      // actually pinned by the post-process in run.ts:29-41; the bare
+      // `elk.position` hint is the only ELK-recognized signal we set.
       const frame = buildSimpleFrame({ anchorRoot: { x: 100, y: 200 } });
       const out = frameToElkGraph(frame, { honor_user_anchors: true });
       const root = out.children.find((c) => c.id === "root_q")!;
       expect(root.x).toBe(100);
       expect(root.y).toBe(200);
       expect(root.layoutOptions?.["elk.position"]).toBe("(100,200)");
-      expect(root.layoutOptions?.["elk.layered.fixed"]).toBe("true");
     });
 
     it("does NOT mark anchors when honor_user_anchors is false", () => {

@@ -86,11 +86,15 @@ export function frameToElkGraph(
     const px = n.presentation?.x;
     const py = n.presentation?.y;
     if (resolved.honor_user_anchors && typeof px === "number" && typeof py === "number") {
+      // P2: `elk.layered.fixed` is not a recognized ELK option key.
+      // Anchored coordinates are actually pinned by the post-process in
+      // run.ts:29-41 — passing this key here was a no-op that misled
+      // readers into thinking it did the pinning. `elk.position` is
+      // recognized as a hint and we leave it in place.
       elkNode.x = px;
       elkNode.y = py;
       elkNode.layoutOptions = {
         "elk.position": `(${px},${py})`,
-        "elk.layered.fixed": "true",
       };
     }
     elkNodes.push(elkNode);

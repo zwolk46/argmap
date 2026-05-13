@@ -238,9 +238,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                       });
                     }}
                     on_edge_created={handleEdgeCreated}
-                    on_node_delete_requested={(node_id) =>
-                      cascade_confirmation.request(node_id)
-                    }
+                    on_node_delete_requested={(node_id) => cascade_confirmation.request(node_id)}
                     on_edge_delete_requested={(edge_id) =>
                       frame_store.getState().applyPatch({ kind: "edge_removed", edge_id })
                     }

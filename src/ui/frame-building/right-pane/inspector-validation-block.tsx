@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { NodeRef } from "@/schema";
+import { VALIDATION_RULE_DESCRIPTIONS } from "@/schema";
 import { useFrameStore } from "@/state";
 import { selectValidationByNode } from "@/state";
 import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
@@ -71,7 +72,10 @@ export function InspectorValidationBlock(
             }}
           >
             <SeverityIcon severity={r.severity} />
-            <span style={{ color: "var(--color-text-primary)", flex: 1 }} title={r.rule_id}>
+            <span
+              style={{ color: "var(--color-text-primary)", flex: 1 }}
+              title={VALIDATION_RULE_DESCRIPTIONS[r.rule_id] ?? r.rule_id}
+            >
               {humanizeValidationMessage(r.message, frame_version)}
             </span>
           </div>

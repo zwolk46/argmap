@@ -172,7 +172,11 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
     pinFrame(frame_id: FrameId, pinned: boolean): void {
       const { app_state } = get();
       const existing_pinned = app_state.pinned;
-      if (pinned && !existing_pinned.includes(frame_id) && existing_pinned.length >= MAX_PINNED_FRAMES) {
+      if (
+        pinned &&
+        !existing_pinned.includes(frame_id) &&
+        existing_pinned.length >= MAX_PINNED_FRAMES
+      ) {
         // P1: cap enforcement. Caller (FrameSummaryCard) catches and
         // surfaces a toast.
         throw new PinnedCapReached();

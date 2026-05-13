@@ -313,11 +313,34 @@ export function CompareView(props: CompareViewProps): ReactElement {
         }}
       >
         <IconButton aria-label="Back to history" onClick={on_back}>
-          ←
+          <svg
+            width={14}
+            height={14}
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M8 3 L4 7 L8 11" />
+            <path d="M4 7 L11 7" />
+          </svg>
         </IconButton>
-        <span data-testid="compare-view-title">
+        {/* P2: make the title an h2 so screen readers get a heading
+            landmark inside the pane. */}
+        <h2
+          data-testid="compare-view-title"
+          style={{
+            margin: 0,
+            fontSize: "inherit",
+            fontWeight: "var(--font-weight-semibold, 600)",
+            color: "inherit",
+          }}
+        >
           Compare v{from_version_number} to v{to_version_number}
-        </span>
+        </h2>
       </header>
       {state.kind === "loading" ? (
         <div

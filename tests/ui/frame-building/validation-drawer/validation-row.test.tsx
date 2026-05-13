@@ -25,7 +25,7 @@ function makeError(node_id?: string): ValidationResult {
 describe("ValidationRow", () => {
   const noop = () => {};
 
-  it("exposes the rule_id as a tooltip (title attribute) rather than visible code", () => {
+  it("exposes the rule's intent as a tooltip (P2: title is now the rule description, not the bare id)", () => {
     const { getByText } = render(
       <ValidationRow
         result={makeWarning("n1")}
@@ -36,7 +36,11 @@ describe("ValidationRow", () => {
       />,
     );
     const message_span = getByText("Frame is missing a conclusion");
-    expect(message_span.getAttribute("title")).toBe("V-FR-1");
+    // V-FR-1's description in validation-rules.ts. Falls back to the
+    // bare rule_id only when no description is registered.
+    const title = message_span.getAttribute("title");
+    expect(title).toBeTruthy();
+    expect(title).not.toBe("V-FR-1");
   });
 
   it("renders the message", () => {

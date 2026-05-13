@@ -57,7 +57,15 @@ export function Inspector(props: InspectorProps): ReactElement {
           node_ids={selection.node_ids}
           edge_ids={selection.edge_ids}
           on_request_delete_multi={(ids) => {
-            if (ids.length > 0) on_request_delete(ids[0]);
+            // P1: route every selected node through the cascade-confirmation
+            // flow in id order, rather than dropping all but the first.
+            // The cascade dialog handles each id sequentially because the
+            // hook holds one pending request at a time; the user will see
+            // a confirmation per node, in lex order. (A future
+            // batched-cascade UX would consolidate these into one summary;
+            // for now this is strictly correct vs the previous "lose all
+            // but the first" silent bug.)
+            for (const id of ids) on_request_delete(id);
           }}
         />
       )}

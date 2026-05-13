@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { FrameVersion, ValidationResult } from "@/schema";
+import { VALIDATION_RULE_DESCRIPTIONS } from "@/schema";
 import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
 
 export interface ValidationRowProps {
@@ -41,7 +42,9 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
           fontSize: "var(--font-size-sm, 13px)",
           color: "var(--color-text-primary, #111827)",
         }}
-        title={result.rule_id}
+        // P2: hover shows the rule's intent instead of the bare rule_id
+        // (the rule_id is a meaningless string to the user).
+        title={VALIDATION_RULE_DESCRIPTIONS[result.rule_id] ?? result.rule_id}
       >
         {display_message}
       </span>

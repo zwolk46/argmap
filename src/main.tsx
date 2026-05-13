@@ -49,8 +49,8 @@ function BootError({ message }: { message: string }): React.ReactElement {
       </h1>
       <p style={{ margin: 0 }}>{message}</p>
       <p style={{ margin: "var(--space-2, 8px) 0 0" }}>
-        Try reloading the page. If the problem persists, your browser may be in private mode or
-        out of storage.
+        Try reloading the page. If the problem persists, your browser may be in private mode or out
+        of storage.
       </p>
     </div>
   );

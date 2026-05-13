@@ -30,7 +30,8 @@ export function relativeTime(iso: string): string {
   if (!iso) return "";
   const t = new Date(iso).getTime();
   if (Number.isNaN(t)) return iso;
-  const delta_s = Math.floor((Date.now() - t) / 1000);
+  // P2: clamp at zero so clock-skewed timestamps don't render "-5s ago".
+  const delta_s = Math.max(0, Math.floor((Date.now() - t) / 1000));
   if (delta_s < 60) return `${delta_s}s ago`;
   if (delta_s < 3600) return `${Math.floor(delta_s / 60)}m ago`;
   if (delta_s < 86400) return `${Math.floor(delta_s / 3600)}h ago`;

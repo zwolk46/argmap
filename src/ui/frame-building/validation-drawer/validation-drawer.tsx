@@ -197,7 +197,25 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
                   gap: "6px",
                 }}
               >
-                <span>{show_dismissed ? "▼" : "›"}</span>
+                {/* P2: SVG chevron in place of the ASCII triangle / unicode
+                    chevron, matching the rest of the chrome SVG icons. */}
+                <svg
+                  width={10}
+                  height={10}
+                  viewBox="0 0 10 10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                  style={{
+                    transform: show_dismissed ? "rotate(90deg)" : "rotate(0deg)",
+                    transition: "transform var(--duration-fast) var(--ease-standard)",
+                  }}
+                >
+                  <path d="M3.5 2 L7 5 L3.5 8" />
+                </svg>
                 <span>Dismissed ({dismissed.length})</span>
               </button>
               {show_dismissed &&

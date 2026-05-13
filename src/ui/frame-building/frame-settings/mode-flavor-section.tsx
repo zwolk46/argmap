@@ -85,7 +85,9 @@ export function ModeFlavorSection({
             type="button"
             style={can_change && !flavor_disabled ? CHANGE_BTN_STYLE : DISABLED_BTN_STYLE}
             disabled={!can_change || flavor_disabled}
-            title={!can_change ? disabled_title : flavor_disabled ? flavor_disabled_title : undefined}
+            title={
+              !can_change ? disabled_title : flavor_disabled ? flavor_disabled_title : undefined
+            }
             onClick={() => {
               if (flavor_disabled) return;
               on_open_mode_change_dialog?.("flavor");

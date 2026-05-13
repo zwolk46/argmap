@@ -45,16 +45,17 @@ export const LEGAL_DIRECTION_VALUES = [
 // P1: user-facing labels for each legal-mode direction. The mode-change
 // dialog used to render raw enum values ("affirm", "favors_plaintiff") in
 // the direction picker; a law student expects legal phrasing.
-export const LEGAL_DIRECTION_LABELS: Readonly<Record<(typeof LEGAL_DIRECTION_VALUES)[number], string>> =
-  {
-    affirm: "Affirm",
-    custom: "Custom direction",
-    dismiss: "Dismiss",
-    favors_defendant: "Favors defendant",
-    favors_plaintiff: "Favors plaintiff",
-    remand: "Remand",
-    reverse: "Reverse",
-  };
+export const LEGAL_DIRECTION_LABELS: Readonly<
+  Record<(typeof LEGAL_DIRECTION_VALUES)[number], string>
+> = {
+  affirm: "Affirm",
+  custom: "Custom direction",
+  dismiss: "Dismiss",
+  favors_defendant: "Favors defendant",
+  favors_plaintiff: "Favors plaintiff",
+  remand: "Remand",
+  reverse: "Reverse",
+};
 
 export function attemptTransition(
   kind: TransitionKind,
