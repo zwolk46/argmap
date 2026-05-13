@@ -80,6 +80,9 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
         confirm_label="Delete"
         cancel_label="Cancel"
         confirm_variant="danger"
+        // P0-23 ride-along: gate the confirm button on a matching typed title
+        // so the dialog cannot silently no-op on empty / wrong input.
+        confirm_disabled={confirm_text !== title}
         onConfirm={handleDelete}
         onCancel={() => {
           setDeleteOpen(false);
@@ -102,6 +105,17 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
               }}
             />
           </label>
+          {confirm_text.length > 0 && confirm_text !== title ? (
+            <p
+              style={{
+                marginTop: "var(--space-1, 4px)",
+                color: "var(--color-severity-warning, #d97706)",
+                fontSize: "var(--font-size-xs, 11px)",
+              }}
+            >
+              Type the title exactly to enable Delete.
+            </p>
+          ) : null}
         </div>
       </ConfirmDialog>
     </section>

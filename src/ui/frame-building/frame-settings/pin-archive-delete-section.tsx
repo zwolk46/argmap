@@ -1,7 +1,9 @@
+import * as React from "react";
 import type { ReactElement } from "react";
 import type { FrameId } from "@/schema";
 import { useFrameStore, useAppStateStore, useRepository } from "@/state";
 import { useNavigate } from "@/ui";
+import { ConfirmDialog } from "../../primitives";
 
 const SECTION_LABEL_STYLE: React.CSSProperties = {
   fontSize: "var(--font-size-xs, 11px)",
@@ -49,6 +51,9 @@ export function PinArchiveDeleteSection(): ReactElement | null {
   const { frame_store, app_state_store } = useRepository();
   const navigate = useNavigate();
 
+  const [delete_open, setDeleteOpen] = React.useState(false);
+  const [confirm_text, setConfirmText] = React.useState("");
+
   if (!frame || !frame_id) return null;
 
   function handlePinToggle() {
@@ -63,10 +68,9 @@ export function PinArchiveDeleteSection(): ReactElement | null {
   }
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the frame "${frame!.title}"? This cannot be undone.`,
-    );
-    if (!confirmed) return;
+    if (confirm_text !== frame!.title) return;
+    setDeleteOpen(false);
+    setConfirmText("");
     await app_state_store.getState().deleteFrame(frame_id!);
     navigate({ kind: "home" });
   }
@@ -102,7 +106,8 @@ export function PinArchiveDeleteSection(): ReactElement | null {
         </span>
         <button
           type="button"
-          onClick={() => void handleDelete()}
+          data-testid="delete-frame-button"
+          onClick={() => setDeleteOpen(true)}
           style={{
             padding: "var(--space-1, 4px) var(--space-3, 12px)",
             fontSize: "var(--font-size-xs, 11px)",
@@ -116,6 +121,57 @@ export function PinArchiveDeleteSection(): ReactElement | null {
           Delete
         </button>
       </div>
+
+      {/* P0-21: replaced native window.confirm() — no type-to-confirm, no
+          destructive styling, no consistency with session-delete — with the
+          shared ConfirmDialog primitive plus a type-to-confirm field.
+          Ride-along P0-23 fix: confirm_disabled gates the action so Delete
+          cannot fire on empty input. */}
+      <ConfirmDialog
+        open={delete_open}
+        title={`Delete frame "${frame.title}"?`}
+        confirm_label="Delete"
+        cancel_label="Cancel"
+        confirm_variant="danger"
+        confirm_disabled={confirm_text !== frame.title}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => {
+          setDeleteOpen(false);
+          setConfirmText("");
+        }}
+      >
+        <div data-testid="delete-frame-confirm-body">
+          <p>
+            Deleting this frame, all its versions, and any sessions running against it cannot be
+            undone.
+          </p>
+          <label style={{ display: "block", marginTop: "var(--space-2, 8px)" }}>
+            Type the frame title to confirm:
+            <input
+              data-testid="delete-frame-confirm-input"
+              type="text"
+              value={confirm_text}
+              onChange={(e) => setConfirmText(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "var(--space-1, 4px) var(--space-2, 8px)",
+                marginTop: "var(--space-1, 4px)",
+              }}
+            />
+          </label>
+          {confirm_text.length > 0 && confirm_text !== frame.title ? (
+            <p
+              style={{
+                marginTop: "var(--space-1, 4px)",
+                color: "var(--color-severity-warning, #d97706)",
+                fontSize: "var(--font-size-xs, 11px)",
+              }}
+            >
+              Type the title exactly to enable Delete.
+            </p>
+          ) : null}
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }
