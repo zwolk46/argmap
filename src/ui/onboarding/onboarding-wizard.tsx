@@ -24,7 +24,17 @@ export function OnboardingWizard(props: OnboardingWizardProps): ReactElement | n
   }
 
   return (
-    <Dialog open={true} onClose={props.onSkip} aria_label="Onboarding">
+    // P0-15: onboarding must NOT auto-dismiss on stray clicks or Escape.
+    // The Skip button is the only intended dismissal. Before this fix, a
+    // backdrop click fired Dialog.onClose → props.onSkip → permanent
+    // dismissWarning("first_launch"); the user lost onboarding forever.
+    <Dialog
+      open={true}
+      onClose={props.onSkip}
+      aria_label="Onboarding"
+      dismiss_on_click_outside={false}
+      dismiss_on_escape={false}
+    >
       {stage === "welcome" ? (
         <WelcomeScreen onStart={() => setStage("wizard")} onSkip={props.onSkip} />
       ) : (
