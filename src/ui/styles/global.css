@@ -344,69 +344,92 @@ input[type="checkbox"]:disabled:not(.argmap-skip-restyle) {
     var(--shadow-sm);
 }
 
-/* Button primitive base — used by `Button` component. */
+/* ============================================================
+   BUTTONS — refined per Argmap Components reference (v2).
+   Tighter heights, color-mix hover, inset highlight on solids,
+   half-pixel press translation. The whole button family reads
+   as one considered surface across the app.
+   ============================================================ */
 .argmap-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   font-family: var(--font-sans);
   font-weight: var(--font-weight-medium);
+  line-height: 1;
+  letter-spacing: -0.005em;
+  border: var(--border-thin) solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   transition:
     background-color var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
-  -webkit-tap-highlight-color: transparent;
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.argmap-btn:not(:disabled):active {
+  transform: translateY(0.5px);
 }
 
 .argmap-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 .argmap-btn[data-size="sm"] {
   height: 26px;
-  padding: 0 var(--space-3);
-  font-size: var(--font-size-xs);
+  padding: 0 10px;
+  font-size: var(--font-size-sm);
+  min-width: 26px;
 }
 
 .argmap-btn[data-size="md"] {
-  height: 32px;
-  padding: 0 var(--space-4);
-  font-size: var(--font-size-sm);
+  height: 30px;
+  padding: 0 12px;
+  font-size: var(--font-size-base);
+  min-width: 30px;
 }
 
 .argmap-btn[data-size="lg"] {
-  height: 40px;
-  padding: 0 var(--space-5);
-  font-size: var(--font-size-base);
+  height: 36px;
+  padding: 0 16px;
+  font-size: var(--font-size-md);
+  min-width: 36px;
 }
 
+/* Primary — solid, mode-accented, with subtle inset highlight on top
+   so the surface reads as slightly raised. */
 .argmap-btn[data-variant="primary"] {
   background: var(--color-mode-current-accent);
   color: var(--color-text-on-accent);
-  border: var(--border-thin) solid var(--color-mode-current-accent);
+  border-color: var(--color-mode-current-accent);
+  box-shadow:
+    inset 0 1px 0 hsla(0 0% 100% / 0.12),
+    var(--shadow-sm);
 }
 
 .argmap-btn[data-variant="primary"]:not(:disabled):hover {
-  background: var(--color-mode-current-accent);
-  filter: brightness(1.08);
-  box-shadow: var(--shadow-sm);
+  background: color-mix(in oklab, var(--color-mode-current-accent), black 10%);
+  border-color: color-mix(in oklab, var(--color-mode-current-accent), black 10%);
 }
 
 .argmap-btn[data-variant="primary"]:not(:disabled):active {
-  filter: brightness(0.95);
-  box-shadow: none;
+  background: color-mix(in oklab, var(--color-mode-current-accent), black 18%);
+  border-color: color-mix(in oklab, var(--color-mode-current-accent), black 18%);
 }
 
+/* Secondary — bordered neutral with hairline shadow */
 .argmap-btn[data-variant="secondary"] {
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
-  border: var(--border-thin) solid var(--color-border-default);
+  border-color: var(--color-border-default);
+  box-shadow: var(--shadow-sm);
 }
 
 .argmap-btn[data-variant="secondary"]:not(:disabled):hover {
@@ -414,10 +437,15 @@ input[type="checkbox"]:disabled:not(.argmap-skip-restyle) {
   border-color: var(--color-border-strong);
 }
 
+.argmap-btn[data-variant="secondary"]:not(:disabled):active {
+  background: var(--color-surface-selected);
+}
+
+/* Ghost — text-only, no border at rest */
 .argmap-btn[data-variant="ghost"] {
   background: transparent;
   color: var(--color-text-secondary);
-  border: var(--border-thin) solid transparent;
+  border-color: transparent;
 }
 
 .argmap-btn[data-variant="ghost"]:not(:disabled):hover {
@@ -425,24 +453,72 @@ input[type="checkbox"]:disabled:not(.argmap-skip-restyle) {
   color: var(--color-text-primary);
 }
 
+.argmap-btn[data-variant="ghost"]:not(:disabled):active {
+  background: var(--color-surface-selected);
+}
+
+/* Destructive — bordered, red ink, neutral surface at rest */
 .argmap-btn[data-variant="destructive"] {
   background: var(--color-surface-elevated);
   color: var(--color-severity-error);
-  border: var(--border-thin) solid var(--color-severity-error);
+  border-color: var(--color-border-default);
 }
 
 .argmap-btn[data-variant="destructive"]:not(:disabled):hover {
   background: var(--color-severity-error-bg);
+  border-color: var(--color-severity-error);
 }
 
+.argmap-btn[data-variant="destructive"]:not(:disabled):active {
+  background: color-mix(in oklab, var(--color-severity-error-bg), black 6%);
+}
+
+/* Destructive solid — full red, with the same inset highlight as primary */
 .argmap-btn[data-variant="destructive-solid"] {
   background: var(--color-severity-error);
   color: var(--color-text-on-accent);
-  border: var(--border-thin) solid var(--color-severity-error);
+  border-color: var(--color-severity-error);
+  box-shadow:
+    inset 0 1px 0 hsla(0 0% 100% / 0.12),
+    var(--shadow-sm);
 }
 
 .argmap-btn[data-variant="destructive-solid"]:not(:disabled):hover {
-  filter: brightness(1.05);
+  background: color-mix(in oklab, var(--color-severity-error), black 10%);
+  border-color: color-mix(in oklab, var(--color-severity-error), black 10%);
+}
+
+.argmap-btn[data-variant="destructive-solid"]:not(:disabled):active {
+  background: color-mix(in oklab, var(--color-severity-error), black 18%);
+  border-color: color-mix(in oklab, var(--color-severity-error), black 18%);
+}
+
+/* Loading spinner state — text fades to transparent, spinner sits over it.
+   Apply via `data-loading="true"` on the button. */
+.argmap-btn[data-loading="true"] {
+  color: transparent !important;
+  position: relative;
+  pointer-events: none;
+}
+
+.argmap-btn[data-loading="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: argmap-spin 600ms linear infinite;
+  color: var(--color-text-on-accent);
+}
+
+.argmap-btn[data-variant="secondary"][data-loading="true"]::after,
+.argmap-btn[data-variant="ghost"][data-loading="true"]::after,
+.argmap-btn[data-variant="destructive"][data-loading="true"]::after {
+  color: var(--color-text-secondary);
 }
 
 /* Inputs / textareas / selects — quiet, consistent. */
@@ -466,15 +542,23 @@ select.argmap-input {
     box-shadow var(--duration-fast) var(--ease-standard);
 }
 
-.argmap-input:hover:not(:disabled) {
+.argmap-input:hover:not(:disabled):not(:focus) {
   border-color: var(--color-border-strong);
 }
 
 .argmap-input:focus,
 .argmap-input:focus-visible {
   border-color: var(--color-mode-current-accent);
-  box-shadow: 0 0 0 3px var(--color-mode-current-accent-bg);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-mode-current-accent), transparent 80%);
   outline: none;
+}
+
+.argmap-input[aria-invalid="true"] {
+  border-color: var(--color-severity-error);
+}
+
+.argmap-input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-severity-error), transparent 80%);
 }
 
 /* iOS Safari auto-zooms the viewport whenever a user focuses an input
@@ -634,14 +718,181 @@ select.argmap-input {
   animation: argmap-dialog-pop-out 160ms var(--ease-emphasized) forwards;
 }
 
-/* P1: IconButton hover via CSS (replaces inline JS mutation that got
-   stuck when the user Tab'd off a hovered button). */
-.argmap-icon-btn:hover:not(:disabled) {
-  background: var(--color-surface-hover) !important;
-  color: var(--color-text-primary) !important;
+/* ============================================================
+   ICON BUTTON — two-layer outline → solid cross-fade.
+
+   At rest:  outline (fi-rr-*) is visible, solid (fi-sr-*) is hidden,
+             box is whisper-quiet so the icon does the talking.
+   On hover: outline fades out and slightly blooms; solid pops in
+             from a small scale with a spring curve.
+   On press: the whole glyph compresses tactilely.
+   When active (sticky toggled-on state): solid stays visible in
+             the mode accent color.
+
+   The component renders both layers when its child is a detectable
+   <UIcon name="..." /> in the regular-rounded family. When no solid
+   sibling is available we keep the outline crisp and just lift it
+   slightly on hover. The chrome transitions are intentionally slower
+   than the glyph transitions so the icon swap leads visually.
+   ============================================================ */
+.argmap-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: var(--border-thin) solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 220ms var(--ease-standard),
+    color 180ms var(--ease-standard),
+    border-color 220ms var(--ease-standard),
+    transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+.argmap-icon-btn[data-size="sm"] {
+  width: 26px;
+  height: 26px;
+}
+
+.argmap-icon-btn[data-size="lg"] {
+  width: 36px;
+  height: 36px;
+}
+
+.argmap-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* The glyph stack: outline + solid layers occupy the same cell so we
+   can cross-fade between them without any layout shift. */
+.argmap-icon-btn-stack {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.argmap-icon-btn-layer {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  transform-origin: center;
+  transition:
+    opacity 160ms var(--ease-standard),
+    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.argmap-icon-btn-layer[data-layer="outline"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.argmap-icon-btn-layer[data-layer="solid"] {
+  opacity: 0;
+  transform: scale(0.72);
+}
+
+/* HOVER — whisper-quiet chrome, the icon does the talking. */
+.argmap-icon-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--color-surface-hover) 60%, transparent);
+  color: var(--color-text-primary);
+}
+
+/* With a solid sibling: outline fades + blooms outward, solid pops in. */
+.argmap-icon-btn:hover:not(:disabled) .argmap-icon-btn-stack[data-has-solid="true"] {
+  transform: scale(1.04);
+}
+
+.argmap-icon-btn:hover:not(:disabled) [data-has-solid="true"] .argmap-icon-btn-layer[data-layer="outline"] {
+  opacity: 0;
+  transform: scale(1.2);
+}
+
+.argmap-icon-btn:hover:not(:disabled) [data-has-solid="true"] .argmap-icon-btn-layer[data-layer="solid"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Without a solid sibling: keep the outline crisp and just lift it. */
+.argmap-icon-btn:hover:not(:disabled) .argmap-icon-btn-stack:not([data-has-solid="true"]) {
+  transform: scale(1.14);
+}
+
+/* PRESS — whole glyph compresses, transitions snap firmer. */
+.argmap-icon-btn:active:not(:disabled) {
+  background: var(--color-surface-selected);
+  transition-duration: 60ms, 60ms, 60ms, 60ms;
+}
+
+.argmap-icon-btn:active:not(:disabled) .argmap-icon-btn-stack {
+  transform: scale(0.86);
+  transition: transform 70ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.argmap-icon-btn:active:not(:disabled) [data-has-solid="true"] .argmap-icon-btn-layer[data-layer="outline"] {
+  opacity: 0;
+}
+
+.argmap-icon-btn:active:not(:disabled) [data-has-solid="true"] .argmap-icon-btn-layer[data-layer="solid"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* TOGGLED ON — sticky state shows solid in accent color. */
+.argmap-icon-btn[data-active="true"] {
+  background: var(--color-surface-selected);
+  color: var(--color-mode-current-accent);
+}
+
+.argmap-icon-btn[data-active="true"] [data-has-solid="true"] .argmap-icon-btn-layer[data-layer="outline"] {
+  opacity: 0;
+  transform: scale(1.06);
+}
+
+.argmap-icon-btn[data-active="true"] [data-has-solid="true"] .argmap-icon-btn-layer[data-layer="solid"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .argmap-icon-btn[data-active="true"]:hover:not(:disabled) {
-  background: var(--color-surface-selected) !important;
+  background: var(--color-surface-selected);
+}
+
+/* Subtle variant — faint resting background so the affordance has
+   visible presence at rest (toolbars benefit from this). */
+.argmap-icon-btn[data-variant="subtle"] {
+  background: var(--color-surface-pane);
+}
+
+.argmap-icon-btn[data-variant="subtle"]:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+}
+
+/* Accent variant — picks up the mode accent at rest. */
+.argmap-icon-btn[data-variant="accent"] {
+  background: var(--color-mode-current-accent-bg);
+  color: var(--color-mode-current-accent);
+}
+
+.argmap-icon-btn[data-variant="accent"]:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--color-mode-current-accent-bg), var(--color-mode-current-accent) 12%);
+  color: var(--color-mode-current-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .argmap-icon-btn,
+  .argmap-icon-btn-stack,
+  .argmap-icon-btn-layer {
+    transition-duration: 0ms !important;
+  }
 }
 
 /* Output view tabs — underline tab control inside argument-running. CSS
@@ -748,6 +999,210 @@ select.argmap-input {
   transition:
     filter 300ms var(--ease-standard),
     opacity 300ms var(--ease-standard);
+}
+
+/* ============================================================
+   PILL — class-driven tones replacing the all-inline Pill component.
+   The Pill primitive still ships inline styles for backward
+   compatibility, but new sites should pass `className="argmap-pill"`
+   with a `data-tone` attribute. The CSS handles every variant.
+   ============================================================ */
+.argmap-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-sans);
+  line-height: 1;
+  background: var(--color-surface-pane);
+  color: var(--color-text-secondary);
+  border: var(--border-hairline) solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+
+.argmap-pill[data-size="lg"] {
+  height: 24px;
+  padding: 4px 10px;
+  font-size: var(--font-size-sm);
+}
+
+.argmap-pill[data-tone="neutral"] {
+  background: var(--color-surface-pane);
+  color: var(--color-text-secondary);
+}
+
+.argmap-pill[data-tone="accent"] {
+  background: var(--color-mode-current-accent-bg);
+  color: var(--color-mode-current-accent);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="satisfied"] {
+  background: var(--color-status-satisfied-bg);
+  color: var(--color-status-satisfied);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="open"] {
+  background: var(--color-status-open-bg);
+  color: var(--color-status-open);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="contested"] {
+  background: var(--color-status-contested-bg);
+  color: var(--color-status-contested);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="foreclosed"] {
+  background: var(--color-status-foreclosed-bg);
+  color: var(--color-status-foreclosed-accent);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="error"] {
+  background: var(--color-severity-error-bg);
+  color: var(--color-severity-error);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="warning"] {
+  background: var(--color-severity-warning-bg);
+  color: var(--color-severity-warning);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="ai"] {
+  background: var(--color-ai-accent-bg);
+  color: var(--color-ai-accent);
+  border-color: transparent;
+}
+
+.argmap-pill[data-tone="binding"] {
+  background: var(--color-subflag-binding-bg);
+  color: var(--color-subflag-binding);
+  border-color: transparent;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: var(--font-size-2xs);
+}
+
+.argmap-pill[data-tone="persuasive"] {
+  background: var(--color-subflag-persuasive-bg);
+  color: var(--color-subflag-persuasive);
+  border-color: transparent;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: var(--font-size-2xs);
+}
+
+.argmap-pill[data-tone="milestone"] {
+  background: var(--color-status-not-applicable-bg);
+  color: var(--color-milestone-star);
+}
+
+.argmap-pill[data-interactive="true"] {
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.argmap-pill[data-interactive="true"]:hover {
+  background: var(--color-surface-hover);
+}
+
+/* ============================================================
+   AI ATTRIBUTION CHIP — radial-gradient dot + uppercase label.
+   Used wherever a value originated from an AI hook and is awaiting
+   review. Class-driven so AiAttributionChip can adopt it directly.
+   ============================================================ */
+.argmap-ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 6px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ai-accent-bg);
+  color: var(--color-ai-accent-strong);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: var(--border-hairline) solid color-mix(in oklab, var(--color-ai-accent), transparent 80%);
+}
+
+.argmap-ai-chip::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    var(--color-ai-accent),
+    color-mix(in oklab, var(--color-ai-accent), black 30%)
+  );
+  box-shadow: 0 0 6px color-mix(in oklab, var(--color-ai-accent), transparent 50%);
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   SEGMENTED TOGGLE — refined active state with mode accent +
+   elevation shadow. Used by the SegmentedToggle primitive's
+   `argmap-segmented-tab` class on individual buttons; this CSS
+   establishes the container chrome the inline styles can't.
+   ============================================================ */
+.argmap-segmented-tab {
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.argmap-segmented-tab:hover:not([aria-checked="true"]):not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+/* ============================================================
+   STATUS BADGE — pop animation on status change is already
+   declared above; here we tighten the resting visual so the
+   small badge reads as a single disk rather than fighting
+   the SVG glyph inside it.
+   ============================================================ */
+.argmap-status-badge {
+  /* Inherit colors and dimensions from the inline style block in
+     StatusBadge; this class just hooks into the pop animation
+     declared earlier. The animation is keyed off the status
+     prop's React key, so swapping the status replays the pop. */
+}
+
+/* ============================================================
+   KBD — keyboard chip used in tooltips and command palettes.
+   Small, dense, with the bottom-shadow trick that reads as
+   a depressed key.
+   ============================================================ */
+.argmap-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-pane);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
 }
 
 /* Reduce motion — collapse keyframes to instant. */
