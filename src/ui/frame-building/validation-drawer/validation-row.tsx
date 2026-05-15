@@ -31,6 +31,9 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
         borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
       }}
       onKeyDown={(e) => {
+        // Only the row itself should trigger jump-to-node; nested IconButtons
+        // (Jump, Dismiss, Restore) keep their native Enter handling.
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" && result.node_id) {
           on_jump_to_node(result.node_id);
         }

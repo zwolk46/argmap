@@ -16,7 +16,7 @@ export interface SessionSettingsPanelProps {
 export function SessionSettingsPanel(props: SessionSettingsPanelProps): ReactElement | null {
   if (!props.open) return null;
   return (
-    <Drawer open={props.open} onClose={props.on_close} width="420px" aria_label="Session settings">
+    <Drawer open={props.open} onClose={props.on_close} width="min(420px, 100vw)" aria_label="Session settings">
       <DrawerHeader>
         <span data-testid="session-settings-title">Session settings</span>
         <IconButton

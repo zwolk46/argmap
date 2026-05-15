@@ -21,7 +21,7 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
   const legal_entries = Object.entries(GLOSSARY_DICTIONARY).filter(([, entry]) => entry.legal_only);
 
   return (
-    <Drawer open={open} onClose={onClose} width="360px" aria_label="Help and glossary">
+    <Drawer open={open} onClose={onClose} width="min(360px, 100vw)" aria_label="Help and glossary">
       <DrawerHeader>
         <span>Help & Glossary</span>
         <IconButton size="sm" aria-label="Close help" onClick={onClose}>

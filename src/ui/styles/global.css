@@ -186,6 +186,22 @@ a:hover {
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
+/* Top-bar progressive collapse on narrow viewports. Below 720px the
+   chip decorations hide (the user can re-derive them from the page
+   body); below 560px the indicators (recompute counter, drift, etc.)
+   also hide. Home button, mode toggle, frame title, primary chrome
+   buttons stay visible at all widths. */
+@media (max-width: 720px) {
+  .argmap-topbar-chips {
+    display: none !important;
+  }
+}
+@media (max-width: 560px) {
+  .argmap-topbar-indicators {
+    display: none !important;
+  }
+}
+
 /* Tabular-numbers helper for counters and timestamps, so digits don't
    shift horizontally when the value updates. Apply to relative-time
    strings, version counters, etc. */
@@ -440,6 +456,19 @@ select.argmap-input {
   border-color: var(--color-mode-current-accent);
   box-shadow: 0 0 0 3px var(--color-mode-current-accent-bg);
   outline: none;
+}
+
+/* iOS Safari auto-zooms the viewport whenever a user focuses an input
+   that renders smaller than 16px. Bumping argmap-input to 16px on
+   coarse-pointer devices (phones, tablets) keeps the visual baseline
+   on desktop but prevents the disorienting zoom-in on mobile sign-in. */
+@media (pointer: coarse) {
+  .argmap-input,
+  input.argmap-input,
+  textarea.argmap-input,
+  select.argmap-input {
+    font-size: 16px;
+  }
 }
 
 .argmap-input:disabled {

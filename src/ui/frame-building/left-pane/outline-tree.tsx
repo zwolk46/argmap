@@ -98,6 +98,7 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     const idx = rows.findIndex((r) => r.outline_node.node_id === focused_id);
+    const current = rows[idx];
     if (e.key === "ArrowDown") {
       e.preventDefault();
       const next = rows[idx + 1];
@@ -113,6 +114,20 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
       e.preventDefault();
       const last = rows[rows.length - 1];
       if (last) set_focused_id(last.outline_node.node_id);
+    } else if (e.key === "ArrowRight") {
+      // WAI-ARIA tree pattern: Right expands (or moves to first child if
+      // already expanded); for our simpler tree we just expand.
+      if (current && current.outline_node.children.length > 0 && !expanded.has(current.outline_node.node_id)) {
+        e.preventDefault();
+        toggle(current.outline_node.node_id);
+      }
+    } else if (e.key === "ArrowLeft") {
+      // Left collapses (or moves to parent if already collapsed); we just
+      // collapse here. Parents are reachable via ArrowUp.
+      if (current && current.outline_node.children.length > 0 && expanded.has(current.outline_node.node_id)) {
+        e.preventDefault();
+        toggle(current.outline_node.node_id);
+      }
     }
   }
 

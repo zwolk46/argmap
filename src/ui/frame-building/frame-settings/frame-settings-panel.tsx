@@ -32,7 +32,7 @@ export function FrameSettingsPanel({
   const mode = useFrameStore((s) => s.frame?.mode);
 
   return (
-    <Drawer open={open} onClose={on_close} width="420px" aria_label="Frame settings">
+    <Drawer open={open} onClose={on_close} width="min(420px, 100vw)" aria_label="Frame settings">
       <DrawerHeader>
         <span>Frame settings</span>
         <IconButton aria-label="Close frame settings" onClick={on_close} size="sm">

@@ -44,7 +44,7 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
   const result = pending as SuggestionResult<unknown>;
 
   return (
-    <Drawer open={is_open} width="420px" aria_label="AI suggestion review">
+    <Drawer open={is_open} width="min(420px, 100vw)" aria_label="AI suggestion review">
       <DrawerHeader>
         <span
           style={{

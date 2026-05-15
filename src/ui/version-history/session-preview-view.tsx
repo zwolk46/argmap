@@ -80,7 +80,7 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
   return (
     <div
       data-testid="session-preview-view"
-      style={{ display: "flex", flexDirection: "column", height: "100vh" }}
+      style={{ display: "flex", flexDirection: "column", height: "100dvh" }}
     >
       <PreviewBanner version_number={version_number} kind="session" />
       {result.status === "loading" ? (

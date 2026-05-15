@@ -116,6 +116,19 @@ export function CompareEntryRow({
       data-testid="compare-entry-row"
       data-kind={descriptor.kind}
       onClick={clickable ? handleClick : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleClick();
+              }
+            }
+          : undefined
+      }
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      className={clickable ? "argmap-row-hover" : undefined}
       style={{
         display: "flex",
         alignItems: "center",

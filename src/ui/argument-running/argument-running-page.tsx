@@ -118,7 +118,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
     <React.Fragment>
       <div
         data-testid="argument-running-page"
-        style={{ display: "flex", flexDirection: "column", height: "100vh" }}
+        style={{ display: "flex", flexDirection: "column", height: "100dvh" }}
       >
         <ArgumentRunningTopBar
           deps={{

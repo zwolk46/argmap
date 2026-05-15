@@ -49,6 +49,11 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
   const { summary, is_pinned, onOpen, onTogglePin, onRunArgument, run_argument_pending } = props;
 
   function handleKey(e: KeyboardEvent<HTMLElement>) {
+    // Only the card itself should open the frame on Enter/Space; nested
+    // buttons (pin, run-argument) must keep their native key activation.
+    // Without this gate, pressing Enter on the focused pin button would
+    // fire the row's onOpen and silently navigate away.
+    if (e.target !== e.currentTarget) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onOpen(summary.id);

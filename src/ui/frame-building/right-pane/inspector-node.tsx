@@ -101,8 +101,15 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
               e.preventDefault();
               (e.currentTarget as HTMLTextAreaElement).blur();
             } else if (e.key === "Escape") {
+              // Escape should cancel, not save. Reset the textarea to the
+              // last committed value before blurring so onBlur sees no
+              // change and the patch is a no-op. Without this, Esc and
+              // Cmd+Enter were synonyms — surprising in a field that
+              // reads as a quick-jot. Cmd+Enter remains the explicit save.
               e.preventDefault();
-              (e.currentTarget as HTMLTextAreaElement).blur();
+              const ta = e.currentTarget as HTMLTextAreaElement;
+              ta.value = (node as { notes?: string }).notes ?? "";
+              ta.blur();
             }
           }}
           className="argmap-input"

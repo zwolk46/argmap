@@ -43,11 +43,25 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
       {slots.home && <div style={{ flexShrink: 0 }}>{slots.home}</div>}
       {slots.modeToggle && <div style={{ flexShrink: 0 }}>{slots.modeToggle}</div>}
       {slots.title && <div style={{ flex: 1, minWidth: 0 }}>{slots.title}</div>}
+      {/* Secondary slots: chips → indicators → buttons. On narrow viewports
+          the title can compress to 0 before these spill horizontally, so
+          we hide the chips first (they're status decorations the user can
+          re-derive from the page body), then indicators. The home button,
+          mode toggle, and primary chrome buttons stay reachable at all
+          widths via .argmap-topbar-* breakpoints in global.css. */}
       {slots.chips && (
-        <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>{slots.chips}</div>
+        <div
+          className="argmap-topbar-chips"
+          style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}
+        >
+          {slots.chips}
+        </div>
       )}
       {slots.indicators && (
-        <div style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}>
+        <div
+          className="argmap-topbar-indicators"
+          style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}
+        >
           {slots.indicators}
         </div>
       )}
