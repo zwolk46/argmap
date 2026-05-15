@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ReactElement } from "react";
 import { Pill, Tooltip, relativeTime } from "../primitives";
 import { UIcon } from "../primitives/uicon";
@@ -13,7 +14,9 @@ export interface VersionTreeRowProps {
   on_select: (version_id: string) => void;
 }
 
-export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
+export const VersionTreeRow = React.memo(VersionTreeRowImpl);
+
+function VersionTreeRowImpl(props: VersionTreeRowProps): ReactElement {
   const { summary, depth, is_current, is_milestone, is_authored_against, is_selected, on_select } =
     props;
 
