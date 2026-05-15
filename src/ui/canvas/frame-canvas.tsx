@@ -665,7 +665,6 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   return (
     <div
       data-testid="frame-canvas"
-      data-canvas-build="2026-05-14-cb-ref-fix"
       data-read-only={read_only}
       style={{ width: "100%", height: "100%", position: "relative" }}
     >

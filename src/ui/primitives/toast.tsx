@@ -196,7 +196,13 @@ function ToastItem({ toast, onDismiss }: ToastItemProps): ReactElement {
           opacity: 0.7,
           fontSize: "var(--font-size-base)",
           lineHeight: 1,
-          padding: 0,
+          padding: "var(--space-1)",
+          borderRadius: "var(--radius-sm)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minWidth: 24,
+          minHeight: 24,
         }}
       >
         <UIcon name="times" size={14} />

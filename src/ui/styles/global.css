@@ -193,6 +193,76 @@ a:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* Native radio + checkbox styling. Browser defaults vary by OS and ship
+   too small + too gray to read as deliberate. We restyle the native
+   input via appearance:none so screen-reader semantics stay intact (no
+   custom Radio component required) but the visual aligns with the rest
+   of the design system. The :checked dot/check uses the mode accent so
+   selecting a radio inside Frame Building reads orange, inside Argument
+   Running reads blue, consistent with every other accent surface. */
+input[type="radio"]:not(.argmap-skip-restyle),
+input[type="checkbox"]:not(.argmap-skip-restyle) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: var(--border-medium) solid var(--color-border-strong);
+  background: var(--color-surface-elevated);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+input[type="radio"]:not(.argmap-skip-restyle) {
+  border-radius: 50%;
+}
+input[type="checkbox"]:not(.argmap-skip-restyle) {
+  border-radius: var(--radius-sm);
+}
+input[type="radio"]:hover:not(:disabled):not(.argmap-skip-restyle),
+input[type="checkbox"]:hover:not(:disabled):not(.argmap-skip-restyle) {
+  border-color: var(--color-mode-current-accent);
+}
+input[type="radio"]:checked:not(.argmap-skip-restyle),
+input[type="checkbox"]:checked:not(.argmap-skip-restyle) {
+  border-color: var(--color-mode-current-accent);
+  background: var(--color-mode-current-accent);
+}
+input[type="radio"]:checked:not(.argmap-skip-restyle)::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--color-surface-elevated);
+}
+input[type="checkbox"]:checked:not(.argmap-skip-restyle)::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 1px;
+  background: transparent;
+  border-right: 2px solid var(--color-surface-elevated);
+  border-bottom: 2px solid var(--color-surface-elevated);
+  transform: rotate(45deg) translate(-1px, -1px);
+  width: 6px;
+  height: 9px;
+  left: 4px;
+  top: 1px;
+}
+input[type="radio"]:focus-visible:not(.argmap-skip-restyle),
+input[type="checkbox"]:focus-visible:not(.argmap-skip-restyle) {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-mode-current-accent-bg);
+}
+input[type="radio"]:disabled:not(.argmap-skip-restyle),
+input[type="checkbox"]:disabled:not(.argmap-skip-restyle) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .argmap-row-hover:hover:not([aria-disabled="true"]):not(:disabled) {
   background-color: var(--color-surface-hover);
 }
@@ -373,7 +443,11 @@ select.argmap-input {
 }
 
 .argmap-input:disabled {
-  opacity: 0.65;
+  /* Disabled inputs need a distinct surface tint, not just opacity, so
+     the locked state reads at a glance. Opacity alone makes white-on-
+     white indistinguishable from interactive. */
+  opacity: 0.75;
+  background: var(--color-surface-pane);
   cursor: not-allowed;
 }
 

@@ -154,7 +154,6 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
             marginBottom: "var(--space-1)",
           }}
         >
-          {/* KEEP RAW: tiny inline icon inside a pill chip; IconButton's min 26px is too large for inline-with-text. */}
           {(node.tags ?? []).map((tag) => (
             <span key={tag} style={PILL_STYLE}>
               {tag}
@@ -164,9 +163,14 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: 0,
+                  padding: "var(--space-1)",
+                  margin: "calc(var(--space-1) * -1)",
                   lineHeight: 1,
                   color: "inherit",
+                  borderRadius: "var(--radius-sm)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
                 onClick={() => removeTag(tag)}
                 aria-label={`Remove tag ${tag}`}

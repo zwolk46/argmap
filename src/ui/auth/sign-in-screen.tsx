@@ -199,29 +199,10 @@ export function SignInScreen(): ReactElement {
               Minimum 8 characters.
             </span>
           ) : null}
-          {mode === "sign_in" ? (
-            // TODO: wire up to `client.auth.resetPasswordForEmail(email)` once a
-            // reset-password flow lands in auth-context.tsx. Until then the link
-            // is rendered disabled so the affordance is discoverable without
-            // promising something the backend doesn't yet support.
-            <a
-              data-testid="sign-in-forgot-password"
-              href="#"
-              aria-disabled="true"
-              title="Coming soon"
-              onClick={(e) => e.preventDefault()}
-              style={{
-                marginTop: "var(--space-1)",
-                alignSelf: "flex-start",
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-tertiary)",
-                textDecoration: "none",
-                cursor: "not-allowed",
-              }}
-            >
-              Forgot password?
-            </a>
-          ) : null}
+          {/* "Forgot password?" intentionally absent: the reset flow isn't
+              wired through auth-context yet, and shipping a dead link
+              ("Coming soon" tooltip on click) reads as cheap. Restore this
+              once client.auth.resetPasswordForEmail() is connected. */}
         </div>
 
         {error ? (
@@ -242,6 +223,7 @@ export function SignInScreen(): ReactElement {
           data-testid="sign-in-submit"
           disabled={form_locked || email.length === 0 || password.length === 0}
           full_width
+          leading={busy ? <Spinner size={14} /> : undefined}
         >
           {busy
             ? mode === "sign_in"

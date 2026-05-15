@@ -12,7 +12,10 @@
   /* Text */
   --color-text-primary: hsl(30 8% 12%);
   --color-text-secondary: hsl(30 6% 38%);
-  --color-text-tertiary: hsl(30 5% 56%);
+  /* Darkened to hsl(30 6% 46%) for ~4.6:1 contrast on white — passes WCAG
+     AA for normal text. Previous value (56%) was ~3.5:1 which only met
+     the large-text AA threshold and read as illegible against pane fills. */
+  --color-text-tertiary: hsl(30 6% 46%);
   --color-text-on-accent: hsl(0 0% 100%);
   --color-text-on-status: hsl(30 8% 12%);
 

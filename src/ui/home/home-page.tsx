@@ -4,7 +4,7 @@ import type { FrameId } from "@/schema";
 import { useAppStateStore, useRepository, PinnedCapReached } from "@/state";
 import { useAuth } from "../auth";
 import { useNavigate } from "../routing";
-import { Dialog, Button, EmptyState, useToast } from "../primitives";
+import { Dialog, Button, EmptyState, Spinner, useToast } from "../primitives";
 import { UIcon } from "../primitives/uicon";
 import { NewFrameWizard, type NewFrameWizardSubmitArgs } from "../onboarding";
 import { FrameSummaryCard, type FrameSummary } from "./frame-summary-card";
@@ -222,6 +222,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
             data-testid="home-start-tutorial"
             onClick={onStartTutorial}
             disabled={tutorial_loading}
+            leading={tutorial_loading ? <Spinner size={12} /> : undefined}
           >
             {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
           </Button>
@@ -261,6 +262,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
                   data-testid="home-empty-start-tutorial"
                   onClick={onStartTutorial}
                   disabled={tutorial_loading}
+                  leading={tutorial_loading ? <Spinner size={12} /> : undefined}
                 >
                   {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
                 </Button>

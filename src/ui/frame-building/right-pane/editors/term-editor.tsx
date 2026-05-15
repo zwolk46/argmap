@@ -83,16 +83,21 @@ export function TermEditor(props: TermEditorProps): ReactElement {
           {node.linked_to ? (
             <span style={CHIP_STYLE}>
               <span>{node.linked_to}</span>
-              {/* KEEP RAW: tiny inline icon inside a pill chip; IconButton's min 26px is too large for inline-with-text. */}
               <button
                 type="button"
                 style={{
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: 0,
+                  padding: "var(--space-1)",
+                  margin: "calc(var(--space-1) * -1)",
                   lineHeight: 1,
                   color: "inherit",
+                  borderRadius: "var(--radius-sm)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "var(--font-size-sm)",
                 }}
                 onClick={() => patch({ linked_to: undefined })}
                 aria-label="Clear link"

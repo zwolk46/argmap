@@ -8,7 +8,7 @@ import type {
   Node,
 } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button } from "../../../primitives";
+import { Button, SegmentedToggle } from "../../../primitives";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface CheckpointEditorProps {
@@ -81,30 +81,13 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
 
       <div style={SECTION_STYLE}>
         <label className="argmap-section-heading">Answer Type</label>
-        <div style={{ display: "flex", gap: "var(--space-1)", marginTop: "var(--space-1)" }}>
-          {/* KEEP RAW: pill-toggles for answer-type selection, not the standard Button taxonomy. */}
-          {ANSWER_TYPE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              style={{
-                padding: "var(--space-1) 10px",
-                border: "var(--border-hairline) solid var(--color-border-subtle)",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "var(--font-size-sm)",
-                cursor: "pointer",
-                background:
-                  node.answer_type === opt.value ? "var(--color-primary)" : "transparent",
-                color:
-                  node.answer_type === opt.value
-                    ? "var(--color-text-on-accent)"
-                    : "var(--color-text)",
-              }}
-              onClick={() => patch({ answer_type: opt.value })}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div style={{ marginTop: "var(--space-1)" }}>
+          <SegmentedToggle
+            options={ANSWER_TYPE_OPTIONS}
+            value={node.answer_type}
+            onChange={(next) => patch({ answer_type: next as CheckpointAnswerType })}
+            aria_label="Answer type"
+          />
         </div>
       </div>
 

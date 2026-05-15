@@ -28,10 +28,16 @@ export function PreviewBanner({ version_number, kind }: PreviewBannerProps): Rea
         justifyContent: "space-between",
         gap: "var(--space-3)",
         padding: "var(--space-2) var(--space-4)",
-        background: "var(--color-status-not-applicable-bg)",
-        borderBottom: "var(--border-thin) solid var(--color-status-not-applicable)",
+        // Use the warning palette (warm gold) for the "you're viewing
+        // history, this is read-only" banner — production apps need this
+        // to read as a state change, not a quiet info chrome. The previous
+        // not-applicable gray blended into the page and let users miss
+        // that they were in preview mode.
+        background: "var(--color-severity-warning-bg)",
+        borderBottom: "var(--border-thin) solid var(--color-severity-warning)",
         fontSize: "var(--font-size-sm)",
-        color: "var(--color-text-secondary)",
+        color: "var(--color-severity-warning)",
+        fontWeight: "var(--font-weight-medium)",
       }}
     >
       <span

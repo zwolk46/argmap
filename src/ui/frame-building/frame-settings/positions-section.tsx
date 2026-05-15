@@ -73,7 +73,7 @@ export function PositionsSection(): ReactElement | null {
             padding: "var(--space-3)",
             background: "var(--color-surface-pane)",
             borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--color-border-subtle)",
+            border: "var(--border-hairline) solid var(--color-border-subtle)",
           }}
         >
           <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>

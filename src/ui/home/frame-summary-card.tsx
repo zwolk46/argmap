@@ -1,7 +1,7 @@
 import type { ReactElement, KeyboardEvent } from "react";
 import type { FrameId } from "@/schema";
 import { ModeFlavorChip } from "../chrome";
-import { IconButton, relativeTime } from "../primitives";
+import { Button, IconButton, Spinner, relativeTime } from "../primitives";
 import { UIcon } from "../primitives/uicon";
 
 export interface FrameSummary {
@@ -156,8 +156,9 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
           {onRunArgument ? (
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="ghost"
               data-testid="frame-card-run-argument"
               disabled={run_argument_pending}
               onClick={(e) => {
@@ -167,25 +168,11 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
               }}
               aria-label="Open an argument session for this frame"
               aria-busy={run_argument_pending ? "true" : undefined}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                padding: "2px var(--space-2)",
-                background: "transparent",
-                border: "var(--border-thin) solid var(--color-border-subtle)",
-                borderRadius: "var(--radius-pill)",
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-secondary)",
-                cursor: run_argument_pending ? "default" : "pointer",
-                opacity: run_argument_pending ? 0.6 : 1,
-                lineHeight: 1,
-                whiteSpace: "nowrap",
-              }}
+              leading={run_argument_pending ? <Spinner size={12} /> : undefined}
+              trailing={run_argument_pending ? undefined : <UIcon name="arrow-right" size={12} />}
             >
-              {run_argument_pending ? "Opening…" : "Run argument"}{" "}
-              <UIcon name="arrow-right" size={12} />
-            </button>
+              {run_argument_pending ? "Opening…" : "Run argument"}
+            </Button>
           ) : null}
           <span
             style={{

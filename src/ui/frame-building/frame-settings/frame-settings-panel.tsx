@@ -16,10 +16,12 @@ export interface FrameSettingsPanelProps {
   on_delete_frame?: () => void;
 }
 
+// Vertical rhythm: settings sections stack with a single --space-6 gap
+// (matching SessionSettingsPanel). No top-border separators — sections
+// already read as distinct via their heading + content blocks.
 const SECTION_DIVIDER_STYLE: React.CSSProperties = {
-  borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-  marginTop: "var(--space-5)",
   paddingTop: "var(--space-5)",
+  borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
 };
 
 export function FrameSettingsPanel({
@@ -39,7 +41,7 @@ export function FrameSettingsPanel({
       </DrawerHeader>
 
       <DrawerBody>
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-5)" }}>
           {/* Metadata */}
           <MetadataSection />
 

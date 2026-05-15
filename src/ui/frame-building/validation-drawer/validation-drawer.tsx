@@ -181,35 +181,67 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           {dismissed.length > 0 && (
             <div>
               {/* KEEP RAW: full-width accordion header with rotating chevron; bespoke layout, not the standard Button taxonomy. */}
-              <button
-                type="button"
-                onClick={() => set_show_dismissed((v) => !v)}
-                aria-expanded={show_dismissed}
+              <div
                 style={{
-                  width: "100%",
-                  padding: "var(--space-2) var(--space-3)",
-                  background: "transparent",
-                  border: "none",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-secondary)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "var(--space-1)",
+                  gap: "var(--space-2)",
+                  padding: "var(--space-2) var(--space-3) var(--space-2) 0",
                 }}
               >
-                <UIcon
-                  name="angle-small-right"
-                  size={12}
+                <button
+                  type="button"
+                  onClick={() => set_show_dismissed((v) => !v)}
+                  aria-expanded={show_dismissed}
                   style={{
-                    transform: show_dismissed ? "rotate(90deg)" : "rotate(0deg)",
-                    transition: "transform var(--duration-fast) var(--ease-standard)",
-                    display: "inline-block",
+                    flex: 1,
+                    padding: "var(--space-2) var(--space-3)",
+                    background: "transparent",
+                    border: "none",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-secondary)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
                   }}
-                />
-                <span>Dismissed ({dismissed.length})</span>
-              </button>
+                >
+                  <UIcon
+                    name="angle-small-right"
+                    size={12}
+                    style={{
+                      transform: show_dismissed ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform var(--duration-fast) var(--ease-standard)",
+                      display: "inline-block",
+                    }}
+                  />
+                  <span>Dismissed ({dismissed.length})</span>
+                </button>
+                {show_dismissed ? (
+                  <button
+                    type="button"
+                    data-testid="validation-restore-all"
+                    onClick={() => {
+                      for (const r of dismissed) {
+                        const key = dismissalKeyFor(r, frame_id ?? "frame");
+                        app_store.getState().undismissWarning(key);
+                      }
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "var(--space-1) var(--space-2)",
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-mode-current-accent)",
+                      borderRadius: "var(--radius-sm)",
+                    }}
+                  >
+                    Restore all
+                  </button>
+                ) : null}
+              </div>
               {show_dismissed &&
                 dismissed.map((r, i) => (
                   <ValidationRow
