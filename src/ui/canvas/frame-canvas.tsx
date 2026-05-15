@@ -65,13 +65,22 @@ export interface FrameCanvasProps {
     target: NodeRef,
     drop_position?: { x: number; y: number },
   ) => void;
+  /** Palette drag-drop. Fired when the user drops a palette item onto the
+   *  canvas with the application/argmap-palette-node MIME. The caller
+   *  should create a node of `node_type` at the supplied canvas-space
+   *  position. Without this prop the drop is ignored and the user-visible
+   *  feedback is "drag silently snaps back". */
+  on_palette_drop?: (node_type: string, position: { x: number; y: number }) => void;
   /** P1: keyboard Delete/Backspace on a selected node. Caller should run the
    *  cascade-delete confirmation flow. */
   on_node_delete_requested?: (node_id: NodeRef) => void;
   /** P1: keyboard Delete/Backspace on a selected edge. Caller should dispatch
    *  the matching edge_removed patch. */
   on_edge_delete_requested?: (edge_id: string) => void;
-  onSelectionChange?: (node_ids: ReadonlyArray<NodeRef>) => void;
+  onSelectionChange?: (
+    node_ids: ReadonlyArray<NodeRef>,
+    edge_ids?: ReadonlyArray<string>,
+  ) => void;
   onAutoArrange?: () => void;
   search?: string;
   handle?: React.Ref<FrameCanvasHandle>;
@@ -388,6 +397,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     read_only = false,
     on_node_moved,
     on_edge_created,
+    on_palette_drop,
     onSelectionChange,
     onAutoArrange,
     handle,
@@ -410,7 +420,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     return new Set<NodeRef>(active_set);
   }, [active_set]);
 
-  const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, setCenter, screenToFlowPosition } = useReactFlow();
   const [fc_visibility, setFcVisibility] =
     React.useState<ForeclosureVisibility>(foreclosure_visibility);
 
@@ -568,6 +578,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     onSelectionChange,
     on_node_moved,
     on_edge_created,
+    on_palette_drop,
     on_node_delete_requested: props.on_node_delete_requested,
     on_edge_delete_requested: props.on_edge_delete_requested,
     read_only,
@@ -576,6 +587,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     onSelectionChange,
     on_node_moved,
     on_edge_created,
+    on_palette_drop,
     on_node_delete_requested: props.on_node_delete_requested,
     on_edge_delete_requested: props.on_edge_delete_requested,
     read_only,
@@ -599,8 +611,30 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   );
 
   const handleSelectionChange = React.useCallback(
-    ({ nodes }: { nodes: RFNode<FrameCanvasNodeData>[] }) => {
-      callbacks_ref.current.onSelectionChange?.(nodes.map((n) => n.data.node_id));
+    ({
+      nodes,
+      edges,
+    }: {
+      nodes: RFNode<FrameCanvasNodeData>[];
+      edges: Array<{ id: string }>;
+    }) => {
+      callbacks_ref.current.onSelectionChange?.(
+        nodes.map((n) => n.data.node_id),
+        edges.map((e) => e.id),
+      );
+    },
+    [],
+  );
+
+  // Clicking an edge directly should route through onSelectionChange so the
+  // inspector can switch to edge-mode (V-FR-3 lives on edges, not nodes —
+  // without this handler InspectorEdge is unreachable). React Flow does
+  // emit onSelectionChange for edge clicks, but the call sometimes coalesces
+  // with the prior nodes-only selection; we forward synchronously here.
+  const handleEdgeClick = React.useCallback(
+    (_: React.MouseEvent, edge: { id: string }) => {
+      const cb = callbacks_ref.current;
+      if (!cb.read_only) cb.onSelectionChange?.([], [edge.id]);
     },
     [],
   );
@@ -622,6 +656,39 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
       target: connection.target as NodeRef,
     };
   }, []);
+
+  // Palette drag-drop handlers. The left-pane palette sets a custom MIME
+  // payload (application/argmap-palette-node) on dragstart; we accept the
+  // drop here, translate the screen coords into canvas coords via
+  // screenToFlowPosition, and forward to on_palette_drop.
+  const handleCanvasDragOver = React.useCallback((event: React.DragEvent) => {
+    if (event.dataTransfer.types.includes("application/argmap-palette-node")) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const handleCanvasDrop = React.useCallback(
+    (event: React.DragEvent) => {
+      const cb = callbacks_ref.current;
+      if (cb.read_only) return;
+      const data = event.dataTransfer.getData("application/argmap-palette-node");
+      if (!data) return;
+      event.preventDefault();
+      try {
+        const parsed = JSON.parse(data) as { kind: string; node_type: string };
+        if (parsed.kind !== "palette_node_type" || !parsed.node_type) return;
+        const flow_position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        cb.on_palette_drop?.(parsed.node_type, flow_position);
+      } catch {
+        // Malformed payload — silently no-op rather than throwing into render.
+      }
+    },
+    [screenToFlowPosition],
+  );
 
   const handleConnectEnd = React.useCallback((event: MouseEvent | TouchEvent) => {
     const point =
@@ -667,6 +734,8 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
       data-testid="frame-canvas"
       data-read-only={read_only}
       style={{ width: "100%", height: "100%", position: "relative" }}
+      onDragOver={handleCanvasDragOver}
+      onDrop={handleCanvasDrop}
     >
       <ReactFlow
         nodes={rf_nodes}
@@ -676,6 +745,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         onNodesChange={onNodesChange as never}
         onEdgesChange={onEdgesChange as never}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick as never}
         onNodeDragStop={handleNodeDragStop}
         onSelectionChange={handleSelectionChange as never}
         onConnect={handleConnect}

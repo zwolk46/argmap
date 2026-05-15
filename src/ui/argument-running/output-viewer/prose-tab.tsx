@@ -93,7 +93,7 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
           >
             Copy as Markdown
           </Button>
-          {shape !== "incomplete" ? (
+          {shape !== "incomplete" && aiSuggestion.enabled ? (
             <Button
               size="sm"
               variant="ghost"

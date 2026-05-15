@@ -7,6 +7,14 @@ export type AiSuggestionStatus = "idle" | "invoking" | "awaiting_decision" | "ap
 export interface UseAiSuggestionReturn<TOut> {
   pending: SuggestionResult<TOut> | null;
   status: AiSuggestionStatus;
+  /**
+   * Whether the AI hook surface is wired through to an executor. When
+   * false (the production state today — no backend hook handlers
+   * configured in context.tsx), invoke() will resolve without producing
+   * a suggestion, so call sites should hide the affordance entirely
+   * rather than render a button that does nothing visible.
+   */
+  enabled: boolean;
   invoke: (hook_id: HookId, args: unknown) => Promise<void>;
   resolve: (decision: ConfirmationDecision<TOut>) => Promise<void>;
   dismiss: () => Promise<void>;
@@ -21,7 +29,7 @@ export function useAiSuggestion<TOut>(
   const session_pending = useSessionStore((s) => s.pending_suggestion);
   const session_status = useSessionStore((s) => s.suggestion_status);
 
-  const { frame_store, session_store } = useRepository();
+  const { frame_store, session_store, ai_hooks_enabled } = useRepository();
 
   const pending = (
     store_kind === "frame" ? frame_pending : session_pending
@@ -56,5 +64,5 @@ export function useAiSuggestion<TOut>(
     await resolve({ kind: "rejected" } as ConfirmationDecision<TOut>);
   }, [resolve]);
 
-  return { pending, status, invoke, resolve, dismiss };
+  return { pending, status, enabled: ai_hooks_enabled, invoke, resolve, dismiss };
 }

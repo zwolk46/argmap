@@ -82,6 +82,27 @@ function SignedInApp({ user_id }: { user_id: string }): React.ReactElement {
     [repo, crosstab],
   );
 
+  // Flush any pending autosave debounce on tab close / refresh. Without
+  // this, edits made within the 5s idle window (or 30s max window) are
+  // lost when the user closes the tab. `pagehide` fires for both tab
+  // close AND browser navigation away (covers Safari's bfcache case);
+  // `beforeunload` doesn't fire on iOS. Using both is the production
+  // pattern.
+  React.useEffect(() => {
+    function flushOnHide() {
+      // Promise is fire-and-forget — there's no time to await here.
+      // Supabase's queueMicrotask gives the in-flight PATCH a chance to
+      // hit `fetch` before the browser tears down the page.
+      void autosave.flushAll();
+    }
+    window.addEventListener("pagehide", flushOnHide);
+    window.addEventListener("beforeunload", flushOnHide);
+    return () => {
+      window.removeEventListener("pagehide", flushOnHide);
+      window.removeEventListener("beforeunload", flushOnHide);
+    };
+  }, [autosave]);
+
   return (
     <App
       repo={repo}

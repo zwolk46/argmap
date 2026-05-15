@@ -188,7 +188,7 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
           on_select={on_select_reuse}
         />
       )}
-      {enable_g11 ? (
+      {enable_g11 && aiSuggestion.enabled ? (
         <Button
           variant="primary"
           size="md"

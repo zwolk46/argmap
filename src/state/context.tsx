@@ -19,6 +19,14 @@ export interface RepositoryProviderValue {
   session_store: SessionStore;
   app_state_store: AppStateStore;
   llm_settings_default: LlmSettings;
+  /**
+   * Whether the LLM-hook surface is currently executable. False today
+   * because invoke_hook + apply_decision aren't wired (no backend hook
+   * runner). UI components that gate AI affordances on this should hide
+   * rather than show-then-fail-silently. Flip to true when wiring an
+   * AI Gateway / Anthropic call path in.
+   */
+  ai_hooks_enabled: boolean;
   now: () => string;
   generateId: () => string;
 }
@@ -103,6 +111,10 @@ export function RepositoryProvider(props: RepositoryProviderProps): ReactElement
       session_store,
       app_state_store,
       llm_settings_default,
+      // No invoke_hook / apply_decision wired today, so the AI surface
+      // hides rather than rendering buttons that no-op. Flip to true here
+      // when an LLM runner is connected to frame/session-store opts.
+      ai_hooks_enabled: false,
       now,
       generateId,
     }),

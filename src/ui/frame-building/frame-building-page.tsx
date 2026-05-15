@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { FrameId, NodeRef, Node, Edge, Flavor } from "@/schema";
+import type { FrameId, NodeRef, NodeType, Node, Edge, Flavor } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 import {
   TopBar,
@@ -29,7 +29,7 @@ import { useNavigate } from "../routing";
 import { ArchitecturalModeChangeDialog, FlavorChangeDialog } from "../mode-change";
 import { ConfirmDialog } from "../primitives";
 import { ThreePaneLayout } from "./three-pane-layout";
-import { NodePalette, OutlineTree } from "./left-pane";
+import { NodePalette, OutlineTree, buildNodeDefaults } from "./left-pane";
 import { Inspector } from "./right-pane";
 import type { InspectorSelection } from "./right-pane";
 import { ValidationDrawer } from "./validation-drawer";
@@ -171,13 +171,22 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     });
   }
 
-  function handleSelectionChange(node_ids: ReadonlyArray<NodeRef>): void {
-    if (node_ids.length === 0) {
+  function handleSelectionChange(
+    node_ids: ReadonlyArray<NodeRef>,
+    edge_ids?: ReadonlyArray<string>,
+  ): void {
+    const eids = edge_ids ?? [];
+    if (node_ids.length === 0 && eids.length === 0) {
       setSelection({ kind: "empty" });
-    } else if (node_ids.length === 1) {
+    } else if (node_ids.length === 1 && eids.length === 0) {
       setSelection({ kind: "node", node_id: node_ids[0] });
+    } else if (node_ids.length === 0 && eids.length === 1) {
+      // Single-edge selection: route to InspectorEdge so edge conditions
+      // and metadata become editable. Without this branch InspectorEdge
+      // was unreachable from the canvas.
+      setSelection({ kind: "edge", edge_id: eids[0] });
     } else {
-      setSelection({ kind: "multi", node_ids, edge_ids: [] });
+      setSelection({ kind: "multi", node_ids, edge_ids: eids });
     }
   }
 
@@ -317,6 +326,22 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                       });
                     }}
                     on_edge_created={handleEdgeCreated}
+                    on_palette_drop={(node_type, position) => {
+                      const defaults = buildNodeDefaults(
+                        node_type as NodeType,
+                        generateId,
+                        now(),
+                      );
+                      const positioned: Node = {
+                        ...defaults,
+                        presentation: {
+                          ...(defaults.presentation ?? {}),
+                          x: position.x,
+                          y: position.y,
+                        },
+                      } as Node;
+                      frame_store.getState().applyPatch({ kind: "node_added", node: positioned });
+                    }}
                     on_node_delete_requested={(node_id) => cascade_confirmation.request(node_id)}
                     on_edge_delete_requested={(edge_id) =>
                       frame_store.getState().applyPatch({ kind: "edge_removed", edge_id })

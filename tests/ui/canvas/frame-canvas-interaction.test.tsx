@@ -320,7 +320,7 @@ describe("FrameCanvas — onSelectionChange → onSelectionChange prop", () => {
       edges: [],
     });
 
-    expect(onSelectionChange).toHaveBeenCalledWith(["n1"]);
+    expect(onSelectionChange).toHaveBeenCalledWith(["n1"], []);
   });
 
   it("fires onSelectionChange with empty array when deselecting all", () => {
@@ -343,6 +343,6 @@ describe("FrameCanvas — onSelectionChange → onSelectionChange prop", () => {
     }) => void;
     handler({ nodes: [], edges: [] });
 
-    expect(onSelectionChange).toHaveBeenCalledWith([]);
+    expect(onSelectionChange).toHaveBeenCalledWith([], []);
   });
 });
