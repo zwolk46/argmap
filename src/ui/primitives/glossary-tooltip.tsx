@@ -98,6 +98,26 @@ export const GLOSSARY_DICTIONARY: Record<string, GlossaryTerm> = {
     definition:
       "Nodes the runtime actually visited under your current selections. Nodes outside the active set were short-circuited by interpretation choices or unmet preconditions.",
   },
+  orphan: {
+    term: "Orphan",
+    definition:
+      "A session reference (premise, checkpoint answer, interpretation choice) that points at a frame node which has been removed or renamed in the frame's current version. Resolved by Discard / Reattach / Keep during session migration.",
+  },
+  reattach: {
+    term: "Reattach",
+    definition:
+      "During session migration, redirect a session reference (e.g., a premise's ANSWERS edge) from its original target to a new target node. Used when a node was renamed or replaced rather than deleted.",
+  },
+  primary_conclusion: {
+    term: "Primary conclusion",
+    definition:
+      "Among multiple reachable Conclusions, the one the runtime picks as the resolved output — by highest satisfied-node count, then binding-authority preference, then lex ordering.",
+  },
+  satisfaction_policy: {
+    term: "Satisfaction policy",
+    definition:
+      "The rule that decides when a Checkpoint or Interpretation counts as 'satisfied' — burden of proof, authority required, premise type, and similar configurable conditions. Each node carries its own policy.",
+  },
 };
 
 export interface GlossaryTooltipProps {
