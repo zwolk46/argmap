@@ -99,7 +99,16 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
 
   function commit() {
     const next = draft.trim();
-    if (next && next !== title) {
+    if (!next) {
+      // Empty / whitespace-only title silently snaps back to the existing
+      // value. Reset the draft so the next edit starts from the live title,
+      // not the half-deleted state — otherwise the user sees their typing
+      // discarded with no explanation.
+      setDraft(title);
+      setEditing(false);
+      return;
+    }
+    if (next !== title) {
       session_store
         .getState()
         .applyPatch({ kind: "session_metadata_edited", partial: { title: next } });
