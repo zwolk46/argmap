@@ -716,6 +716,23 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     }
   }, []);
 
+  // Clear pending_connection on pointercancel / window blur. iOS can fire
+  // pointercancel mid-drag (e.g., the user opens Control Center), and
+  // without this cleanup the next drag-start would call on_edge_created
+  // with stale source/target ids — a phantom edge that didn't come from
+  // the user's current gesture.
+  React.useEffect(() => {
+    function clear() {
+      pending_connection.current = null;
+    }
+    window.addEventListener("pointercancel", clear);
+    window.addEventListener("blur", clear);
+    return () => {
+      window.removeEventListener("pointercancel", clear);
+      window.removeEventListener("blur", clear);
+    };
+  }, []);
+
   // P1: keyboard delete. React Flow's deleteKeyCode (default Backspace +
   // Delete) emits onNodesDelete / onEdgesDelete when the user presses one
   // with a selection. We forward both as cascade-delete requests for nodes

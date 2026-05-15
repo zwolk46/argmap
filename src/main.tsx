@@ -118,11 +118,21 @@ function SignedInApp({ user_id }: { user_id: string }): React.ReactElement {
       // hit `fetch` before the browser tears down the page.
       void autosave.flushAll();
     }
+    function flushOnVisibilityHidden() {
+      // iOS Safari throttles setTimeout in background tabs to ≥1000ms
+      // (and ≥60s after ~5 min), then aggressively kills the page. The
+      // autosave debounce can stretch past the kill point, dropping the
+      // payload. Flush on visibilitychange→hidden to cover backgrounding
+      // without a full unload.
+      if (document.visibilityState === "hidden") flushOnHide();
+    }
     window.addEventListener("pagehide", flushOnHide);
     window.addEventListener("beforeunload", flushOnHide);
+    document.addEventListener("visibilitychange", flushOnVisibilityHidden);
     return () => {
       window.removeEventListener("pagehide", flushOnHide);
       window.removeEventListener("beforeunload", flushOnHide);
+      document.removeEventListener("visibilitychange", flushOnVisibilityHidden);
     };
   }, [autosave]);
 

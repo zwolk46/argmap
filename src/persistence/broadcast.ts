@@ -38,8 +38,12 @@ class BroadcastChannelBus implements CrossTabBus {
 
   constructor(channel: BroadcastChannel) {
     this.channel = channel;
-    this.channel.onmessage = (e: MessageEvent) => {
+    // addEventListener instead of assignment-onto-.onmessage so we don't
+    // clobber any other consumer that happens to share the same
+    // BroadcastChannel instance (e.g., a future telemetry sink).
+    this.channel.addEventListener("message", (e: MessageEvent) => {
       const msg = e.data as { event: keyof BroadcastEvents; payload: unknown };
+      if (!msg || typeof msg.event !== "string") return;
       const set = this.listeners.get(msg.event);
       if (!set) return;
       for (const listener of set) {
@@ -49,7 +53,7 @@ class BroadcastChannelBus implements CrossTabBus {
           /* isolate */
         }
       }
-    };
+    });
   }
 
   publish<K extends keyof BroadcastEvents>(event: K, payload: BroadcastEvents[K]): void {

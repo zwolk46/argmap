@@ -154,7 +154,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
       navigate({ kind: "argument_running", session_id: result.session_id });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.push({ kind: "error", message: `Could not load the tutorial: ${msg}` });
+      toast.push({ kind: "error", message: `Couldn't load the tutorial: ${msg}` });
     } finally {
       setTutorialLoading(false);
     }
