@@ -1,18 +1,33 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useRoute, useNavigate } from "./routing";
-import { FrameBuildingPage, ArgumentRunningPage } from "./pages";
 import {
   VersionHistoryPane,
   VersionHistoryPreviewProvider,
-  FramePreviewView,
-  SessionPreviewView,
   useVersionHistoryPreview,
 } from "./version-history";
 import { OnboardingWizard } from "./onboarding";
 import { HomePage } from "./home";
 import { LoadingScreen } from "./primitives";
 import { useAppStateStore, useRepository, selectFirstLaunchDismissed } from "@/state";
+
+// Code-split the heavy pages. Home + sign-in are the routes a first-time
+// user hits; the canvas-heavy pages (Frame Building, Argument Running,
+// version-history preview surfaces) ship a separate chunk that loads only
+// when the user navigates to them. React Flow + ELK + the layout module
+// together account for ~60% of the previous all-in-one bundle.
+const FrameBuildingPage = React.lazy(() =>
+  import("./pages").then((m) => ({ default: m.FrameBuildingPage })),
+);
+const ArgumentRunningPage = React.lazy(() =>
+  import("./pages").then((m) => ({ default: m.ArgumentRunningPage })),
+);
+const FramePreviewView = React.lazy(() =>
+  import("./version-history").then((m) => ({ default: m.FramePreviewView })),
+);
+const SessionPreviewView = React.lazy(() =>
+  import("./version-history").then((m) => ({ default: m.SessionPreviewView })),
+);
 
 /**
  * Boots the app's persistent AppState (pins, recents, coachmark dismissals,
@@ -114,7 +129,13 @@ function RoutedView(): ReactElement {
           the immediate children) keep their geometry unchanged. tabIndex=-1
           allows programmatic focus after the skip link is activated. */}
       <main id="main" tabIndex={-1} style={{ display: "contents" }}>
-        {page}
+        {/* React.lazy needs a Suspense boundary. We render LoadingScreen
+            while the canvas-heavy chunk arrives — same component the
+            workspace boot already uses, so the transition reads as one
+            continuous load rather than a flash of empty UI. */}
+        <React.Suspense fallback={<LoadingScreen label="Loading…" />}>
+          {page}
+        </React.Suspense>
       </main>
       <VersionHistoryPane open={version_history_open} onClose={onClose} />
       <AppOnboardingMount />
