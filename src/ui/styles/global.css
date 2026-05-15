@@ -454,6 +454,38 @@ select.argmap-input {
   animation: argmap-dialog-pop-in var(--duration-medium) var(--ease-emphasized);
 }
 
+/* Exit phase. When the dialog's open prop flips to false we keep the
+   element mounted for 160ms while these animations play, then unmount.
+   The overlay fades out; the panel scales down slightly so the page
+   reads as receding rather than vanishing. */
+@keyframes argmap-overlay-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes argmap-dialog-pop-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97) translateY(1px);
+  }
+}
+
+.argmap-overlay--exiting {
+  animation: argmap-overlay-fade-out 160ms var(--ease-standard) forwards;
+}
+
+.argmap-dialog--exiting {
+  animation: argmap-dialog-pop-out 160ms var(--ease-emphasized) forwards;
+}
+
 /* P1: IconButton hover via CSS (replaces inline JS mutation that got
    stuck when the user Tab'd off a hovered button). */
 .argmap-icon-btn:hover:not(:disabled) {

@@ -105,27 +105,63 @@ export function Dialog({
   const dialogRef = React.useRef<HTMLDivElement>(null);
   const previousFocusRef = React.useRef<Element | null>(null);
 
+  // Three-phase mount state. "open" while visible, "exiting" while the
+  // close animation plays, "closed" when unmounted. We need the
+  // intermediate "exiting" so the overlay + panel get a chance to fade
+  // out rather than vanishing — production apps with abrupt unmounts
+  // read as cheap.
+  const [phase, setPhase] = React.useState<"open" | "exiting" | "closed">(
+    open ? "open" : "closed",
+  );
+  const exit_timer_ref = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   React.useEffect(() => {
     if (open) {
+      if (exit_timer_ref.current !== null) {
+        clearTimeout(exit_timer_ref.current);
+        exit_timer_ref.current = null;
+      }
+      setPhase("open");
+    } else if (phase !== "closed") {
+      setPhase("exiting");
+      // 160ms matches argmap-overlay-fade-out duration below. We use a
+      // timer instead of onAnimationEnd because the listener can miss
+      // when the consumer unmounts during the exit (React may reorder
+      // events around state updates).
+      exit_timer_ref.current = setTimeout(() => {
+        setPhase("closed");
+        exit_timer_ref.current = null;
+      }, 160);
+    }
+  }, [open, phase]);
+
+  React.useEffect(() => {
+    return () => {
+      if (exit_timer_ref.current !== null) clearTimeout(exit_timer_ref.current);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (phase === "open") {
       previousFocusRef.current = document.activeElement;
       const focusable = dialogRef.current?.querySelector<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
       );
       focusable?.focus();
       document.body.style.overflow = "hidden";
-    } else {
+    } else if (phase === "closed") {
       document.body.style.overflow = "";
       if (previousFocusRef.current instanceof HTMLElement) {
         previousFocusRef.current.focus();
       }
     }
     return () => {
-      document.body.style.overflow = "";
+      if (phase === "closed") document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [phase]);
 
   React.useEffect(() => {
-    if (!open) return;
+    if (phase !== "open") return;
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && dismiss_on_escape) onClose();
       if (e.key === "Tab" && dialogRef.current) {
@@ -150,13 +186,16 @@ export function Dialog({
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose, dismiss_on_escape]);
+  }, [phase, onClose, dismiss_on_escape]);
 
-  if (!open) return null;
+  if (phase === "closed") return null;
+
+  const exiting = phase === "exiting";
 
   return (
     <div
-      className="argmap-overlay"
+      className={`argmap-overlay ${exiting ? "argmap-overlay--exiting" : ""}`}
+      data-state={phase}
       style={{
         position: "fixed",
         inset: 0,
@@ -168,7 +207,7 @@ export function Dialog({
         background: "var(--color-surface-overlay)",
       }}
       onClick={
-        dismiss_on_click_outside
+        dismiss_on_click_outside && !exiting
           ? (e) => {
               if (e.target === e.currentTarget) onClose();
             }
@@ -181,7 +220,7 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={aria_labelledby}
         aria-label={aria_labelledby ? undefined : aria_label}
-        className="argmap-dialog"
+        className={`argmap-dialog ${exiting ? "argmap-dialog--exiting" : ""}`}
         style={{
           background: "var(--color-surface-elevated)",
           borderRadius: "var(--radius-lg)",
