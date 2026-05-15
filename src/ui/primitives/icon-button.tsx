@@ -22,8 +22,20 @@ export interface IconButtonProps {
  *
  * Children that aren't a single detectable UIcon (raw SVG, multi-element
  * trees, plain text) fall through with a scale-only hover treatment.
+ *
+ * Names where the regular-rounded slug differs from the solid-rounded one
+ * are mapped here so the hover swap doesn't render a blank glyph. Audit:
+ * I.e., `times` exists in fi-rr but not in fi-sr — the solid variant is
+ * `cross`. Verified against UICONS 2.6.0 against every UIcon name in the
+ * codebase. If a name has no solid sibling at all (none currently do
+ * after this map), omit it from the SOLID_PAIRED set and the swap layer
+ * will not render for that icon.
  */
-function findUIconName(children: ReactNode): { name: string; size: number } | null {
+const SOLID_ALIAS: Record<string, string> = {
+  times: "cross",
+};
+
+function findUIconName(children: ReactNode): { name: string; solidName: string; size: number } | null {
   const list = React.Children.toArray(children);
   if (list.length !== 1) return null;
   const only = list[0];
@@ -34,7 +46,8 @@ function findUIconName(children: ReactNode): { name: string; size: number } | nu
   if (iconStyle !== undefined && iconStyle !== "rr") return null;
   if (typeof props.name !== "string") return null;
   const size = typeof props.size === "number" ? props.size : 16;
-  return { name: props.name, size };
+  const solidName = SOLID_ALIAS[props.name] ?? props.name;
+  return { name: props.name, solidName, size };
 }
 
 export function IconButton({
@@ -57,7 +70,7 @@ export function IconButton({
       </span>
       <span className="argmap-icon-btn-layer" data-layer="solid" aria-hidden="true">
         <i
-          className={`fi fi-sr-${detected.name}`}
+          className={`fi fi-sr-${detected.solidName}`}
           aria-hidden="true"
           style={{
             fontSize: detected.size,
