@@ -25,7 +25,7 @@ export function buildShortTourSteps(_roles: TutorialRoleMap | null): Step[] {
       placement: "center",
       title: "Welcome — see how a complete negligence claim resolves",
       content:
-        "This is a worked example of Palsgraf v. Long Island Railroad. The frame in front of you models the full negligence claim — DUTY, BREACH, CAUSATION, and DAMAGES — joined by an AND Gate that requires all four to hold. The session we've preloaded selects Cardozo's narrow duty rule and stipulates Mrs. Palsgraf was outside the zone of danger, so the Duty element fails, the AND Gate fails, and the resolved output is NOT LIABLE — even though the other three elements are stipulated met.",
+        "This is a worked example of Palsgraf v. Long Island Railroad. The frame in front of you models the full negligence claim — Duty, Breach, Causation, and Damages — joined by an AND Gate that requires all four to hold. The session we've preloaded selects Cardozo's narrow duty rule and stipulates Mrs. Palsgraf was outside the zone of danger, so the Duty element fails, the AND Gate fails, and the resolved output is not liable — even though the other three elements are stipulated met.",
       disableBeacon: true,
       spotlightClicks: false,
     },
@@ -41,7 +41,7 @@ export function buildShortTourSteps(_roles: TutorialRoleMap | null): Step[] {
       placement: "auto",
       title: "What the runtime concluded",
       content:
-        "The runtime walked the frame using your premises and selections, evaluated every element, applied the AND Gate, and produced a resolved output. For this tutorial: determinate, NOT LIABLE — because the Duty element fails the moment we select Cardozo and stipulate Mrs. Palsgraf was outside the zone.",
+        "The runtime walked the frame using your premises and selections, evaluated every element, applied the AND Gate, and produced a resolved output. For this tutorial: determinate, not liable — because the Duty element fails the moment we select Cardozo and stipulate Mrs. Palsgraf was outside the zone.",
     },
     {
       target: '[data-testid="interview-pane"]',
@@ -70,7 +70,7 @@ export function buildLongTourSteps(roles: TutorialRoleMap | null): Step[] {
       placement: "center",
       title: "The complete negligence walkthrough",
       content:
-        "Negligence has four elements — DUTY, BREACH, CAUSATION, DAMAGES — and a defendant is liable only when all four are met. The tour walks each element, then the AND Gate that combines them, then traces the path the runtime followed under your selections.",
+        "Negligence has four elements — Duty, Breach, Causation, Damages — and a defendant is liable only when all four are met. The tour walks each element, then the AND Gate that combines them, then traces the path the runtime followed under your selections.",
       disableBeacon: true,
     },
     {
@@ -78,7 +78,7 @@ export function buildLongTourSteps(roles: TutorialRoleMap | null): Step[] {
       placement: "auto",
       title: "Two concepts: the Frame and the Session",
       content:
-        "The graph in front of you is the FRAME — the logical structure of the legal question. It's reusable: every argument session on this frame uses the same nodes and edges. A SESSION is the FACTS you bring in (premises + interpretation choices + checkpoint answers). The frame is the skeleton; the session is the flesh. You're looking at one Session on top of the Palsgraf frame.",
+        "The graph in front of you is the frame — the logical structure of the legal question. It's reusable: every argument session on this frame uses the same nodes and edges. A session is the facts you bring in (premises + interpretation choices + checkpoint answers). The frame is the skeleton; the session is the flesh. You're looking at one Session on top of the Palsgraf frame.",
     },
     {
       target: at("rq"),
@@ -92,7 +92,7 @@ export function buildLongTourSteps(roles: TutorialRoleMap | null): Step[] {
       placement: "auto",
       title: "AND Gate — every element must hold",
       content:
-        "Negligence requires DUTY, BREACH, CAUSATION, and DAMAGES. The AND Gate enforces 'all of the above': it has four inputs (one per element). The gate's output (the 'Liable' Conclusion) fires only if every input is satisfied. If any one element fails — even with the other three rock-solid — the gate fails and liability does not follow. This is exactly what happens under Cardozo: Duty fails, gate fails, NOT LIABLE.",
+        "Negligence requires Duty, Breach, Causation, and Damages. The AND Gate enforces 'all of the above': it has four inputs (one per element). The gate's output (the 'Liable' Conclusion) fires only if every input is satisfied. If any one element fails — even with the other three rock-solid — the gate fails and liability does not follow. This is exactly what happens under Cardozo: Duty fails, gate fails, not liable.",
     },
     {
       target: at("sq_duty"),
@@ -120,14 +120,14 @@ export function buildLongTourSteps(roles: TutorialRoleMap | null): Step[] {
       placement: "auto",
       title: "Andrews's interpretation (dissent — the broad rule)",
       content:
-        "Andrews: every actor owes a duty to the world. Liability is bounded later, by proximate cause, not by the duty question. Currently dimmed because the session selected Cardozo. If you swap to Andrews, this becomes the active branch and Duty is automatically satisfied — making BREACH, CAUSATION, DAMAGES the dispositive questions.",
+        "Andrews: every actor owes a duty to the world. Liability is bounded later, by proximate cause, not by the duty question. Currently dimmed because the session selected Cardozo. If you swap to Andrews, this becomes the active branch and Duty is automatically satisfied — making Breach, Causation, Damages the dispositive questions.",
     },
     {
       target: at("cp_duty"),
       placement: "auto",
       title: "Duty Checkpoint — the dispositive fact question",
       content:
-        "Under Cardozo, the Checkpoint asks: 'Was Mrs. Palsgraf within the foreseeable zone of danger?' Your stipulated Premise answered 'No', which routes the Duty element straight to the NOT-LIABLE Conclusion — bypassing the gate, because a single missing element kills the claim. Each Checkpoint has two `target_node_id`s: 'Yes' funnels into the AND Gate (where it joins the other three elements); 'No' short-circuits direct to Not Liable. That's how the four-elements-required rule is enforced structurally, not just by narrative.",
+        "Under Cardozo, the Checkpoint asks: 'Was Mrs. Palsgraf within the foreseeable zone of danger?' Your stipulated Premise answered 'No', which routes the Duty element straight to the Not Liable Conclusion — bypassing the gate, because a single missing element kills the claim. Each Checkpoint has two `target_node_id`s: 'Yes' funnels into the AND Gate (where it joins the other three elements); 'No' short-circuits direct to Not Liable. That's how the four-elements-required rule is enforced structurally, not just by narrative.",
     },
     {
       target: at("sq_breach"),

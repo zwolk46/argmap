@@ -10,7 +10,7 @@ const INPUT_STYLE: React.CSSProperties = {
 
 export function PositionsSection(): ReactElement | null {
   const frame = useFrameStore((s) => s.frame);
-  const { frame_store } = useRepository();
+  const { frame_store, generateId } = useRepository();
 
   if (!frame) return null;
 
@@ -24,7 +24,9 @@ export function PositionsSection(): ReactElement | null {
   }
 
   function addPosition() {
-    const id = crypto.randomUUID();
+    // Route through repository's generateId so the UUID polyfill in
+    // main.tsx covers Safari < 15.4 instead of throwing here.
+    const id = generateId();
     dispatchPositions([...positions, { id, label: "New position" }]);
   }
 

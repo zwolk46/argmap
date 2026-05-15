@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { Edge } from "@/schema";
 import { useRepository } from "@/state";
+import { EDGE_TYPE_LABELS } from "@/ui/primitives";
 
 export interface EdgeEditorProps {
   edge: Edge;
@@ -37,7 +38,7 @@ export function EdgeEditor(props: EdgeEditorProps): ReactElement {
       <div style={SECTION_STYLE}>
         <label className="argmap-section-heading">Edge Type</label>
         <div style={{ marginTop: "var(--space-1)" }}>
-          <span style={EDGE_TYPE_BADGE}>{edge.type}</span>
+          <span style={EDGE_TYPE_BADGE}>{EDGE_TYPE_LABELS[edge.type] ?? edge.type}</span>
         </div>
       </div>
 

@@ -38,6 +38,10 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
         top: 0,
         zIndex: Z.topbar,
         backdropFilter: "saturate(120%) blur(2px)",
+        // Safari (all versions) still requires the -webkit- prefix and
+        // silently drops the unprefixed property. Without this the top
+        // bar reads opaque on Mac and iOS.
+        WebkitBackdropFilter: "saturate(120%) blur(2px)",
       }}
     >
       {slots.home && <div style={{ flexShrink: 0 }}>{slots.home}</div>}

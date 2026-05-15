@@ -15,7 +15,30 @@ const llm_settings_default: LlmSettings = {
 };
 
 const now = (): string => new Date().toISOString();
-const generateId = (): string => crypto.randomUUID();
+
+// crypto.randomUUID() requires Safari 15.4+ and a secure context. We
+// fall through to a manually-built v4 UUID (using crypto.getRandomValues
+// for the entropy, which has wider browser support) so an older Safari
+// doesn't TypeError at app boot the first time we try to mint an id.
+const generateId = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    // RFC 4122 v4 — set version (top 4 bits of byte 6 to 0100) and
+    // variant (top 2 bits of byte 8 to 10).
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  // Last-resort fallback for ancient environments — Math.random is not
+  // cryptographically strong but won't collide at session scale.
+  const rand = () => Math.floor(Math.random() * 0x10000).toString(16).padStart(4, "0");
+  return `${rand()}${rand()}-${rand()}-4${rand().slice(1)}-${rand()}-${rand()}${rand()}${rand()}`;
+};
 
 function BootError({ message, hint }: { message: string; hint?: string }): React.ReactElement {
   return (

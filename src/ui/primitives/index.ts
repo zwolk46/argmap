@@ -58,6 +58,7 @@ export {
   humanizeFieldName,
   humanizeValidationMessage,
   NODE_TYPE_LABELS,
+  EDGE_TYPE_LABELS,
 } from "./humanize";
 
 export { ToastProvider, useToast } from "./toast";

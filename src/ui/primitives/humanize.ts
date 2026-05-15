@@ -6,7 +6,7 @@ export const NODE_TYPE_LABELS: Readonly<Record<NodeType, string>> = {
   Term: "Term",
   Interpretation: "Interpretation",
   Checkpoint: "Checkpoint",
-  LogicalGate: "Logic Gate",
+  LogicalGate: "Logical Gate",
   Conclusion: "Conclusion",
   Authority: "Authority",
   Premise: "Premise",
@@ -70,7 +70,7 @@ const PHRASE_REPLACEMENTS: ReadonlyArray<[RegExp, string]> = [
 ];
 
 // Edge-type enum codes that show up in V-EDGE-1 messages naked.
-const EDGE_TYPE_LABELS: Readonly<Record<string, string>> = {
+export const EDGE_TYPE_LABELS: Readonly<Record<string, string>> = {
   DECOMPOSES_INTO: "decomposes into",
   TURNS_ON: "turns on",
   INTERPRETED_AS: "interpreted as",
