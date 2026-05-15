@@ -190,8 +190,11 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
       try {
         const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
         set({ pending_suggestion: result, suggestion_status: "awaiting_decision" });
-      } catch {
-        set({ suggestion_status: "idle" });
+      } catch (e) {
+        // Surface the failure so the toast bridge can render it; bare
+        // catch left the user with a silent flicker.
+        const message = e instanceof Error ? e.message : "AI suggestion failed";
+        set({ suggestion_status: "idle", error: message });
       }
     },
 

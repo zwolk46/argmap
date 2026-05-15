@@ -8,7 +8,7 @@ describe("ResolutionPicker", () => {
     const { getByText } = render(<ResolutionPicker value="discard" onChange={() => {}} />);
     expect(getByText("Discard")).toBeTruthy();
     expect(getByText("Reattach")).toBeTruthy();
-    expect(getByText("Keep as no-op")).toBeTruthy();
+    expect(getByText("Keep")).toBeTruthy();
   });
 
   it("clicking an option calls onChange with the right kind", () => {

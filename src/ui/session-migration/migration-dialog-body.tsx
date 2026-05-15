@@ -43,13 +43,14 @@ export function MigrationDialogBody(props: MigrationDialogBodyProps): ReactEleme
   const { phase } = props;
 
   if (phase.kind === "loading") {
-    return <InlineLoading testId="migration-loading" label="Computing orphan candidates…" />;
+    return <InlineLoading testId="migration-loading" label="Checking what changed…" />;
   }
 
   if (phase.kind === "loaded_empty") {
     return (
       <InlineEmpty testId="migration-empty">
-        This session has no orphans. Migrating is safe.
+        Nothing in this session points at frame nodes that have moved or been
+        removed. Migrating is safe — no manual decisions needed.
       </InlineEmpty>
     );
   }

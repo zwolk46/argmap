@@ -127,8 +127,13 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
       try {
         const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
         set({ pending_suggestion: result, suggestion_status: "awaiting_decision" });
-      } catch {
-        set({ suggestion_status: "idle" });
+      } catch (e) {
+        // Surface the failure to the store's error field so the toast
+        // bridge can render it; previously this catch was bare and the
+        // user saw the button flicker and produce nothing with no
+        // explanation. Status returns to idle so the call site can retry.
+        const message = e instanceof Error ? e.message : "AI suggestion failed";
+        set({ suggestion_status: "idle", error: message });
       }
     },
 

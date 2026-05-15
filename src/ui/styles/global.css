@@ -186,6 +186,25 @@ a:hover {
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
+/* Full-viewport height with a mobile-Safari upgrade. Pages and panes
+   that want to fill the viewport apply this class; the @supports block
+   uses dvh on browsers that support it so the iOS URL bar shrink/
+   expand doesn't push content below the fold. Safari < 15.4 and
+   Chrome < 108 keep the 100vh baseline. */
+html,
+body,
+#root {
+  height: 100%;
+}
+.argmap-fullheight {
+  height: 100vh;
+}
+@supports (height: 100dvh) {
+  .argmap-fullheight {
+    height: 100dvh;
+  }
+}
+
 /* Top-bar progressive collapse on narrow viewports. Below 720px the
    chip decorations hide (the user can re-derive them from the page
    body); below 560px the indicators (recompute counter, drift, etc.)

@@ -12,7 +12,7 @@ export function LoadingScreen({ label = "Loading…" }: LoadingScreenProps): Rea
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        height: "100dvh",
+        height: "100vh",
         gap: "var(--space-4)",
         background: "var(--color-surface-canvas)",
       }}

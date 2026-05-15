@@ -294,7 +294,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
 
   return (
     <React.Fragment>
-      <div style={{ display: "flex", flexDirection: "column", height: "100dvh" }}>
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
         <TopBar slots={top_bar_slots} mode="frame-building" />
         <div style={{ flex: 1, overflow: "hidden" }}>
           <ThreePaneLayout

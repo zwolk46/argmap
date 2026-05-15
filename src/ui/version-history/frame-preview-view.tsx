@@ -44,7 +44,7 @@ export function FramePreviewView(props: FramePreviewViewProps): ReactElement {
   return (
     <div
       data-testid="frame-preview-view"
-      style={{ display: "flex", flexDirection: "column", height: "100dvh" }}
+      style={{ display: "flex", flexDirection: "column", height: "100vh" }}
     >
       <PreviewBanner version_number={version_number} kind="frame" />
       {result.status === "loading" ? (
