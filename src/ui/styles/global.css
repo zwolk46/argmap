@@ -186,6 +186,13 @@ a:hover {
   transition: background-color var(--duration-fast) var(--ease-standard);
 }
 
+/* Tabular-numbers helper for counters and timestamps, so digits don't
+   shift horizontally when the value updates. Apply to relative-time
+   strings, version counters, etc. */
+.argmap-number-meta {
+  font-variant-numeric: tabular-nums;
+}
+
 .argmap-row-hover:hover:not([aria-disabled="true"]):not(:disabled) {
   background-color: var(--color-surface-hover);
 }
@@ -213,9 +220,23 @@ a:hover {
   transition-duration: 80ms;
 }
 
-.argmap-card:focus-visible {
-  outline: 2px solid var(--color-mode-current-accent);
-  outline-offset: 2px;
+/* Unified focus halo. The global `:focus-visible` above gives a hard accent
+   outline for landmarks. For interactive primitives (cards, buttons,
+   icon-buttons, radio cards, segmented-toggle tabs) we want a softer 3px
+   accent-bg halo that composes with the element's own border/shadow
+   without doubling up the outline. */
+.argmap-card:focus-visible,
+.argmap-btn:focus-visible,
+.argmap-icon-btn:focus-visible,
+.argmap-radio-card:focus-visible,
+.argmap-output-tab:focus-visible,
+.argmap-row-hover:focus-visible,
+.argmap-segmented-tab:focus-visible,
+.argmap-outline-row[data-focused="true"] {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--color-mode-current-accent-bg),
+    var(--shadow-sm);
 }
 
 /* Button primitive base — used by `Button` component. */
@@ -240,13 +261,6 @@ a:hover {
 .argmap-btn:disabled {
   cursor: not-allowed;
   opacity: 0.55;
-}
-
-/* Custom focus ring for buttons: a soft accent halo rather than the
-   global hard outline. Keeps the button's existing border shape readable. */
-.argmap-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--color-mode-current-accent-bg, rgba(31, 111, 235, 0.25));
 }
 
 .argmap-btn[data-size="sm"] {

@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { HookInvocationRecord } from "@/llm-hooks";
 import { Tooltip } from "./tooltip";
+import { AiSparkle } from "./ai-sparkle";
 
 const HOOK_SHORT_NAMES: Record<string, string> = {
   G1: "checkpoint",
@@ -74,9 +75,7 @@ export function AiAttributionChip({ record }: AiAttributionChipProps): ReactElem
           (e.currentTarget as HTMLElement).style.borderColor = "transparent";
         }}
       >
-        <span aria-hidden style={{ fontSize: "var(--font-size-xs)", lineHeight: 1 }}>
-          ✦
-        </span>
+        <AiSparkle style={{ fontSize: "var(--font-size-xs)" }} />
         {short}
       </span>
     </Tooltip>

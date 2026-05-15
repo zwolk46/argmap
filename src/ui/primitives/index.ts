@@ -73,3 +73,6 @@ export { relativeTime } from "./relative-time";
 
 export { InlineAlert } from "./inline-alert";
 export type { InlineAlertProps, InlineAlertKind } from "./inline-alert";
+
+export { AiSparkle } from "./ai-sparkle";
+export type { AiSparkleProps } from "./ai-sparkle";

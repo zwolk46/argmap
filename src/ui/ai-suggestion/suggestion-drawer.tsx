@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { SuggestionResult, ConfirmationDecision } from "@/llm-hooks";
-import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, Button } from "../primitives";
+import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, Button, AiSparkle } from "../primitives";
 import { useAiSuggestion } from "../hooks/use-ai-suggestion";
 
 export interface SuggestionDrawerProps {
@@ -53,9 +53,7 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
             gap: "var(--space-2)",
           }}
         >
-          <span aria-hidden style={{ color: "var(--color-ai-accent)" }}>
-            ✦
-          </span>
+          <AiSparkle />
           AI suggestion
         </span>
         <span

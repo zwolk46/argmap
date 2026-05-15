@@ -2,7 +2,7 @@ import * as React from "react";
 import type { NodeRef, Premise, PremiseKind } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
 import { useAiSuggestion } from "@/ui";
-import { Button } from "../../primitives";
+import { Button, AiSparkle } from "../../primitives";
 import { PremiseReuseSuggestions } from "./premise-reuse-suggestions";
 
 export type PremiseAuthoringResult =
@@ -196,8 +196,9 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
           onClick={() => aiSuggestion.invoke("G11", { context: reuse_context })}
           disabled={aiSuggestion.status === "invoking"}
           style={{ alignSelf: "flex-start" }}
+          leading={<AiSparkle />}
         >
-          ✦ Draft from fact pattern
+          Draft from fact pattern
         </Button>
       ) : null}
     </div>

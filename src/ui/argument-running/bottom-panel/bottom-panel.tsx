@@ -26,7 +26,7 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
           alignItems: "center",
           gap: "var(--space-3)",
           padding: "0 var(--space-4)",
-          height: 32,
+          height: "var(--height-row-toolbar)",
           fontSize: "var(--font-size-xs)",
           color: "var(--color-text-secondary)",
           background: "var(--color-surface-elevated)",
@@ -68,7 +68,7 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 var(--space-4)",
-          height: 32,
+          height: "var(--height-row-toolbar)",
           borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
           background: "var(--color-surface-elevated)",
         }}

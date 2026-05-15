@@ -134,6 +134,14 @@ export function NodeFrame({
   const cardStyle: React.CSSProperties = {
     position: "relative",
     minWidth: isGate ? "64px" : "140px",
+    // Cap node width so long Interpretation / Conclusion text wraps instead
+    // of stretching the card laterally. Without a maxWidth a paragraph-long
+    // Interpretation expands the node to several hundred pixels wider than
+    // its column allocation in the tutorial layout, and adjacent-column
+    // nodes collide horizontally. 280px keeps a Conclusion's two-or-three
+    // sentence summary on three lines or fewer; the LineClamp inside keeps
+    // anything longer truncated with an ellipsis.
+    maxWidth: isGate ? undefined : "280px",
     padding: isGate ? "var(--space-3)" : "var(--space-3) var(--space-4)",
     background: display.selected
       ? "var(--color-surface-selected)"
@@ -157,7 +165,21 @@ export function NodeFrame({
       "opacity var(--duration-base) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard)",
     ...variantStyle,
     ...(isGate ? { width: "60px", height: "60px" } : {}),
-    ...(selectionShadow ? { boxShadow: selectionShadow } : {}),
+    // Compose selection halo with the variant's own box-shadow so the
+    // Conclusion double-border (rendered as a multi-stop box-shadow) stays
+    // visible while selected, and so the selection ring also shows up on
+    // node types that don't have a base shadow. Without composing, the
+    // assignment below would replace the Conclusion's outer ring whenever
+    // it was selected, losing the affordance that identifies it as a
+    // Conclusion.
+    ...(selectionShadow
+      ? {
+          boxShadow:
+            variantStyle.boxShadow !== undefined
+              ? `${selectionShadow}, ${String(variantStyle.boxShadow)}`
+              : selectionShadow,
+        }
+      : {}),
     ...(isGate && display.indeterminate_gate_dashed ? { borderStyle: "dashed" } : {}),
   };
 

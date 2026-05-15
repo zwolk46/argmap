@@ -1,3 +1,15 @@
+/**
+ * Output viewer tab control. Underline-style tab strip.
+ *
+ * App convention: use this pattern (underline + role="tab") for VIEW
+ * SWITCHERS — controls that change WHAT is shown in the body. Use
+ * <SegmentedToggle> (pill style + role="radio") for FILTER controls
+ * that narrow a list without changing what kind of thing is shown.
+ *
+ * Example of each:
+ *   View switcher  → output viewer (Path / Tree / Prose)
+ *   Filter         → milestone filter (All / Milestones / Drafts)
+ */
 import type { ReactElement } from "react";
 import type { OutputViewTab } from "@/state";
 import { Spinner } from "../../primitives";

@@ -73,6 +73,8 @@ export function SegmentedToggle<T extends string>({
             onKeyDown={(e) => handleKeyDown(e, idx)}
             onFocus={() => setFocusedIdx(idx)}
             onBlur={() => setFocusedIdx(-1)}
+            data-focused={focused_idx === idx ? "true" : "false"}
+            className="argmap-segmented-tab"
             style={{
               padding: `${padY} ${padX}`,
               borderRadius: "var(--radius-pill)",
@@ -85,8 +87,6 @@ export function SegmentedToggle<T extends string>({
               cursor: disabled ? "default" : "pointer",
               transition:
                 "background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard)",
-              outline: focused_idx === idx ? "var(--focus-ring)" : "none",
-              outlineOffset: "var(--focus-ring-offset)",
               boxShadow: is_active ? "var(--shadow-sm)" : "none",
             }}
           >

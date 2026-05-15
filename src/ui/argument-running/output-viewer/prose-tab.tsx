@@ -3,6 +3,7 @@ import type { OutputViewPayload, SessionShape } from "@/state";
 import { useAiSuggestion } from "@/ui";
 import { Button } from "../../primitives/button";
 import { EmptyState } from "../../primitives/loading-screen";
+import { AiSparkle } from "../../primitives/ai-sparkle";
 
 export interface ProseTabProps {
   payload: OutputViewPayload | null;
@@ -99,11 +100,7 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
               data-testid="prose-suggest-rewrite"
               onClick={() => aiSuggestion.invoke("G6", { canonical })}
               disabled={aiSuggestion.status === "invoking"}
-              leading={
-                <span aria-hidden style={{ color: "var(--color-ai-accent)" }}>
-                  ✦
-                </span>
-              }
+              leading={<AiSparkle />}
             >
               Suggest rewrite
             </Button>
@@ -162,9 +159,7 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
                   textTransform: "uppercase",
                 }}
               >
-                <span aria-hidden style={{ fontSize: "var(--font-size-sm)" }}>
-                  ✦
-                </span>
+                <AiSparkle style={{ fontSize: "var(--font-size-sm)" }} />
                 AI rewrite
               </div>
               <Button

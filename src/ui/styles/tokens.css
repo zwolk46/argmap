@@ -113,6 +113,9 @@
   --border-radius-sm: var(--radius-sm);
   --border-radius-lg: var(--radius-lg);
   --radius-full: var(--radius-pill);
+  /* --space-7 is intentionally between --space-6 (32px) and --space-8 (48px)
+     to give the layout a 40px tick for list-row heights (palette item,
+     left-pane row) without flattening the larger spacing scale. */
   --space-7: 40px;
 
   /* Typography — font families */
@@ -199,6 +202,18 @@
   --z-toast: 1100;
   --z-tooltip: 1200;
   --z-tour: 10000;
+
+  /* Layout heights — fixed sizes for repeating row/toolbar surfaces. The
+     bottom-panel toolbar (toggle + section heading + counts) lives at
+     row-toolbar height; the rest of the app builds vertical rhythm off
+     the --space-* scale. */
+  --height-row-toolbar: 32px;
+
+  /* Canvas grid background. The dot pattern lives in React Flow's
+     <Background gap=...> prop, not in CSS, but we centralize the
+     constant here so frame-canvas.tsx and any future canvas-style
+     consumers stay in agreement. */
+  --canvas-grid-gap: 22px;
 }
 
 [data-mode="frame-building"] {

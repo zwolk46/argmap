@@ -165,19 +165,81 @@ export function buildTutorial(opts: TutorialBuildOpts): TutorialBuildResult {
   for (const v of Object.values(N)) id_map.set(v, generateId());
   const remap = (k: string): NodeRef => (id_map.get(k) ?? k) as NodeRef;
 
-  // We deliberately do NOT set presentation.{x,y} on any tutorial node.
-  // Honoring user anchors would lock these positions and force them through
-  // ELK as fixed coordinates; with eight Interpretations across four element
-  // columns the spacing math is brittle and produces overlaps at common node
-  // widths. Letting ELK's layered algorithm own the layout produces a clean
-  // top-down hierarchy automatically and adapts when the canvas zoom or node
-  // size changes. Users can still drag nodes after the fact — drag-stop writes
-  // presentation back, and subsequent re-layouts honor those anchors.
+  // Tutorial layout — hand-positioned. We initially tried letting ELK
+  // auto-layout own placement, but during the 100-500ms ELK pass nodes fall
+  // through to (0,0) and read as "piled at origin" — even though they
+  // resolve correctly later. For a pedagogical fixture that's the first
+  // thing users see, that flash is worse than the brittleness of
+  // hand-positioning, so we pin every node.
+  //
+  // Spacing math: the widest node type is Conclusion (300px). Column gap
+  // is 600px so adjacent-column nodes have ~300px breathing room. The
+  // Duty column carries two side-by-side Interpretations (Cardozo and
+  // Andrews) because the case turns on that fork; we space them ±180 from
+  // the column center, which leaves ~160px between the Interpretation
+  // boxes and ~120px between the right edge of Andrews and the left edge
+  // of the Breach column.
+  //
+  //   Column centers (x):  Duty=-900   Breach=-300   Causation=300   Damages=900
+  //   Authority is parked further left of the Duty column.
+  //
+  //   Rows (y):
+  //     0    RootQuestion (center)
+  //     160  AndGate (center, the structural OR-of-everything)
+  //     320  SubQuestion (×4, one per element column)
+  //     480  Term (×4, one per column)
+  //     640  Primary Interpretation. For Duty, Cardozo at col-180 and
+  //          Andrews at col+180; for the other three, at column center.
+  //          Authority sits at this row, far left.
+  //     780  Alternative Interpretation (Breach / Causation / Damages
+  //          each have one — the second reading of their Term). The
+  //          Duty column has no alt at this row because Andrews already
+  //          fills the side-by-side slot at y=640.
+  //     940  Checkpoint (×4). cp_duty sits under Cardozo (col_duty-180);
+  //          the other three at column center.
+  //     1120 Conclusion: NotLiable under Cardozo's column, Liable centered
+  //          under the AND Gate.
+  const COL = {
+    duty: -900,
+    breach: -300,
+    causation: 300,
+    damages: 900,
+  };
+
+  const node_positions: Record<string, { x: number; y: number }> = {
+    [N.rq]: { x: 0, y: 0 },
+    [N.and_gate]: { x: 0, y: 160 },
+    [N.sq_duty]: { x: COL.duty, y: 320 },
+    [N.sq_breach]: { x: COL.breach, y: 320 },
+    [N.sq_causation]: { x: COL.causation, y: 320 },
+    [N.sq_damages]: { x: COL.damages, y: 320 },
+    [N.term_duty]: { x: COL.duty, y: 480 },
+    [N.term_breach]: { x: COL.breach, y: 480 },
+    [N.term_causation]: { x: COL.causation, y: 480 },
+    [N.term_damages]: { x: COL.damages, y: 480 },
+    [N.interp_cardozo]: { x: COL.duty - 180, y: 640 },
+    [N.interp_andrews]: { x: COL.duty + 180, y: 640 },
+    [N.interp_breach]: { x: COL.breach, y: 640 },
+    [N.interp_breach_alt]: { x: COL.breach, y: 820 },
+    [N.interp_causation]: { x: COL.causation, y: 640 },
+    [N.interp_causation_alt]: { x: COL.causation, y: 820 },
+    [N.interp_damages]: { x: COL.damages, y: 640 },
+    [N.interp_damages_alt]: { x: COL.damages, y: 820 },
+    [N.cp_duty]: { x: COL.duty - 180, y: 1000 },
+    [N.cp_breach]: { x: COL.breach, y: 1000 },
+    [N.cp_causation]: { x: COL.causation, y: 1000 },
+    [N.cp_damages]: { x: COL.damages, y: 1000 },
+    [N.not_liable]: { x: COL.duty - 180, y: 1180 },
+    [N.liable]: { x: 0, y: 1180 },
+    [N.authority]: { x: COL.duty - 520, y: 640 },
+  };
+
   function stamp(key: string) {
     return {
       id: remap(key),
       created_at: now,
       updated_at: now,
+      presentation: node_positions[key],
     };
   }
 

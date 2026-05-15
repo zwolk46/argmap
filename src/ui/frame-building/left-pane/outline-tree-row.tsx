@@ -58,6 +58,8 @@ export function OutlineTreeRow(props: OutlineTreeRowProps): ReactElement {
       aria-expanded={has_children ? expanded : undefined}
       tabIndex={focused ? 0 : -1}
       data-testid={`outline-row-${outline_node.node_id}`}
+      data-focused={focused ? "true" : undefined}
+      className="argmap-row-hover argmap-outline-row"
       style={{
         display: "flex",
         alignItems: "center",
@@ -66,7 +68,6 @@ export function OutlineTreeRow(props: OutlineTreeRowProps): ReactElement {
         paddingBottom: "var(--space-1)",
         paddingRight: "var(--space-2)",
         background: selected ? "var(--color-surface-selected)" : "transparent",
-        outline: focused ? "2px solid var(--color-focus-ring)" : "none",
         cursor: "pointer",
         fontSize: "var(--font-size-sm)",
         gap: "var(--space-2)",

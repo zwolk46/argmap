@@ -42,9 +42,15 @@ export function DialogHeader({
       style={{
         padding: "var(--space-4) var(--space-5)",
         borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        fontSize: "var(--font-size-md)",
+        // Dialog headings sit at the "lg" tier of the heading scale.
+        // Page-level headings (sign-in title, welcome screen) use xl;
+        // dialogs (wizard, mode-change, confirm) use lg; section headings
+        // inside a panel use sm via .argmap-section-heading. Keeping these
+        // tiers consistent is what makes the app feel like one product.
+        fontSize: "var(--font-size-lg)",
         fontWeight: "var(--font-weight-semibold)",
         color: "var(--color-text-primary)",
+        letterSpacing: "var(--letter-spacing-tight)",
       }}
     >
       {children}

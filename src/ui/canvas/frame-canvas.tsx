@@ -26,6 +26,11 @@ import type { FrameCanvasEdgeData, ForeclosureVisibility } from "./edges";
 import { CanvasToolbar } from "./canvas-toolbar";
 import { CanvasMinimap } from "./minimap";
 
+// Background dot pitch. Mirrors --canvas-grid-gap in tokens.css. React
+// Flow's <Background gap> prop takes a number, so we hold the value in
+// TS rather than reading from CSS at runtime.
+const CANVAS_GRID_GAP = 22;
+
 export type { ForeclosureVisibility } from "./edges";
 
 export interface FrameCanvasHandle {
@@ -686,7 +691,10 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         proOptions={{ hideAttribution: true }}
         style={{ background: "var(--color-surface-canvas)" }}
       >
-        <Background gap={22} size={1} color="var(--color-border-subtle)" />
+        {/* Dot grid gap matches --canvas-grid-gap in tokens.css. The grid
+            is dense enough that nodes appear to "float" on it without the
+            grid reading as gridded paper. */}
+        <Background gap={CANVAS_GRID_GAP} size={1} color="var(--color-border-subtle)" />
         <CanvasMinimap />
         <CanvasToolbar
           foreclosure_visibility={fc_visibility}
