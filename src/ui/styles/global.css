@@ -499,6 +499,32 @@ select.argmap-input {
   }
 }
 
+/* Pulse keyframe used under prefers-reduced-motion when rotation is
+   neutralized. Conveys "in flight" without using motion. */
+@keyframes argmap-spinner-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.argmap-spinner {
+  animation: argmap-spin 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .argmap-spinner {
+    /* Override the global duration-stripped animation with a fresh,
+       opacity-only keyframe that respects reduced-motion intent: the
+       rotation is silenced but the affordance still pulses to communicate
+       "something is happening". */
+    animation: argmap-spinner-pulse 1.4s ease-in-out infinite;
+  }
+}
+
 /* Dialog mount fade-in. */
 @keyframes argmap-overlay-fade-in {
   from {

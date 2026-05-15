@@ -46,10 +46,15 @@ export function LoadingScreen({ label = "Loading…" }: LoadingScreenProps): Rea
 }
 
 export function Spinner({ size = 22 }: { size?: number }): ReactElement {
+  // The animation duration becomes ~0.01ms under prefers-reduced-motion
+  // (see tokens.css), which would freeze the rotation mid-frame. Switch
+  // to a non-spinning pulse instead so the affordance still communicates
+  // "something is happening" without motion.
   return (
     <span
       role="status"
       aria-label="Loading"
+      className="argmap-spinner"
       style={{
         display: "inline-block",
         width: size,
@@ -57,7 +62,6 @@ export function Spinner({ size = 22 }: { size?: number }): ReactElement {
         borderRadius: "50%",
         border: "var(--border-medium) solid var(--color-border-subtle)",
         borderTopColor: "var(--color-mode-current-accent)",
-        animation: "argmap-spin 0.8s linear infinite",
       }}
     />
   );

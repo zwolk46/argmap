@@ -21,6 +21,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
     <div
       role="listitem"
       tabIndex={0}
+      className="argmap-row-hover"
       style={{
         display: "flex",
         alignItems: "flex-start",
