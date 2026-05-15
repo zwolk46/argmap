@@ -91,7 +91,7 @@ export function ConditionList(props: ConditionListProps): ReactElement {
           style={{
             marginTop: "var(--space-2)",
             padding: "var(--space-2)",
-            border: "1px solid var(--color-border)",
+            border: "var(--border-hairline) solid var(--color-border-subtle)",
             borderRadius: "var(--radius-sm)",
           }}
         >

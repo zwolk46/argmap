@@ -147,7 +147,7 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
               onClick={() => handlePick("any_of")}
               style={{
                 ...MENU_ITEM_STYLE,
-                borderTop: "1px solid var(--color-border)",
+                borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
                 marginTop: "var(--space-1)",
               }}
             >

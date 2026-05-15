@@ -22,7 +22,7 @@ const PILL_STYLE: React.CSSProperties = {
   gap: "var(--space-1)",
   padding: "2px var(--space-2)",
   background: "var(--color-surface-muted)",
-  border: "1px solid var(--color-border)",
+  border: "var(--border-hairline) solid var(--color-border-subtle)",
   borderRadius: "var(--radius-full)",
   fontSize: "var(--font-size-sm)",
 };

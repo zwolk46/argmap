@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { Button, Spinner } from "../primitives";
+import { Button, Spinner, InlineAlert } from "../primitives";
 import { useAuth } from "./auth-context";
 
 /**
@@ -225,36 +225,14 @@ export function SignInScreen(): ReactElement {
         </div>
 
         {error ? (
-          <div
-            data-testid="sign-in-error"
-            role="alert"
-            style={{
-              padding: "var(--space-2) var(--space-3)",
-              fontSize: "var(--font-size-base)",
-              background: "var(--color-severity-error-bg)",
-              color: "var(--color-severity-error)",
-              borderLeft: "var(--border-medium) solid var(--color-severity-error)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
+          <InlineAlert kind="error" testId="sign-in-error">
             {error}
-          </div>
+          </InlineAlert>
         ) : null}
         {signup_success ? (
-          <div
-            data-testid="sign-up-pending"
-            role="status"
-            style={{
-              padding: "var(--space-2) var(--space-3)",
-              fontSize: "var(--font-size-base)",
-              background: "var(--color-status-satisfied-bg)",
-              color: "var(--color-status-satisfied)",
-              borderLeft: "var(--border-medium) solid var(--color-status-satisfied)",
-              borderRadius: "var(--radius-sm)",
-            }}
-          >
+          <InlineAlert kind="success" testId="sign-up-pending">
             Check your email for a confirmation link. Once confirmed, return here to sign in.
-          </div>
+          </InlineAlert>
         ) : null}
 
         <Button

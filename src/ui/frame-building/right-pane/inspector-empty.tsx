@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { Button, humanizeNodeType, InlineEmpty } from "../../primitives";
+import { Button, humanizeNodeType, InlineEmpty, Pill } from "../../primitives";
 
 export interface InspectorEmptyProps {
   on_open_settings: () => void;
@@ -75,18 +75,9 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
             }}
           >
             {frame.tags.map((tag) => (
-              <span
-                key={tag}
-                style={{
-                  padding: "2px var(--space-2)",
-                  borderRadius: "var(--radius-pill)",
-                  background: "var(--color-surface-pane)",
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
+              <Pill key={tag} variant="neutral" size="xs">
                 {tag}
-              </span>
+              </Pill>
             ))}
           </div>
         </section>

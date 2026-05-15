@@ -70,3 +70,6 @@ export { Z } from "./z-index";
 export type { ZBand } from "./z-index";
 
 export { relativeTime } from "./relative-time";
+
+export { InlineAlert } from "./inline-alert";
+export type { InlineAlertProps, InlineAlertKind } from "./inline-alert";

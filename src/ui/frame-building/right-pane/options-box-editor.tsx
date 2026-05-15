@@ -144,7 +144,7 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
                     edit_mode === m
                       ? "var(--color-text-on-accent)"
                       : "var(--color-text-secondary)",
-                  border: "1px solid var(--color-border)",
+                  border: "var(--border-hairline) solid var(--color-border-subtle)",
                   borderRadius: "var(--radius-sm)",
                   cursor: "pointer",
                   fontSize: "var(--font-size-xs)",

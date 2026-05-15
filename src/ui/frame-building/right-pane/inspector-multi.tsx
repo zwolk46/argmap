@@ -30,7 +30,7 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
       <div
         style={{
           paddingBottom: "var(--space-3)",
-          borderBottom: "1px solid var(--color-border)",
+          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
         }}
       >
         <div

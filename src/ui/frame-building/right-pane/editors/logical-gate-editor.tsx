@@ -25,7 +25,7 @@ const GATE_TYPE_BADGE: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 10px",
   background: "var(--color-surface-muted)",
-  border: "1px solid var(--color-border)",
+  border: "var(--border-hairline) solid var(--color-border-subtle)",
   borderRadius: "var(--radius-sm)",
   fontSize: "var(--font-size-sm)",
   fontWeight: "var(--font-weight-semibold)",

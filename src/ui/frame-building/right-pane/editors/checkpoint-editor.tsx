@@ -89,7 +89,7 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
               type="button"
               style={{
                 padding: "var(--space-1) 10px",
-                border: "1px solid var(--color-border)",
+                border: "var(--border-hairline) solid var(--color-border-subtle)",
                 borderRadius: "var(--radius-sm)",
                 fontSize: "var(--font-size-sm)",
                 cursor: "pointer",

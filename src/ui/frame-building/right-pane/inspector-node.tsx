@@ -52,7 +52,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
           alignItems: "center",
           gap: "var(--space-2)",
           paddingBottom: "var(--space-3)",
-          borderBottom: "1px solid var(--color-border)",
+          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
           marginBottom: "var(--space-3)",
         }}
       >
@@ -125,7 +125,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
         style={{
           marginTop: "var(--space-4)",
           paddingTop: "var(--space-3)",
-          borderTop: "1px solid var(--color-border)",
+          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
         }}
       >
         <Button

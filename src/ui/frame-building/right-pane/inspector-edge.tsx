@@ -33,7 +33,7 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
       <div
         style={{
           paddingBottom: "var(--space-3)",
-          borderBottom: "1px solid var(--color-border)",
+          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
         }}
       >
         <h3
@@ -138,7 +138,7 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
       <div
         style={{
           paddingTop: "var(--space-3)",
-          borderTop: "1px solid var(--color-border)",
+          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
         }}
       >
         <Button
