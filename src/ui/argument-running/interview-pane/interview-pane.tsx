@@ -29,6 +29,7 @@ export interface InterviewPaneProps {
   on_search_change: (next: string) => void;
   recompute_counter: number;
   on_save_milestone: () => void;
+  saving_milestone?: boolean;
 }
 
 export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
@@ -41,6 +42,7 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
     on_search_change,
     recompute_counter,
     on_save_milestone,
+    saving_milestone,
   } = props;
 
   const items: InterviewItem[] = useSessionStore((s) => selectInterviewItems(s));
@@ -96,6 +98,7 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
           <InterviewEmptyState
             conclusion_label={summary?.conclusion_label}
             on_save_milestone={on_save_milestone}
+            saving_milestone={saving_milestone}
           />
         ) : (
           <InterviewList

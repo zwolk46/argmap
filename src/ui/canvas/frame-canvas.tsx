@@ -427,7 +427,16 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   React.useImperativeHandle(handle, () => ({
     fitToScreen: () => fitView(),
     zoomToNode: (node_id: NodeRef) => {
-      const pos = layout_result?.positions.find((p) => p.node_id === node_id);
+      // Prefer the user-dragged anchor (presentation.x/y) over the ELK
+      // layout result. Without this, clicking "highlight on canvas" for
+      // a node the user has moved sends the viewport to where ELK put
+      // it originally, not where it actually is on screen.
+      const node = frame_version.nodes.find((n) => n.id === node_id);
+      const anchor =
+        node?.presentation?.x !== undefined && node?.presentation?.y !== undefined
+          ? { x: node.presentation.x, y: node.presentation.y }
+          : null;
+      const pos = anchor ?? layout_result?.positions.find((p) => p.node_id === node_id);
       if (pos) setCenter(pos.x, pos.y, { zoom: 1.2, duration: 300 });
     },
     zoom: (direction: "in" | "out") => {

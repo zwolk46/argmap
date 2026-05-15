@@ -20,6 +20,7 @@ import type { ReactElement } from "react";
 import Joyride, { STATUS, type CallBackProps, type Step } from "react-joyride";
 import { Dialog, Button, Z } from "../primitives";
 import { readTutorialRoleMap, clearTutorialRoleMap } from "@/tutorial";
+import { useNavigate } from "../routing";
 import {
   getTutorialPhase,
   setTutorialPhase,
@@ -38,6 +39,7 @@ function useTutorialPhase(): TutorialPhase | null {
 
 export function TutorialTour(): ReactElement | null {
   const phase = useTutorialPhase();
+  const navigate = useNavigate();
   // After the short tour finishes, prompt the user to continue to the long
   // tour or dismiss. We capture this as separate React state so the prompt
   // dialog persists across joyride lifecycle events.
@@ -79,6 +81,13 @@ export function TutorialTour(): ReactElement | null {
     setTutorialPhase("done");
     clearTutorialRoleMap();
     setShowContinuePrompt(false);
+    // After the long-tour finishes, navigate back to home so the closing
+    // step's "we'll take you to the home page" promise is kept. Short-tour
+    // skip leaves the user on the tutorial session, which is fine — the
+    // short tour's pitch is "here's a quick look", not a hand-off.
+    if (phase === "long") {
+      navigate({ kind: "home" });
+    }
   }
 
   return (

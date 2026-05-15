@@ -183,7 +183,7 @@ export function buildLongTourSteps(roles: TutorialRoleMap | null): Step[] {
       placement: "center",
       title: "Ready to build your own?",
       content:
-        "Hit 'Home' in the top bar, click 'New frame', and start with your own Root Question. The Frame Building view lets you drag nodes from the left palette, connect them with edges, and edit each node's content. When you're ready to test premises against your frame, run an Argument Session — exactly like this tutorial.",
+        "Click Done below — we'll take you to the home page. From there, click 'New frame' and start with your own Root Question. The Frame Building view lets you drag nodes from the left palette, connect them with edges, and edit each node's content. When you're ready to test premises against your frame, run an Argument Session — exactly like this tutorial.",
     },
   ];
 }

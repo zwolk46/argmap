@@ -1,9 +1,10 @@
 import type { ReactElement } from "react";
-import { Button, InlineEmpty } from "../../primitives";
+import { Button, InlineEmpty, Spinner } from "../../primitives";
 
 export interface InterviewEmptyStateProps {
   conclusion_label?: string;
   on_save_milestone: () => void;
+  saving_milestone?: boolean;
 }
 
 export function InterviewEmptyState(props: InterviewEmptyStateProps): ReactElement {
@@ -41,11 +42,13 @@ export function InterviewEmptyState(props: InterviewEmptyStateProps): ReactEleme
           variant="primary"
           size="md"
           onClick={props.on_save_milestone}
+          disabled={props.saving_milestone}
           data-testid="save-milestone-button"
           style={{ alignSelf: "flex-start" }}
           title="Save this resolved session as a permanent checkpoint you can come back to."
+          leading={props.saving_milestone ? <Spinner size={12} /> : undefined}
         >
-          Save snapshot
+          {props.saving_milestone ? "Saving snapshot…" : "Save snapshot"}
         </Button>
       </div>
     );

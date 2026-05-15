@@ -45,6 +45,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
   const [migration_dialog_open, setMigrationDialogOpen] = React.useState(false);
   const [session_settings_open, setSessionSettingsOpen] = React.useState(false);
   const [recompute_counter, setRecomputeCounter] = React.useState(0);
+  const [saving_milestone, setSavingMilestone] = React.useState(false);
   const navigate = useNavigate();
 
   const canvas_ref = React.useRef<FrameCanvasHandle | null>(null);
@@ -143,7 +144,15 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
                 search_text={search_text}
                 on_search_change={setSearchText}
                 recompute_counter={recompute_counter}
-                on_save_milestone={() => session_store.getState().saveSessionMilestone("Milestone")}
+                on_save_milestone={async () => {
+                  setSavingMilestone(true);
+                  try {
+                    await session_store.getState().saveSessionMilestone("Milestone");
+                  } finally {
+                    setSavingMilestone(false);
+                  }
+                }}
+                saving_milestone={saving_milestone}
               />
             }
             right={
