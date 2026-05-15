@@ -55,7 +55,20 @@ function inverseFlavor(current: Flavor | undefined): Flavor {
 export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const { frame_id } = props;
   const { frame_store, repository, now, generateId } = useRepository();
-  const snapshot = useFrameStore((s) => s);
+  // Discrete-field subscriptions avoid the whole-snapshot subscription
+  // that caused every page-level patch (drag, edit, validation change) to
+  // re-render the entire frame-building tree above FrameCanvas. Each
+  // useFrameStore call subscribes to a single slice; React only re-renders
+  // when that slice's identity changes.
+  const frame = useFrameStore((s) => s.frame);
+  const frame_version = useFrameStore((s) => s.frame_version);
+  const validation = useFrameStore((s) => s.validation);
+  const is_loading = useFrameStore((s) => s.is_loading);
+  const error = useFrameStore((s) => s.error);
+  const snapshot = React.useMemo(
+    () => ({ frame, frame_version, validation, is_loading, error }),
+    [frame, frame_version, validation, is_loading, error],
+  );
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -289,8 +302,6 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   if (snapshot.is_loading) {
     return <LoadingScreen label="Loading frame…" />;
   }
-
-  const frame_version = snapshot.frame_version;
 
   return (
     <React.Fragment>

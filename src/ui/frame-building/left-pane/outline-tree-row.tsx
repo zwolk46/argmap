@@ -16,7 +16,12 @@ export interface OutlineTreeRowProps {
   on_focus: () => void;
 }
 
-export function OutlineTreeRow(props: OutlineTreeRowProps): ReactElement {
+// React.memo so a keystroke in the inspector / canvas doesn't re-render
+// every outline row. Most props are id-stable; selected / focused /
+// expanded flip for at most one row per change.
+export const OutlineTreeRow = React.memo(OutlineTreeRowImpl);
+
+function OutlineTreeRowImpl(props: OutlineTreeRowProps): ReactElement {
   const {
     outline_node,
     depth,

@@ -41,7 +41,13 @@ export function useLayoutResult(
     [direction, honor_user_anchors, collapse_subquestions],
   );
 
-  const hash = structuralHash(frame_version, merged_opts);
+  // Memoize the structural hash so we don't re-walk every node+edge on
+  // each render. The hash only changes when frame_version or the layout
+  // options change identity; nothing else in the page can force a recompute.
+  const hash = React.useMemo(
+    () => structuralHash(frame_version, merged_opts),
+    [frame_version, merged_opts],
+  );
 
   const [status, setStatus] = React.useState<LayoutConsumerStatus>({ kind: "idle" });
   const lastHashRef = React.useRef<string | null>(null);

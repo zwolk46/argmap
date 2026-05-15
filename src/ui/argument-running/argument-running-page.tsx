@@ -33,8 +33,18 @@ export interface ArgumentRunningPageProps {
 export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactElement {
   const { session_id } = props;
   const { session_store, frame_store, app_state_store } = useRepository();
-  const snapshot = useSessionStore((s) => s);
-  const session = snapshot.session;
+  // Discrete-field subscriptions instead of useSessionStore((s) => s).
+  // Previously every premise edit / recompute re-rendered the whole page
+  // tree (canvas mount, viewer, interview pane). Now each field has its
+  // own subscription and only re-renders when that field's identity
+  // changes.
+  const session = useSessionStore((s) => s.session);
+  const is_loading = useSessionStore((s) => s.is_loading);
+  const error = useSessionStore((s) => s.error);
+  const snapshot = React.useMemo(
+    () => ({ session, is_loading, error }),
+    [session, is_loading, error],
+  );
   const frame_id = session?.frame_id ?? null;
 
   const [selected_item_id, setSelectedItemId] = React.useState<NodeRef | null>(null);

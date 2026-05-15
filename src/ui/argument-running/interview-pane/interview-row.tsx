@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, FrameVersion, Node } from "@/schema";
 import type { InterviewItem } from "@/state";
@@ -49,7 +50,14 @@ export function buildBreadcrumb(frame_version: FrameVersion, node_id: NodeRef): 
   return labels.join(" → ");
 }
 
-export function InterviewRow(props: InterviewRowProps): ReactElement {
+// Wrapped in React.memo because the interview-pane parent re-renders on
+// every session patch (premise edit, status recompute) but most rows
+// haven't changed. Props are largely id-stable; the only thing that
+// changes per-edit is `selected` / `recommended_next` for at most two
+// rows. Without memo, every premise keystroke re-renders every row.
+export const InterviewRow = React.memo(InterviewRowImpl);
+
+function InterviewRowImpl(props: InterviewRowProps): ReactElement {
   const { item, selected, recommended_next, on_click, frame_version } = props;
   const node = frame_version.nodes.find((n) => n.id === item.node_id);
   const statement = node ? statementPreviewFor(node) : item.node_id;
