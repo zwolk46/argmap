@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef } from "@/schema";
+import { Z } from "../primitives/z-index";
 
 export interface EdgeDragEvent {
   source: NodeRef;
@@ -80,7 +81,7 @@ export function ConnectorHandle({
         background: "var(--color-mode-current-accent)",
         border: "2px solid var(--color-surface-elevated)",
         cursor: "crosshair",
-        zIndex: 10,
+        zIndex: Z.canvasToolbar,
       }}
     />
   );

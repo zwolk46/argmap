@@ -23,14 +23,18 @@ describe("OutputViewTabs", () => {
     expect(getByTestId("output-view-tab-prose").getAttribute("data-active")).toBe("false");
   });
 
-  it("disables all tabs and shows Computing… when computing=true", () => {
-    const { getAllByRole } = render(
+  it("disables all tabs and shows a Computing indicator when computing=true", () => {
+    const { getAllByRole, getByTestId } = render(
       <OutputViewTabs current="prose" on_change={vi.fn()} computing={true} />,
     );
     const tabs = getAllByRole("tab");
     expect(tabs).toHaveLength(3);
     tabs.forEach((t) => expect(t.getAttribute("disabled")).not.toBeNull());
-    expect(tabs[0]?.textContent).toContain("Computing");
+    // Tab labels stay intact (otherwise all three read "Computing…" and the
+    // tab control becomes ambiguous). The computing state is surfaced via a
+    // separate indicator pinned to the right.
+    expect(tabs[0]?.textContent).toContain("Path overlay");
+    expect(getByTestId("output-view-tabs-computing").textContent).toContain("Computing");
   });
 
   it("calls on_change with the tab clicked", () => {

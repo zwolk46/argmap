@@ -7,15 +7,15 @@ export interface EdgeEditorProps {
   edge: Edge;
 }
 
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
+const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
 
 const EDGE_TYPE_BADGE: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 10px",
-  background: "var(--color-surface-muted, #f3f4f6)",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
+  background: "var(--color-surface-muted)",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-sm)",
+  fontSize: "var(--font-size-sm)",
   fontWeight: "var(--font-weight-semibold)",
   letterSpacing: "var(--letter-spacing-wide)",
 };

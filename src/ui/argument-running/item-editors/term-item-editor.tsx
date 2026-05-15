@@ -87,16 +87,16 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-3, 12px)",
-        padding: "var(--space-3, 12px)",
+        gap: "var(--space-3)",
+        padding: "var(--space-3)",
       }}
     >
-      <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-1, 4px)" }}>
+      <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         <h3
           style={{
             margin: 0,
-            fontSize: "var(--font-size-base, 14px)",
-            color: "var(--color-text-primary, #111827)",
+            fontSize: "var(--font-size-base)",
+            color: "var(--color-text-primary)",
           }}
         >
           {node.name}
@@ -108,11 +108,11 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
         <div
           data-testid="term-linked-notice"
           style={{
-            padding: "var(--space-2, 8px)",
-            background: "var(--color-background-warning, #fef3c7)",
-            color: "var(--color-text-warning, #92400e)",
-            borderRadius: "var(--border-radius-md, 6px)",
-            fontSize: "var(--font-size-xs, 11px)",
+            padding: "var(--space-2)",
+            background: "var(--color-background-warning)",
+            color: "var(--color-text-warning)",
+            borderRadius: "var(--border-radius-md)",
+            fontSize: "var(--font-size-xs)",
           }}
         >
           This term is linked to another. Selecting an interpretation here will not affect the
@@ -123,18 +123,18 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
       <fieldset
         style={{
           border: "var(--border-thin) solid var(--color-border-tertiary)",
-          borderRadius: "var(--border-radius-md, 6px)",
-          padding: "var(--space-2, 8px)",
+          borderRadius: "var(--border-radius-md)",
+          padding: "var(--space-2)",
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-1, 4px)",
+          gap: "var(--space-1)",
         }}
       >
         <legend
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
-            padding: "0 var(--space-1, 4px)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-secondary)",
+            padding: "0 var(--space-1)",
           }}
         >
           Interpretations
@@ -142,8 +142,8 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
         {interpretations.length === 0 ? (
           <span
             style={{
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-tertiary, #9ca3af)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
             }}
           >
             No interpretations attached to this term.
@@ -156,8 +156,8 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
               style={{
                 display: "flex",
                 alignItems: "flex-start",
-                gap: "var(--space-1, 4px)",
-                fontSize: "var(--font-size-xs, 11px)",
+                gap: "var(--space-1)",
+                fontSize: "var(--font-size-xs)",
                 cursor: "pointer",
               }}
             >
@@ -186,7 +186,7 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
         style={{
           display: "flex",
           justifyContent: "flex-end",
-          gap: "var(--space-1, 4px)",
+          gap: "var(--space-1)",
         }}
       >
         <Button variant="secondary" size="md" data-testid="term-editor-cancel" onClick={on_close}>

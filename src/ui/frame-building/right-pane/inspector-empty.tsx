@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { Button, humanizeNodeType } from "../../primitives";
+import { Button, humanizeNodeType, InlineEmpty } from "../../primitives";
 
 export interface InspectorEmptyProps {
   on_open_settings: () => void;
@@ -12,20 +12,11 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
   const frame = useFrameStore((s) => s.frame);
 
   if (!frame) {
-    return (
-      <div
-        style={{
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
-        }}
-      >
-        No frame loaded.
-      </div>
-    );
+    return <InlineEmpty testId="inspector-no-frame">No frame loaded.</InlineEmpty>;
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
       <section
         style={{
           padding: "var(--space-3)",
@@ -51,7 +42,7 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
           <>
             <h3
               className="argmap-section-heading"
-              style={{ marginTop: "var(--space-2, 8px)", marginBottom: "var(--space-1)" }}
+              style={{ marginTop: "var(--space-2)", marginBottom: "var(--space-1)" }}
             >
               Description
             </h3>
@@ -89,9 +80,9 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
                 style={{
                   padding: "2px var(--space-2)",
                   borderRadius: "var(--radius-pill)",
-                  background: "var(--color-surface-pane, #f3f4f6)",
-                  fontSize: "var(--font-size-xs, 11px)",
-                  color: "var(--color-text-secondary, #6b7280)",
+                  background: "var(--color-surface-pane)",
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-secondary)",
                 }}
               >
                 {tag}
@@ -108,8 +99,8 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
         <div
           style={{
             marginTop: "var(--space-1)",
-            fontSize: "var(--font-size-sm, 13px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-secondary)",
           }}
         >
           {Object.entries(frame.default_satisfaction_policies ?? {}).map(([type, policy]) => (

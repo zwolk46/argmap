@@ -25,12 +25,12 @@ export function G6RemoveRewriteSection(): ReactElement {
   }
 
   return (
-    <section data-testid="g6-section" style={{ marginBottom: "var(--space-3, 12px)" }}>
+    <section data-testid="g6-section" style={{ marginBottom: "var(--space-3)" }}>
       <header
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
+          fontSize: "var(--font-size-sm)",
           fontWeight: "var(--font-weight-medium)",
-          marginBottom: "var(--space-2, 8px)",
+          marginBottom: "var(--space-2)",
         }}
       >
         Output rewrite (G6)
@@ -39,8 +39,8 @@ export function G6RemoveRewriteSection(): ReactElement {
         <p
           data-testid="g6-empty-state"
           style={{
-            fontSize: "var(--font-size-sm, 13px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-secondary)",
           }}
         >
           No rewritten prose for this session. Use the 'Rewrite' button in the prose tab of the
@@ -51,8 +51,8 @@ export function G6RemoveRewriteSection(): ReactElement {
           <p
             data-testid="g6-preview"
             style={{
-              fontSize: "var(--font-size-sm, 13px)",
-              color: "var(--color-text-primary, #111827)",
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-primary)",
               fontStyle: "italic",
             }}
           >
@@ -63,7 +63,7 @@ export function G6RemoveRewriteSection(): ReactElement {
             size="md"
             data-testid="g6-remove-button"
             onClick={() => setConfirmOpen(true)}
-            style={{ marginTop: "var(--space-2, 8px)" }}
+            style={{ marginTop: "var(--space-2)" }}
           >
             Remove rewrite
           </Button>

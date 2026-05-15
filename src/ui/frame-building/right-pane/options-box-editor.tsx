@@ -41,8 +41,8 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
     return (
       <div
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-tertiary)",
         }}
       >
         Loading…
@@ -87,24 +87,24 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
   const allows_per_instance = PER_INSTANCE_ALLOWED_TYPES.has(node.type);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2, 8px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
       <h3 className="argmap-section-heading">Satisfaction policy</h3>
 
       {/* Tier 1: Effective policy (read-only summary) */}
       <div
         style={{
           padding: "var(--space-1) var(--space-2)",
-          background: "var(--color-surface-pane, #f9fafb)",
-          borderRadius: "var(--radius-sm, 4px)",
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          background: "var(--color-surface-pane)",
+          borderRadius: "var(--radius-sm)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
         }}
         title={`Effective: ${policyToString(effective)}`}
       >
         <span
           style={{
             fontWeight: "var(--font-weight-medium)",
-            color: "var(--color-text-primary, #111827)",
+            color: "var(--color-text-primary)",
           }}
         >
           Effective:{" "}
@@ -117,10 +117,10 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
         <span
           style={{
             padding: "2px var(--space-2)",
-            background: "var(--color-surface-hover, rgba(0,0,0,0.05))",
+            background: "var(--color-surface-hover)",
             borderRadius: "var(--radius-pill)",
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-secondary)",
           }}
         >
           source: {source_label}
@@ -139,15 +139,15 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
                 onClick={() => on_change_edit_mode(m)}
                 style={{
                   padding: "3px 10px",
-                  background: edit_mode === m ? "var(--color-accent, #6366f1)" : "transparent",
+                  background: edit_mode === m ? "var(--color-accent)" : "transparent",
                   color:
                     edit_mode === m
                       ? "var(--color-text-on-accent)"
-                      : "var(--color-text-secondary, #6b7280)",
-                  border: "1px solid var(--color-border, #e5e7eb)",
-                  borderRadius: "var(--radius-sm, 4px)",
+                      : "var(--color-text-secondary)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)",
                   cursor: "pointer",
-                  fontSize: "var(--font-size-xs, 11px)",
+                  fontSize: "var(--font-size-xs)",
                 }}
               >
                 {m === "instance" ? "Edit this instance" : "Edit frame default"}
@@ -163,8 +163,8 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
       ) : (
         <div
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-secondary)",
           }}
         >
           This node type uses the frame default. Edit it under Frame Settings → Default policies.

@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useVersionHistoryPreview } from "./preview-context";
-import { Button } from "../primitives";
+import { Button, Z } from "../primitives";
 import { UIcon } from "../primitives/uicon";
 
 export interface PreviewBannerProps {
@@ -22,7 +22,7 @@ export function PreviewBanner({ version_number, kind }: PreviewBannerProps): Rea
       style={{
         position: "sticky",
         top: 0,
-        zIndex: 50,
+        zIndex: Z.banner,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",

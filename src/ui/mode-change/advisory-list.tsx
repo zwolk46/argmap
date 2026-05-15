@@ -22,10 +22,10 @@ export function AdvisoryList(props: AdvisoryListProps): ReactElement {
         <section key={rule_id} data-testid="advisory-group" data-rule-id={rule_id}>
           <header
             style={{
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-secondary, #6b7280)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-secondary)",
               fontWeight: "var(--font-weight-medium)",
-              marginTop: "var(--space-2, 8px)",
+              marginTop: "var(--space-2)",
             }}
           >
             {rule_id}
@@ -35,9 +35,9 @@ export function AdvisoryList(props: AdvisoryListProps): ReactElement {
               key={`${rule_id}-${i}`}
               data-testid="advisory-row"
               style={{
-                color: "var(--color-text-tertiary, #9ca3af)",
-                fontSize: "var(--font-size-sm, 13px)",
-                padding: "var(--space-1, 4px) 0",
+                color: "var(--color-text-tertiary)",
+                fontSize: "var(--font-size-sm)",
+                padding: "var(--space-1) 0",
               }}
             >
               <span>{v.message}</span>
@@ -53,12 +53,12 @@ export function AdvisoryList(props: AdvisoryListProps): ReactElement {
                   }
                   disabled={!props.onNodeFocusRequested}
                   style={{
-                    marginLeft: "var(--space-2, 8px)",
-                    fontSize: "var(--font-size-2xs, 10px)",
+                    marginLeft: "var(--space-2)",
+                    fontSize: "var(--font-size-2xs)",
                     background: "transparent",
-                    border: "var(--border-thin, 1px) solid var(--color-border-default, #e5e7eb)",
-                    borderRadius: "var(--radius-pill, 9999px)",
-                    padding: "0 var(--space-2, 8px)",
+                    border: "var(--border-thin) solid var(--color-border-default)",
+                    borderRadius: "var(--radius-pill)",
+                    padding: "0 var(--space-2)",
                     cursor: props.onNodeFocusRequested ? "pointer" : "default",
                   }}
                 >

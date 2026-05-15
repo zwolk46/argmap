@@ -5,6 +5,10 @@ export interface OutputEmptyStateProps {
   message?: string;
 }
 
+// Full-pane computing surface inside the output viewer. Uses centered
+// spinner+label rather than the inline `<InlineLoading>` because the
+// surrounding tabs already give horizontal context — when the body is
+// empty, the page wants a hero treatment, not an inline row.
 export function OutputEmptyState(props: OutputEmptyStateProps): ReactElement {
   return (
     <div

@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 import { UIcon } from "./uicon";
+import { Z } from "./z-index";
 
 /**
  * Minimal toast primitive. Surfaces non-blocking transient notifications.
@@ -113,13 +114,13 @@ function ToastStack({ toasts, onDismiss }: ToastStackProps): ReactElement | null
       data-testid="toast-stack"
       style={{
         position: "fixed",
-        bottom: "var(--space-4, 16px)",
-        right: "var(--space-4, 16px)",
+        bottom: "var(--space-4)",
+        right: "var(--space-4)",
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-2, 8px)",
-        zIndex: 1300,
-        maxWidth: "calc(100vw - var(--space-8, 32px))",
+        gap: "var(--space-2)",
+        zIndex: Z.toast,
+        maxWidth: "calc(100vw - var(--space-8))",
         pointerEvents: "none",
       }}
     >
@@ -132,24 +133,24 @@ function ToastStack({ toasts, onDismiss }: ToastStackProps): ReactElement | null
 
 const KIND_STYLES: Record<ToastKind, { fg: string; bg: string; stripe: string }> = {
   error: {
-    fg: "var(--color-text-on-severity-error, #b91c1c)",
-    bg: "var(--color-severity-error-bg, #fee2e2)",
-    stripe: "var(--color-severity-error, #dc2626)",
+    fg: "var(--color-severity-error)",
+    bg: "var(--color-severity-error-bg)",
+    stripe: "var(--color-severity-error)",
   },
   warning: {
-    fg: "var(--color-text-on-severity-warning, #92400e)",
-    bg: "var(--color-severity-warning-bg, #fef3c7)",
-    stripe: "var(--color-severity-warning, #d97706)",
+    fg: "var(--color-severity-warning)",
+    bg: "var(--color-severity-warning-bg)",
+    stripe: "var(--color-severity-warning)",
   },
   info: {
-    fg: "var(--color-text-primary, #111827)",
-    bg: "var(--color-background-secondary, #f3f4f6)",
-    stripe: "var(--color-border-secondary, #d1d5db)",
+    fg: "var(--color-text-primary)",
+    bg: "var(--color-surface-pane)",
+    stripe: "var(--color-border-subtle)",
   },
   success: {
-    fg: "var(--color-text-success, #065f46)",
-    bg: "var(--color-background-success, #d1fae5)",
-    stripe: "var(--color-text-success, #10b981)",
+    fg: "var(--color-status-satisfied)",
+    bg: "var(--color-status-satisfied-bg)",
+    stripe: "var(--color-status-satisfied)",
   },
 };
 
@@ -168,15 +169,15 @@ function ToastItem({ toast, onDismiss }: ToastItemProps): ReactElement {
       style={{
         background: styles.bg,
         color: styles.fg,
-        padding: "var(--space-3, 12px) var(--space-4, 16px)",
-        borderRadius: "var(--border-radius-md, 6px)",
-        borderLeft: `var(--border-thick, 3px) solid ${styles.stripe}`,
-        fontSize: "var(--font-size-sm, 13px)",
-        lineHeight: "var(--line-height-normal, 1.5)",
-        boxShadow: "var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08))",
+        padding: "var(--space-3) var(--space-4)",
+        borderRadius: "var(--border-radius-md)",
+        borderLeft: `var(--border-thick) solid ${styles.stripe}`,
+        fontSize: "var(--font-size-sm)",
+        lineHeight: "var(--line-height-normal)",
+        boxShadow: "var(--shadow-md)",
         display: "flex",
         alignItems: "flex-start",
-        gap: "var(--space-3, 12px)",
+        gap: "var(--space-3)",
         pointerEvents: "auto",
         minWidth: 280,
         maxWidth: 480,
@@ -193,7 +194,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps): ReactElement {
           cursor: "pointer",
           color: styles.fg,
           opacity: 0.7,
-          fontSize: "var(--font-size-base, 14px)",
+          fontSize: "var(--font-size-base)",
           lineHeight: 1,
           padding: 0,
         }}

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Pill, Tooltip } from "../primitives";
+import { Pill, Tooltip, relativeTime } from "../primitives";
 import { UIcon } from "../primitives/uicon";
 import type { AnySummary } from "./version-tree-shape";
 
@@ -13,26 +13,15 @@ export interface VersionTreeRowProps {
   on_select: (version_id: string) => void;
 }
 
-function relativeTime(iso: string): string {
-  if (!iso) return "";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return iso;
-  const delta_s = Math.floor((Date.now() - t) / 1000);
-  if (delta_s < 60) return `${delta_s}s ago`;
-  if (delta_s < 3600) return `${Math.floor(delta_s / 60)}m ago`;
-  if (delta_s < 86400) return `${Math.floor(delta_s / 3600)}h ago`;
-  return `${Math.floor(delta_s / 86400)}d ago`;
-}
-
 export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
   const { summary, depth, is_current, is_milestone, is_authored_against, is_selected, on_select } =
     props;
 
   const marker_color = is_current
-    ? "var(--color-mode-current-accent, #1d4ed8)"
+    ? "var(--color-mode-current-accent)"
     : is_milestone
-      ? "var(--color-milestone-star, #d97706)"
-      : "var(--color-text-tertiary, #9ca3af)";
+      ? "var(--color-milestone-star)"
+      : "var(--color-text-tertiary)";
   const marker_glyph = is_milestone ? "★" : "●";
   const change_summary_text = summary.change_summary;
   const is_autosave = !change_summary_text;

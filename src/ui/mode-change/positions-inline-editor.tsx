@@ -24,17 +24,17 @@ export function PositionsInlineEditor(props: PositionsInlineEditorProps): ReactE
     <div
       data-testid="positions-inline-editor"
       style={{
-        marginTop: "var(--space-3, 12px)",
-        padding: "var(--space-3, 12px)",
-        background: "var(--color-status-not-applicable-bg, #f3f4f6)",
-        borderRadius: "var(--radius-md, 6px)",
+        marginTop: "var(--space-3)",
+        padding: "var(--space-3)",
+        background: "var(--color-status-not-applicable-bg)",
+        borderRadius: "var(--radius-md)",
       }}
     >
       <div
         style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
-          marginBottom: "var(--space-2, 8px)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
+          marginBottom: "var(--space-2)",
         }}
       >
         Required: define at least one position
@@ -43,9 +43,9 @@ export function PositionsInlineEditor(props: PositionsInlineEditorProps): ReactE
         <div
           key={p.id}
           data-testid="staged-position-row"
-          style={{ display: "flex", gap: "var(--space-2, 8px)", alignItems: "center" }}
+          style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}
         >
-          <span style={{ fontSize: "var(--font-size-sm, 13px)" }}>{p.label}</span>
+          <span style={{ fontSize: "var(--font-size-sm)" }}>{p.label}</span>
           {/* KEEP RAW: tiny inline × glyph in a staged-position row; bespoke micro-control. */}
           <button
             type="button"
@@ -59,7 +59,7 @@ export function PositionsInlineEditor(props: PositionsInlineEditorProps): ReactE
         </div>
       ))}
       <div
-        style={{ display: "flex", gap: "var(--space-2, 8px)", marginTop: "var(--space-2, 8px)" }}
+        style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}
       >
         <input
           type="text"

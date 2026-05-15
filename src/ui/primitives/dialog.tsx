@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { Z } from "./z-index";
 
 export type DialogSize = "sm" | "md" | "lg";
 
@@ -153,7 +154,7 @@ export function Dialog({
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 1000,
+        zIndex: Z.modal,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

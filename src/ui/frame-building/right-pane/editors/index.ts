@@ -33,9 +33,9 @@ function PremisePlaceholder(): React.ReactElement {
     "div",
     {
       style: {
-        padding: "var(--space-3, 12px)",
-        color: "var(--color-text-secondary, #6b7280)",
-        fontSize: "var(--font-size-sm, 13px)",
+        padding: "var(--space-3)",
+        color: "var(--color-text-secondary)",
+        fontSize: "var(--font-size-sm)",
         fontStyle: "italic",
       },
     },

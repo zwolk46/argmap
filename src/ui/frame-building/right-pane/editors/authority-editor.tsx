@@ -10,17 +10,17 @@ export interface AuthorityEditorProps {
   on_pick_binding_in_jurisdiction: () => void;
 }
 
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
+const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
 
 const CHIP_STYLE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: "var(--space-1)",
   padding: "2px var(--space-2)",
-  background: "var(--color-primary-subtle, #eff6ff)",
-  color: "var(--color-primary, #2563eb)",
-  borderRadius: "var(--radius-full, 9999px)",
-  fontSize: "var(--font-size-sm, 13px)",
+  background: "var(--color-primary-subtle)",
+  color: "var(--color-primary)",
+  borderRadius: "var(--radius-full)",
+  fontSize: "var(--font-size-sm)",
 };
 
 export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
@@ -77,7 +77,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
                 marginTop: "var(--space-1)",
                 display: "flex",
                 flexDirection: "column",
-                gap: "var(--space-1, 4px)",
+                gap: "var(--space-1)",
               }}
             >
               <input
@@ -132,7 +132,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "var(--space-2, 8px)",
+                gap: "var(--space-2)",
                 cursor: "pointer",
               }}
             >
@@ -151,7 +151,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
               style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: "var(--space-1, 4px)",
+                gap: "var(--space-1)",
                 marginTop: "var(--space-1)",
                 marginBottom: "var(--space-1)",
               }}

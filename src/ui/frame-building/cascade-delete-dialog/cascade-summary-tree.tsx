@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import type { CascadeReport } from "@/state";
 import type { CascadeReason } from "@/runtime";
-import { TypeIcon } from "../../primitives";
+import { UIcon } from "../../primitives";
 
 function reasonLabel(reason: CascadeReason): string {
   switch (reason.kind) {
@@ -22,19 +22,19 @@ export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactEl
   const { cascade_nodes, cascade_edges } = report;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3, 12px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
       <p
         style={{
           margin: 0,
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-secondary)",
         }}
       >
         The following nodes and edges will be permanently removed:
       </p>
 
       {cascade_nodes.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1, 4px)" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
           <h3 className="argmap-section-heading">Nodes ({cascade_nodes.length})</h3>
           {cascade_nodes.map(({ node_id, reason }) => (
             <div
@@ -42,18 +42,22 @@ export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactEl
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "var(--space-2, 8px)",
-                padding: "var(--space-1, 4px) var(--space-2, 8px)",
-                background: "var(--color-surface-pane, #f9fafb)",
-                borderRadius: "var(--radius-sm, 4px)",
+                gap: "var(--space-2)",
+                padding: "var(--space-1) var(--space-2)",
+                background: "var(--color-surface-pane)",
+                borderRadius: "var(--radius-sm)",
               }}
             >
-              <TypeIcon node_type="Checkpoint" size={14} />
+              <UIcon
+                name="trash"
+                size={12}
+                style={{ color: "var(--color-text-tertiary)", flexShrink: 0 }}
+              />
               <span
                 style={{
-                  fontSize: "var(--font-size-sm, 13px)",
-                  color: "var(--color-text-primary, #111827)",
-                  fontFamily: "var(--font-mono, monospace)",
+                  fontSize: "var(--font-size-sm)",
+                  color: "var(--color-text-primary)",
+                  fontFamily: "var(--font-mono)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -64,8 +68,8 @@ export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactEl
               </span>
               <span
                 style={{
-                  fontSize: "var(--font-size-xs, 11px)",
-                  color: "var(--color-text-tertiary, #9ca3af)",
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-tertiary)",
                   flexShrink: 0,
                 }}
               >
@@ -79,11 +83,11 @@ export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactEl
       {cascade_edges.length > 0 && (
         <div
           style={{
-            fontSize: "var(--font-size-sm, 13px)",
-            color: "var(--color-text-secondary, #6b7280)",
-            padding: "var(--space-2, 8px)",
-            background: "var(--color-surface-pane, #f9fafb)",
-            borderRadius: "var(--radius-sm, 4px)",
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-secondary)",
+            padding: "var(--space-2)",
+            background: "var(--color-surface-pane)",
+            borderRadius: "var(--radius-sm)",
           }}
         >
           {cascade_edges.length} edge{cascade_edges.length !== 1 ? "s" : ""} will also be removed.

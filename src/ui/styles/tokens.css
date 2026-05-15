@@ -183,6 +183,22 @@
   --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
   --ease-soft: cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  /* Z-index scale. Layers are bands so a feature can use the band number
+     directly (e.g. zIndex: var(--z-modal)) without inventing one-off values.
+     Anything that overlays the page reads from this scale; do not introduce
+     literal z-index values in component styles. */
+  --z-canvas: 1;
+  --z-canvas-toolbar: 10;
+  --z-banner: 40;
+  --z-topbar: 50;
+  --z-drawer: 80;
+  --z-popover: 90;
+  --z-coachmark: 200;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-tooltip: 1200;
+  --z-tour: 10000;
 }
 
 [data-mode="frame-building"] {

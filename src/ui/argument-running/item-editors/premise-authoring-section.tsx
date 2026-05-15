@@ -119,13 +119,13 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-2, 8px)",
+        gap: "var(--space-2)",
       }}
     >
       <label
         style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
         }}
       >
         Premise statement
@@ -140,15 +140,15 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
           className="argmap-input"
           style={{
             minHeight: 56,
-            fontSize: "var(--font-size-xs, 11px)",
-            background: reused_id ? "var(--color-surface-pane-secondary, #fafafa)" : undefined,
+            fontSize: "var(--font-size-xs)",
+            background: reused_id ? "var(--color-surface-pane-secondary)" : undefined,
           }}
         />
       </label>
       <label
         style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
         }}
       >
         Kind
@@ -159,8 +159,8 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
           onChange={(e) => on_kind_change(e.target.value as PremiseKind)}
           className="argmap-input"
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            background: reused_id ? "var(--color-surface-pane-secondary, #fafafa)" : undefined,
+            fontSize: "var(--font-size-xs)",
+            background: reused_id ? "var(--color-surface-pane-secondary)" : undefined,
           }}
         >
           {PREMISE_KIND_OPTIONS.map((k) => (

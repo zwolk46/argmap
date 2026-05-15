@@ -20,8 +20,8 @@ export function FieldAttributionDecoration(props: FieldAttributionDecorationProp
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-2, 8px)",
-          marginBottom: "var(--space-1, 4px)",
+          gap: "var(--space-2)",
+          marginBottom: "var(--space-1)",
         }}
       >
         <label className="argmap-section-heading">{label}</label>

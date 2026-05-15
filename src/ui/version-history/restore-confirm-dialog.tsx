@@ -63,7 +63,7 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
       onConfirm={handleConfirm}
       onCancel={onClose}
     >
-      <div data-testid="restore-confirm-body" style={{ fontSize: "var(--font-size-sm, 13px)" }}>
+      <div data-testid="restore-confirm-body" style={{ fontSize: "var(--font-size-sm)" }}>
         Restoring version {ancestor_version_number} will create a new version (v
         {current_version_number + 1}) that branches from version {ancestor_version_number}. The
         current version (v{current_version_number}) and any later versions remain on their own
@@ -72,8 +72,8 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
           <div
             data-testid="restore-confirm-error"
             style={{
-              marginTop: "var(--space-2, 8px)",
-              color: "var(--color-severity-error, #dc2626)",
+              marginTop: "var(--space-2)",
+              color: "var(--color-severity-error)",
             }}
           >
             {error}

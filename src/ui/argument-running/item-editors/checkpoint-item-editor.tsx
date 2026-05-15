@@ -76,16 +76,16 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-3, 12px)",
-        padding: "var(--space-3, 12px)",
+        gap: "var(--space-3)",
+        padding: "var(--space-3)",
       }}
     >
-      <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-1, 4px)" }}>
+      <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         <h3
           style={{
             margin: 0,
-            fontSize: "var(--font-size-base, 14px)",
-            color: "var(--color-text-primary, #111827)",
+            fontSize: "var(--font-size-base)",
+            color: "var(--color-text-primary)",
           }}
         >
           {node.question}
@@ -96,18 +96,18 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
       <fieldset
         style={{
           border: "var(--border-thin) solid var(--color-border-tertiary)",
-          borderRadius: "var(--border-radius-md, 6px)",
-          padding: "var(--space-2, 8px)",
+          borderRadius: "var(--border-radius-md)",
+          padding: "var(--space-2)",
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-1, 4px)",
+          gap: "var(--space-1)",
         }}
       >
         <legend
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
-            padding: "0 var(--space-1, 4px)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-secondary)",
+            padding: "0 var(--space-1)",
           }}
         >
           Answer
@@ -119,8 +119,8 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "var(--space-1, 4px)",
-              fontSize: "var(--font-size-xs, 11px)",
+              gap: "var(--space-1)",
+              fontSize: "var(--font-size-xs)",
               cursor: "pointer",
             }}
           >
@@ -154,11 +154,11 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
         <div
           data-testid="checkpoint-editor-error"
           style={{
-            padding: "var(--space-2, 8px)",
-            background: "var(--color-background-danger, #fee2e2)",
-            color: "var(--color-text-danger, #b91c1c)",
-            borderRadius: "var(--border-radius-md, 6px)",
-            fontSize: "var(--font-size-xs, 11px)",
+            padding: "var(--space-2)",
+            background: "var(--color-background-danger)",
+            color: "var(--color-text-danger)",
+            borderRadius: "var(--border-radius-md)",
+            fontSize: "var(--font-size-xs)",
           }}
         >
           {error}
@@ -169,7 +169,7 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
         style={{
           display: "flex",
           justifyContent: "flex-end",
-          gap: "var(--space-1, 4px)",
+          gap: "var(--space-1)",
         }}
       >
         <Button

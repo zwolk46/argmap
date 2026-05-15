@@ -68,10 +68,10 @@ export function DecisionTreeTab(props: DecisionTreeTabProps): ReactElement {
       <div
         data-testid="decision-tree-empty"
         style={{
-          padding: "var(--space-4, 16px) var(--space-5, 20px)",
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
-          lineHeight: "var(--line-height-relaxed, 1.6)",
+          padding: "var(--space-4) var(--space-5)",
+          color: "var(--color-text-secondary)",
+          fontSize: "var(--font-size-sm)",
+          lineHeight: "var(--line-height-relaxed)",
           maxWidth: 480,
         }}
       >
@@ -88,7 +88,7 @@ export function DecisionTreeTab(props: DecisionTreeTabProps): ReactElement {
     <div
       data-testid="decision-tree-tab"
       style={{
-        padding: "var(--space-4, 16px)",
+        padding: "var(--space-4)",
         overflow: "auto",
         height: "100%",
       }}
@@ -117,15 +117,15 @@ export function DecisionTreeTab(props: DecisionTreeTabProps): ReactElement {
                 ry={6}
                 fill={
                   highlight
-                    ? "var(--color-background-accent, #dbeafe)"
-                    : "var(--color-surface-elevated, #ffffff)"
+                    ? "var(--color-background-accent)"
+                    : "var(--color-surface-elevated)"
                 }
-                stroke="var(--color-border-secondary, #d1d5db)"
+                stroke="var(--color-border-secondary)"
               />
-              <text x={8} y={20} fontSize={11} fill="var(--color-text-primary, #111827)">
+              <text x={8} y={20} fontSize={11} fill="var(--color-text-primary)">
                 {b.conditions.map((c) => c.required_value_label).join(" · ") || "(no conditions)"}
               </text>
-              <text x={8} y={40} fontSize={11} fill="var(--color-text-secondary, #6b7280)">
+              <text x={8} y={40} fontSize={11} fill="var(--color-text-secondary)">
                 → {b.resulting_conclusion}
               </text>
             </g>

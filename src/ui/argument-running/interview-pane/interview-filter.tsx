@@ -62,8 +62,8 @@ export function InterviewFilter(props: InterviewFilterProps): ReactElement {
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: "var(--space-1, 4px)",
-        padding: "var(--space-2, 8px)",
+        gap: "var(--space-1)",
+        padding: "var(--space-2)",
         borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
       }}
     >
@@ -137,13 +137,13 @@ export function passesFilter(
 function chipStyle(active: boolean): React.CSSProperties {
   return {
     background: active
-      ? "var(--color-background-accent, #dbeafe)"
-      : "var(--color-background-secondary, #f3f4f6)",
-    color: active ? "var(--color-text-accent, #1d4ed8)" : "var(--color-text-secondary, #6b7280)",
+      ? "var(--color-background-accent)"
+      : "var(--color-background-secondary)",
+    color: active ? "var(--color-text-accent)" : "var(--color-text-secondary)",
     border: "none",
     borderRadius: "var(--radius-pill)",
     cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
+    fontSize: "var(--font-size-xs)",
     padding: "2px var(--space-2)",
   };
 }

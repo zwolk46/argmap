@@ -36,7 +36,7 @@ export function MetadataSection(): ReactElement {
   }
 
   return (
-    <section data-testid="metadata-section" style={{ marginBottom: "var(--space-3, 12px)" }}>
+    <section data-testid="metadata-section" style={{ marginBottom: "var(--space-3)" }}>
       {archived ? (
         <div
           data-testid="archived-banner"
@@ -44,12 +44,12 @@ export function MetadataSection(): ReactElement {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "var(--space-2, 8px) var(--space-3, 12px)",
-            background: "var(--color-background-warning, #fef3c7)",
-            color: "var(--color-text-warning, #92400e)",
-            fontSize: "var(--font-size-sm, 13px)",
-            marginBottom: "var(--space-2, 8px)",
-            borderRadius: "var(--radius-md, 6px)",
+            padding: "var(--space-2) var(--space-3)",
+            background: "var(--color-background-warning)",
+            color: "var(--color-text-warning)",
+            fontSize: "var(--font-size-sm)",
+            marginBottom: "var(--space-2)",
+            borderRadius: "var(--radius-md)",
           }}
         >
           <span>This session is archived</span>
@@ -60,18 +60,18 @@ export function MetadataSection(): ReactElement {
       ) : null}
       <header
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
+          fontSize: "var(--font-size-sm)",
           fontWeight: "var(--font-weight-medium)",
-          marginBottom: "var(--space-2, 8px)",
+          marginBottom: "var(--space-2)",
         }}
       >
         Metadata
       </header>
-      <label style={{ display: "block", marginBottom: "var(--space-2, 8px)" }}>
+      <label style={{ display: "block", marginBottom: "var(--space-2)" }}>
         <span
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-secondary)",
           }}
         >
           Title
@@ -95,8 +95,8 @@ export function MetadataSection(): ReactElement {
       <label style={{ display: "block" }}>
         <span
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-secondary)",
           }}
         >
           Description

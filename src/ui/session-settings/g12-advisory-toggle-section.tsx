@@ -20,12 +20,12 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
   const llm = useFrameStore((s) => s.frame?.llm_settings);
   const enabled = g12EffectiveEnabled(llm);
   return (
-    <section data-testid="g12-section" style={{ marginBottom: "var(--space-3, 12px)" }}>
+    <section data-testid="g12-section" style={{ marginBottom: "var(--space-3)" }}>
       <header
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
+          fontSize: "var(--font-size-sm)",
           fontWeight: "var(--font-weight-medium)",
-          marginBottom: "var(--space-2, 8px)",
+          marginBottom: "var(--space-2)",
         }}
       >
         Advisory notes (G12)
@@ -35,18 +35,18 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "var(--space-2, 8px)",
+          gap: "var(--space-2)",
         }}
       >
-        <span style={{ fontSize: "var(--font-size-sm, 13px)" }}>Cross-implication advisories</span>
+        <span style={{ fontSize: "var(--font-size-sm)" }}>Cross-implication advisories</span>
         <Pill
           color={
-            enabled ? "var(--color-text-success, #166534)" : "var(--color-text-secondary, #6b7280)"
+            enabled ? "var(--color-text-success)" : "var(--color-text-secondary)"
           }
           bg={
             enabled
-              ? "var(--color-background-success, #dcfce7)"
-              : "var(--color-status-open-bg, #f3f4f6)"
+              ? "var(--color-background-success)"
+              : "var(--color-status-open-bg)"
           }
         >
           <span data-testid="g12-status">{enabled ? "Enabled" : "Disabled"}</span>
@@ -54,9 +54,9 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
       </div>
       <p
         style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
-          marginTop: "var(--space-1, 4px)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
+          marginTop: "var(--space-1)",
         }}
       >
         Set per-frame in{" "}
@@ -68,7 +68,7 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
           style={{
             background: "transparent",
             border: "none",
-            color: "var(--color-mode-current-accent, #1d4ed8)",
+            color: "var(--color-mode-current-accent)",
             cursor: "pointer",
             padding: 0,
           }}

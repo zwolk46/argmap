@@ -2,7 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { ConditionKind, ModeFlavor } from "@/schema";
 import { OFFERED_CONDITIONS_BY_MODE_FLAVOR, CONDITION_KIND_PRIORITY } from "@/schema";
-import { Button } from "../../primitives";
+import { Button, Z } from "../../primitives";
 
 export interface ConditionPickerProps {
   mode_flavor: ModeFlavor;
@@ -104,7 +104,7 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
             position: "absolute",
             top: "100%",
             left: 0,
-            zIndex: 150,
+            zIndex: Z.popover,
             background: "var(--color-surface-elevated)",
             border: "var(--border-thin) solid var(--color-border-subtle)",
             borderRadius: "var(--radius-md)",
@@ -130,8 +130,8 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
               {CONDITION_DESCRIPTIONS[kind] && (
                 <div
                   style={{
-                    fontSize: "var(--font-size-xs, 11px)",
-                    color: "var(--color-text-tertiary, #9ca3af)",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--color-text-tertiary)",
                     marginTop: "1px",
                   }}
                 >
@@ -147,15 +147,15 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
               onClick={() => handlePick("any_of")}
               style={{
                 ...MENU_ITEM_STYLE,
-                borderTop: "1px solid var(--color-border, #e5e7eb)",
+                borderTop: "1px solid var(--color-border)",
                 marginTop: "var(--space-1)",
               }}
             >
               <div style={{ fontWeight: "var(--font-weight-medium)" }}>+ Add "any of" group</div>
               <div
                 style={{
-                  fontSize: "var(--font-size-xs, 11px)",
-                  color: "var(--color-text-tertiary, #9ca3af)",
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-tertiary)",
                   marginTop: "1px",
                 }}
               >
@@ -167,8 +167,8 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
             <div
               style={{
                 padding: "var(--space-2) var(--space-3)",
-                fontSize: "var(--font-size-xs, 11px)",
-                color: "var(--color-text-tertiary, #9ca3af)",
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-tertiary)",
               }}
             >
               All conditions already added.
@@ -188,6 +188,6 @@ const MENU_ITEM_STYLE: React.CSSProperties = {
   border: "none",
   textAlign: "left",
   cursor: "pointer",
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
+  fontSize: "var(--font-size-sm)",
+  color: "var(--color-text-primary)",
 };

@@ -15,7 +15,7 @@ const OPTIONS: ReadonlyArray<{ value: PaneTabValue; label: string }> = [
 
 export function PaneTabs({ value, onChange }: PaneTabsProps): ReactElement {
   return (
-    <div data-testid="version-history-tabs" style={{ padding: "var(--space-2, 8px) 0" }}>
+    <div data-testid="version-history-tabs" style={{ padding: "var(--space-2) 0" }}>
       <SegmentedToggle options={OPTIONS} value={value} onChange={onChange} />
     </div>
   );

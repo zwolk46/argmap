@@ -95,11 +95,11 @@ export function JurisdictionSection(): ReactElement | null {
   const is_federal = jur.level === "federal";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
       <div>
         <label
           className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
           htmlFor="jur-level"
         >
           Jurisdiction Level
@@ -128,7 +128,7 @@ export function JurisdictionSection(): ReactElement | null {
         <div>
           <label
             className="argmap-section-heading"
-            style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+            style={{ display: "block", marginBottom: "var(--space-1)" }}
             htmlFor="jur-region"
           >
             State
@@ -153,7 +153,7 @@ export function JurisdictionSection(): ReactElement | null {
         <div>
           <label
             className="argmap-section-heading"
-            style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+            style={{ display: "block", marginBottom: "var(--space-1)" }}
             htmlFor="jur-region-text"
           >
             Region / Name
@@ -172,7 +172,7 @@ export function JurisdictionSection(): ReactElement | null {
       <div>
         <label
           className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
           htmlFor="jur-court"
         >
           Court

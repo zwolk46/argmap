@@ -44,16 +44,16 @@ export function MetadataSection(): ReactElement | null {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
       {frame.archived && (
         <div
           style={{
-            padding: "var(--space-2, 8px) var(--space-3, 12px)",
-            background: "var(--color-severity-warning-bg, #fef9c3)",
-            border: "1px solid var(--color-severity-warning, #ca8a04)",
-            borderRadius: "var(--radius-sm, 4px)",
-            fontSize: "var(--font-size-sm, 13px)",
-            color: "var(--color-severity-warning, #ca8a04)",
+            padding: "var(--space-2) var(--space-3)",
+            background: "var(--color-severity-warning-bg)",
+            border: "1px solid var(--color-severity-warning)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-severity-warning)",
           }}
         >
           This frame is archived.
@@ -63,7 +63,7 @@ export function MetadataSection(): ReactElement | null {
       <div>
         <label
           className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
           htmlFor="metadata-title"
         >
           Title
@@ -88,7 +88,7 @@ export function MetadataSection(): ReactElement | null {
       <div>
         <label
           className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
           htmlFor="metadata-description"
         >
           Description
@@ -117,7 +117,7 @@ export function MetadataSection(): ReactElement | null {
       <div>
         <label
           className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
           htmlFor="metadata-tags"
         >
           Tags (comma-separated)

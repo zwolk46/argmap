@@ -1,9 +1,16 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { act, render, fireEvent } from "@testing-library/react";
 import { AiAttributionChip, hookShortName } from "@/ui/primitives/ai-attribution-chip";
 import type { HookInvocationRecord } from "@/llm-hooks";
 import { TooltipProvider } from "@/ui/primitives/tooltip";
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const FIXTURE: HookInvocationRecord = {
   id: "inv-1",
@@ -34,6 +41,10 @@ describe("AiAttributionChip", () => {
   it("shows tooltip on hover with hook id, model, and timestamp", () => {
     const { getByTestId, getByText } = renderChip(FIXTURE);
     fireEvent.mouseEnter(getByTestId("ai-attribution-chip"), { clientX: 10, clientY: 10 });
+    // Tooltip opens after a 300ms delay — see TOOLTIP_OPEN_DELAY_MS.
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     expect(getByText(FIXTURE.hook_id)).toBeTruthy();
     expect(getByText(FIXTURE.model_id)).toBeTruthy();
   });

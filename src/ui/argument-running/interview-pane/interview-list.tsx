@@ -63,8 +63,8 @@ function SectionHeader({ label }: { label: string }): ReactElement {
     <h3
       className="argmap-section-heading"
       style={{
-        padding: "var(--space-1, 4px) var(--space-2, 8px)",
-        background: "var(--color-surface-pane-secondary, #fafafa)",
+        padding: "var(--space-1) var(--space-2)",
+        background: "var(--color-surface-pane-secondary)",
       }}
     >
       {label}

@@ -72,6 +72,7 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
       data-testid="frame-title"
       onClick={startEdit}
       title={read_only ? undefined : "Click to rename"}
+      className={read_only ? undefined : "argmap-row-hover"}
       style={{
         fontSize: "var(--font-size-lg)",
         fontWeight: "var(--font-weight-semibold)",
@@ -91,14 +92,6 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
         // as an inline-ish element inside a flex row).
         display: "inline-block",
         lineHeight: "var(--line-height-tight)",
-      }}
-      onMouseEnter={(e) => {
-        if (!read_only) {
-          (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
       {title || "Untitled frame"}

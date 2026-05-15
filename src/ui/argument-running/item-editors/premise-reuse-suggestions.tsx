@@ -96,10 +96,10 @@ export function PremiseReuseSuggestions(props: PremiseReuseSuggestionsProps): Re
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-1, 4px)",
-        padding: "var(--space-2, 8px)",
-        background: "var(--color-surface-pane-secondary, #fafafa)",
-        borderRadius: "var(--border-radius-md, 6px)",
+        gap: "var(--space-1)",
+        padding: "var(--space-2)",
+        background: "var(--color-surface-pane-secondary)",
+        borderRadius: "var(--border-radius-md)",
         border: "var(--border-thin) solid var(--color-border-tertiary)",
       }}
     >
@@ -116,10 +116,10 @@ export function PremiseReuseSuggestions(props: PremiseReuseSuggestionsProps): Re
             border: "none",
             textAlign: "left",
             cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-primary, #111827)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-primary)",
             padding: "var(--space-1)",
-            borderRadius: "var(--border-radius-md, 6px)",
+            borderRadius: "var(--border-radius-md)",
           }}
         >
           {(premise as { statement?: string }).statement ?? premise.id}

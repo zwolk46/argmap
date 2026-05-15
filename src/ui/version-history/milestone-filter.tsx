@@ -17,8 +17,8 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
       aria-label="Milestone filter"
       style={{
         display: "inline-flex",
-        gap: "var(--space-1, 4px)",
-        padding: "var(--space-2, 8px) 0",
+        gap: "var(--space-1)",
+        padding: "var(--space-2) 0",
       }}
     >
       {/* KEEP RAW: pill-toggle filter chips (aria-pressed) wrapping Pill primitives; not the standard Button taxonomy. */}
@@ -36,19 +36,19 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
           // P1: align the :focus-visible outline with the inner Pill shape
           // so the focus ring traces the pill instead of an awkward
           // rectangle around it.
-          borderRadius: "var(--radius-pill, 999px)",
+          borderRadius: "var(--radius-pill)",
         }}
       >
         <Pill
           bg={
             !is_milestones
-              ? "var(--color-mode-current-accent-bg, #dbeafe)"
-              : "var(--color-status-open-bg, #f3f4f6)"
+              ? "var(--color-mode-current-accent-bg)"
+              : "var(--color-status-open-bg)"
           }
           color={
             !is_milestones
-              ? "var(--color-mode-current-accent, #1d4ed8)"
-              : "var(--color-text-secondary, #6b7280)"
+              ? "var(--color-mode-current-accent)"
+              : "var(--color-text-secondary)"
           }
         >
           All
@@ -68,24 +68,24 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
           // P1: align the :focus-visible outline with the inner Pill shape
           // so the focus ring traces the pill instead of an awkward
           // rectangle around it.
-          borderRadius: "var(--radius-pill, 999px)",
+          borderRadius: "var(--radius-pill)",
         }}
       >
         <Pill
           bg={
             is_milestones
-              ? "var(--color-mode-current-accent-bg, #dbeafe)"
-              : "var(--color-status-open-bg, #f3f4f6)"
+              ? "var(--color-mode-current-accent-bg)"
+              : "var(--color-status-open-bg)"
           }
           color={
             is_milestones
-              ? "var(--color-mode-current-accent, #1d4ed8)"
-              : "var(--color-text-secondary, #6b7280)"
+              ? "var(--color-mode-current-accent)"
+              : "var(--color-text-secondary)"
           }
         >
           <span
             style={{
-              color: "var(--color-milestone-star, #d97706)",
+              color: "var(--color-milestone-star)",
               marginRight: 4,
               display: "inline-flex",
               alignItems: "center",

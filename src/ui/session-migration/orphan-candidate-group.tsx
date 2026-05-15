@@ -23,11 +23,11 @@ export function OrphanCandidateGroup(props: OrphanCandidateGroupProps): ReactEle
     <section
       data-testid="orphan-candidate-group"
       data-carrier-kind={props.carrier_kind}
-      style={{ marginBottom: "var(--space-3, 12px)" }}
+      style={{ marginBottom: "var(--space-3)" }}
     >
       <h3
         className="argmap-section-heading"
-        style={{ padding: "var(--space-2, 8px) var(--space-3, 12px)" }}
+        style={{ padding: "var(--space-2) var(--space-3)" }}
       >
         {header} · {props.candidates.length}
       </h3>

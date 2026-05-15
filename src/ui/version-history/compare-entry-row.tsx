@@ -119,11 +119,11 @@ export function CompareEntryRow({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "var(--space-2, 8px)",
-        padding: "var(--space-2, 8px) var(--space-3, 12px)",
-        fontSize: "var(--font-size-sm, 13px)",
+        gap: "var(--space-2)",
+        padding: "var(--space-2) var(--space-3)",
+        fontSize: "var(--font-size-sm)",
         cursor: clickable ? "pointer" : "default",
-        color: "var(--color-text-primary, #111827)",
+        color: "var(--color-text-primary)",
       }}
     >
       {icon}
@@ -132,7 +132,7 @@ export function CompareEntryRow({
       </span>
       {secondary ? (
         <span
-          style={{ color: "var(--color-text-secondary, #6b7280)", fontSize: "var(--font-size-xs)" }}
+          style={{ color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)" }}
         >
           {secondary}
         </span>

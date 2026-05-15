@@ -21,7 +21,7 @@ import type { FrameCanvasHandle } from "../canvas";
 import { EdgeCreationPopup } from "../canvas/edge-creation-popup";
 import { validEdgeTypesFor } from "../canvas/edges/edge-validity";
 import type { EdgeCreationCandidate } from "../canvas/edges/edge-validity";
-import { Button, LoadingScreen, CanvasEmptyState, useToast } from "../primitives";
+import { Button, LoadingScreen, CanvasEmptyState, useToast, Z } from "../primitives";
 import { humanizeNodeType } from "../primitives";
 import { SuggestionDrawer } from "../ai-suggestion";
 import { useCascadeConfirmation } from "../hooks";
@@ -389,7 +389,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                         border: "var(--border-thin) solid var(--color-severity-warning)",
                         borderRadius: "var(--radius-md)",
                         fontSize: "var(--font-size-xs)",
-                        zIndex: 10,
+                        zIndex: Z.banner,
                       }}
                     >
                       Layout pass failed; showing last-known positions.

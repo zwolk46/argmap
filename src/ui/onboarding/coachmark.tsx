@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { ReactElement, RefObject } from "react";
-import { Button } from "../primitives";
+import { Button, Z } from "../primitives";
 
 export interface CoachmarkProps {
   anchor_ref: RefObject<HTMLElement | null>;
@@ -37,19 +37,19 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
         position: "fixed",
         top: pos.top,
         left: pos.left,
-        zIndex: 200,
+        zIndex: Z.coachmark,
         maxWidth: 320,
-        padding: "var(--space-3, 12px)",
-        background: "var(--color-surface-elevated, #ffffff)",
-        boxShadow: "var(--shadow-md, 0 4px 12px rgba(0,0,0,0.1))",
-        borderRadius: "var(--radius-md, 6px)",
-        border: "var(--border-thin, 1px) solid var(--color-border-default, #e5e7eb)",
+        padding: "var(--space-3)",
+        background: "var(--color-surface-elevated)",
+        boxShadow: "var(--shadow-md)",
+        borderRadius: "var(--radius-md)",
+        border: "var(--border-thin) solid var(--color-border-default)",
       }}
     >
       <p
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-primary, #111827)",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-primary)",
           margin: 0,
         }}
       >
@@ -59,8 +59,8 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
         style={{
           display: "flex",
           justifyContent: "flex-end",
-          gap: "var(--space-2, 8px)",
-          marginTop: "var(--space-2, 8px)",
+          gap: "var(--space-2)",
+          marginTop: "var(--space-2)",
         }}
       >
         {props.on_learn_more ? (

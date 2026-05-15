@@ -51,7 +51,7 @@ export function PremisePool(props: PremisePoolProps): React.ReactElement {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "var(--space-2, 8px)",
+          padding: "var(--space-2)",
           borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
         }}
       >

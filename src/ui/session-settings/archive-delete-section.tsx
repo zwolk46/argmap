@@ -31,16 +31,16 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
     <section
       data-testid="archive-delete-section"
       style={{
-        marginTop: "var(--space-6, 24px)",
-        paddingTop: "var(--space-4, 16px)",
-        borderTop: "var(--border-hairline, 1px) solid var(--color-border-subtle, #e5e7eb)",
+        marginTop: "var(--space-6)",
+        paddingTop: "var(--space-4)",
+        borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
       }}
     >
       <header
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
+          fontSize: "var(--font-size-sm)",
           fontWeight: "var(--font-weight-medium)",
-          marginBottom: "var(--space-2, 8px)",
+          marginBottom: "var(--space-2)",
         }}
       >
         Archive and Delete
@@ -51,7 +51,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
         data-testid="archive-toggle"
         onClick={toggleArchive}
         title="Archived sessions are hidden from the default open-existing-session list"
-        style={{ marginRight: "var(--space-2, 8px)" }}
+        style={{ marginRight: "var(--space-2)" }}
       >
         {archived ? "Unarchive" : "Archive"}
       </Button>
@@ -80,7 +80,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
       >
         <div data-testid="delete-confirm-body">
           <p>Deleting this session and all its versions cannot be undone.</p>
-          <label style={{ display: "block", marginTop: "var(--space-2, 8px)" }}>
+          <label style={{ display: "block", marginTop: "var(--space-2)" }}>
             Type the session title to confirm:
             <input
               data-testid="delete-confirm-input"
@@ -88,15 +88,15 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
               value={confirm_text}
               onChange={(e) => setConfirmText(e.target.value)}
               className="argmap-input"
-              style={{ marginTop: "var(--space-1, 4px)" }}
+              style={{ marginTop: "var(--space-1)" }}
             />
           </label>
           {confirm_text.length > 0 && confirm_text !== title ? (
             <p
               style={{
-                marginTop: "var(--space-1, 4px)",
-                color: "var(--color-severity-warning, #d97706)",
-                fontSize: "var(--font-size-xs, 11px)",
+                marginTop: "var(--space-1)",
+                color: "var(--color-severity-warning)",
+                fontSize: "var(--font-size-xs)",
               }}
             >
               Type the title exactly to enable Delete.

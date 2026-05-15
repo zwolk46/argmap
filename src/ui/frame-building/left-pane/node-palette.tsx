@@ -184,7 +184,7 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
       style={{
         display: "flex",
         flexDirection: "column",
-        padding: "var(--space-2, 8px) 0",
+        padding: "var(--space-2) 0",
       }}
       aria-label="Node palette"
     >

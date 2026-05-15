@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import type { FrameVersion, ValidationResult } from "@/schema";
 import { VALIDATION_RULE_DESCRIPTIONS } from "@/schema";
-import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
+import { SeverityIcon, IconButton, humanizeValidationMessage } from "../../primitives";
 import { UIcon } from "../../primitives/uicon";
 
 export interface ValidationRowProps {
@@ -24,10 +24,10 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
       style={{
         display: "flex",
         alignItems: "flex-start",
-        gap: "var(--space-2, 8px)",
-        padding: "var(--space-2, 8px) var(--space-3, 12px)",
+        gap: "var(--space-2)",
+        padding: "var(--space-2) var(--space-3)",
         opacity: is_dismissed ? 0.5 : 1,
-        borderBottom: "1px solid var(--color-border, #e5e7eb)",
+        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" && result.node_id) {
@@ -40,8 +40,8 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
       <span
         style={{
           flex: 1,
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-primary, #111827)",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-primary)",
         }}
         // P2: hover shows the rule's intent instead of the bare rule_id
         // (the rule_id is a meaningless string to the user).
@@ -50,55 +50,38 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
         {display_message}
       </span>
 
-      {/* KEEP RAW: validation-row inline action icons (task spec lists validation-row explicitly). */}
-      {/* Jump to node */}
       {result.node_id && (
-        <button
-          type="button"
+        <IconButton
+          size="sm"
           onClick={() => on_jump_to_node(result.node_id!)}
           aria-label="Jump to node"
           title="Jump to node"
-          style={ACTION_BTN_STYLE}
         >
           <UIcon name="arrow-up-right" size={14} />
-        </button>
+        </IconButton>
       )}
 
       {/* Dismiss / Restore (warnings only) */}
       {result.severity === "warning" &&
         (is_dismissed ? (
-          <button
-            type="button"
+          <IconButton
+            size="sm"
             onClick={on_restore}
             aria-label="Restore warning"
             title="Restore warning"
-            style={ACTION_BTN_STYLE}
           >
             <UIcon name="rotate-left" size={14} />
-          </button>
+          </IconButton>
         ) : (
-          <button
-            type="button"
+          <IconButton
+            size="sm"
             onClick={on_dismiss}
             aria-label="Dismiss warning"
             title="Dismiss warning"
-            style={ACTION_BTN_STYLE}
           >
             <UIcon name="times" size={14} />
-          </button>
+          </IconButton>
         ))}
     </div>
   );
 }
-
-import type * as React from "react";
-
-const ACTION_BTN_STYLE: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  cursor: "pointer",
-  color: "var(--color-text-tertiary, #9ca3af)",
-  padding: "0 var(--space-1)",
-  fontSize: "var(--font-size-sm)",
-  flexShrink: 0,
-};

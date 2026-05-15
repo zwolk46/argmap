@@ -26,8 +26,8 @@ export function AutoArrangeFlow({ open, on_close }: AutoArrangeFlowProps): React
       <p
         style={{
           margin: 0,
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-secondary)",
         }}
       >
         All manual node positions in the current frame version will be cleared so the canvas can

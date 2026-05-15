@@ -15,9 +15,9 @@ export function NotesField(props: NotesFieldProps): ReactElement {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-1, 4px)",
-        fontSize: "var(--font-size-xs, 11px)",
-        color: "var(--color-text-secondary, #6b7280)",
+        gap: "var(--space-1)",
+        fontSize: "var(--font-size-xs)",
+        color: "var(--color-text-secondary)",
       }}
     >
       <span>Notes (optional)</span>
@@ -30,7 +30,7 @@ export function NotesField(props: NotesFieldProps): ReactElement {
         style={{
           minHeight: min_height,
           maxHeight: max_height,
-          fontSize: "var(--font-size-xs, 11px)",
+          fontSize: "var(--font-size-xs)",
           resize: "vertical",
         }}
       />

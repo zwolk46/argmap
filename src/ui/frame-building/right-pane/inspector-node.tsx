@@ -30,8 +30,8 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
     return (
       <div
         style={{
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
+          color: "var(--color-text-secondary)",
+          fontSize: "var(--font-size-sm)",
         }}
       >
         Node not found.
@@ -50,15 +50,15 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-2, 8px)",
-          paddingBottom: "var(--space-3, 12px)",
-          borderBottom: "1px solid var(--color-border, #e5e7eb)",
-          marginBottom: "var(--space-3, 12px)",
+          gap: "var(--space-2)",
+          paddingBottom: "var(--space-3)",
+          borderBottom: "1px solid var(--color-border)",
+          marginBottom: "var(--space-3)",
         }}
       >
         <TypeIcon node_type={node.type} />
         <span
-          style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: "var(--font-weight-medium)" }}
+          style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}
         >
           {humanizeNodeType(node.type)}
         </span>
@@ -76,7 +76,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
       />
 
       {/* Notes */}
-      <div style={{ marginTop: "var(--space-3, 12px)" }}>
+      <div style={{ marginTop: "var(--space-3)" }}>
         <label
           className="argmap-section-heading"
           style={{ display: "block", marginBottom: "var(--space-1)" }}
@@ -112,7 +112,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
 
       {/* Options box (A3: per-instance allowed types only) */}
       {PER_INSTANCE_ALLOWED.has(node.type) && (
-        <div style={{ marginTop: "var(--space-3, 12px)" }}>
+        <div style={{ marginTop: "var(--space-3)" }}>
           <OptionsBoxEditor node={node} edit_mode={edit_mode} on_change_edit_mode={set_edit_mode} />
         </div>
       )}
@@ -123,9 +123,9 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
       {/* Footer */}
       <div
         style={{
-          marginTop: "var(--space-4, 16px)",
-          paddingTop: "var(--space-3, 12px)",
-          borderTop: "1px solid var(--color-border, #e5e7eb)",
+          marginTop: "var(--space-4)",
+          paddingTop: "var(--space-3)",
+          borderTop: "1px solid var(--color-border)",
         }}
       >
         <Button

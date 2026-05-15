@@ -18,8 +18,8 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
     return (
       <div
         style={{
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
+          color: "var(--color-text-secondary)",
+          fontSize: "var(--font-size-sm)",
         }}
       >
         Edge not found.
@@ -28,12 +28,12 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3, 12px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
       {/* Header */}
       <div
         style={{
-          paddingBottom: "var(--space-3, 12px)",
-          borderBottom: "1px solid var(--color-border, #e5e7eb)",
+          paddingBottom: "var(--space-3)",
+          borderBottom: "1px solid var(--color-border)",
         }}
       >
         <h3
@@ -43,7 +43,7 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
           Edge type
         </h3>
         <div
-          style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: "var(--font-weight-medium)" }}
+          style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}
         >
           {edge.type}
         </div>
@@ -55,9 +55,9 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
         </h3>
         <div
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
+            fontSize: "var(--font-size-xs)",
             fontFamily: "monospace",
-            color: "var(--color-text-secondary, #6b7280)",
+            color: "var(--color-text-secondary)",
           }}
         >
           {edge.source.slice(0, 8)} → {edge.target.slice(0, 8)}
@@ -137,8 +137,8 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
       {/* Footer */}
       <div
         style={{
-          paddingTop: "var(--space-3, 12px)",
-          borderTop: "1px solid var(--color-border, #e5e7eb)",
+          paddingTop: "var(--space-3)",
+          borderTop: "1px solid var(--color-border)",
         }}
       >
         <Button

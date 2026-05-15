@@ -18,13 +18,13 @@ export function OnboardingPreferencesSection(): ReactElement {
     <section
       data-testid="onboarding-preferences-section"
       style={{
-        padding: "var(--space-3, 12px)",
-        borderTop: "var(--border-hairline, 1px) solid var(--color-border-subtle, #e5e7eb)",
+        padding: "var(--space-3)",
+        borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
       }}
     >
       <h3
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
+          fontSize: "var(--font-size-sm)",
           fontWeight: "var(--font-weight-medium)",
           margin: 0,
         }}
@@ -33,9 +33,9 @@ export function OnboardingPreferencesSection(): ReactElement {
       </h3>
       <p
         style={{
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-secondary, #6b7280)",
-          margin: "var(--space-1, 4px) 0",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-secondary)",
+          margin: "var(--space-1) 0",
         }}
       >
         Reset coachmarks and the welcome screen to see them again.

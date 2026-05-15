@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { Drawer, DrawerHeader, DrawerBody, IconButton } from "../../primitives";
+import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, IconButton, Button } from "../../primitives";
 import { UIcon } from "../../primitives/uicon";
 import { MetadataSection } from "./metadata-section";
 import { ModeFlavorSection } from "./mode-flavor-section";
@@ -17,9 +17,9 @@ export interface FrameSettingsPanelProps {
 }
 
 const SECTION_DIVIDER_STYLE: React.CSSProperties = {
-  borderTop: "1px solid var(--color-border-subtle, #f3f4f6)",
-  marginTop: "var(--space-5, 20px)",
-  paddingTop: "var(--space-5, 20px)",
+  borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
+  marginTop: "var(--space-5)",
+  paddingTop: "var(--space-5)",
 };
 
 export function FrameSettingsPanel({
@@ -34,7 +34,7 @@ export function FrameSettingsPanel({
       <DrawerHeader>
         <span>Frame settings</span>
         <IconButton aria-label="Close frame settings" onClick={on_close} size="sm">
-          <UIcon name="times" size={16} />
+          <UIcon name="times" size={14} />
         </IconButton>
       </DrawerHeader>
 
@@ -73,6 +73,11 @@ export function FrameSettingsPanel({
           </div>
         </div>
       </DrawerBody>
+      <DrawerFooter>
+        <Button variant="secondary" data-testid="frame-settings-done" onClick={on_close}>
+          Done
+        </Button>
+      </DrawerFooter>
     </Drawer>
   );
 }

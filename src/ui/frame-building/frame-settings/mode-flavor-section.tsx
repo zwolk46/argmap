@@ -7,8 +7,8 @@ export interface ModeFlavorSectionProps {
 }
 
 const VALUE_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
+  fontSize: "var(--font-size-sm)",
+  color: "var(--color-text-primary)",
   fontWeight: "var(--font-weight-medium)",
 };
 
@@ -35,11 +35,11 @@ export function ModeFlavorSection({
     : disabled_title;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
       <div>
         <h3
           className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
         >
           Mode
         </h3>
@@ -60,7 +60,7 @@ export function ModeFlavorSection({
       <div>
         <h3
           className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
         >
           Flavor
         </h3>

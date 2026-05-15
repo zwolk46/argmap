@@ -45,7 +45,7 @@ export function ItemEditorHost(props: ItemEditorHostProps): React.ReactElement |
   return (
     <div
       data-testid="item-editor-unsupported"
-      style={{ padding: "var(--space-3, 12px)", fontSize: "var(--font-size-xs, 11px)" }}
+      style={{ padding: "var(--space-3)", fontSize: "var(--font-size-xs)" }}
     >
       No editor for node type: {node.type}
     </div>

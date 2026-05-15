@@ -244,6 +244,8 @@ function Choice({
             aria-pressed={active}
             data-testid={opt.testid}
             onClick={() => onChange(opt.value)}
+            data-active={active ? "true" : "false"}
+            className="argmap-radio-card"
             style={{
               textAlign: "left",
               padding: "var(--space-3) var(--space-4)",

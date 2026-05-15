@@ -16,20 +16,20 @@ export function TargetModePicker(props: TargetModePickerProps): ReactElement {
     props.target_mode === "legal" ? "legal" : `general (${props.target_flavor ?? "personal"})`;
 
   return (
-    <div data-testid="target-mode-picker" style={{ padding: "var(--space-3, 12px) 0" }}>
+    <div data-testid="target-mode-picker" style={{ padding: "var(--space-3) 0" }}>
       <div
         style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
         }}
       >
         Currently: <span data-testid="target-mode-current">{current_label}</span>
       </div>
       <div
         style={{
-          marginTop: "var(--space-2, 8px)",
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-primary, #111827)",
+          marginTop: "var(--space-2)",
+          fontSize: "var(--font-size-sm)",
+          color: "var(--color-text-primary)",
         }}
       >
         Switch to: <span data-testid="target-mode-target">{target_label}</span>
@@ -40,15 +40,15 @@ export function TargetModePicker(props: TargetModePickerProps): ReactElement {
           style={{
             border: "none",
             padding: 0,
-            marginTop: "var(--space-2, 8px)",
+            marginTop: "var(--space-2)",
             display: "flex",
-            gap: "var(--space-3, 12px)",
+            gap: "var(--space-3)",
           }}
         >
           <legend
             style={{
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-secondary, #6b7280)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-secondary)",
             }}
           >
             Flavor:

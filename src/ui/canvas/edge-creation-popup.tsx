@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { EdgeCreationCandidate } from "./edges/edge-validity";
 import { candidateLabel } from "./edges/edge-validity";
+import { Z } from "../primitives";
 
 export interface EdgeCreationPopupProps {
   open: boolean;
@@ -48,8 +49,9 @@ export function EdgeCreationPopup({
         position: "fixed",
         left: position.x,
         top: position.y,
-        zIndex: 1050,
+        zIndex: Z.popover,
         background: "var(--color-surface-elevated)",
+        border: "var(--border-hairline) solid var(--color-border-subtle)",
         boxShadow: "var(--shadow-md)",
         borderRadius: "var(--radius-md)",
         padding: "var(--space-1)",
@@ -64,6 +66,7 @@ export function EdgeCreationPopup({
             onChoose(c);
             onDismiss();
           }}
+          className="argmap-row-hover"
           style={{
             display: "block",
             width: "100%",
@@ -76,12 +79,6 @@ export function EdgeCreationPopup({
             cursor: "pointer",
             textAlign: "left",
             fontFamily: "var(--font-sans)",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "transparent";
           }}
         >
           {candidateLabel(c)}

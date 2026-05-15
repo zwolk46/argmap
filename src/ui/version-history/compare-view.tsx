@@ -17,7 +17,7 @@ import {
   type StructuralDiff,
   type SessionStructuralDiff,
 } from "@/state";
-import { Button, IconButton, InlineLoading } from "../primitives";
+import { Button, IconButton, InlineLoading, UIcon } from "../primitives";
 import { CompareEntryList } from "./compare-entry-list";
 import type { CompareEntryRowDescriptor } from "./compare-entry-row";
 
@@ -306,27 +306,14 @@ export function CompareView(props: CompareViewProps): ReactElement {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-2, 8px)",
-          padding: "var(--space-2, 8px) var(--space-3, 12px)",
-          borderBottom: "var(--border-hairline, 1px) solid var(--color-border-subtle, #e5e7eb)",
-          fontSize: "var(--font-size-sm, 13px)",
+          gap: "var(--space-2)",
+          padding: "var(--space-2) var(--space-3)",
+          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
+          fontSize: "var(--font-size-sm)",
         }}
       >
         <IconButton aria-label="Back to history" onClick={on_back}>
-          <svg
-            width={14}
-            height={14}
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.6}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M8 3 L4 7 L8 11" />
-            <path d="M4 7 L11 7" />
-          </svg>
+          <UIcon name="arrow-left" size={14} />
         </IconButton>
         {/* P2: make the title an h2 so screen readers get a heading
             landmark inside the pane. */}
@@ -335,7 +322,7 @@ export function CompareView(props: CompareViewProps): ReactElement {
           style={{
             margin: 0,
             fontSize: "inherit",
-            fontWeight: "var(--font-weight-semibold, 600)",
+            fontWeight: "var(--font-weight-semibold)",
             color: "inherit",
           }}
         >
@@ -420,8 +407,8 @@ function FrameCompareBody(props: {
       <div
         data-testid="compare-view-empty"
         style={{
-          padding: "var(--space-4, 16px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
+          padding: "var(--space-4)",
+          color: "var(--color-text-tertiary)",
           fontStyle: "italic",
         }}
       >
@@ -518,8 +505,8 @@ function SessionCompareBody(props: {
       <div
         data-testid="compare-view-empty"
         style={{
-          padding: "var(--space-4, 16px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
+          padding: "var(--space-4)",
+          color: "var(--color-text-tertiary)",
           fontStyle: "italic",
         }}
       >

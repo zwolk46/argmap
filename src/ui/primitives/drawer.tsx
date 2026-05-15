@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { Z } from "./z-index";
 
 export type DrawerSide = "right" | "left" | "bottom";
 
@@ -142,7 +143,7 @@ export function Drawer({
     // Above the sticky top bar (50) so the drawer overlay reads as on top
     // of chrome. Below dialogs (1000) so confirmation modals can stack
     // above an open drawer.
-    zIndex: 80,
+    zIndex: Z.drawer,
   };
 
   let positionalStyle: React.CSSProperties;

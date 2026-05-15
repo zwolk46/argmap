@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { OutputViewTab } from "@/state";
+import { Spinner } from "../../primitives";
 
 export type { OutputViewTab };
 
@@ -30,7 +31,7 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
       style={{
         display: "flex",
         gap: "var(--space-3)",
-        alignItems: "stretch",
+        alignItems: "center",
         padding: "0 var(--space-4)",
         borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
         background: "var(--color-surface-elevated)",
@@ -49,37 +50,29 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
             data-testid={`output-view-tab-${tab}`}
             data-active={active ? "true" : "false"}
             onClick={() => on_change(tab)}
-            style={{
-              background: "transparent",
-              color: active ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-              border: "none",
-              borderBottom: active
-                ? "var(--border-medium) solid var(--color-mode-current-accent)"
-                : "var(--border-medium) solid transparent",
-              padding: "var(--space-3) var(--space-2)",
-              cursor: computing ? "default" : "pointer",
-              fontSize: "var(--font-size-sm)",
-              fontWeight: active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-              transition:
-                "color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
-              marginBottom: "-1px",
-              letterSpacing: "var(--letter-spacing-normal)",
-            }}
-            onMouseEnter={(e) => {
-              if (!active && !computing) {
-                (e.currentTarget as HTMLElement).style.color = "var(--color-text-primary)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!active) {
-                (e.currentTarget as HTMLElement).style.color = "var(--color-text-secondary)";
-              }
-            }}
+            className="argmap-output-tab"
           >
-            {computing ? "Computing…" : TAB_LABELS[tab]}
+            {TAB_LABELS[tab]}
           </button>
         );
       })}
+      {computing ? (
+        <div
+          data-testid="output-view-tabs-computing"
+          aria-live="polite"
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
+            color: "var(--color-text-secondary)",
+            fontSize: "var(--font-size-sm)",
+          }}
+        >
+          <Spinner size={12} />
+          <span>Computing…</span>
+        </div>
+      ) : null}
     </div>
   );
 }

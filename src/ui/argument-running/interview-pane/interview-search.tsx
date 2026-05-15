@@ -11,7 +11,7 @@ export const InterviewSearch = React.forwardRef<HTMLInputElement, InterviewSearc
     return (
       <div
         style={{
-          padding: "var(--space-2, 8px)",
+          padding: "var(--space-2)",
           borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
         }}
       >
@@ -23,7 +23,7 @@ export const InterviewSearch = React.forwardRef<HTMLInputElement, InterviewSearc
           value={value}
           onChange={(e) => on_change(e.target.value)}
           className="argmap-input"
-          style={{ fontSize: "var(--font-size-xs, 11px)" }}
+          style={{ fontSize: "var(--font-size-xs)" }}
         />
       </div>
     );

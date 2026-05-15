@@ -18,7 +18,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import Joyride, { STATUS, type CallBackProps, type Step } from "react-joyride";
-import { Dialog, Button } from "../primitives";
+import { Dialog, Button, Z } from "../primitives";
 import { readTutorialRoleMap, clearTutorialRoleMap } from "@/tutorial";
 import {
   getTutorialPhase,
@@ -113,57 +113,57 @@ export function TutorialTour(): ReactElement | null {
           }}
           styles={{
             options: {
-              primaryColor: "var(--color-mode-current-accent, #1f6feb)",
-              zIndex: 10000,
-              arrowColor: "var(--color-surface-elevated, #ffffff)",
-              backgroundColor: "var(--color-surface-elevated, #ffffff)",
-              textColor: "var(--color-text-primary, #111827)",
-              overlayColor: "rgba(15, 23, 42, 0.45)",
+              primaryColor: "var(--color-mode-current-accent)",
+              zIndex: Z.tour,
+              arrowColor: "var(--color-surface-elevated)",
+              backgroundColor: "var(--color-surface-elevated)",
+              textColor: "var(--color-text-primary)",
+              overlayColor: "var(--color-surface-overlay)",
               width: 380,
             },
             tooltip: {
-              borderRadius: "var(--radius-lg, 12px)",
-              padding: "var(--space-4, 16px) var(--space-5, 20px)",
-              fontSize: "var(--font-size-sm, 13px)",
-              lineHeight: "var(--line-height-relaxed, 1.6)",
-              boxShadow:
-                "0 16px 40px -10px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+              borderRadius: "var(--radius-lg)",
+              padding: "var(--space-4) var(--space-5)",
+              fontSize: "var(--font-size-sm)",
+              lineHeight: "var(--line-height-relaxed)",
+              boxShadow: "var(--shadow-lg)",
+              border: "var(--border-hairline) solid var(--color-border-subtle)",
             },
             tooltipContainer: { textAlign: "left" },
             tooltipTitle: {
-              fontSize: "var(--font-size-md, 15px)",
-              fontWeight: "var(--font-weight-semibold, 600)",
+              fontSize: "var(--font-size-md)",
+              fontWeight: "var(--font-weight-semibold)",
               margin: 0,
-              marginBottom: "var(--space-2, 8px)",
-              color: "var(--color-text-primary, #111827)",
-              letterSpacing: "var(--letter-spacing-tight, -0.01em)",
+              marginBottom: "var(--space-2)",
+              color: "var(--color-text-primary)",
+              letterSpacing: "var(--letter-spacing-tight)",
             },
             tooltipContent: {
               padding: 0,
-              color: "var(--color-text-secondary, #4b5563)",
+              color: "var(--color-text-secondary)",
             },
             tooltipFooter: {
-              marginTop: "var(--space-4, 16px)",
+              marginTop: "var(--space-4)",
               alignItems: "center",
             },
             buttonNext: {
-              borderRadius: "var(--radius-md, 6px)",
+              borderRadius: "var(--radius-md)",
               padding: "var(--space-1) 14px",
-              fontSize: "var(--font-size-sm, 13px)",
-              fontWeight: "var(--font-weight-medium, 500)",
+              fontSize: "var(--font-size-sm)",
+              fontWeight: "var(--font-weight-medium)",
               outline: "none",
             },
             buttonBack: {
-              color: "var(--color-text-secondary, #6b7280)",
-              fontSize: "var(--font-size-sm, 13px)",
-              marginRight: "var(--space-2, 8px)",
+              color: "var(--color-text-secondary)",
+              fontSize: "var(--font-size-sm)",
+              marginRight: "var(--space-2)",
             },
             buttonSkip: {
-              color: "var(--color-text-tertiary, #9ca3af)",
-              fontSize: "var(--font-size-sm, 13px)",
+              color: "var(--color-text-tertiary)",
+              fontSize: "var(--font-size-sm)",
             },
             buttonClose: { display: "none" },
-            spotlight: { borderRadius: "var(--radius-md, 6px)" },
+            spotlight: { borderRadius: "var(--radius-md)" },
           }}
           locale={{
             back: "Back",

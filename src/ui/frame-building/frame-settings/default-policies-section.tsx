@@ -40,8 +40,8 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
   return (
     <div
       style={{
-        border: "1px solid var(--color-border-subtle, #f3f4f6)",
-        borderRadius: "var(--radius-sm, 4px)",
+        border: "1px solid var(--color-border-subtle)",
+        borderRadius: "var(--radius-sm)",
         overflow: "hidden",
       }}
     >
@@ -52,11 +52,11 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
         aria-expanded={expanded}
         style={{
           width: "100%",
-          padding: "var(--space-2, 8px) var(--space-3, 12px)",
+          padding: "var(--space-2) var(--space-3)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "var(--color-surface-pane, #f9fafb)",
+          background: "var(--color-surface-pane)",
           border: "none",
           cursor: "pointer",
           textAlign: "left",
@@ -65,8 +65,8 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
         <span className="argmap-section-heading">{node_type}</span>
         <span
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-tertiary, #9ca3af)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-tertiary)",
           }}
         >
           {frame_default ? "custom" : "library default"} {expanded ? "▲" : "▼"}
@@ -76,8 +76,8 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
       {expanded && (
         <div
           style={{
-            padding: "var(--space-3, 12px)",
-            background: "var(--color-surface-elevated, #fff)",
+            padding: "var(--space-3)",
+            background: "var(--color-surface-elevated)",
           }}
         >
           <ConditionList
@@ -90,7 +90,7 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
               variant="secondary"
               size="sm"
               onClick={() => handleChange(DEFAULT_SATISFACTION_POLICIES[node_type])}
-              style={{ marginTop: "var(--space-2, 8px)" }}
+              style={{ marginTop: "var(--space-2)" }}
             >
               Reset to library default
             </Button>
@@ -107,13 +107,13 @@ export function DefaultPoliciesSection(): ReactElement | null {
   if (!frame) return null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2, 8px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
       <h3 className="argmap-section-heading">Default satisfaction policies</h3>
       <p
         style={{
           margin: 0,
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-tertiary)",
         }}
       >
         These apply to all new nodes of each type in this frame unless overridden per-instance.

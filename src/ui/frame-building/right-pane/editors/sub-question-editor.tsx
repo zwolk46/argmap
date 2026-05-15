@@ -8,7 +8,7 @@ export interface SubQuestionEditorProps {
   node: SubQuestion;
 }
 
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
+const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
 
 const INPUT_STYLE: React.CSSProperties = {
   resize: "vertical",
@@ -43,7 +43,7 @@ export function SubQuestionEditor(props: SubQuestionEditorProps): ReactElement {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "var(--space-2, 8px)",
+                gap: "var(--space-2)",
                 cursor: "pointer",
               }}
             >

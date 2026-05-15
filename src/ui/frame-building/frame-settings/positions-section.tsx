@@ -43,10 +43,10 @@ export function PositionsSection(): ReactElement | null {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
       <h3
         className="argmap-section-heading"
-        style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+        style={{ display: "block", marginBottom: "var(--space-1)" }}
       >
         Positions
       </h3>
@@ -54,8 +54,8 @@ export function PositionsSection(): ReactElement | null {
       {positions.length === 0 && (
         <div
           style={{
-            fontSize: "var(--font-size-sm, 13px)",
-            color: "var(--color-text-tertiary, #9ca3af)",
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-tertiary)",
             fontStyle: "italic",
           }}
         >
@@ -69,14 +69,14 @@ export function PositionsSection(): ReactElement | null {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "var(--space-2, 8px)",
-            padding: "var(--space-3, 12px)",
-            background: "var(--color-surface-pane, #f9fafb)",
-            borderRadius: "var(--radius-sm, 4px)",
-            border: "1px solid var(--color-border-subtle, #f3f4f6)",
+            gap: "var(--space-2)",
+            padding: "var(--space-3)",
+            background: "var(--color-surface-pane)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--color-border-subtle)",
           }}
         >
-          <div style={{ display: "flex", gap: "var(--space-2, 8px)", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
             <input
               type="text"
               value={pos.label}

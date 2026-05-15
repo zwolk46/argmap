@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { IconButton } from "../primitives/icon-button";
 import { UIcon } from "../primitives/uicon";
+import { Z } from "../primitives/z-index";
 import type { ForeclosureVisibility } from "./edges/types";
 
 export type { ForeclosureVisibility };
@@ -59,7 +60,7 @@ export function CanvasToolbar({
         top: "var(--space-3)",
         left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 10,
+        zIndex: Z.canvasToolbar,
         display: "flex",
         alignItems: "center",
         gap: "var(--space-1)",

@@ -16,7 +16,7 @@ export interface CheckpointEditorProps {
   on_pick_option_target: (option_id: string) => void;
 }
 
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
+const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
 
 const INPUT_STYLE: React.CSSProperties = {
   resize: "vertical",
@@ -27,10 +27,10 @@ const CHIP_STYLE: React.CSSProperties = {
   alignItems: "center",
   gap: "var(--space-1)",
   padding: "2px var(--space-2)",
-  background: "var(--color-primary-subtle, #eff6ff)",
-  color: "var(--color-primary, #2563eb)",
-  borderRadius: "var(--radius-full, 9999px)",
-  fontSize: "var(--font-size-sm, 13px)",
+  background: "var(--color-primary-subtle)",
+  color: "var(--color-primary)",
+  borderRadius: "var(--radius-full)",
+  fontSize: "var(--font-size-sm)",
 };
 
 const ANSWER_TYPE_OPTIONS: { value: CheckpointAnswerType; label: string }[] = [
@@ -81,7 +81,7 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
 
       <div style={SECTION_STYLE}>
         <label className="argmap-section-heading">Answer Type</label>
-        <div style={{ display: "flex", gap: "var(--space-1, 4px)", marginTop: "var(--space-1)" }}>
+        <div style={{ display: "flex", gap: "var(--space-1)", marginTop: "var(--space-1)" }}>
           {/* KEEP RAW: pill-toggles for answer-type selection, not the standard Button taxonomy. */}
           {ANSWER_TYPE_OPTIONS.map((opt) => (
             <button
@@ -89,16 +89,16 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
               type="button"
               style={{
                 padding: "var(--space-1) 10px",
-                border: "1px solid var(--color-border, #e5e7eb)",
-                borderRadius: "var(--radius-sm, 4px)",
-                fontSize: "var(--font-size-sm, 13px)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "var(--font-size-sm)",
                 cursor: "pointer",
                 background:
-                  node.answer_type === opt.value ? "var(--color-primary, #2563eb)" : "transparent",
+                  node.answer_type === opt.value ? "var(--color-primary)" : "transparent",
                 color:
                   node.answer_type === opt.value
                     ? "var(--color-text-on-accent)"
-                    : "var(--color-text, #111827)",
+                    : "var(--color-text)",
               }}
               onClick={() => patch({ answer_type: opt.value })}
             >
@@ -116,13 +116,13 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
               marginTop: "var(--space-1)",
               display: "flex",
               flexDirection: "column",
-              gap: "var(--space-2, 8px)",
+              gap: "var(--space-2)",
             }}
           >
             {node.options.map((opt) => (
               <div
                 key={opt.id}
-                style={{ display: "flex", alignItems: "center", gap: "var(--space-2, 8px)" }}
+                style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
               >
                 <input
                   type="text"
@@ -159,7 +159,7 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "var(--space-2, 8px)",
+                gap: "var(--space-2)",
                 cursor: "pointer",
               }}
             >

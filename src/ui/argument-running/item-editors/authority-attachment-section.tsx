@@ -93,13 +93,13 @@ export function AuthorityAttachmentSection(
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-2, 8px)",
+        gap: "var(--space-2)",
       }}
     >
       <label
         style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-secondary, #6b7280)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
         }}
       >
         {label}
@@ -109,7 +109,7 @@ export function AuthorityAttachmentSection(
           onChange={(e) => on_change(e.target.value || null)}
           className="argmap-input"
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
+            fontSize: "var(--font-size-xs)",
           }}
         >
           <option value="">(none)</option>
@@ -137,12 +137,12 @@ export function AuthorityAttachmentSection(
         <div
           data-testid="authority-new-form"
           style={{
-            padding: "var(--space-2, 8px)",
-            background: "var(--color-surface-pane-secondary, #fafafa)",
-            borderRadius: "var(--border-radius-md, 6px)",
+            padding: "var(--space-2)",
+            background: "var(--color-surface-pane-secondary)",
+            borderRadius: "var(--border-radius-md)",
             display: "flex",
             flexDirection: "column",
-            gap: "var(--space-1, 4px)",
+            gap: "var(--space-1)",
           }}
         >
           <input
@@ -160,7 +160,7 @@ export function AuthorityAttachmentSection(
               }
             }}
             className="argmap-input"
-            style={{ fontSize: "var(--font-size-xs, 11px)" }}
+            style={{ fontSize: "var(--font-size-xs)" }}
           />
           <input
             data-testid="authority-new-citation"
@@ -177,9 +177,9 @@ export function AuthorityAttachmentSection(
               }
             }}
             className="argmap-input"
-            style={{ fontSize: "var(--font-size-xs, 11px)" }}
+            style={{ fontSize: "var(--font-size-xs)" }}
           />
-          <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
+          <div style={{ display: "flex", gap: "var(--space-1)" }}>
             <Button
               variant="primary"
               size="md"

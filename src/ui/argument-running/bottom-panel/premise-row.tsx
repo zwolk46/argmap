@@ -81,8 +81,8 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-1, 4px)",
-        padding: "var(--space-2, 8px)",
+        gap: "var(--space-1)",
+        padding: "var(--space-2)",
         borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
       }}
     >
@@ -104,10 +104,10 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
             className="argmap-input"
             style={{
               minHeight: 48,
-              fontSize: "var(--font-size-xs, 11px)",
+              fontSize: "var(--font-size-xs)",
             }}
           />
-          <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
+          <div style={{ display: "flex", gap: "var(--space-1)" }}>
             <Button
               variant="primary"
               size="md"
@@ -125,8 +125,8 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
         <>
           <span
             style={{
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-primary, #111827)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-primary)",
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -139,9 +139,9 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "var(--space-1, 4px)",
+              gap: "var(--space-1)",
               fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-tertiary, #9ca3af)",
+              color: "var(--color-text-tertiary)",
             }}
           >
             <span data-testid={`premise-kind-${premise.id}`}>{premise.kind}</span>
@@ -167,7 +167,7 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
                 orphan
               </Pill>
             ) : null}
-            <span style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1, 4px)" }}>
+            <span style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1)" }}>
               <IconButton
                 aria-label="Highlight on canvas"
                 size="sm"
@@ -208,20 +208,20 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
             <div
               data-testid={`premise-delete-confirm-${premise.id}`}
               style={{
-                background: "var(--color-background-warning, #fef3c7)",
-                padding: "var(--space-2, 8px)",
-                borderRadius: "var(--border-radius-md, 6px)",
-                fontSize: "var(--font-size-xs, 11px)",
+                background: "var(--color-background-warning)",
+                padding: "var(--space-2)",
+                borderRadius: "var(--border-radius-md)",
+                fontSize: "var(--font-size-xs)",
                 display: "flex",
                 flexDirection: "column",
-                gap: "var(--space-1, 4px)",
+                gap: "var(--space-1)",
               }}
             >
               <span>
                 {counts.total} argument edge(s) reference this premise. Deleting the premise will
                 also delete those edges. Continue?
               </span>
-              <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
+              <div style={{ display: "flex", gap: "var(--space-1)" }}>
                 <Button
                   variant="destructive"
                   size="md"

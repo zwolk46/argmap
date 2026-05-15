@@ -16,15 +16,15 @@ export interface CompareEntryListProps {
 function colorForKind(kind: CompareEntryListKind): string {
   switch (kind) {
     case "added":
-      return "var(--color-status-satisfied, #10b981)";
+      return "var(--color-status-satisfied)";
     case "removed":
-      return "var(--color-severity-error, #dc2626)";
+      return "var(--color-severity-error)";
     case "edited":
-      return "var(--color-status-contested, #d97706)";
+      return "var(--color-status-contested)";
     case "layout_only":
-      return "var(--color-text-tertiary, #9ca3af)";
+      return "var(--color-text-tertiary)";
     case "metadata":
-      return "var(--color-text-secondary, #6b7280)";
+      return "var(--color-text-secondary)";
   }
 }
 
@@ -40,14 +40,14 @@ export function CompareEntryList(props: CompareEntryListProps): ReactElement | n
     <section
       data-testid="compare-entry-list"
       data-kind={kind}
-      style={{ borderTop: "var(--border-hairline, 1px) solid var(--color-border-subtle, #e5e7eb)" }}
+      style={{ borderTop: "var(--border-hairline) solid var(--color-border-subtle)" }}
     >
       <header
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-2, 8px)",
-          padding: "var(--space-2, 8px) var(--space-3, 12px)",
+          gap: "var(--space-2)",
+          padding: "var(--space-2) var(--space-3)",
         }}
       >
         <span

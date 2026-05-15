@@ -216,24 +216,15 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
               CTA (New frame) reads as the singular intent. Production UIs
               follow this pattern: one primary action per surface, ancillary
               actions as links to the left of it. */}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="home-start-tutorial"
             onClick={onStartTutorial}
             disabled={tutorial_loading}
-            style={{
-              background: "transparent",
-              border: "none",
-              padding: "var(--space-1) var(--space-2)",
-              fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-secondary)",
-              cursor: tutorial_loading ? "default" : "pointer",
-              fontFamily: "inherit",
-              opacity: tutorial_loading ? 0.6 : 1,
-            }}
           >
             {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
-          </button>
+          </Button>
           <Button
             variant="primary"
             data-testid="home-new-frame"
@@ -250,22 +241,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
           <EmptyState
             label={EMPTY_COPY.title}
             description={EMPTY_COPY.body}
-            icon={
-              <svg
-                width={48}
-                height={48}
-                viewBox="0 0 48 48"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <rect x="8" y="10" width="32" height="28" rx="3" />
-                <path d="M14 18h20M14 24h14M14 30h8" />
-              </svg>
-            }
+            icon={<UIcon name="document" size={48} />}
             action={
               // Same hierarchy as the page header: one primary action,
               // tutorial as a quiet text link. Use the SAME copy as the
@@ -279,24 +255,15 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
                   alignItems: "center",
                 }}
               >
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   data-testid="home-empty-start-tutorial"
                   onClick={onStartTutorial}
                   disabled={tutorial_loading}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    padding: "var(--space-1) var(--space-2)",
-                    fontSize: "var(--font-size-sm)",
-                    color: "var(--color-text-secondary)",
-                    cursor: tutorial_loading ? "default" : "pointer",
-                    fontFamily: "inherit",
-                    opacity: tutorial_loading ? 0.6 : 1,
-                  }}
                 >
                   {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
-                </button>
+                </Button>
                 <Button
                   variant="primary"
                   onClick={() => setWizardOpen(true)}

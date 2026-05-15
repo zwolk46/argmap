@@ -10,7 +10,7 @@ export interface ConclusionEditorProps {
   node: Conclusion;
 }
 
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
+const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
 
 const INPUT_STYLE: React.CSSProperties = {
   resize: "vertical",
@@ -21,10 +21,10 @@ const PILL_STYLE: React.CSSProperties = {
   alignItems: "center",
   gap: "var(--space-1)",
   padding: "2px var(--space-2)",
-  background: "var(--color-surface-muted, #f3f4f6)",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-full, 9999px)",
-  fontSize: "var(--font-size-sm, 13px)",
+  background: "var(--color-surface-muted)",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-full)",
+  fontSize: "var(--font-size-sm)",
 };
 
 const LEGAL_DIRECTION_VALUES = [
@@ -149,7 +149,7 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
           style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: "var(--space-1, 4px)",
+            gap: "var(--space-1)",
             marginTop: "var(--space-1)",
             marginBottom: "var(--space-1)",
           }}
@@ -176,7 +176,7 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
             </span>
           ))}
         </div>
-        <div style={{ display: "flex", gap: "var(--space-2, 8px)" }}>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
           <input
             type="text"
             className="argmap-input"

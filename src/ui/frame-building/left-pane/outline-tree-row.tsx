@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import * as React from "react";
 import type { ReactElement } from "react";
-import { TypeIcon } from "@/ui/primitives";
+import { TypeIcon, UIcon } from "@/ui/primitives";
 import type { OutlineNode } from "./outline-tree-shape";
 
 export interface OutlineTreeRowProps {
@@ -62,14 +62,14 @@ export function OutlineTreeRow(props: OutlineTreeRowProps): ReactElement {
         display: "flex",
         alignItems: "center",
         paddingLeft: `${indent}px`,
-        paddingTop: "var(--space-1, 4px)",
-        paddingBottom: "var(--space-1, 4px)",
-        paddingRight: "var(--space-2, 8px)",
-        background: selected ? "var(--color-surface-selected, #e0e7ff)" : "transparent",
-        outline: focused ? "2px solid var(--color-focus-ring, #6366f1)" : "none",
+        paddingTop: "var(--space-1)",
+        paddingBottom: "var(--space-1)",
+        paddingRight: "var(--space-2)",
+        background: selected ? "var(--color-surface-selected)" : "transparent",
+        outline: focused ? "2px solid var(--color-focus-ring)" : "none",
         cursor: "pointer",
-        fontSize: "var(--font-size-sm, 13px)",
-        gap: "var(--space-2, 8px)",
+        fontSize: "var(--font-size-sm)",
+        gap: "var(--space-2)",
         minHeight: "28px",
         userSelect: "none",
       }}
@@ -92,13 +92,13 @@ export function OutlineTreeRow(props: OutlineTreeRowProps): ReactElement {
           justifyContent: "center",
           transform: has_children ? (expanded ? "rotate(90deg)" : "rotate(0deg)") : "none",
           opacity: has_children ? 1 : 0,
-          transition: "transform 150ms ease",
+          transition: "transform var(--duration-fast) var(--ease-standard)",
           cursor: has_children ? "pointer" : "default",
         }}
         onClick={has_children ? handleChevronClick : undefined}
         aria-hidden="true"
       >
-        {has_children ? "›" : ""}
+        {has_children ? <UIcon name="angle-small-right" size={12} /> : null}
       </span>
 
       {/* Type icon */}
@@ -113,7 +113,7 @@ export function OutlineTreeRow(props: OutlineTreeRowProps): ReactElement {
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
-          color: "var(--color-text-primary, #111827)",
+          color: "var(--color-text-primary)",
         }}
         title={outline_node.primary_text}
       >

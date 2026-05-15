@@ -9,24 +9,24 @@ const ROW_STYLE: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "var(--space-2, 8px) 0",
+  padding: "var(--space-2) 0",
 };
 
 const ROW_LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
+  fontSize: "var(--font-size-sm)",
+  color: "var(--color-text-primary)",
 };
 
 const TOGGLE_BTN_STYLE = (active: boolean): React.CSSProperties => ({
-  padding: "var(--space-1, 4px) var(--space-3, 12px)",
-  fontSize: "var(--font-size-xs, 11px)",
+  padding: "var(--space-1) var(--space-3)",
+  fontSize: "var(--font-size-xs)",
   border: active
-    ? "1px solid var(--color-mode-current-accent, #6366f1)"
-    : "1px solid var(--color-border-default, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
+    ? "1px solid var(--color-mode-current-accent)"
+    : "1px solid var(--color-border-default)",
+  borderRadius: "var(--radius-sm)",
   cursor: "pointer",
-  background: active ? "var(--color-mode-current-accent, #6366f1)" : "transparent",
-  color: active ? "var(--color-text-on-accent, #fff)" : "var(--color-text-secondary, #6b7280)",
+  background: active ? "var(--color-mode-current-accent)" : "transparent",
+  color: active ? "var(--color-text-on-accent)" : "var(--color-text-secondary)",
 });
 
 export function PinArchiveDeleteSection(): ReactElement | null {
@@ -69,7 +69,7 @@ export function PinArchiveDeleteSection(): ReactElement | null {
     <div style={{ display: "flex", flexDirection: "column" }}>
       <h3
         className="argmap-section-heading"
-        style={{ display: "block", marginBottom: "var(--space-2, 8px)" }}
+        style={{ display: "block", marginBottom: "var(--space-2)" }}
       >
         Frame actions
       </h3>
@@ -93,12 +93,12 @@ export function PinArchiveDeleteSection(): ReactElement | null {
       <div
         style={{
           ...ROW_STYLE,
-          borderTop: "1px solid var(--color-border-subtle, #f3f4f6)",
-          marginTop: "var(--space-2, 8px)",
-          paddingTop: "var(--space-3, 12px)",
+          borderTop: "1px solid var(--color-border-subtle)",
+          marginTop: "var(--space-2)",
+          paddingTop: "var(--space-3)",
         }}
       >
-        <span style={{ ...ROW_LABEL_STYLE, color: "var(--color-severity-error, #ef4444)" }}>
+        <span style={{ ...ROW_LABEL_STYLE, color: "var(--color-severity-error)" }}>
           Delete frame
         </span>
         <Button
@@ -134,7 +134,7 @@ export function PinArchiveDeleteSection(): ReactElement | null {
             Deleting this frame, all its versions, and any sessions running against it cannot be
             undone.
           </p>
-          <label style={{ display: "block", marginTop: "var(--space-2, 8px)" }}>
+          <label style={{ display: "block", marginTop: "var(--space-2)" }}>
             Type the frame title to confirm:
             <input
               data-testid="delete-frame-confirm-input"
@@ -143,16 +143,16 @@ export function PinArchiveDeleteSection(): ReactElement | null {
               onChange={(e) => setConfirmText(e.target.value)}
               className="argmap-input"
               style={{
-                marginTop: "var(--space-1, 4px)",
+                marginTop: "var(--space-1)",
               }}
             />
           </label>
           {confirm_text.length > 0 && confirm_text !== frame.title ? (
             <p
               style={{
-                marginTop: "var(--space-1, 4px)",
-                color: "var(--color-severity-warning, #d97706)",
-                fontSize: "var(--font-size-xs, 11px)",
+                marginTop: "var(--space-1)",
+                color: "var(--color-severity-warning)",
+                fontSize: "var(--font-size-xs)",
               }}
             >
               Type the title exactly to enable Delete.

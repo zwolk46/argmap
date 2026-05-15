@@ -1,7 +1,16 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { act, render, fireEvent } from "@testing-library/react";
 import { Tooltip, TooltipProvider } from "@/ui/primitives/tooltip";
+
+// Hover opens the tooltip after a 300ms delay so cursor flyovers don't fire
+// the tooltip stream. Focus opens immediately (deliberate intent).
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function WrappedTooltip({ content }: { content: string }) {
   return (
@@ -19,22 +28,35 @@ describe("Tooltip", () => {
     expect(queryByText("tooltip text")).toBeNull();
   });
 
-  it("shows content on mouseenter", () => {
-    const { getByTestId, getByText } = render(<WrappedTooltip content="hover content" />);
+  it("shows content on mouseenter after the open delay", () => {
+    const { getByTestId, getByText, queryByText } = render(
+      <WrappedTooltip content="hover content" />,
+    );
     fireEvent.mouseEnter(getByTestId("trigger"), { clientX: 100, clientY: 100 });
+    // Not yet — waiting for the open delay.
+    expect(queryByText("hover content")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     expect(getByText("hover content")).toBeTruthy();
   });
 
-  it("closes on mouseleave", () => {
+  it("does not open if the cursor leaves before the open delay elapses", () => {
     const { getByTestId, queryByText } = render(<WrappedTooltip content="leave test" />);
     fireEvent.mouseEnter(getByTestId("trigger"), { clientX: 100, clientY: 100 });
     fireEvent.mouseLeave(getByTestId("trigger"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
     expect(queryByText("leave test")).toBeNull();
   });
 
   it("closes on Escape key", () => {
     const { getByTestId, queryByText } = render(<WrappedTooltip content="esc test" />);
     fireEvent.mouseEnter(getByTestId("trigger"), { clientX: 100, clientY: 100 });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
     fireEvent.keyDown(getByTestId("trigger"), { key: "Escape" });
     expect(queryByText("esc test")).toBeNull();
   });

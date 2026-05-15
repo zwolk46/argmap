@@ -36,30 +36,22 @@ export function PaletteItem(props: PaletteItemProps): ReactElement {
       draggable={!disabled}
       onDragStart={disabled ? undefined : on_drag_start}
       onClick={disabled ? undefined : on_click}
+      className="argmap-row-hover"
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "var(--space-2, 8px)",
+        gap: "var(--space-2)",
         width: "100%",
-        height: "var(--space-7, 28px)",
-        padding: "0 var(--space-3, 12px)",
+        height: "var(--space-7)",
+        padding: "0 var(--space-3)",
         background: "transparent",
         border: "none",
-        borderRadius: "var(--radius-sm, 4px)",
+        borderRadius: "var(--radius-sm)",
         cursor: disabled ? "not-allowed" : "grab",
         opacity: disabled ? 0.4 : 1,
-        fontSize: "var(--font-size-sm, 13px)",
-        color: "var(--color-text-primary, #111827)",
+        fontSize: "var(--font-size-sm)",
+        color: "var(--color-text-primary)",
         textAlign: "left",
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled) {
-          (e.currentTarget as HTMLButtonElement).style.background =
-            "var(--color-surface-hover, rgba(0,0,0,0.05))";
-        }
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
       }}
     >
       <TypeIcon node_type={node_type} />

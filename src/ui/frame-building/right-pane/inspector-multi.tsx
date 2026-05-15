@@ -25,17 +25,17 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
     : [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
       {/* Header */}
       <div
         style={{
-          paddingBottom: "var(--space-3, 12px)",
-          borderBottom: "1px solid var(--color-border, #e5e7eb)",
+          paddingBottom: "var(--space-3)",
+          borderBottom: "1px solid var(--color-border)",
         }}
       >
         <div
           style={{
-            fontSize: "var(--font-size-sm, 13px)",
+            fontSize: "var(--font-size-sm)",
             fontWeight: "var(--font-weight-medium)",
             marginBottom: "4px",
           }}
@@ -44,8 +44,8 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
         </div>
         <div
           style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-xs)",
+            color: "var(--color-text-secondary)",
           }}
         >
           {node_count > 0 && `${node_count} node${node_count !== 1 ? "s" : ""}`}
@@ -57,8 +57,8 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
           <div
             style={{
               marginTop: "var(--space-1)",
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-tertiary, #9ca3af)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
             }}
           >
             Types: {node_types.join(", ")}
@@ -82,8 +82,8 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
       {/* Hint */}
       <div
         style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-tertiary)",
         }}
       >
         Select a single item to edit its properties.

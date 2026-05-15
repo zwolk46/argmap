@@ -8,26 +8,26 @@ export interface LogicalGateEditorProps {
   on_pick_slot_source: (slot: string, current_value: string | undefined) => void;
 }
 
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
+const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
 
 const CHIP_STYLE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: "var(--space-1)",
   padding: "2px var(--space-2)",
-  background: "var(--color-primary-subtle, #eff6ff)",
-  color: "var(--color-primary, #2563eb)",
-  borderRadius: "var(--radius-full, 9999px)",
-  fontSize: "var(--font-size-sm, 13px)",
+  background: "var(--color-primary-subtle)",
+  color: "var(--color-primary)",
+  borderRadius: "var(--radius-full)",
+  fontSize: "var(--font-size-sm)",
 };
 
 const GATE_TYPE_BADGE: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 10px",
-  background: "var(--color-surface-muted, #f3f4f6)",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
+  background: "var(--color-surface-muted)",
+  border: "1px solid var(--color-border)",
+  borderRadius: "var(--radius-sm)",
+  fontSize: "var(--font-size-sm)",
   fontWeight: "var(--font-weight-semibold)",
   letterSpacing: "var(--letter-spacing-wide)",
 };
@@ -48,8 +48,8 @@ function SlotRow({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "var(--space-2, 8px)",
-        marginBottom: "var(--space-2, 8px)",
+        gap: "var(--space-2)",
+        marginBottom: "var(--space-2)",
       }}
     >
       <span className="argmap-section-heading" style={{ minWidth: 80 }}>

@@ -91,8 +91,8 @@ export function ConditionList(props: ConditionListProps): ReactElement {
           style={{
             marginTop: "var(--space-2)",
             padding: "var(--space-2)",
-            border: "1px solid var(--color-border, #e5e7eb)",
-            borderRadius: "var(--radius-sm, 4px)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-sm)",
           }}
         >
           <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>

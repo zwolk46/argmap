@@ -65,3 +65,8 @@ export type { ToastInput, ToastKind } from "./toast";
 
 export { UIcon } from "./uicon";
 export type { UIconProps } from "./uicon";
+
+export { Z } from "./z-index";
+export type { ZBand } from "./z-index";
+
+export { relativeTime } from "./relative-time";

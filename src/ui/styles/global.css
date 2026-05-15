@@ -450,6 +450,44 @@ select.argmap-input {
   background: var(--color-surface-selected) !important;
 }
 
+/* Output view tabs — underline tab control inside argument-running. CSS
+   hover here replaces the prior JS onMouseEnter/onMouseLeave handlers
+   (which got stuck when Tab moved focus away). */
+.argmap-output-tab {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+  border-bottom: var(--border-medium) solid transparent;
+  padding: var(--space-3) var(--space-2);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-normal);
+  margin-bottom: -1px;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+.argmap-output-tab:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+.argmap-output-tab[data-active="true"] {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  border-bottom-color: var(--color-mode-current-accent);
+}
+.argmap-output-tab:disabled {
+  cursor: default;
+}
+
+/* Radio card hover — used by the New Frame Wizard's mode/flavor cards. The
+   active card has the accent border; the inactive cards should signal
+   interactivity by transitioning their border to the strong neutral on
+   hover, without competing with the active style. */
+.argmap-radio-card[data-active="false"]:hover {
+  border-color: var(--color-border-strong);
+}
+
 /* P0-17: path-to-conclusion animation. When the session reaches a
    determinate state, overlay edges on the primary path fade in from source
    toward conclusion (staggered by --path-index × 120ms). After the trace

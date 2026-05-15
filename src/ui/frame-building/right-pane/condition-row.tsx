@@ -45,10 +45,10 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
       style={{
         display: "flex",
         alignItems: "flex-start",
-        gap: "var(--space-2, 8px)",
-        padding: "var(--space-2, 8px)",
-        background: "var(--color-surface-pane, #f9fafb)",
-        borderRadius: "var(--radius-sm, 4px)",
+        gap: "var(--space-2)",
+        padding: "var(--space-2)",
+        background: "var(--color-surface-pane)",
+        borderRadius: "var(--radius-sm)",
         marginBottom: "var(--space-1)",
       }}
     >
@@ -56,10 +56,10 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
       <span
         style={{
           padding: "2px var(--space-2)",
-          background: "var(--color-surface-hover, rgba(0,0,0,0.05))",
+          background: "var(--color-surface-hover)",
           borderRadius: "var(--radius-pill)",
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-primary, #111827)",
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-primary)",
           flexShrink: 0,
           fontWeight: "var(--font-weight-medium)",
         }}
@@ -118,5 +118,5 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
 // rows fit cleanly in the inspector pane.
 const INPUT_STYLE: React.CSSProperties = {
   padding: "2px var(--space-1)",
-  fontSize: "var(--font-size-xs, 11px)",
+  fontSize: "var(--font-size-xs)",
 };

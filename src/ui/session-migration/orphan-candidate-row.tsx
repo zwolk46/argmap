@@ -45,15 +45,15 @@ export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-1, 4px)",
-        padding: "var(--space-2, 8px) var(--space-3, 12px)",
-        borderTop: "var(--border-hairline, 1px) solid var(--color-border-subtle, #e5e7eb)",
+        gap: "var(--space-1)",
+        padding: "var(--space-2) var(--space-3)",
+        borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3, 12px)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
         <span
           data-testid="candidate-display-summary"
-          style={{ flex: 1, fontSize: "var(--font-size-sm, 13px)" }}
+          style={{ flex: 1, fontSize: "var(--font-size-sm)" }}
         >
           {candidate.display_summary}
         </span>
@@ -67,7 +67,7 @@ export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement
           value={resolution.target_node_id ?? ""}
           onChange={(e) => handleTargetChange(e.target.value as NodeRef)}
           className="argmap-input"
-          style={{ alignSelf: "flex-end", width: "auto", fontSize: "var(--font-size-sm, 13px)" }}
+          style={{ alignSelf: "flex-end", width: "auto", fontSize: "var(--font-size-sm)" }}
         >
           {candidate.reattach_candidates.map((c) => (
             <option key={c.target_node_id} value={c.target_node_id}>

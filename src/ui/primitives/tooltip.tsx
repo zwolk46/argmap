@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { Z } from "./z-index";
 
 const TooltipCtx = React.createContext<null>(null);
 
@@ -13,35 +14,66 @@ export interface TooltipProps {
   disabled?: boolean;
 }
 
+// 300ms open delay matches Mac/Linear convention — fast enough that intent
+// reads as "I want this tooltip" but slow enough that flyovers don't fire
+// the tooltip stream. Keyboard focus is instant (no delay) because it
+// represents deliberate intent, not a hover sweep.
+const TOOLTIP_OPEN_DELAY_MS = 300;
+
 export function Tooltip({ content, children, disabled }: TooltipProps): ReactElement {
   const [open, setOpen] = React.useState(false);
   const [pos, setPos] = React.useState({ x: 0, y: 0 });
   const ref = React.useRef<HTMLElement>(null);
+  const open_timer_ref = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (open_timer_ref.current !== null) clearTimeout(open_timer_ref.current);
+    };
+  }, []);
+
+  function cancelOpen() {
+    if (open_timer_ref.current !== null) {
+      clearTimeout(open_timer_ref.current);
+      open_timer_ref.current = null;
+    }
+  }
 
   function handleMouseEnter(e: React.MouseEvent) {
     if (disabled) return;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setPos({ x: r.left + r.width / 2, y: r.bottom + 6 });
-    setOpen(true);
+    const next_pos = { x: r.left + r.width / 2, y: r.bottom + 6 };
+    cancelOpen();
+    open_timer_ref.current = setTimeout(() => {
+      setPos(next_pos);
+      setOpen(true);
+      open_timer_ref.current = null;
+    }, TOOLTIP_OPEN_DELAY_MS);
   }
 
   function handleMouseLeave() {
+    cancelOpen();
     setOpen(false);
   }
 
   function handleFocus(e: React.FocusEvent) {
     if (disabled) return;
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    cancelOpen();
     setPos({ x: r.left + r.width / 2, y: r.bottom + 6 });
     setOpen(true);
   }
 
   function handleBlur() {
+    cancelOpen();
     setOpen(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") setOpen(false);
+    if (e.key === "Escape") {
+      cancelOpen();
+      setOpen(false);
+    }
   }
 
   // P1: merge with the child's existing handlers instead of overwriting.
@@ -91,7 +123,7 @@ export function Tooltip({ content, children, disabled }: TooltipProps): ReactEle
             left: pos.x,
             top: pos.y,
             transform: "translateX(-50%)",
-            zIndex: 9999,
+            zIndex: Z.tooltip,
             background: "var(--color-surface-elevated)",
             boxShadow: "var(--shadow-md)",
             borderRadius: "var(--radius-md)",

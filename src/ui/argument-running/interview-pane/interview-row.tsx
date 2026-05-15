@@ -56,7 +56,7 @@ export function InterviewRow(props: InterviewRowProps): ReactElement {
   const breadcrumb = buildBreadcrumb(frame_version, item.node_id);
 
   return (
-    // KEEP RAW: interview list row — full-width clickable row with custom hover/selected/recommended states.
+    // KEEP RAW: interview list row — full-width clickable row with custom selected/recommended states.
     <button
       type="button"
       data-testid={`interview-row-${item.node_id}`}
@@ -64,6 +64,7 @@ export function InterviewRow(props: InterviewRowProps): ReactElement {
       data-recommended={recommended_next ? "true" : "false"}
       data-reason={item.reason}
       onClick={on_click}
+      className={selected || recommended_next ? undefined : "argmap-row-hover"}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -79,21 +80,12 @@ export function InterviewRow(props: InterviewRowProps): ReactElement {
             : "transparent",
         cursor: "pointer",
         borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        borderLeft: recommended_next
-          ? "var(--border-medium) solid var(--color-mode-current-accent)"
-          : "var(--border-medium) solid transparent",
+        borderLeft:
+          selected || recommended_next
+            ? "var(--border-medium) solid var(--color-mode-current-accent)"
+            : "var(--border-medium) solid transparent",
         transition:
           "background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
-      }}
-      onMouseEnter={(e) => {
-        if (!selected && !recommended_next) {
-          (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!selected && !recommended_next) {
-          (e.currentTarget as HTMLElement).style.background = "transparent";
-        }
       }}
     >
       {recommended_next ? (

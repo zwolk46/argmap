@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { Z } from "../primitives";
 
 export interface TopBarSlots {
   home?: ReactNode;
@@ -35,7 +36,7 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
         // body doesn't lose the chrome.
         position: "sticky",
         top: 0,
-        zIndex: 50,
+        zIndex: Z.topbar,
         backdropFilter: "saturate(120%) blur(2px)",
       }}
     >

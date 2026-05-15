@@ -25,7 +25,7 @@ export function SessionSettingsPanel(props: SessionSettingsPanelProps): ReactEle
           aria-label="Close session settings"
           onClick={props.on_close}
         >
-          <UIcon name="times" size={16} />
+          <UIcon name="times" size={14} />
         </IconButton>
       </DrawerHeader>
       <DrawerBody>

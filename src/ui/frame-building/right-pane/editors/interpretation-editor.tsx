@@ -10,7 +10,7 @@ export interface InterpretationEditorProps {
   on_pick_authority: () => void;
 }
 
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
+const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
 
 const INPUT_STYLE: React.CSSProperties = {
   resize: "vertical",

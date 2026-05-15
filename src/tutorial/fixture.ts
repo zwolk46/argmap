@@ -165,61 +165,19 @@ export function buildTutorial(opts: TutorialBuildOpts): TutorialBuildResult {
   for (const v of Object.values(N)) id_map.set(v, generateId());
   const remap = (k: string): NodeRef => (id_map.get(k) ?? k) as NodeRef;
 
-  // Layout: four parallel element columns under the RootQuestion, joined at
-  // the AND Gate, with the two Conclusions at the bottom. Cardozo / Andrews
-  // are the only forked Interpretations (the rest are single-Interpretation
-  // chains) — they branch under the Duty Term column.
-  //
-  //   y =     0     RootQuestion
-  //         140     AndGate
-  //         320     SubQuestion (×4) — one per element
-  //         480     Term (×4)
-  //         640     Interpretation (×4 elements: duty branches into 2)
-  //         820     Checkpoint (×4)
-  //        1020     Conclusion (Liable | Not Liable)
-  //
-  //   x columns:  Duty=-320  Breach=80  Causation=480  Damages=880
-  const COL = {
-    duty: -320,
-    breach: 80,
-    causation: 480,
-    damages: 880,
-  };
-
-  const node_positions: Record<string, { x: number; y: number }> = {
-    [N.rq]: { x: 280, y: 0 },
-    [N.and_gate]: { x: 320, y: 160 },
-    [N.sq_duty]: { x: COL.duty, y: 320 },
-    [N.sq_breach]: { x: COL.breach, y: 320 },
-    [N.sq_causation]: { x: COL.causation, y: 320 },
-    [N.sq_damages]: { x: COL.damages, y: 320 },
-    [N.term_duty]: { x: COL.duty, y: 480 },
-    [N.term_breach]: { x: COL.breach, y: 480 },
-    [N.term_causation]: { x: COL.causation, y: 480 },
-    [N.term_damages]: { x: COL.damages, y: 480 },
-    [N.interp_cardozo]: { x: COL.duty - 200, y: 660 },
-    [N.interp_andrews]: { x: COL.duty + 200, y: 660 },
-    [N.interp_breach]: { x: COL.breach - 110, y: 660 },
-    [N.interp_breach_alt]: { x: COL.breach + 110, y: 660 },
-    [N.interp_causation]: { x: COL.causation - 110, y: 660 },
-    [N.interp_causation_alt]: { x: COL.causation + 110, y: 660 },
-    [N.interp_damages]: { x: COL.damages - 110, y: 660 },
-    [N.interp_damages_alt]: { x: COL.damages + 110, y: 660 },
-    [N.cp_duty]: { x: COL.duty - 200, y: 840 },
-    [N.cp_breach]: { x: COL.breach, y: 840 },
-    [N.cp_causation]: { x: COL.causation, y: 840 },
-    [N.cp_damages]: { x: COL.damages, y: 840 },
-    [N.not_liable]: { x: COL.duty - 200, y: 1040 },
-    [N.liable]: { x: 320, y: 1040 },
-    [N.authority]: { x: COL.duty - 480, y: 660 },
-  };
-
+  // We deliberately do NOT set presentation.{x,y} on any tutorial node.
+  // Honoring user anchors would lock these positions and force them through
+  // ELK as fixed coordinates; with eight Interpretations across four element
+  // columns the spacing math is brittle and produces overlaps at common node
+  // widths. Letting ELK's layered algorithm own the layout produces a clean
+  // top-down hierarchy automatically and adapts when the canvas zoom or node
+  // size changes. Users can still drag nodes after the fact — drag-stop writes
+  // presentation back, and subsequent re-layouts honor those anchors.
   function stamp(key: string) {
     return {
       id: remap(key),
       created_at: now,
       updated_at: now,
-      presentation: node_positions[key],
     };
   }
 

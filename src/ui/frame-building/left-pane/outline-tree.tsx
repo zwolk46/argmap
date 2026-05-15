@@ -120,9 +120,9 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
     return (
       <div
         style={{
-          padding: "var(--space-4, 16px)",
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
+          padding: "var(--space-4)",
+          color: "var(--color-text-secondary)",
+          fontSize: "var(--font-size-sm)",
         }}
       >
         No frame loaded.

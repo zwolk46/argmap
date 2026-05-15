@@ -1,7 +1,7 @@
 import type { ReactElement, KeyboardEvent } from "react";
 import type { FrameId } from "@/schema";
 import { ModeFlavorChip } from "../chrome";
-import { IconButton } from "../primitives";
+import { IconButton, relativeTime } from "../primitives";
 import { UIcon } from "../primitives/uicon";
 
 export interface FrameSummary {
@@ -43,17 +43,7 @@ export interface FrameSummaryCardProps {
   run_argument_pending?: boolean;
 }
 
-export function relativeTime(iso: string): string {
-  if (!iso) return "";
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return iso;
-  // P2: clamp at zero so clock-skewed timestamps don't render "-5s ago".
-  const delta_s = Math.max(0, Math.floor((Date.now() - t) / 1000));
-  if (delta_s < 60) return `${delta_s}s ago`;
-  if (delta_s < 3600) return `${Math.floor(delta_s / 60)}m ago`;
-  if (delta_s < 86400) return `${Math.floor(delta_s / 3600)}h ago`;
-  return `${Math.floor(delta_s / 86400)}d ago`;
-}
+export { relativeTime };
 
 export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
   const { summary, is_pinned, onOpen, onTogglePin, onRunArgument, run_argument_pending } = props;
