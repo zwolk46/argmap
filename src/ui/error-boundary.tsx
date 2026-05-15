@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { Button } from "./primitives";
 
 interface State {
   error: Error | null;
@@ -81,21 +82,9 @@ export class AppErrorBoundary extends React.Component<{ children: ReactNode }, S
               {this.state.error.stack ?? this.state.error.message}
             </pre>
           )}
-          <button
-            onClick={this.handleReload}
-            style={{
-              padding: "var(--space-2) var(--space-4)",
-              fontSize: "var(--font-size-sm)",
-              fontWeight: "var(--font-weight-medium)",
-              background: "var(--color-mode-current-accent)",
-              color: "var(--color-text-on-accent)",
-              border: "none",
-              borderRadius: "var(--radius-md)",
-              cursor: "pointer",
-            }}
-          >
+          <Button variant="primary" size="md" onClick={this.handleReload}>
             Reload
-          </button>
+          </Button>
         </div>
       );
     }

@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { UIcon } from "./uicon";
 
 /**
  * Minimal toast primitive. Surfaces non-blocking transient notifications.
@@ -117,7 +118,7 @@ function ToastStack({ toasts, onDismiss }: ToastStackProps): ReactElement | null
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-2, 8px)",
-        zIndex: 1000,
+        zIndex: 1300,
         maxWidth: "calc(100vw - var(--space-8, 32px))",
         pointerEvents: "none",
       }}
@@ -197,7 +198,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps): ReactElement {
           padding: 0,
         }}
       >
-        ×
+        <UIcon name="times" size={14} />
       </button>
     </div>
   );

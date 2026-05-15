@@ -1,26 +1,10 @@
 import type { ReactElement } from "react";
 import type { Position } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-xs, 11px)",
-  fontWeight: 600,
-  color: "var(--color-text-tertiary, #9ca3af)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  display: "block",
-  marginBottom: "var(--space-1, 4px)",
-};
+import { Button } from "../../primitives";
 
 const INPUT_STYLE: React.CSSProperties = {
   flex: 1,
-  padding: "var(--space-1, 4px) var(--space-2, 8px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
-  background: "var(--color-surface-pane, #f9fafb)",
-  border: "1px solid var(--color-border-default, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  outline: "none",
   minWidth: 0,
 };
 
@@ -60,7 +44,12 @@ export function PositionsSection(): ReactElement | null {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
-      <span style={LABEL_STYLE}>Positions</span>
+      <h3
+        className="argmap-section-heading"
+        style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+      >
+        Positions
+      </h3>
 
       {positions.length === 0 && (
         <div
@@ -91,32 +80,26 @@ export function PositionsSection(): ReactElement | null {
             <input
               type="text"
               value={pos.label}
+              className="argmap-input"
               style={INPUT_STYLE}
               placeholder="Position label"
               onChange={(e) => updateLabel(pos.id, e.target.value)}
               onBlur={(e) => updateLabel(pos.id, e.target.value.trim() || "Untitled")}
             />
-            <button
-              type="button"
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => removePosition(pos.id)}
               aria-label={`Remove position "${pos.label}"`}
-              style={{
-                padding: "var(--space-1, 4px) var(--space-2, 8px)",
-                fontSize: "var(--font-size-xs, 11px)",
-                border: "1px solid var(--color-severity-error, #ef4444)",
-                borderRadius: "var(--radius-sm, 4px)",
-                cursor: "pointer",
-                background: "transparent",
-                color: "var(--color-severity-error, #ef4444)",
-                flexShrink: 0,
-              }}
+              style={{ flexShrink: 0 }}
             >
               Remove
-            </button>
+            </Button>
           </div>
           <input
             type="text"
             value={pos.description ?? ""}
+            className="argmap-input"
             style={INPUT_STYLE}
             placeholder="Description (optional)"
             onChange={(e) => updateDescription(pos.id, e.target.value)}
@@ -124,22 +107,9 @@ export function PositionsSection(): ReactElement | null {
         </div>
       ))}
 
-      <button
-        type="button"
-        onClick={addPosition}
-        style={{
-          padding: "var(--space-2, 8px) var(--space-3, 12px)",
-          fontSize: "var(--font-size-sm, 13px)",
-          border: "1px solid var(--color-border-default, #e5e7eb)",
-          borderRadius: "var(--radius-sm, 4px)",
-          cursor: "pointer",
-          background: "var(--color-surface-pane, #f9fafb)",
-          color: "var(--color-text-secondary, #6b7280)",
-          alignSelf: "flex-start",
-        }}
-      >
+      <Button variant="ghost" size="sm" onClick={addPosition} style={{ alignSelf: "flex-start" }}>
         + Add position
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { Button, InlineEmpty } from "../../primitives";
 
 export interface InterviewEmptyStateProps {
   conclusion_label?: string;
@@ -11,52 +12,48 @@ export function InterviewEmptyState(props: InterviewEmptyStateProps): ReactEleme
       <div
         data-testid="interview-empty-state-complete"
         style={{
-          padding: "var(--space-4, 16px)",
+          padding: "var(--space-4)",
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-3, 12px)",
+          gap: "var(--space-3)",
         }}
       >
-        <p style={{ margin: 0, fontSize: "var(--font-size-sm, 13px)" }}>All items resolved.</p>
         <p
           style={{
             margin: 0,
-            fontSize: "var(--font-size-sm, 13px)",
-            color: "var(--color-text-secondary, #6b7280)",
+            fontSize: "var(--font-size-sm)",
+            fontWeight: "var(--font-weight-medium)",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          All items resolved.
+        </p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-secondary)",
           }}
         >
           Conclusion: <em>{props.conclusion_label}</em>
         </p>
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="md"
           onClick={props.on_save_milestone}
           data-testid="save-milestone-button"
-          style={{
-            padding: "6px 12px",
-            background: "var(--color-background-accent, #dbeafe)",
-            color: "var(--color-text-accent, #1d4ed8)",
-            border: "none",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            alignSelf: "flex-start",
-          }}
+          style={{ alignSelf: "flex-start" }}
+          title="Save this resolved session as a permanent checkpoint you can come back to."
         >
-          Save milestone
-        </button>
+          Save snapshot
+        </Button>
       </div>
     );
   }
   return (
-    <div
-      data-testid="interview-empty-state-none"
-      style={{
-        padding: "var(--space-4, 16px)",
-        color: "var(--color-text-tertiary, #9ca3af)",
-        fontSize: "var(--font-size-sm, 13px)",
-      }}
-    >
-      No open items.
-    </div>
+    <InlineEmpty testId="interview-empty-state-none">
+      Nothing open. As you bring in premises that answer Checkpoints or select Interpretations, any
+      unresolved items appear here.
+    </InlineEmpty>
   );
 }

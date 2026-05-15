@@ -60,17 +60,14 @@ export function InterviewList(props: InterviewListProps): ReactElement {
 
 function SectionHeader({ label }: { label: string }): ReactElement {
   return (
-    <div
+    <h3
+      className="argmap-section-heading"
       style={{
         padding: "var(--space-1, 4px) var(--space-2, 8px)",
-        fontSize: "10px",
-        textTransform: "uppercase",
-        letterSpacing: "0.05em",
-        color: "var(--color-text-tertiary, #9ca3af)",
         background: "var(--color-surface-pane-secondary, #fafafa)",
       }}
     >
       {label}
-    </div>
+    </h3>
   );
 }

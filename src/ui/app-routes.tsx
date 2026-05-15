@@ -103,7 +103,19 @@ function RoutedView(): ReactElement {
 
   return (
     <>
-      {page}
+      {/* WCAG 2.4.1: skip-to-main-content link. Hidden until focused; the
+          first Tab from the URL bar reveals it so keyboard users can jump
+          past the top-bar chrome straight to the primary content region. */}
+      <a href="#main" className="argmap-skip-link">
+        Skip to main content
+      </a>
+      {/* `display: contents` makes the <main> a transparent passthrough so
+          existing page layouts (which set their own minHeight/grid/flex on
+          the immediate children) keep their geometry unchanged. tabIndex=-1
+          allows programmatic focus after the skip link is activated. */}
+      <main id="main" tabIndex={-1} style={{ display: "contents" }}>
+        {page}
+      </main>
       <VersionHistoryPane open={version_history_open} onClose={onClose} />
       <AppOnboardingMount />
     </>

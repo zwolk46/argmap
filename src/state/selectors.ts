@@ -93,38 +93,59 @@ function findConclusionLabel(
   return c.direction?.value ?? c.statement;
 }
 
+// Memoization caches keyed on the SessionStoreSnapshot object itself.
+// Zustand returns a stable snapshot ref between set() calls; we exploit that
+// to cache derived results and return the SAME reference on consecutive
+// calls. Without these caches, useSyncExternalStore detects every render's
+// fresh array/object as a "snapshot changed" signal and forces another
+// render, looping until React's max-update-depth trips. Fixes "Maximum
+// update depth exceeded" thrown the first time the user navigated into
+// argument-running with a freshly created session.
+const STATUS_SUMMARY_CACHE = new WeakMap<SessionStoreSnapshot, StatusSummary | null>();
+const INTERVIEW_ITEMS_CACHE = new WeakMap<SessionStoreSnapshot, InterviewItem[]>();
+const EMPTY_INTERVIEW_ITEMS: InterviewItem[] = [];
+
 export function selectStatusSummary(snapshot: SessionStoreSnapshot): StatusSummary | null {
+  if (STATUS_SUMMARY_CACHE.has(snapshot)) return STATUS_SUMMARY_CACHE.get(snapshot) ?? null;
   const session = snapshot.session;
   const cr = snapshot.compute_result;
-  if (!session || !cr || !cr.output) return null;
-
-  let resolved = 0;
-  let total = 0;
-  cr.status_map.forEach((ns) => {
-    total += 1;
-    if (ns.status === "satisfied") resolved += 1;
-  });
-
-  const conclusion_label = findConclusionLabel(
-    session.frame_version_snapshot,
-    cr.output.conclusion,
-  );
-
-  return {
-    shape: cr.output.shape,
-    resolved_count: resolved,
-    total_count: total,
-    conclusion_label,
-  };
+  let value: StatusSummary | null;
+  if (!session || !cr || !cr.output) {
+    value = null;
+  } else {
+    let resolved = 0;
+    let total = 0;
+    cr.status_map.forEach((ns) => {
+      total += 1;
+      if (ns.status === "satisfied") resolved += 1;
+    });
+    const conclusion_label = findConclusionLabel(
+      session.frame_version_snapshot,
+      cr.output.conclusion,
+    );
+    value = {
+      shape: cr.output.shape,
+      resolved_count: resolved,
+      total_count: total,
+      conclusion_label,
+    };
+  }
+  STATUS_SUMMARY_CACHE.set(snapshot, value);
+  return value;
 }
 
 // ---- Interview items (I.9c, F-022) ----
 
 export function selectInterviewItems(snapshot: SessionStoreSnapshot): InterviewItem[] {
+  if (INTERVIEW_ITEMS_CACHE.has(snapshot)) return INTERVIEW_ITEMS_CACHE.get(snapshot)!;
   const session = snapshot.session;
   const cr = snapshot.compute_result;
-  if (!session || !cr) return [];
-  return computeInterviewOrder(session.frame_version_snapshot, session, cr);
+  const value =
+    !session || !cr
+      ? EMPTY_INTERVIEW_ITEMS
+      : computeInterviewOrder(session.frame_version_snapshot, session, cr);
+  INTERVIEW_ITEMS_CACHE.set(snapshot, value);
+  return value;
 }
 
 // ---- Frame version drift (I.9c) ----
@@ -135,18 +156,35 @@ export interface FrameVersionDriftSummary {
   current_version_number: number;
 }
 
+// Cache: (session_snapshot) -> (frame_snapshot) -> drift summary.
+// Same memoization rationale as selectStatusSummary.
+const DRIFT_CACHE = new WeakMap<
+  SessionStoreSnapshot,
+  WeakMap<FrameStoreSnapshot, FrameVersionDriftSummary | null>
+>();
+
 export function selectFrameVersionDrift(
   session_snapshot: SessionStoreSnapshot,
   frame_snapshot: FrameStoreSnapshot,
 ): FrameVersionDriftSummary | null {
+  let inner = DRIFT_CACHE.get(session_snapshot);
+  if (!inner) {
+    inner = new WeakMap();
+    DRIFT_CACHE.set(session_snapshot, inner);
+  }
+  if (inner.has(frame_snapshot)) return inner.get(frame_snapshot) ?? null;
   const session = session_snapshot.session;
   const fv = frame_snapshot.frame_version;
-  if (!session || !fv) return null;
-  return {
-    has_drift: session.frame_version_id !== fv.id,
-    session_version_number: session.frame_version_snapshot.version_number,
-    current_version_number: fv.version_number,
-  };
+  const value: FrameVersionDriftSummary | null =
+    !session || !fv
+      ? null
+      : {
+          has_drift: session.frame_version_id !== fv.id,
+          session_version_number: session.frame_version_snapshot.version_number,
+          current_version_number: fv.version_number,
+        };
+  inner.set(frame_snapshot, value);
+  return value;
 }
 
 // ---- Output viewer payload (I.9c) ----
@@ -160,33 +198,48 @@ export interface OutputViewPayload {
   path_overlay?: { active_path: NodeRef[]; conclusion?: NodeRef };
 }
 
+// Cache keyed on (snapshot, tab) since callers usually subscribe to one tab.
+const OUTPUT_FOR_VIEW_CACHE = new WeakMap<
+  SessionStoreSnapshot,
+  Map<OutputViewTab, OutputViewPayload | null>
+>();
+
 export function selectOutputForView(
   snapshot: SessionStoreSnapshot,
   tab: OutputViewTab,
 ): OutputViewPayload | null {
+  let tab_map = OUTPUT_FOR_VIEW_CACHE.get(snapshot);
+  if (!tab_map) {
+    tab_map = new Map();
+    OUTPUT_FOR_VIEW_CACHE.set(snapshot, tab_map);
+  }
+  if (tab_map.has(tab)) return tab_map.get(tab) ?? null;
+
   const session = snapshot.session;
   const session_version = snapshot.session_version;
   const cr = snapshot.compute_result;
-  if (!session || !cr || !cr.output) return null;
+  let value: OutputViewPayload | null = null;
 
-  const shape: SessionShape = cr.output.shape;
-
-  if (tab === "prose") {
-    const canonical = cr.output.prose_summary ?? "";
-    const rewritten = session_version?.output_overrides?.rewritten_prose;
-    return { shape, prose: { canonical, rewritten } };
+  if (session && cr && cr.output) {
+    const shape: SessionShape = cr.output.shape;
+    if (tab === "prose") {
+      const canonical = cr.output.prose_summary ?? "";
+      const rewritten = session_version?.output_overrides?.rewritten_prose;
+      value = { shape, prose: { canonical, rewritten } };
+    } else if (tab === "decision_tree") {
+      value = { shape, decision_tree: { branches: cr.output.branches ?? [] } };
+    } else {
+      value = {
+        shape,
+        path_overlay: {
+          active_path: cr.output.primary_path ?? [],
+          conclusion: cr.output.conclusion,
+        },
+      };
+    }
   }
-  if (tab === "decision_tree") {
-    return { shape, decision_tree: { branches: cr.output.branches ?? [] } };
-  }
-  // path_overlay
-  return {
-    shape,
-    path_overlay: {
-      active_path: cr.output.primary_path ?? [],
-      conclusion: cr.output.conclusion,
-    },
-  };
+  tab_map.set(tab, value);
+  return value;
 }
 
 // ---- Per-node status badge (I.9c convenience) ----
@@ -197,19 +250,34 @@ export interface StatusBadgeData {
   failed_conditions?: string[];
 }
 
+// Cache keyed on (snapshot, node_id). Same memoization rationale.
+const STATUS_BADGE_CACHE = new WeakMap<
+  SessionStoreSnapshot,
+  Map<NodeRef, StatusBadgeData | null>
+>();
+
 export function selectStatusBadge(
   snapshot: SessionStoreSnapshot,
   node_id: NodeRef,
 ): StatusBadgeData | null {
+  let by_node = STATUS_BADGE_CACHE.get(snapshot);
+  if (!by_node) {
+    by_node = new Map();
+    STATUS_BADGE_CACHE.set(snapshot, by_node);
+  }
+  if (by_node.has(node_id)) return by_node.get(node_id) ?? null;
+
   const cr = snapshot.compute_result;
-  if (!cr) return null;
-  const ns = cr.status_map.get(node_id);
-  if (!ns) return null;
-  return {
-    status: ns.status,
-    via: ns.via,
-    failed_conditions: ns.failed_conditions,
-  };
+  const ns = cr?.status_map.get(node_id);
+  const value: StatusBadgeData | null = ns
+    ? {
+        status: ns.status,
+        via: ns.via,
+        failed_conditions: ns.failed_conditions,
+      }
+    : null;
+  by_node.set(node_id, value);
+  return value;
 }
 
 // ---- Cascade summary ----
@@ -223,9 +291,20 @@ export function selectCascadeSummary(
 
 // ---- Per-node and per-edge validation selectors (E2 surface) ----
 
+const VALIDATION_BY_NODE_CACHE = new WeakMap<
+  FrameStoreSnapshot,
+  ReadonlyMap<NodeRef, ReadonlyArray<ValidationResult>>
+>();
+const VALIDATION_BY_EDGE_CACHE = new WeakMap<
+  FrameStoreSnapshot,
+  ReadonlyMap<EdgeRef, ReadonlyArray<ValidationResult>>
+>();
+
 export function selectValidationByNode(
   snapshot: FrameStoreSnapshot,
 ): ReadonlyMap<NodeRef, ReadonlyArray<ValidationResult>> {
+  const cached = VALIDATION_BY_NODE_CACHE.get(snapshot);
+  if (cached) return cached;
   const map = new Map<NodeRef, ValidationResult[]>();
   for (const r of snapshot.validation) {
     if (r.node_id) {
@@ -234,12 +313,15 @@ export function selectValidationByNode(
       map.set(r.node_id, arr);
     }
   }
+  VALIDATION_BY_NODE_CACHE.set(snapshot, map);
   return map;
 }
 
 export function selectValidationByEdge(
   snapshot: FrameStoreSnapshot,
 ): ReadonlyMap<EdgeRef, ReadonlyArray<ValidationResult>> {
+  const cached = VALIDATION_BY_EDGE_CACHE.get(snapshot);
+  if (cached) return cached;
   const map = new Map<EdgeRef, ValidationResult[]>();
   for (const r of snapshot.validation) {
     if (r.edge_id) {
@@ -248,6 +330,7 @@ export function selectValidationByEdge(
       map.set(r.edge_id, arr);
     }
   }
+  VALIDATION_BY_EDGE_CACHE.set(snapshot, map);
   return map;
 }
 

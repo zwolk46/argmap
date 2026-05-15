@@ -141,6 +141,45 @@ a:hover {
   display: none;
 }
 
+/* Skip-to-main-content link. Hidden until keyboard-focused, then visible
+   at the top-left so the first Tab from the URL bar reveals it. Standard
+   WCAG 2.4.1 (Bypass Blocks) pattern. */
+.argmap-skip-link {
+  position: absolute;
+  top: -100px;
+  left: var(--space-2);
+  z-index: 10000;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-elevated);
+  color: var(--color-mode-current-accent);
+  border: var(--border-medium) solid var(--color-mode-current-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+}
+
+.argmap-skip-link:focus,
+.argmap-skip-link:focus-visible {
+  top: var(--space-2);
+  outline: none;
+}
+
+/* Visually-hidden helper for screen-reader-only text. Used where an icon
+   alone carries meaning and an aria-label isn't structurally available. */
+.argmap-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Helper classes for interactive primitives (used by Button, IconButton, cards, rows). */
 
 .argmap-row-hover {
@@ -164,10 +203,19 @@ a:hover {
   background-color: var(--color-surface-hover);
   border-color: var(--color-border-strong);
   box-shadow: var(--shadow-md);
+  /* Subtle 1px lift signals interactivity without feeling bouncy. Linear /
+     Notion use this exact amount; anything larger reads as toy-like. */
+  transform: translateY(-1px);
 }
 
 .argmap-card:active {
-  transform: translateY(0.5px);
+  transform: translateY(0);
+  transition-duration: 80ms;
+}
+
+.argmap-card:focus-visible {
+  outline: 2px solid var(--color-mode-current-accent);
+  outline-offset: 2px;
 }
 
 /* Button primitive base — used by `Button` component. */
@@ -192,6 +240,13 @@ a:hover {
 .argmap-btn:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+/* Custom focus ring for buttons: a soft accent halo rather than the
+   global hard outline. Keeps the button's existing border shape readable. */
+.argmap-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-mode-current-accent-bg, rgba(31, 111, 235, 0.25));
 }
 
 .argmap-btn[data-size="sm"] {
@@ -403,6 +458,38 @@ select.argmap-input {
    applied via inline styles by argument-overlay-edge.tsx; React's key
    prop changes when the path fingerprint changes, remounting the edge
    and replaying the animation from the start. */
+/* Subtle entrance for new canvas nodes — applied via animation prop in
+   node-frame.tsx when first mounted. Production apps fade-and-rise rather
+   than snap; the difference is the "did this just appear?" experience. */
+@keyframes argmap-node-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* React Flow handle-glow when a node is hovered AND draggable. The
+   connector circle scales slightly to invite the drag-from-handle. */
+.react-flow__node:hover .react-flow__handle[data-handlepos="bottom"] {
+  transform: translate(-50%, 50%) scale(1.15);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+/* Joyride tooltip polish — fade-and-rise to match dialogs. react-joyride's
+   default tooltip just snaps. */
+.react-joyride__tooltip {
+  animation: argmap-dialog-pop-in var(--duration-medium) var(--ease-emphasized);
+}
+.react-joyride__spotlight {
+  /* Slightly softer cutout edge so the spotlight reads as suggestive
+     rather than diagrammatic. */
+  transition: all var(--duration-medium) var(--ease-emphasized);
+}
+
 @keyframes argmap-edge-trace-in {
   from {
     opacity: 0;

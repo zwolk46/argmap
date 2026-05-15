@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { humanizeNodeType } from "../../primitives";
+import { Button, humanizeNodeType } from "../../primitives";
 
 export interface InspectorEmptyProps {
   on_open_settings: () => void;
@@ -28,7 +28,7 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
       <section
         style={{
-          padding: "var(--space-3) var(--space-3)",
+          padding: "var(--space-3)",
           background: "var(--color-surface-pane)",
           border: "var(--border-hairline) solid var(--color-border-subtle)",
           borderRadius: "var(--radius-md)",
@@ -38,23 +38,32 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
         }}
         aria-label="Inspector hint"
       >
-        Click a node on the canvas to edit its settings here. With nothing selected, this panel
-        shows the frame's overall settings.
+        Select a node on the canvas to edit it here. With nothing selected, this panel shows the
+        frame's overall settings.
       </section>
 
       <section>
-        <div style={LABEL_STYLE}>Title</div>
-        <div style={VALUE_STYLE}>{frame.title || "(untitled)"}</div>
+        <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
+          Title
+        </h3>
+        <div style={VALUE_STYLE}>{frame.title || "Untitled frame"}</div>
         {frame.description && (
           <>
-            <div style={{ ...LABEL_STYLE, marginTop: "var(--space-2, 8px)" }}>Description</div>
+            <h3
+              className="argmap-section-heading"
+              style={{ marginTop: "var(--space-2, 8px)", marginBottom: "var(--space-1)" }}
+            >
+              Description
+            </h3>
             <div style={VALUE_STYLE}>{frame.description}</div>
           </>
         )}
       </section>
 
       <section>
-        <div style={LABEL_STYLE}>Mode &amp; Flavor</div>
+        <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
+          Mode &amp; Flavor
+        </h3>
         <div style={VALUE_STYLE}>
           {frame.mode === "legal" ? "Legal" : "General"}
           {frame.flavor ? ` / ${frame.flavor}` : ""}
@@ -63,14 +72,23 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
 
       {frame.tags && frame.tags.length > 0 && (
         <section>
-          <div style={LABEL_STYLE}>Tags</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" }}>
+          <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
+            Tags
+          </h3>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "var(--space-1)",
+              marginTop: "var(--space-1)",
+            }}
+          >
             {frame.tags.map((tag) => (
               <span
                 key={tag}
                 style={{
-                  padding: "2px 8px",
-                  borderRadius: "9999px",
+                  padding: "2px var(--space-2)",
+                  borderRadius: "var(--radius-pill)",
                   background: "var(--color-surface-pane, #f3f4f6)",
                   fontSize: "var(--font-size-xs, 11px)",
                   color: "var(--color-text-secondary, #6b7280)",
@@ -84,10 +102,12 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
       )}
 
       <section>
-        <div style={LABEL_STYLE}>Default Satisfaction Policies</div>
+        <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
+          Default Satisfaction Policies
+        </h3>
         <div
           style={{
-            marginTop: "4px",
+            marginTop: "var(--space-1)",
             fontSize: "var(--font-size-sm, 13px)",
             color: "var(--color-text-secondary, #6b7280)",
           }}
@@ -99,40 +119,25 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
             >
               <span>{humanizeNodeType(type)}</span>
               <span>
-                {policy ? (policy.all_of?.length ?? 0) + " condition(s)" : "library default"}
+                {policy
+                  ? `${policy.all_of?.length ?? 0} condition${policy.all_of?.length === 1 ? "" : "s"}`
+                  : "system default"}
               </span>
             </div>
           ))}
-          <button
-            type="button"
-            style={{
-              marginTop: "8px",
-              background: "none",
-              border: "none",
-              padding: 0,
-              color: "var(--color-accent, #6366f1)",
-              cursor: "pointer",
-              fontSize: "var(--font-size-sm, 13px)",
-              textDecoration: "underline",
-            }}
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={on_open_settings}
+            style={{ marginTop: "var(--space-2)" }}
           >
             Edit in settings
-          </button>
+          </Button>
         </div>
       </section>
     </div>
   );
 }
-
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs)",
-  fontWeight: "var(--font-weight-medium)",
-  color: "var(--color-text-secondary)",
-  letterSpacing: "var(--letter-spacing-wide)",
-  marginBottom: "var(--space-1)",
-};
 
 const VALUE_STYLE: React.CSSProperties = {
   fontSize: "var(--font-size-sm)",

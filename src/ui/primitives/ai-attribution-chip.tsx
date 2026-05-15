@@ -74,7 +74,7 @@ export function AiAttributionChip({ record }: AiAttributionChipProps): ReactElem
           (e.currentTarget as HTMLElement).style.borderColor = "transparent";
         }}
       >
-        <span aria-hidden style={{ fontSize: "11px", lineHeight: 1 }}>
+        <span aria-hidden style={{ fontSize: "var(--font-size-xs)", lineHeight: 1 }}>
           ✦
         </span>
         {short}

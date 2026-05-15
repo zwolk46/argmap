@@ -48,7 +48,7 @@ export function EdgeCreationPopup({
         position: "fixed",
         left: position.x,
         top: position.y,
-        zIndex: 1000,
+        zIndex: 1050,
         background: "var(--color-surface-elevated)",
         boxShadow: "var(--shadow-md)",
         borderRadius: "var(--radius-md)",
@@ -56,6 +56,7 @@ export function EdgeCreationPopup({
         minWidth: "160px",
       }}
     >
+      {/* KEEP RAW: dropdown menu rows in a popup, not the standard Button taxonomy. */}
       {candidates.map((c, idx) => (
         <button
           key={idx}

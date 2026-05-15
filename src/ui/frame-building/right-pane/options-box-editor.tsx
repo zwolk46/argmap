@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { ReactElement } from "react";
 import type { Node, NodeType, SatisfactionPolicy } from "@/schema";
 import { resolveEffectivePolicy, CONDITION_KIND_PRIORITY, toModeFlavor } from "@/schema";
@@ -89,12 +88,12 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2, 8px)" }}>
-      <div style={SECTION_LABEL_STYLE}>Satisfaction policy</div>
+      <h3 className="argmap-section-heading">Satisfaction policy</h3>
 
       {/* Tier 1: Effective policy (read-only summary) */}
       <div
         style={{
-          padding: "6px 8px",
+          padding: "var(--space-1) var(--space-2)",
           background: "var(--color-surface-pane, #f9fafb)",
           borderRadius: "var(--radius-sm, 4px)",
           fontSize: "var(--font-size-xs, 11px)",
@@ -102,19 +101,24 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
         }}
         title={`Effective: ${policyToString(effective)}`}
       >
-        <span style={{ fontWeight: 500, color: "var(--color-text-primary, #111827)" }}>
+        <span
+          style={{
+            fontWeight: "var(--font-weight-medium)",
+            color: "var(--color-text-primary, #111827)",
+          }}
+        >
           Effective:{" "}
         </span>
         {policyToString(effective)}
       </div>
 
       {/* Tier 2: Source chip */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
         <span
           style={{
-            padding: "2px 8px",
+            padding: "2px var(--space-2)",
             background: "var(--color-surface-hover, rgba(0,0,0,0.05))",
-            borderRadius: "9999px",
+            borderRadius: "var(--radius-pill)",
             fontSize: "var(--font-size-xs, 11px)",
             color: "var(--color-text-secondary, #6b7280)",
           }}
@@ -126,7 +130,8 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
       {/* Tier 3: Edit surface */}
       {allows_per_instance ? (
         <>
-          <div style={{ display: "flex", gap: "4px" }}>
+          {/* KEEP RAW: pill-toggle for edit-mode selection (instance vs frame default), not the standard Button taxonomy. */}
+          <div style={{ display: "flex", gap: "var(--space-1)" }}>
             {(["instance", "frame_default"] as OptionsBoxEditMode[]).map((m) => (
               <button
                 key={m}
@@ -135,7 +140,10 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
                 style={{
                   padding: "3px 10px",
                   background: edit_mode === m ? "var(--color-accent, #6366f1)" : "transparent",
-                  color: edit_mode === m ? "#fff" : "var(--color-text-secondary, #6b7280)",
+                  color:
+                    edit_mode === m
+                      ? "var(--color-text-on-accent)"
+                      : "var(--color-text-secondary, #6b7280)",
                   border: "1px solid var(--color-border, #e5e7eb)",
                   borderRadius: "var(--radius-sm, 4px)",
                   cursor: "pointer",
@@ -165,10 +173,3 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
     </div>
   );
 }
-
-const SECTION_LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-};

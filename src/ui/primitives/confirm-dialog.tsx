@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 import { Dialog, DialogHeader, DialogBody, DialogFooter } from "./dialog";
 import type { DialogSize } from "./dialog";
@@ -31,11 +32,18 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): ReactElement | null {
+  const title_id = React.useId();
   if (!open) return null;
   const variant = destructive || confirm_variant === "danger" ? "destructive-solid" : "primary";
   return (
-    <Dialog open={open} onClose={onCancel} aria_label={title} size={size}>
-      <DialogHeader>{title}</DialogHeader>
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      aria_labelledby={title_id}
+      aria_label={title}
+      size={size}
+    >
+      <DialogHeader id={title_id}>{title}</DialogHeader>
       <DialogBody>{children}</DialogBody>
       <DialogFooter>
         <Button variant="secondary" onClick={onCancel}>

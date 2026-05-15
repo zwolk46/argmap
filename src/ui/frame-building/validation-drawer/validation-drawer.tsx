@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useFrameStore, useAppStateStore, useRepository } from "@/state";
 import { selectValidationDrawer } from "@/state";
 import { Drawer, Pill, IconButton, SeverityIcon } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 import { ValidationRow } from "./validation-row";
 import { dismissalKeyFor, partitionByDismissal } from "./dismissed-warnings";
 
@@ -52,8 +53,8 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
       open={open}
       onClose={on_close}
       side="bottom"
-      height="280px"
-      aria_label="Validation issues"
+      height="min(48vh, 480px)"
+      aria_label="Frame issues"
     >
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header */}
@@ -76,7 +77,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
               letterSpacing: "var(--letter-spacing-tight)",
             }}
           >
-            Validation
+            Frame issues
           </span>
           {errors.length > 0 && (
             <Pill variant="severity_error">
@@ -92,18 +93,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           )}
           <div style={{ marginLeft: "auto" }}>
             <IconButton size="sm" aria-label="Close validation drawer" onClick={on_close}>
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.7}
-                strokeLinecap="round"
-                aria-hidden
-              >
-                <path d="M4 4l8 8M12 4l-8 8" />
-              </svg>
+              <UIcon name="times" size={14} />
             </IconButton>
           </div>
         </div>
@@ -135,7 +125,12 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           {/* Errors */}
           {errors.length > 0 && (
             <div>
-              <div style={GROUP_LABEL_STYLE}>Errors</div>
+              <h3
+                className="argmap-section-heading"
+                style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
+              >
+                Errors
+              </h3>
               {errors.map((e, i) => (
                 <ValidationRow
                   key={`${e.rule_id}-${i}`}
@@ -159,7 +154,12 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           {/* Active warnings */}
           {active.length > 0 && (
             <div>
-              <div style={GROUP_LABEL_STYLE}>Warnings</div>
+              <h3
+                className="argmap-section-heading"
+                style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
+              >
+                Warnings
+              </h3>
               {active.map((r, i) => (
                 <ValidationRow
                   key={`${r.rule_id}-${i}`}
@@ -180,12 +180,14 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           {/* Dismissed warnings */}
           {dismissed.length > 0 && (
             <div>
+              {/* KEEP RAW: full-width accordion header with rotating chevron; bespoke layout, not the standard Button taxonomy. */}
               <button
                 type="button"
                 onClick={() => set_show_dismissed((v) => !v)}
+                aria-expanded={show_dismissed}
                 style={{
                   width: "100%",
-                  padding: "8px 12px",
+                  padding: "var(--space-2) var(--space-3)",
                   background: "transparent",
                   border: "none",
                   textAlign: "left",
@@ -194,28 +196,18 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
                   color: "var(--color-text-secondary, #6b7280)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "var(--space-1)",
                 }}
               >
-                {/* P2: SVG chevron in place of the ASCII triangle / unicode
-                    chevron, matching the rest of the chrome SVG icons. */}
-                <svg
-                  width={10}
-                  height={10}
-                  viewBox="0 0 10 10"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.6}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
+                <UIcon
+                  name="angle-small-right"
+                  size={12}
                   style={{
                     transform: show_dismissed ? "rotate(90deg)" : "rotate(0deg)",
                     transition: "transform var(--duration-fast) var(--ease-standard)",
+                    display: "inline-block",
                   }}
-                >
-                  <path d="M3.5 2 L7 5 L3.5 8" />
-                </svg>
+                />
                 <span>Dismissed ({dismissed.length})</span>
               </button>
               {show_dismissed &&
@@ -240,12 +232,3 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
     </Drawer>
   );
 }
-
-const GROUP_LABEL_STYLE: React.CSSProperties = {
-  padding: "var(--space-3) var(--space-4) var(--space-1)",
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs)",
-  color: "var(--color-text-secondary)",
-  letterSpacing: "var(--letter-spacing-wide)",
-  fontWeight: "var(--font-weight-semibold)",
-};

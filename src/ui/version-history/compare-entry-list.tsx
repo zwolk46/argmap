@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, EdgeRef } from "@/schema";
+import { Button } from "../primitives";
 import { CompareEntryRow, type CompareEntryRowDescriptor } from "./compare-entry-row";
 
 export type CompareEntryListKind = "added" | "removed" | "edited" | "layout_only" | "metadata";
@@ -47,33 +48,26 @@ export function CompareEntryList(props: CompareEntryListProps): ReactElement | n
           alignItems: "center",
           gap: "var(--space-2, 8px)",
           padding: "var(--space-2, 8px) var(--space-3, 12px)",
-          color,
-          fontSize: "var(--font-size-xs, 11px)",
-          fontWeight: 500,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
         }}
       >
-        <span data-testid="compare-entry-list-title">
+        <span
+          data-testid="compare-entry-list-title"
+          className="argmap-section-heading"
+          style={{ color }}
+        >
           {title} ({entries.length})
         </span>
         {kind === "layout_only" ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="compare-entry-list-expand"
             aria-expanded={expanded}
             onClick={() => setExpanded((v) => !v)}
-            style={{
-              marginLeft: "auto",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              color: "var(--color-text-secondary, #6b7280)",
-              fontSize: "11px",
-            }}
+            style={{ marginLeft: "auto" }}
           >
             {expanded ? "Collapse" : "Expand"}
-          </button>
+          </Button>
         ) : null}
       </header>
       {expanded

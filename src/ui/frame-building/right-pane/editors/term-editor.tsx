@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { Term, Node } from "@/schema";
 import { useRepository } from "@/state";
+import { Button } from "../../../primitives";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface TermEditorProps {
@@ -11,42 +12,15 @@ export interface TermEditorProps {
 
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
 
-const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
-};
-
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-};
-
 const CHIP_STYLE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
-  padding: "2px 8px",
+  gap: "var(--space-1)",
+  padding: "2px var(--space-2)",
   background: "var(--color-primary-subtle, #eff6ff)",
   color: "var(--color-primary, #2563eb)",
   borderRadius: "var(--radius-full, 9999px)",
   fontSize: "var(--font-size-sm, 13px)",
-};
-
-const BUTTON_STYLE: React.CSSProperties = {
-  padding: "4px 10px",
-  border: "1px dashed var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  background: "transparent",
-  color: "var(--color-text-secondary, #6b7280)",
-  fontSize: "var(--font-size-sm, 13px)",
-  cursor: "pointer",
 };
 
 export function TermEditor(props: TermEditorProps): ReactElement {
@@ -63,7 +37,7 @@ export function TermEditor(props: TermEditorProps): ReactElement {
         <FieldAttributionDecoration node_id={node.id} field_path="name" label="Name">
           <input
             type="text"
-            style={INPUT_STYLE}
+            className="argmap-input"
             defaultValue={node.name}
             onBlur={(e) => patch({ name: e.currentTarget.value })}
           />
@@ -71,10 +45,11 @@ export function TermEditor(props: TermEditorProps): ReactElement {
       </div>
 
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Order</label>
+        <label className="argmap-section-heading">Order</label>
         <input
           type="number"
-          style={{ ...INPUT_STYLE, marginTop: "4px" }}
+          className="argmap-input"
+          style={{ marginTop: "var(--space-1)" }}
           defaultValue={node.order}
           min={0}
           onBlur={(e) => {
@@ -98,17 +73,19 @@ export function TermEditor(props: TermEditorProps): ReactElement {
             defaultChecked={node.dispositive}
             onChange={(e) => patch({ dispositive: e.currentTarget.checked })}
           />
-          <span style={LABEL_STYLE}>Dispositive</span>
+          <span className="argmap-section-heading">Dispositive</span>
         </label>
       </div>
 
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Linked To</label>
-        <div style={{ marginTop: "4px" }}>
+        <label className="argmap-section-heading">Linked To</label>
+        <div style={{ marginTop: "var(--space-1)" }}>
           {node.linked_to ? (
             <span style={CHIP_STYLE}>
               <span>{node.linked_to}</span>
+              {/* KEEP RAW: tiny inline icon inside a pill chip; IconButton's min 26px is too large for inline-with-text. */}
               <button
+                type="button"
                 style={{
                   background: "none",
                   border: "none",
@@ -124,9 +101,9 @@ export function TermEditor(props: TermEditorProps): ReactElement {
               </button>
             </span>
           ) : (
-            <button style={BUTTON_STYLE} onClick={on_pick_linked_to}>
+            <Button variant="ghost" size="sm" onClick={on_pick_linked_to}>
               + Link node
-            </button>
+            </Button>
           )}
         </div>
       </div>

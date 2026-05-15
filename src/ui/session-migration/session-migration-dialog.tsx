@@ -95,8 +95,14 @@ export function SessionMigrationDialog(props: SessionMigrationDialogProps): Reac
   const can_migrate = !migrating && (phase.kind === "loaded" || phase.kind === "loaded_empty");
 
   return (
-    <Dialog open={true} onClose={onClose} aria_label="Migrate session" size="md">
-      <DialogHeader>Migrate session</DialogHeader>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      aria_labelledby="session-migration-dialog-title"
+      aria_label="Migrate session"
+      size="md"
+    >
+      <DialogHeader id="session-migration-dialog-title">Migrate session</DialogHeader>
       <DialogBody>
         <MigrationDialogBody
           phase={phase}

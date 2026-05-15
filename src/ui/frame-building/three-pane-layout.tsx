@@ -44,7 +44,13 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
       >
         {left}
       </aside>
-      <main
+      {/* P5: outer <main id="main"> lives in app-routes.tsx so the skip-link
+          target is defined once. The center pane is a region inside that
+          main, not a separate landmark; <section role="region"> would be
+          semantically the most accurate but a plain <div> matches the
+          previous layout exactly and the parent <main> already announces
+          this region as primary content. */}
+      <div
         style={{
           gridRow: "1",
           gridColumn: "2",
@@ -55,7 +61,7 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
         }}
       >
         {center}
-      </main>
+      </div>
       <aside
         style={{
           gridRow: "1",

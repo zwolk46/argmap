@@ -22,7 +22,7 @@ export function ModeFlavorChip({
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "4px",
+          gap: "var(--space-1)",
           cursor: onOpenSettings ? "pointer" : "default",
           textTransform: "uppercase",
           letterSpacing: "var(--letter-spacing-wide)",

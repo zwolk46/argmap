@@ -131,7 +131,9 @@ export function CompareEntryRow({
         {primary}
       </span>
       {secondary ? (
-        <span style={{ color: "var(--color-text-secondary, #6b7280)", fontSize: "11px" }}>
+        <span
+          style={{ color: "var(--color-text-secondary, #6b7280)", fontSize: "var(--font-size-xs)" }}
+        >
           {secondary}
         </span>
       ) : null}

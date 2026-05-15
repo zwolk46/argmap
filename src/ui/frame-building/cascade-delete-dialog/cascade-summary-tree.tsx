@@ -35,17 +35,7 @@ export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactEl
 
       {cascade_nodes.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1, 4px)" }}>
-          <div
-            style={{
-              fontSize: "var(--font-size-xs, 11px)",
-              fontWeight: 600,
-              color: "var(--color-text-tertiary, #9ca3af)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Nodes ({cascade_nodes.length})
-          </div>
+          <h3 className="argmap-section-heading">Nodes ({cascade_nodes.length})</h3>
           {cascade_nodes.map(({ node_id, reason }) => (
             <div
               key={node_id}

@@ -17,6 +17,7 @@ export function FrameVersionDriftIndicator(
 
   const { has_drift, session_version_number, current_version_number } = drift;
   return (
+    // KEEP RAW: pill-shaped status indicator with severity-driven styling; not expressible via Button variants.
     <button
       type="button"
       onClick={has_drift ? props.on_open_migration_dialog : undefined}

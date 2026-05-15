@@ -56,6 +56,7 @@ export function InterviewRow(props: InterviewRowProps): ReactElement {
   const breadcrumb = buildBreadcrumb(frame_version, item.node_id);
 
   return (
+    // KEEP RAW: interview list row — full-width clickable row with custom hover/selected/recommended states.
     <button
       type="button"
       data-testid={`interview-row-${item.node_id}`}

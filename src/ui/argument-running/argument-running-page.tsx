@@ -11,6 +11,7 @@ import {
 } from "@/ui";
 import { SessionMigrationDialog } from "../session-migration";
 import { SessionSettingsPanel } from "../session-settings";
+import { TutorialTour } from "../tutorial";
 import { useNavigate } from "../routing";
 import { ArgumentRunningTopBar } from "./top-bar-slots";
 import { TwoPaneLayout } from "./two-pane-layout";
@@ -226,6 +227,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
           }
         }}
       />
+      <TutorialTour />
     </React.Fragment>
   );
 }

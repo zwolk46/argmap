@@ -129,6 +129,89 @@ export interface PremiseReuseSuggestion {
   score: number;
 }
 
+// Edge types that constitute structural reachability from the RootQuestion.
+// Mirrors STRUCTURAL_EDGE_TYPES in src/modes/cascade.ts. Kept duplicated here
+// rather than imported because modes/ depends on runtime/, not the reverse.
+const STRUCTURAL_EDGE_TYPES = new Set<string>([
+  "DECOMPOSES_INTO",
+  "TURNS_ON",
+  "INTERPRETED_AS",
+  "LEADS_TO",
+  "GATES",
+]);
+
+type LogicalGateNode =
+  | { type: "LogicalGate"; gate_type: "AND" | "OR"; inputs: ReadonlyArray<NodeRef> }
+  | { type: "LogicalGate"; gate_type: "NOT"; input: NodeRef }
+  | { type: "LogicalGate"; gate_type: "IF_THEN"; antecedent: NodeRef; consequent: NodeRef }
+  | { type: "LogicalGate"; gate_type: "UNLESS"; main: NodeRef; exception: NodeRef };
+type CheckpointNode = {
+  type: "Checkpoint";
+  options: ReadonlyArray<{ target_node_id?: NodeRef }>;
+};
+
+function pushGateChildren(node: Node, list: NodeRef[], removed: ReadonlySet<NodeRef>): void {
+  if (node.type !== "LogicalGate") return;
+  const g = node as Node & LogicalGateNode;
+  if (g.gate_type === "AND" || g.gate_type === "OR") {
+    for (const id of g.inputs) if (!removed.has(id)) list.push(id);
+  } else if (g.gate_type === "NOT") {
+    if (!removed.has(g.input)) list.push(g.input);
+  } else if (g.gate_type === "IF_THEN") {
+    if (!removed.has(g.antecedent)) list.push(g.antecedent);
+    if (!removed.has(g.consequent)) list.push(g.consequent);
+  } else if (g.gate_type === "UNLESS") {
+    if (!removed.has(g.main)) list.push(g.main);
+    if (!removed.has(g.exception)) list.push(g.exception);
+  }
+}
+
+function pushCheckpointChildren(node: Node, list: NodeRef[], removed: ReadonlySet<NodeRef>): void {
+  if (node.type !== "Checkpoint") return;
+  const cp = node as Node & CheckpointNode;
+  for (const opt of cp.options) {
+    if (opt.target_node_id && !removed.has(opt.target_node_id)) list.push(opt.target_node_id);
+  }
+}
+
+function buildReachabilityAdjacency(
+  frame_version: FrameVersion,
+  removed: ReadonlySet<NodeRef>,
+): Map<NodeRef, NodeRef[]> {
+  const adj = new Map<NodeRef, NodeRef[]>();
+  for (const n of frame_version.nodes) {
+    if (!removed.has(n.id)) adj.set(n.id, []);
+  }
+  for (const e of frame_version.edges) {
+    if (removed.has(e.source) || removed.has(e.target)) continue;
+    if (!STRUCTURAL_EDGE_TYPES.has(e.type)) continue;
+    const list = adj.get(e.source);
+    if (list) list.push(e.target);
+  }
+  for (const n of frame_version.nodes) {
+    if (removed.has(n.id)) continue;
+    const list = adj.get(n.id);
+    if (!list) continue;
+    pushGateChildren(n, list, removed);
+    pushCheckpointChildren(n, list, removed);
+  }
+  return adj;
+}
+
+function bfsFrom(start: NodeRef, adj: Map<NodeRef, NodeRef[]>): Set<NodeRef> {
+  const visited = new Set<NodeRef>();
+  const queue: NodeRef[] = [start];
+  while (queue.length > 0) {
+    const curr = queue.shift()!;
+    if (visited.has(curr)) continue;
+    visited.add(curr);
+    for (const neighbor of adj.get(curr) ?? []) {
+      if (!visited.has(neighbor)) queue.push(neighbor);
+    }
+  }
+  return visited;
+}
+
 export function computeCascadeReport(
   frame_version: FrameVersion,
   to_delete: { node_ids?: NodeRef[]; edge_ids?: EdgeRef[] },
@@ -139,6 +222,37 @@ export function computeCascadeReport(
   const cascade_nodes: Array<{ node_id: NodeRef; reason: CascadeReason }> = [];
   const cascade_edges: Array<{ edge_id: EdgeRef; reason: CascadeReason }> = [];
 
+  // Reachability-based cascade: anything reachable from RootQuestion that
+  // becomes unreachable after the requested nodes are removed is also part of
+  // the cascade. This mirrors modes/cascade.ts:computeDeletionCascade and
+  // ensures the dialog's "X nodes will be removed" count matches what the
+  // node_removed handler actually deletes. Without this, the dialog
+  // under-reported and orphan descendants stayed in the frame after a
+  // confirmed delete — appearing as "deleted nodes that reappeared" when a
+  // subsequent palette click triggered a canvas re-render.
+  const root = frame_version.nodes.find((n) => n.type === "RootQuestion");
+  const reach_full = root
+    ? bfsFrom(root.id, buildReachabilityAdjacency(frame_version, new Set<NodeRef>()))
+    : null;
+  const reach_after = root
+    ? bfsFrom(root.id, buildReachabilityAdjacency(frame_version, removedNodes))
+    : null;
+
+  // Build a flat list of [orphan_id, cause_id] pairs so we can iterate in
+  // sorted-key order without calling .keys() on a Map (the determinism
+  // plugin disallows the latter).
+  const orphan_pairs: Array<[NodeRef, NodeRef]> = [];
+  if (reach_full && reach_after && removedNodes.size > 0) {
+    const requested_sorted = sortedBy([...removedNodes], (x) => x);
+    const default_cause = requested_sorted[0]!;
+    for (const id of reach_full) {
+      if (removedNodes.has(id)) continue;
+      if (reach_after.has(id)) continue;
+      orphan_pairs.push([id, default_cause]);
+    }
+  }
+  const orphan_pairs_sorted = sortedBy(orphan_pairs, (p) => p[0]);
+
   // Explicitly requested first (sorted lex).
   for (const id of sortedBy([...removedNodes], (x) => x)) {
     cascade_nodes.push({ node_id: id, reason: { kind: "explicitly_requested" } });
@@ -147,15 +261,27 @@ export function computeCascadeReport(
     cascade_edges.push({ edge_id: id, reason: { kind: "explicitly_requested" } });
   }
 
-  // Edges whose source or target is in removedNodes → cascade.
+  // Orphaned-by-reachability nodes (already sorted lex).
+  for (const [id, cause] of orphan_pairs_sorted) {
+    cascade_nodes.push({
+      node_id: id,
+      reason: { kind: "orphaned_by_node", cause_node_id: cause },
+    });
+  }
+
+  // Edges whose endpoint is in (removedNodes ∪ orphaned nodes) → cascade.
+  const all_dropped_nodes = new Set<NodeRef>([
+    ...removedNodes,
+    ...orphan_pairs_sorted.map(([id]) => id),
+  ]);
   for (const e of sortedBy(frame_version.edges, (x) => x.id)) {
     if (removedEdges.has(e.id)) continue;
-    if (removedNodes.has(e.source)) {
+    if (all_dropped_nodes.has(e.source)) {
       cascade_edges.push({
         edge_id: e.id,
         reason: { kind: "orphaned_by_node", cause_node_id: e.source },
       });
-    } else if (removedNodes.has(e.target)) {
+    } else if (all_dropped_nodes.has(e.target)) {
       cascade_edges.push({
         edge_id: e.id,
         reason: { kind: "orphaned_by_node", cause_node_id: e.target },

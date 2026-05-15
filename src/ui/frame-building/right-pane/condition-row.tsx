@@ -1,6 +1,8 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { Condition, ConditionKind, BurdenLevel } from "@/schema";
+import { IconButton } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 
 export interface ConditionRowProps {
   condition: Condition;
@@ -47,19 +49,19 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
         padding: "var(--space-2, 8px)",
         background: "var(--color-surface-pane, #f9fafb)",
         borderRadius: "var(--radius-sm, 4px)",
-        marginBottom: "4px",
+        marginBottom: "var(--space-1)",
       }}
     >
       {/* Kind pill */}
       <span
         style={{
-          padding: "2px 8px",
+          padding: "2px var(--space-2)",
           background: "var(--color-surface-hover, rgba(0,0,0,0.05))",
-          borderRadius: "9999px",
+          borderRadius: "var(--radius-pill)",
           fontSize: "var(--font-size-xs, 11px)",
           color: "var(--color-text-primary, #111827)",
           flexShrink: 0,
-          fontWeight: 500,
+          fontWeight: "var(--font-weight-medium)",
         }}
       >
         {KIND_LABELS[condition.kind] ?? condition.kind}
@@ -73,6 +75,7 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
             onChange={(e) =>
               on_change({ ...condition, level: e.currentTarget.value as BurdenLevel })
             }
+            className="argmap-input"
             style={INPUT_STYLE}
           >
             {BURDEN_LEVELS.map((l) => (
@@ -96,36 +99,24 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
               })
             }
             placeholder="Comma-separated kinds…"
+            className="argmap-input"
             style={INPUT_STYLE}
           />
         )}
       </div>
 
       {/* Remove button */}
-      <button
-        type="button"
-        onClick={on_remove}
-        aria-label="Remove condition"
-        style={{
-          flexShrink: 0,
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--color-text-tertiary, #9ca3af)",
-          padding: "0 4px",
-          fontSize: "14px",
-        }}
-      >
-        ×
-      </button>
+      <IconButton aria-label="Remove condition" onClick={on_remove} size="sm">
+        <UIcon name="times" size={14} />
+      </IconButton>
     </div>
   );
 }
 
+// Compact density override for inline condition-row layout: tighter padding
+// and smaller font than the default .argmap-input, so multiple condition
+// rows fit cleanly in the inspector pane.
 const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "2px 6px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
+  padding: "2px var(--space-1)",
   fontSize: "var(--font-size-xs, 11px)",
 };

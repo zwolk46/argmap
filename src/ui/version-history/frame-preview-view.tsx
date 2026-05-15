@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { FrameId, FrameVersion, FrameVersionId, NodeRef } from "@/schema";
 import { FrameCanvas, useLayoutResult } from "../canvas";
+import { Button, Spinner } from "../primitives";
 import { PreviewBanner } from "./preview-banner";
 import { useVersionFullLoad } from "./use-version-full-load";
 import { useVersionHistoryPreview } from "./preview-context";
@@ -54,11 +55,13 @@ export function FramePreviewView(props: FramePreviewViewProps): ReactElement {
             alignItems: "center",
             justifyContent: "center",
             flex: 1,
-            color: "var(--color-text-secondary, #6b7280)",
-            fontSize: "var(--font-size-sm, 13px)",
+            gap: "var(--space-2)",
+            color: "var(--color-text-secondary)",
+            fontSize: "var(--font-size-sm)",
           }}
         >
-          Loading version {version_number}…
+          <Spinner size={16} />
+          <span>Loading version {version_number}…</span>
         </div>
       ) : result.status === "error" ? (
         <div
@@ -69,15 +72,15 @@ export function FramePreviewView(props: FramePreviewViewProps): ReactElement {
             alignItems: "center",
             justifyContent: "center",
             flex: 1,
-            gap: 8,
+            gap: "var(--space-2)",
           }}
         >
-          <div style={{ color: "var(--color-severity-error, #dc2626)" }}>
+          <div style={{ color: "var(--color-severity-error)", fontSize: "var(--font-size-sm)" }}>
             {result.error?.message ?? "Failed to load version"}
           </div>
-          <button type="button" onClick={preview.exit}>
+          <Button variant="secondary" size="md" onClick={preview.exit}>
             Return to working version
-          </button>
+          </Button>
         </div>
       ) : (
         <div style={{ flex: 1, position: "relative" }}>

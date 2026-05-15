@@ -1,6 +1,8 @@
 import * as React from "react";
-import type { Authority } from "@/schema";
+import type { Authority, Edge } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
+import { Button, IconButton } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 
 export interface SessionAuthorityRowProps {
   authority_id: string;
@@ -8,6 +10,10 @@ export interface SessionAuthorityRowProps {
   initial_inline_edit?: boolean;
   on_highlight_on_canvas?: (node_ids: ReadonlyArray<string>) => void;
 }
+
+// Stable fallback so the Zustand selector below never returns a fresh array.
+// (See use-field-attribution.ts for the loop diagnosis.)
+const EMPTY_EDGES: ReadonlyArray<Edge> = [];
 
 export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.ReactElement | null {
   const {
@@ -21,7 +27,7 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
     (s) =>
       (s.session?.session_authorities ?? []).find((a: Authority) => a.id === authority_id) ?? null,
   );
-  const argument_edges = useSessionStore((s) => s.session?.argument_edges ?? []);
+  const argument_edges = useSessionStore((s) => s.session?.argument_edges ?? EMPTY_EDGES);
 
   const [editing, setEditing] = React.useState(initial_inline_edit);
   const [name, setName] = React.useState(authority?.citation ?? "");
@@ -72,25 +78,32 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
             data-testid={`session-authority-name-${authority.id}`}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                on_save_edit();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setEditing(false);
+              }
+            }}
+            className="argmap-input"
             style={{
-              padding: "4px 6px",
-              border: "var(--border-thin) solid var(--color-border-tertiary)",
-              borderRadius: "var(--border-radius-md, 6px)",
               fontSize: "var(--font-size-xs, 11px)",
             }}
           />
           <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="md"
               data-testid={`session-authority-save-${authority.id}`}
               onClick={on_save_edit}
-              style={primary_btn()}
             >
               Save
-            </button>
-            <button type="button" onClick={() => setEditing(false)} style={secondary_btn()}>
+            </Button>
+            <Button variant="secondary" size="md" onClick={() => setEditing(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </>
       ) : (
@@ -108,7 +121,7 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
               display: "flex",
               alignItems: "center",
               gap: "var(--space-1, 4px)",
-              fontSize: "10px",
+              fontSize: "var(--font-size-2xs)",
               color: "var(--color-text-tertiary, #9ca3af)",
             }}
           >
@@ -133,38 +146,38 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
                 : `cited by ${citations_to_this.length}`}
             </span>
             <span style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1, 4px)" }}>
-              <button
-                type="button"
+              <IconButton
+                aria-label="Highlight on canvas"
+                size="sm"
                 data-testid={`session-authority-highlight-${authority.id}`}
                 onClick={() => {
                   const sources = citations_to_this.map((e) => e.source);
                   on_highlight_on_canvas?.(sources);
                 }}
-                style={icon_btn()}
                 title="Highlight on canvas"
               >
-                ⌖
-              </button>
-              <button
-                type="button"
+                <UIcon name="target" size={14} />
+              </IconButton>
+              <IconButton
+                aria-label="Edit"
+                size="sm"
                 data-testid={`session-authority-edit-${authority.id}`}
                 onClick={() => setEditing(true)}
-                style={icon_btn()}
                 title="Edit"
               >
-                ✎
-              </button>
-              <button
-                type="button"
+                <UIcon name="pencil" size={14} />
+              </IconButton>
+              <IconButton
+                aria-label="Delete"
+                size="sm"
                 data-testid={`session-authority-delete-${authority.id}`}
                 onClick={() =>
                   citations_to_this.length > 0 ? setConfirmingDelete(true) : on_delete_confirmed()
                 }
-                style={icon_btn()}
                 title="Delete"
               >
-                ⌫
-              </button>
+                <UIcon name="trash" size={14} />
+              </IconButton>
             </span>
           </div>
           {confirming_delete ? (
@@ -185,21 +198,17 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
                 also delete those edges. Continue?
               </span>
               <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
-                <button
-                  type="button"
+                <Button
+                  variant="destructive"
+                  size="md"
                   onClick={on_delete_confirmed}
-                  style={primary_btn()}
                   data-testid={`session-authority-delete-confirm-yes-${authority.id}`}
                 >
                   Delete
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(false)}
-                  style={secondary_btn()}
-                >
+                </Button>
+                <Button variant="secondary" size="md" onClick={() => setConfirmingDelete(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
@@ -207,39 +216,4 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
       )}
     </div>
   );
-}
-
-function icon_btn(): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: "var(--color-text-tertiary, #9ca3af)",
-    fontSize: "12px",
-    padding: "0 4px",
-  };
-}
-
-function primary_btn(): React.CSSProperties {
-  return {
-    background: "var(--color-background-accent, #dbeafe)",
-    color: "var(--color-text-accent, #1d4ed8)",
-    border: "none",
-    borderRadius: "var(--border-radius-md, 6px)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
-    padding: "2px 8px",
-  };
-}
-
-function secondary_btn(): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "var(--border-thin) solid var(--color-border-tertiary)",
-    borderRadius: "var(--border-radius-md, 6px)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
-    padding: "2px 8px",
-    color: "var(--color-text-secondary, #6b7280)",
-  };
 }

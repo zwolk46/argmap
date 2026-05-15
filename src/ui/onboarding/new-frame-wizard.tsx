@@ -194,16 +194,12 @@ function Section({
   return (
     <section style={{ marginTop: "var(--space-4)" }}>
       <label
+        className="argmap-section-heading"
         style={{
           display: "flex",
           alignItems: "baseline",
           gap: "var(--space-2)",
           marginBottom: "var(--space-2)",
-          fontSize: "var(--font-size-xs)",
-          fontWeight: "var(--font-weight-medium)",
-          color: "var(--color-text-secondary)",
-          letterSpacing: "var(--letter-spacing-wide)",
-          textTransform: "uppercase",
         }}
       >
         {title}
@@ -237,6 +233,7 @@ function Choice({
 }): ReactElement {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
+      {/* KEEP RAW: role="radio" card with rich label + hint content and active-state styling; not the standard Button taxonomy. */}
       {options.map((opt) => {
         const active = opt.value === value;
         return (

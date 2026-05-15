@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { Pill } from "../primitives";
+import { UIcon } from "../primitives/uicon";
 
 export type MilestoneFilterValue = "milestones_only" | "all";
 
@@ -20,6 +21,7 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
         padding: "var(--space-2, 8px) 0",
       }}
     >
+      {/* KEEP RAW: pill-toggle filter chips (aria-pressed) wrapping Pill primitives; not the standard Button taxonomy. */}
       <button
         type="button"
         data-testid="milestone-filter-all"
@@ -81,7 +83,16 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
               : "var(--color-text-secondary, #6b7280)"
           }
         >
-          <span style={{ color: "var(--color-milestone-star, #d97706)", marginRight: 4 }}>★</span>
+          <span
+            style={{
+              color: "var(--color-milestone-star, #d97706)",
+              marginRight: 4,
+              display: "inline-flex",
+              alignItems: "center",
+            }}
+          >
+            <UIcon name="star" size={12} />
+          </span>
           Milestones only
         </Pill>
       </button>

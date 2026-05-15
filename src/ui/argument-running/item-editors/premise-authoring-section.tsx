@@ -2,6 +2,7 @@ import * as React from "react";
 import type { NodeRef, Premise, PremiseKind } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
 import { useAiSuggestion } from "@/ui";
+import { Button } from "../../primitives";
 import { PremiseReuseSuggestions } from "./premise-reuse-suggestions";
 
 export type PremiseAuthoringResult =
@@ -42,10 +43,14 @@ const PREMISE_KIND_LABELS: Readonly<Record<PremiseKind, string>> = {
   assumption: "Assumption",
 };
 
+// Stable fallback so the Zustand selector never returns a fresh array,
+// which would trip React's "getSnapshot must be cached" infinite-loop.
+const EMPTY_PREMISES: ReadonlyArray<Premise> = [];
+
 export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): React.ReactElement {
   const { value, on_change, default_kind = "found", reuse_context, enable_g11 } = props;
   const { now, generateId } = useRepository();
-  const premises = useSessionStore((s) => s.session?.premises ?? []);
+  const premises = useSessionStore((s) => s.session?.premises ?? EMPTY_PREMISES);
   const aiSuggestion = useAiSuggestion("session");
 
   const [statement, setStatement] = React.useState(
@@ -132,17 +137,11 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
           disabled={!!reused_id}
           placeholder="What does this premise assert?"
           onChange={(e) => on_statement_change(e.target.value)}
+          className="argmap-input"
           style={{
-            width: "100%",
             minHeight: 56,
-            padding: "6px 8px",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md, 6px)",
             fontSize: "var(--font-size-xs, 11px)",
-            fontFamily: "inherit",
-            background: reused_id
-              ? "var(--color-surface-pane-secondary, #fafafa)"
-              : "var(--color-surface-elevated, #ffffff)",
+            background: reused_id ? "var(--color-surface-pane-secondary, #fafafa)" : undefined,
           }}
         />
       </label>
@@ -158,15 +157,10 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
           value={reused_id ? (premises.find((p) => p.id === reused_id)?.kind ?? kind) : kind}
           disabled={!!reused_id}
           onChange={(e) => on_kind_change(e.target.value as PremiseKind)}
+          className="argmap-input"
           style={{
-            width: "100%",
-            padding: "4px 6px",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md, 6px)",
             fontSize: "var(--font-size-xs, 11px)",
-            background: reused_id
-              ? "var(--color-surface-pane-secondary, #fafafa)"
-              : "var(--color-surface-elevated, #ffffff)",
+            background: reused_id ? "var(--color-surface-pane-secondary, #fafafa)" : undefined,
           }}
         >
           {PREMISE_KIND_OPTIONS.map((k) => (
@@ -177,23 +171,15 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
         </select>
       </label>
       {reused_id ? (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="md"
           data-testid="premise-clear-reuse"
           onClick={on_clear_reuse}
-          style={{
-            background: "transparent",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "2px 8px",
-            alignSelf: "flex-start",
-            color: "var(--color-text-secondary, #6b7280)",
-          }}
+          style={{ alignSelf: "flex-start" }}
         >
           Create new instead
-        </button>
+        </Button>
       ) : (
         <PremiseReuseSuggestions
           draft_text={statement}
@@ -203,24 +189,16 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
         />
       )}
       {enable_g11 ? (
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="md"
           data-testid="premise-draft-from-fact-pattern"
           onClick={() => aiSuggestion.invoke("G11", { context: reuse_context })}
           disabled={aiSuggestion.status === "invoking"}
-          style={{
-            background: "var(--color-background-accent, #dbeafe)",
-            color: "var(--color-text-accent, #1d4ed8)",
-            border: "none",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "4px 8px",
-            alignSelf: "flex-start",
-          }}
+          style={{ alignSelf: "flex-start" }}
         >
           ✦ Draft from fact pattern
-        </button>
+        </Button>
       ) : null}
     </div>
   );

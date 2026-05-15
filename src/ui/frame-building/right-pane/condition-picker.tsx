@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { ConditionKind, ModeFlavor } from "@/schema";
 import { OFFERED_CONDITIONS_BY_MODE_FLAVOR, CONDITION_KIND_PRIORITY } from "@/schema";
+import { Button } from "../../primitives";
 
 export interface ConditionPickerProps {
   mode_flavor: ModeFlavor;
@@ -52,39 +53,68 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
     on_pick(kind);
   }
 
+  // Escape closes the menu and returns focus to the trigger; click-outside
+  // captured via a document-level pointerdown listener.
+  const trigger_ref = React.useRef<HTMLButtonElement | null>(null);
+  const menu_ref = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        set_open(false);
+        trigger_ref.current?.focus();
+      }
+    }
+    function onPointerDown(e: PointerEvent) {
+      const t = e.target as Node | null;
+      if (t && menu_ref.current?.contains(t)) return;
+      if (t && trigger_ref.current?.contains(t)) return;
+      set_open(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
-      <button
-        type="button"
-        onClick={() => set_open((v) => !v)}
-        style={{
-          padding: "4px 10px",
-          background: "transparent",
-          border: "1px dashed var(--color-border, #e5e7eb)",
-          borderRadius: "var(--radius-sm, 4px)",
-          cursor: "pointer",
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-text-secondary, #6b7280)",
+      <span
+        ref={(el) => {
+          trigger_ref.current = el?.querySelector("button") ?? null;
         }}
       >
-        + Add condition
-      </button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => set_open((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="menu"
+        >
+          + Add condition
+        </Button>
+      </span>
       {open && (
         <div
+          ref={menu_ref}
           style={{
             position: "absolute",
             top: "100%",
             left: 0,
-            zIndex: 100,
-            background: "var(--color-surface-elevated, #fff)",
-            border: "1px solid var(--color-border, #e5e7eb)",
-            borderRadius: "var(--radius-md, 8px)",
-            boxShadow: "var(--shadow-md, 0 4px 6px rgba(0,0,0,0.1))",
+            zIndex: 150,
+            background: "var(--color-surface-elevated)",
+            border: "var(--border-thin) solid var(--color-border-subtle)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--shadow-lg)",
             minWidth: "220px",
-            padding: "4px 0",
+            padding: "var(--space-1) 0",
           }}
           role="menu"
         >
+          {/* KEEP RAW: condition-picker dropdown menu rows (role="menuitem"), not the standard Button taxonomy. */}
           {available.map((kind) => (
             <button
               key={kind}
@@ -94,7 +124,9 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
               style={MENU_ITEM_STYLE}
               title={CONDITION_DESCRIPTIONS[kind]}
             >
-              <div style={{ fontWeight: 500 }}>{CONDITION_LABELS[kind]}</div>
+              <div style={{ fontWeight: "var(--font-weight-medium)" }}>
+                {CONDITION_LABELS[kind]}
+              </div>
               {CONDITION_DESCRIPTIONS[kind] && (
                 <div
                   style={{
@@ -116,10 +148,10 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
               style={{
                 ...MENU_ITEM_STYLE,
                 borderTop: "1px solid var(--color-border, #e5e7eb)",
-                marginTop: "4px",
+                marginTop: "var(--space-1)",
               }}
             >
-              <div style={{ fontWeight: 500 }}>+ Add "any of" group</div>
+              <div style={{ fontWeight: "var(--font-weight-medium)" }}>+ Add "any of" group</div>
               <div
                 style={{
                   fontSize: "var(--font-size-xs, 11px)",
@@ -134,7 +166,7 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
           {available.length === 0 && !show_any_of && (
             <div
               style={{
-                padding: "8px 12px",
+                padding: "var(--space-2) var(--space-3)",
                 fontSize: "var(--font-size-xs, 11px)",
                 color: "var(--color-text-tertiary, #9ca3af)",
               }}
@@ -151,7 +183,7 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
 const MENU_ITEM_STYLE: React.CSSProperties = {
   display: "block",
   width: "100%",
-  padding: "8px 12px",
+  padding: "var(--space-2) var(--space-3)",
   background: "transparent",
   border: "none",
   textAlign: "left",

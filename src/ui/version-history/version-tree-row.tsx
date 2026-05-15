@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { Pill, Tooltip } from "../primitives";
+import { UIcon } from "../primitives/uicon";
 import type { AnySummary } from "./version-tree-shape";
 
 export interface VersionTreeRowProps {
@@ -38,6 +39,7 @@ export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
   const rel = relativeTime(summary.created_at);
 
   return (
+    // KEEP RAW: tree-row button with depth-indented padding, multiple inline children, and selected-state styling.
     <button
       type="button"
       data-testid="version-tree-row"
@@ -82,15 +84,7 @@ export function VersionTreeRow(props: VersionTreeRowProps): ReactElement {
           flexShrink: 0,
         }}
       >
-        {is_milestone ? (
-          <svg width={12} height={12} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-            <path d="M8 1.5l1.7 4 4.3.4-3.3 2.9.9 4.2L8 10.8l-3.6 2.2.9-4.2-3.3-2.9 4.3-.4z" />
-          </svg>
-        ) : (
-          <svg width={8} height={8} viewBox="0 0 8 8" fill="currentColor" aria-hidden>
-            <circle cx="4" cy="4" r="3" />
-          </svg>
-        )}
+        {is_milestone ? <UIcon name="star" size={12} /> : <UIcon name="circle-small" size={12} />}
         <span
           style={{
             position: "absolute",

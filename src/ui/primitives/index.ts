@@ -37,8 +37,20 @@ export type { IconButtonProps } from "./icon-button";
 export { Button } from "./button";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./button";
 
-export { LoadingScreen, Spinner, EmptyState, CanvasEmptyState } from "./loading-screen";
-export type { LoadingScreenProps, EmptyStateProps } from "./loading-screen";
+export {
+  LoadingScreen,
+  Spinner,
+  EmptyState,
+  CanvasEmptyState,
+  InlineEmpty,
+  InlineLoading,
+} from "./loading-screen";
+export type {
+  LoadingScreenProps,
+  EmptyStateProps,
+  InlineEmptyProps,
+  InlineLoadingProps,
+} from "./loading-screen";
 
 export {
   humanizeNodeType,
@@ -50,3 +62,6 @@ export {
 
 export { ToastProvider, useToast } from "./toast";
 export type { ToastInput, ToastKind } from "./toast";
+
+export { UIcon } from "./uicon";
+export type { UIconProps } from "./uicon";

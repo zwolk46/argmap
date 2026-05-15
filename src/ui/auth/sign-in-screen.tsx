@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { Button, Spinner } from "../primitives";
 import { useAuth } from "./auth-context";
 
 /**
@@ -7,8 +8,11 @@ import { useAuth } from "./auth-context";
  * via the bottom link. Designed to be the only thing visible when the user
  * isn't authenticated; the App is gated behind `useAuth().user`.
  *
- * Visual: small centered card, system fonts, no design-token dependence
- * (these may not be ready at first paint).
+ * Visual: small centered card, design-token-driven typography and spacing
+ * so the surface reads as part of the rest of the app rather than a foreign
+ * pre-auth screen. Token fallbacks are intentionally omitted — `tokens.css`
+ * is imported by `main.tsx` before this component renders, so the variables
+ * are defined at first paint.
  */
 
 type Mode = "sign_in" | "sign_up";
@@ -21,6 +25,9 @@ export function SignInScreen(): ReactElement {
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [signup_success, setSignupSuccess] = React.useState(false);
+
+  const email_id = React.useId();
+  const password_id = React.useId();
 
   async function onSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
@@ -43,8 +50,48 @@ export function SignInScreen(): ReactElement {
   }
 
   if (loading) {
-    return <div style={{ padding: 24, fontFamily: "sans-serif" }}>Loading your workspace…</div>;
+    return (
+      <div
+        data-testid="sign-in-loading"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "var(--space-4)",
+          background: "var(--color-surface-canvas)",
+          fontFamily: "var(--font-sans)",
+          padding: "var(--space-5)",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            fontSize: "var(--font-size-xl)",
+            fontWeight: "var(--font-weight-semibold)",
+            color: "var(--color-text-primary)",
+            letterSpacing: "var(--letter-spacing-tight)",
+          }}
+        >
+          argmap
+        </span>
+        <Spinner size={20} />
+        <span
+          style={{
+            fontSize: "var(--font-size-sm)",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          Loading your workspace…
+        </span>
+      </div>
+    );
   }
+
+  // Once a sign-up email has been dispatched, lock the form so the user
+  // can't double-submit while waiting for the confirmation link.
+  const form_locked = busy || signup_success;
 
   return (
     <main
@@ -53,9 +100,9 @@ export function SignInScreen(): ReactElement {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "var(--color-surface-canvas, #faf8f4)",
-        fontFamily: "var(--font-sans, system-ui, sans-serif)",
-        padding: 24,
+        background: "var(--color-surface-canvas)",
+        fontFamily: "var(--font-sans)",
+        padding: "var(--space-5)",
       }}
     >
       <form
@@ -64,34 +111,35 @@ export function SignInScreen(): ReactElement {
         style={{
           width: "100%",
           maxWidth: 400,
-          background: "var(--color-surface-elevated, #ffffff)",
-          padding: "32px 28px",
-          borderRadius: 12,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.08)",
-          border: "1px solid var(--color-border-subtle, #e5e7eb)",
+          background: "var(--color-surface-elevated)",
+          padding: "var(--space-6) var(--space-5)",
+          borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-md)",
+          border: "var(--border-thin) solid var(--color-border-subtle)",
           display: "flex",
           flexDirection: "column",
-          gap: 16,
+          gap: "var(--space-4)",
         }}
       >
         <header>
           <h1
             style={{
-              fontSize: 20,
-              fontWeight: 600,
+              fontSize: "var(--font-size-xl)",
+              fontWeight: "var(--font-weight-semibold)",
               margin: 0,
-              marginBottom: 6,
-              color: "var(--color-text-primary, #111827)",
+              marginBottom: "var(--space-1)",
+              color: "var(--color-text-primary)",
+              letterSpacing: "var(--letter-spacing-tight)",
             }}
           >
             {mode === "sign_in" ? "Sign in to argmap" : "Create your argmap account"}
           </h1>
           <p
             style={{
-              fontSize: 13,
-              color: "var(--color-text-secondary, #6b7280)",
+              fontSize: "var(--font-size-base)",
+              color: "var(--color-text-secondary)",
               margin: 0,
-              lineHeight: 1.5,
+              lineHeight: "var(--line-height-normal)",
             }}
           >
             {mode === "sign_in"
@@ -100,28 +148,36 @@ export function SignInScreen(): ReactElement {
           </p>
         </header>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-          <span style={{ color: "var(--color-text-secondary, #6b7280)" }}>Email</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+          <label
+            htmlFor={email_id}
+            style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}
+          >
+            Email
+          </label>
           <input
+            id={email_id}
             data-testid="sign-in-email"
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={busy}
-            style={{
-              padding: "8px 10px",
-              fontSize: 14,
-              border: "1px solid var(--color-border-default, #d1d5db)",
-              borderRadius: 6,
-            }}
+            disabled={form_locked}
+            className="argmap-input"
+            style={{ fontSize: "var(--font-size-base)" }}
           />
-        </label>
+        </div>
 
-        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
-          <span style={{ color: "var(--color-text-secondary, #6b7280)" }}>Password</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+          <label
+            htmlFor={password_id}
+            style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}
+          >
+            Password
+          </label>
           <input
+            id={password_id}
             data-testid="sign-in-password"
             type="password"
             required
@@ -129,32 +185,56 @@ export function SignInScreen(): ReactElement {
             autoComplete={mode === "sign_in" ? "current-password" : "new-password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={busy}
-            style={{
-              padding: "8px 10px",
-              fontSize: 14,
-              border: "1px solid var(--color-border-default, #d1d5db)",
-              borderRadius: 6,
-            }}
+            disabled={form_locked}
+            className="argmap-input"
+            style={{ fontSize: "var(--font-size-base)" }}
           />
           {mode === "sign_up" ? (
-            <span style={{ fontSize: 11, color: "var(--color-text-tertiary, #9ca3af)" }}>
+            <span
+              style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-tertiary)",
+              }}
+            >
               Minimum 8 characters.
             </span>
           ) : null}
-        </label>
+          {mode === "sign_in" ? (
+            // TODO: wire up to `client.auth.resetPasswordForEmail(email)` once a
+            // reset-password flow lands in auth-context.tsx. Until then the link
+            // is rendered disabled so the affordance is discoverable without
+            // promising something the backend doesn't yet support.
+            <a
+              data-testid="sign-in-forgot-password"
+              href="#"
+              aria-disabled="true"
+              title="Coming soon"
+              onClick={(e) => e.preventDefault()}
+              style={{
+                marginTop: "var(--space-1)",
+                alignSelf: "flex-start",
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-tertiary)",
+                textDecoration: "none",
+                cursor: "not-allowed",
+              }}
+            >
+              Forgot password?
+            </a>
+          ) : null}
+        </div>
 
         {error ? (
           <div
             data-testid="sign-in-error"
             role="alert"
             style={{
-              padding: "8px 10px",
-              fontSize: 13,
-              background: "var(--color-severity-error-bg, #fee2e2)",
-              color: "var(--color-severity-error, #b91c1c)",
-              borderLeft: "3px solid var(--color-severity-error, #dc2626)",
-              borderRadius: 4,
+              padding: "var(--space-2) var(--space-3)",
+              fontSize: "var(--font-size-base)",
+              background: "var(--color-severity-error-bg)",
+              color: "var(--color-severity-error)",
+              borderLeft: "var(--border-medium) solid var(--color-severity-error)",
+              borderRadius: "var(--radius-sm)",
             }}
           >
             {error}
@@ -165,34 +245,25 @@ export function SignInScreen(): ReactElement {
             data-testid="sign-up-pending"
             role="status"
             style={{
-              padding: "8px 10px",
-              fontSize: 13,
-              background: "var(--color-background-success, #d1fae5)",
-              color: "var(--color-text-success, #065f46)",
-              borderLeft: "3px solid #10b981",
-              borderRadius: 4,
+              padding: "var(--space-2) var(--space-3)",
+              fontSize: "var(--font-size-base)",
+              background: "var(--color-status-satisfied-bg)",
+              color: "var(--color-status-satisfied)",
+              borderLeft: "var(--border-medium) solid var(--color-status-satisfied)",
+              borderRadius: "var(--radius-sm)",
             }}
           >
             Check your email for a confirmation link. Once confirmed, return here to sign in.
           </div>
         ) : null}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          size="lg"
           data-testid="sign-in-submit"
-          disabled={busy || email.length === 0 || password.length === 0}
-          style={{
-            padding: "10px 16px",
-            fontSize: 14,
-            fontWeight: 500,
-            background: busy
-              ? "var(--color-text-tertiary, #9ca3af)"
-              : "var(--color-mode-current-accent, #6366f1)",
-            color: "var(--color-text-on-accent, #ffffff)",
-            border: "none",
-            borderRadius: 6,
-            cursor: busy ? "default" : "pointer",
-          }}
+          disabled={form_locked || email.length === 0 || password.length === 0}
+          full_width
         >
           {busy
             ? mode === "sign_in"
@@ -201,47 +272,33 @@ export function SignInScreen(): ReactElement {
             : mode === "sign_in"
               ? "Sign in"
               : "Create account"}
-        </button>
+        </Button>
 
-        <div style={{ textAlign: "center", fontSize: 13 }}>
+        <div style={{ textAlign: "center", fontSize: "var(--font-size-base)" }}>
           {mode === "sign_in" ? (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setMode("sign_up");
                 setError(null);
                 setSignupSuccess(false);
               }}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--color-mode-current-accent, #6366f1)",
-                cursor: "pointer",
-                fontSize: 13,
-                padding: 0,
-              }}
             >
               Don't have an account? Create one.
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setMode("sign_in");
                 setError(null);
                 setSignupSuccess(false);
               }}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--color-mode-current-accent, #6366f1)",
-                cursor: "pointer",
-                fontSize: 13,
-                padding: 0,
-              }}
             >
               Already have an account? Sign in.
-            </button>
+            </Button>
           )}
         </div>
       </form>

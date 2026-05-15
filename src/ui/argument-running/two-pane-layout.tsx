@@ -44,7 +44,12 @@ export function TwoPaneLayout(props: TwoPaneLayoutProps): ReactElement {
       >
         {left}
       </aside>
-      <main
+      {/* P5: outer <main id="main"> lives in app-routes.tsx so we don't nest
+          <main> elements (invalid per HTML5). The right pane is the page's
+          primary content region, but a plain <div> here matches the
+          previous layout exactly and the parent <main> already exposes
+          this as the main landmark. */}
+      <div
         style={{
           gridRow: "1",
           gridColumn: "2",
@@ -55,7 +60,7 @@ export function TwoPaneLayout(props: TwoPaneLayoutProps): ReactElement {
         }}
       >
         {right}
-      </main>
+      </div>
       {bottom != null && (
         <div
           style={{

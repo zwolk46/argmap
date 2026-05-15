@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { EdgeRef, NodeRef, Edge } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
+import { Button } from "../../primitives";
 import { EdgeEditor } from "./editors";
 
 export interface InspectorEdgeProps {
@@ -35,9 +36,23 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
           borderBottom: "1px solid var(--color-border, #e5e7eb)",
         }}
       >
-        <div style={LABEL_STYLE}>Edge type</div>
-        <div style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: 500 }}>{edge.type}</div>
-        <div style={{ ...LABEL_STYLE, marginTop: "8px" }}>Direction</div>
+        <h3
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
+        >
+          Edge type
+        </h3>
+        <div
+          style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: "var(--font-weight-medium)" }}
+        >
+          {edge.type}
+        </div>
+        <h3
+          className="argmap-section-heading"
+          style={{ display: "block", marginTop: "var(--space-2)", marginBottom: "var(--space-1)" }}
+        >
+          Direction
+        </h3>
         <div
           style={{
             fontSize: "var(--font-size-xs, 11px)",
@@ -51,7 +66,11 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
 
       {/* Label */}
       <div>
-        <label style={LABEL_STYLE} htmlFor={`edge-label-${edge_id}`}>
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
+          htmlFor={`edge-label-${edge_id}`}
+        >
           Label
         </label>
         <input
@@ -65,7 +84,16 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
               partial: { label: e.currentTarget.value } as Partial<Edge>,
             });
           }}
-          style={INPUT_STYLE}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              (e.currentTarget as HTMLInputElement).blur();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              (e.currentTarget as HTMLInputElement).blur();
+            }
+          }}
+          className="argmap-input"
         />
       </div>
 
@@ -74,7 +102,11 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
 
       {/* Notes */}
       <div>
-        <label style={LABEL_STYLE} htmlFor={`edge-notes-${edge_id}`}>
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
+          htmlFor={`edge-notes-${edge_id}`}
+        >
           Notes
         </label>
         <textarea
@@ -88,7 +120,17 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
               partial: { notes: e.currentTarget.value } as Partial<Edge>,
             });
           }}
-          style={{ ...INPUT_STYLE, resize: "vertical", fontFamily: "inherit" }}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            }
+          }}
+          className="argmap-input"
+          style={{ resize: "vertical" }}
         />
       </div>
 
@@ -99,43 +141,16 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
           borderTop: "1px solid var(--color-border, #e5e7eb)",
         }}
       >
-        <button
-          type="button"
+        <Button
+          variant="destructive"
+          size="md"
           onClick={() => {
             frame_store.getState().applyPatch({ kind: "edge_removed", edge_id });
           }}
-          style={{
-            padding: "6px 12px",
-            background: "var(--color-danger-subtle, #fef2f2)",
-            color: "var(--color-danger, #dc2626)",
-            border: "1px solid var(--color-danger-border, #fca5a5)",
-            borderRadius: "var(--radius-sm, 4px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-sm, 13px)",
-          }}
         >
           Delete edge
-        </button>
+        </Button>
       </div>
     </div>
   );
 }
-
-import type * as React from "react";
-
-const LABEL_STYLE: React.CSSProperties = {
-  display: "block",
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-  marginBottom: "4px",
-};
-
-const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
-};

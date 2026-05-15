@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useRepository } from "@/state";
-import { ConfirmDialog } from "../primitives";
+import { Button, ConfirmDialog } from "../primitives";
 
 export function OnboardingPreferencesSection(): ReactElement {
   const { app_state_store } = useRepository();
@@ -25,7 +25,7 @@ export function OnboardingPreferencesSection(): ReactElement {
       <h3
         style={{
           fontSize: "var(--font-size-sm, 13px)",
-          fontWeight: 500,
+          fontWeight: "var(--font-weight-medium)",
           margin: 0,
         }}
       >
@@ -40,13 +40,14 @@ export function OnboardingPreferencesSection(): ReactElement {
       >
         Reset coachmarks and the welcome screen to see them again.
       </p>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
         data-testid="reset-coachmarks-button"
         onClick={() => setConfirmOpen(true)}
       >
         Reset coachmarks
-      </button>
+      </Button>
       <ConfirmDialog
         open={confirm_open}
         title="Reset coachmarks?"

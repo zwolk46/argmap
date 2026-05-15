@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { Authority, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
+import { Button } from "../../../primitives";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface AuthorityEditorProps {
@@ -11,28 +12,11 @@ export interface AuthorityEditorProps {
 
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
 
-const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
-};
-
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-};
-
 const CHIP_STYLE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
-  padding: "2px 8px",
+  gap: "var(--space-1)",
+  padding: "2px var(--space-2)",
   background: "var(--color-primary-subtle, #eff6ff)",
   color: "var(--color-primary, #2563eb)",
   borderRadius: "var(--radius-full, 9999px)",
@@ -66,7 +50,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
         <FieldAttributionDecoration node_id={node.id} field_path="short_label" label={sourceLabel}>
           <input
             type="text"
-            style={INPUT_STYLE}
+            className="argmap-input"
             defaultValue={node.short_label ?? ""}
             onBlur={(e) => patch({ short_label: e.currentTarget.value || undefined })}
           />
@@ -77,7 +61,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
         <FieldAttributionDecoration node_id={node.id} field_path="citation" label="Citation">
           <input
             type="text"
-            style={INPUT_STYLE}
+            className="argmap-input"
             defaultValue={node.citation}
             onBlur={(e) => patch({ citation: e.currentTarget.value })}
           />
@@ -87,10 +71,10 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
       {isLegal && (
         <>
           <div style={SECTION_STYLE}>
-            <label style={LABEL_STYLE}>Jurisdiction</label>
+            <label className="argmap-section-heading">Jurisdiction</label>
             <div
               style={{
-                marginTop: "4px",
+                marginTop: "var(--space-1)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "var(--space-1, 4px)",
@@ -98,7 +82,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
             >
               <input
                 type="text"
-                style={INPUT_STYLE}
+                className="argmap-input"
                 placeholder="Level (e.g. federal, state)"
                 defaultValue={node.jurisdiction?.level ?? ""}
                 onBlur={(e) => {
@@ -114,7 +98,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
               />
               <input
                 type="text"
-                style={INPUT_STYLE}
+                className="argmap-input"
                 placeholder="Region / Circuit"
                 defaultValue={node.jurisdiction?.region ?? ""}
                 onBlur={(e) => {
@@ -128,7 +112,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
               />
               <input
                 type="text"
-                style={INPUT_STYLE}
+                className="argmap-input"
                 placeholder="Court"
                 defaultValue={node.jurisdiction?.court ?? ""}
                 onBlur={(e) => {
@@ -157,19 +141,19 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
                 defaultChecked={node.is_binding ?? false}
                 onChange={(e) => patch({ is_binding: e.currentTarget.checked })}
               />
-              <span style={LABEL_STYLE}>Is Binding</span>
+              <span className="argmap-section-heading">Is Binding</span>
             </label>
           </div>
 
           <div style={SECTION_STYLE}>
-            <label style={LABEL_STYLE}>Binding In</label>
+            <label className="argmap-section-heading">Binding In</label>
             <div
               style={{
                 display: "flex",
                 flexWrap: "wrap",
                 gap: "var(--space-1, 4px)",
-                marginTop: "4px",
-                marginBottom: "4px",
+                marginTop: "var(--space-1)",
+                marginBottom: "var(--space-1)",
               }}
             >
               {(node.binding_in ?? []).map((j, i) => (
@@ -179,20 +163,9 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
                 </span>
               ))}
             </div>
-            <button
-              style={{
-                padding: "4px 10px",
-                border: "1px dashed var(--color-border, #e5e7eb)",
-                borderRadius: "var(--radius-sm, 4px)",
-                background: "transparent",
-                color: "var(--color-text-secondary, #6b7280)",
-                fontSize: "var(--font-size-sm, 13px)",
-                cursor: "pointer",
-              }}
-              onClick={on_pick_binding_in_jurisdiction}
-            >
+            <Button variant="ghost" size="sm" onClick={on_pick_binding_in_jurisdiction}>
               + Add jurisdiction
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -203,7 +176,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
             <FieldAttributionDecoration node_id={node.id} field_path="author" label="Author">
               <input
                 type="text"
-                style={INPUT_STYLE}
+                className="argmap-input"
                 defaultValue={node.author ?? ""}
                 onBlur={(e) => patch({ author: e.currentTarget.value || undefined })}
               />
@@ -218,7 +191,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
             >
               <input
                 type="text"
-                style={INPUT_STYLE}
+                className="argmap-input"
                 defaultValue={node.venue ?? ""}
                 onBlur={(e) => patch({ venue: e.currentTarget.value || undefined })}
               />
@@ -233,7 +206,7 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
             >
               <input
                 type="text"
-                style={INPUT_STYLE}
+                className="argmap-input"
                 defaultValue={node.position ?? ""}
                 onBlur={(e) => patch({ position: e.currentTarget.value || undefined })}
               />

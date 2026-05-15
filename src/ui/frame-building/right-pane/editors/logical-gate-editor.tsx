@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { LogicalGate } from "@/schema";
-import { humanizeGateType } from "../../../primitives";
+import { Button, humanizeGateType } from "../../../primitives";
 
 export interface LogicalGateEditorProps {
   node: LogicalGate;
@@ -10,32 +10,15 @@ export interface LogicalGateEditorProps {
 
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
 
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-};
-
 const CHIP_STYLE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
-  padding: "2px 8px",
+  gap: "var(--space-1)",
+  padding: "2px var(--space-2)",
   background: "var(--color-primary-subtle, #eff6ff)",
   color: "var(--color-primary, #2563eb)",
   borderRadius: "var(--radius-full, 9999px)",
   fontSize: "var(--font-size-sm, 13px)",
-};
-
-const SLOT_BUTTON_STYLE: React.CSSProperties = {
-  padding: "2px 8px",
-  border: "1px dashed var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  background: "transparent",
-  color: "var(--color-text-secondary, #6b7280)",
-  fontSize: "var(--font-size-sm, 13px)",
-  cursor: "pointer",
 };
 
 const GATE_TYPE_BADGE: React.CSSProperties = {
@@ -45,8 +28,8 @@ const GATE_TYPE_BADGE: React.CSSProperties = {
   border: "1px solid var(--color-border, #e5e7eb)",
   borderRadius: "var(--radius-sm, 4px)",
   fontSize: "var(--font-size-sm, 13px)",
-  fontWeight: 600,
-  letterSpacing: "0.05em",
+  fontWeight: "var(--font-weight-semibold)",
+  letterSpacing: "var(--letter-spacing-wide)",
 };
 
 function SlotRow({
@@ -69,18 +52,20 @@ function SlotRow({
         marginBottom: "var(--space-2, 8px)",
       }}
     >
-      <span style={{ ...LABEL_STYLE, minWidth: 80 }}>{label}</span>
+      <span className="argmap-section-heading" style={{ minWidth: 80 }}>
+        {label}
+      </span>
       {value ? (
         <span style={CHIP_STYLE}>{value}</span>
       ) : (
-        <button style={SLOT_BUTTON_STYLE} onClick={() => on_pick(slot, value)}>
+        <Button variant="ghost" size="sm" onClick={() => on_pick(slot, value)}>
           + Pick
-        </button>
+        </Button>
       )}
       {value && (
-        <button style={SLOT_BUTTON_STYLE} onClick={() => on_pick(slot, value)}>
+        <Button variant="ghost" size="sm" onClick={() => on_pick(slot, value)}>
           Change
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -92,8 +77,8 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
   return (
     <div>
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Gate Type</label>
-        <div style={{ marginTop: "4px" }}>
+        <label className="argmap-section-heading">Gate Type</label>
+        <div style={{ marginTop: "var(--space-1)" }}>
           <span style={GATE_TYPE_BADGE} title={node.gate_type}>
             {humanizeGateType(node.gate_type)}
           </span>
@@ -101,8 +86,8 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
       </div>
 
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Inputs</label>
-        <div style={{ marginTop: "4px" }}>
+        <label className="argmap-section-heading">Inputs</label>
+        <div style={{ marginTop: "var(--space-1)" }}>
           {(node.gate_type === "AND" || node.gate_type === "OR") && (
             <>
               {node.inputs.map((ref, i) => (
@@ -114,12 +99,13 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
                   on_pick={(slot, current) => on_pick_slot_source(slot, current)}
                 />
               ))}
-              <button
-                style={SLOT_BUTTON_STYLE}
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => on_pick_slot_source(`inputs.${node.inputs.length}`, undefined)}
               >
                 + Add input
-              </button>
+              </Button>
             </>
           )}
 

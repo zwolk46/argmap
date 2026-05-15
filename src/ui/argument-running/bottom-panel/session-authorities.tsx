@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Authority } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
+import { Button, InlineEmpty } from "../../primitives";
 import { SessionAuthorityRow } from "./session-authority-row";
 
 export interface SessionAuthoritiesProps {
@@ -8,9 +9,13 @@ export interface SessionAuthoritiesProps {
   on_highlight_on_canvas?: (node_ids: ReadonlyArray<string>) => void;
 }
 
+// Stable fallback so the Zustand selector below never returns a fresh array.
+// (See use-field-attribution.ts for the loop diagnosis.)
+const EMPTY_AUTHORITIES: ReadonlyArray<Authority> = [];
+
 export function SessionAuthorities(props: SessionAuthoritiesProps): React.ReactElement {
   const { session_store, now, generateId } = useRepository();
-  const authorities = useSessionStore((s) => s.session?.session_authorities ?? []);
+  const authorities = useSessionStore((s) => s.session?.session_authorities ?? EMPTY_AUTHORITIES);
 
   const [newly_added_id, setNewlyAddedId] = React.useState<string | null>(null);
 
@@ -50,46 +55,17 @@ export function SessionAuthorities(props: SessionAuthoritiesProps): React.ReactE
           borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
         }}
       >
-        <span
-          style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
-          Session authorities ({sorted.length})
-        </span>
-        <button
-          type="button"
-          data-testid="session-authority-add"
-          onClick={on_add}
-          style={{
-            background: "var(--color-background-accent, #dbeafe)",
-            color: "var(--color-text-accent, #1d4ed8)",
-            border: "none",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "2px 8px",
-          }}
-        >
+        <span className="argmap-section-heading">Session authorities ({sorted.length})</span>
+        <Button variant="ghost" size="sm" data-testid="session-authority-add" onClick={on_add}>
           + Add Authority
-        </button>
+        </Button>
       </header>
       <div style={{ flex: 1, overflowY: "auto" }}>
         {sorted.length === 0 ? (
-          <div
-            data-testid="session-authorities-empty"
-            style={{
-              padding: "var(--space-3, 12px)",
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-tertiary, #9ca3af)",
-            }}
-          >
+          <InlineEmpty testId="session-authorities-empty" density="compact">
             No session-scoped authorities yet. Use this list for case-specific citations you
             don&apos;t want to add to the Frame Authority library.
-          </div>
+          </InlineEmpty>
         ) : (
           sorted.map((a) => (
             <SessionAuthorityRow

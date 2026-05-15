@@ -77,7 +77,12 @@ export function OutlineTreeRow(props: OutlineTreeRowProps): ReactElement {
       onKeyDown={handleKeyDown}
       onFocus={on_focus}
     >
-      {/* Expand chevron */}
+      {/* Expand chevron. Intentionally not focusable: the parent `treeitem`
+          row already owns keyboard focus and handles Space → toggle_expanded
+          (see handleKeyDown above). Making the chevron a separate tab stop
+          would create a focusable-inside-focusable trap and force users to
+          tab into nested controls just to expand a row. `aria-hidden` keeps
+          AT from announcing it as a separate control. */}
       <span
         style={{
           width: "16px",

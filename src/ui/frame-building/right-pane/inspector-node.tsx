@@ -2,7 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { TypeIcon, humanizeNodeType } from "../../primitives";
+import { Button, TypeIcon, humanizeNodeType } from "../../primitives";
 import { InspectorValidationBlock } from "./inspector-validation-block";
 import { NODE_TYPE_EDITORS } from "./editors";
 import { OptionsBoxEditor } from "./options-box-editor";
@@ -57,20 +57,11 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
         }}
       >
         <TypeIcon node_type={node.type} />
-        <span style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: 500 }}>
+        <span
+          style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: "var(--font-weight-medium)" }}
+        >
           {humanizeNodeType(node.type)}
         </span>
-        {import.meta.env.DEV && (
-          <span
-            style={{
-              fontFamily: "monospace",
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-tertiary, #9ca3af)",
-            }}
-          >
-            #{node_id.slice(0, 8)}
-          </span>
-        )}
       </div>
 
       {/* Per-node-type editor */}
@@ -86,7 +77,11 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
 
       {/* Notes */}
       <div style={{ marginTop: "var(--space-3, 12px)" }}>
-        <label style={LABEL_STYLE} htmlFor={`notes-${node_id}`}>
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1)" }}
+          htmlFor={`notes-${node_id}`}
+        >
           Notes
         </label>
         <textarea
@@ -101,6 +96,16 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
               partial: { notes: e.currentTarget.value } as Partial<Node>,
             });
           }}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            }
+          }}
+          className="argmap-input"
           style={TEXTAREA_STYLE}
         />
       </div>
@@ -123,8 +128,9 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
           borderTop: "1px solid var(--color-border, #e5e7eb)",
         }}
       >
-        <button
-          type="button"
+        <Button
+          variant="destructive"
+          size="md"
           disabled={node.type === "RootQuestion"}
           title={
             node.type === "RootQuestion"
@@ -132,26 +138,9 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
               : "Delete node"
           }
           onClick={on_request_delete}
-          style={{
-            padding: "6px 12px",
-            background:
-              node.type === "RootQuestion" ? "transparent" : "var(--color-danger-subtle, #fef2f2)",
-            color:
-              node.type === "RootQuestion"
-                ? "var(--color-text-tertiary, #9ca3af)"
-                : "var(--color-danger, #dc2626)",
-            border: "1px solid",
-            borderColor:
-              node.type === "RootQuestion"
-                ? "var(--color-border, #e5e7eb)"
-                : "var(--color-danger-border, #fca5a5)",
-            borderRadius: "var(--radius-sm, 4px)",
-            cursor: node.type === "RootQuestion" ? "not-allowed" : "pointer",
-            fontSize: "var(--font-size-sm, 13px)",
-          }}
         >
           Delete node
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -178,21 +167,6 @@ function useEditMode(
   return [mode, setMode];
 }
 
-const LABEL_STYLE: React.CSSProperties = {
-  display: "block",
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-  marginBottom: "4px",
-};
-
 const TEXTAREA_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
   resize: "vertical",
-  fontFamily: "inherit",
 };

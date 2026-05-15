@@ -1,6 +1,15 @@
 import * as React from "react";
-import type { NodeRef, Authority } from "@/schema";
+import type { NodeRef, Authority, Node } from "@/schema";
 import { useFrameStore, useSessionStore, useRepository } from "@/state";
+import { Button } from "../../primitives";
+
+// Stable empty-array fallbacks. Zustand selectors must return a reference
+// that is `Object.is`-stable across renders when the underlying value hasn't
+// changed; returning a fresh `[]` from a `?? []` fallback (or computing a
+// fresh array via `.filter(...)` inside the selector) trips React's
+// "Maximum update depth exceeded" loop via useSyncExternalStore.
+const EMPTY_NODES: ReadonlyArray<Node> = [];
+const EMPTY_AUTHORITIES: ReadonlyArray<Authority> = [];
 
 export interface AuthorityAttachmentSectionProps {
   value: NodeRef | null;
@@ -36,12 +45,17 @@ export function AuthorityAttachmentSection(
   const flavor = flavor_override ?? (frame_flavor === "academic" ? "academic" : undefined);
 
   const visible = authorityPickerVisible(mode, flavor, frame_authority_opted_in);
-  const frame_authorities = useFrameStore((s) =>
-    (s.frame_version?.nodes ?? []).filter((n): n is Authority => n.type === "Authority"),
+  // Read the nodes array (or the stable empty fallback) from the store, then
+  // derive `frame_authorities` in a memoized step. Filtering inside the
+  // selector would return a new array each call and loop us.
+  const all_frame_nodes = useFrameStore((s) => s.frame_version?.nodes ?? EMPTY_NODES);
+  const frame_authorities = React.useMemo(
+    () => all_frame_nodes.filter((n): n is Authority => n.type === "Authority"),
+    [all_frame_nodes],
   );
   const session_authorities = useSessionStore(
-    (s) => (s.session?.session_authorities ?? []) as Authority[],
-  );
+    (s) => s.session?.session_authorities ?? EMPTY_AUTHORITIES,
+  ) as ReadonlyArray<Authority>;
 
   const { session_store, now, generateId } = useRepository();
   const [creating_new, setCreatingNew] = React.useState(false);
@@ -93,13 +107,9 @@ export function AuthorityAttachmentSection(
           data-testid="authority-picker"
           value={value ?? ""}
           onChange={(e) => on_change(e.target.value || null)}
+          className="argmap-input"
           style={{
-            width: "100%",
-            padding: "4px 6px",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md, 6px)",
             fontSize: "var(--font-size-xs, 11px)",
-            background: "var(--color-surface-elevated, #ffffff)",
           }}
         >
           <option value="">(none)</option>
@@ -140,78 +150,60 @@ export function AuthorityAttachmentSection(
             value={new_name}
             placeholder="Name"
             onChange={(e) => setNewName(e.target.value)}
-            style={input_style()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit_new();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setCreatingNew(false);
+              }
+            }}
+            className="argmap-input"
+            style={{ fontSize: "var(--font-size-xs, 11px)" }}
           />
           <input
             data-testid="authority-new-citation"
             value={new_citation}
             placeholder="Citation"
             onChange={(e) => setNewCitation(e.target.value)}
-            style={input_style()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit_new();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setCreatingNew(false);
+              }
+            }}
+            className="argmap-input"
+            style={{ fontSize: "var(--font-size-xs, 11px)" }}
           />
           <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="md"
               data-testid="authority-new-save"
               onClick={commit_new}
-              style={primary_btn_style()}
             >
               Save
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreatingNew(false)}
-              style={secondary_btn_style()}
-            >
+            </Button>
+            <Button variant="secondary" size="md" onClick={() => setCreatingNew(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           data-testid="authority-new-toggle"
           onClick={() => setCreatingNew(true)}
-          style={secondary_btn_style()}
+          style={{ alignSelf: "flex-start" }}
         >
           + New session {label.toLowerCase()}
-        </button>
+        </Button>
       )}
     </div>
   );
-}
-
-function input_style(): React.CSSProperties {
-  return {
-    padding: "4px 6px",
-    border: "var(--border-thin) solid var(--color-border-tertiary)",
-    borderRadius: "var(--border-radius-md, 6px)",
-    fontSize: "var(--font-size-xs, 11px)",
-    background: "var(--color-surface-elevated, #ffffff)",
-  };
-}
-
-function primary_btn_style(): React.CSSProperties {
-  return {
-    background: "var(--color-background-accent, #dbeafe)",
-    color: "var(--color-text-accent, #1d4ed8)",
-    border: "none",
-    borderRadius: "var(--border-radius-md, 6px)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
-    padding: "4px 10px",
-  };
-}
-
-function secondary_btn_style(): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "var(--border-thin) solid var(--color-border-tertiary)",
-    borderRadius: "var(--border-radius-md, 6px)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
-    padding: "4px 10px",
-    color: "var(--color-text-secondary, #6b7280)",
-    alignSelf: "flex-start",
-  };
 }

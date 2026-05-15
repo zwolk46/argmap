@@ -1,40 +1,15 @@
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
+import { Button } from "../../primitives";
 
 export interface ModeFlavorSectionProps {
   on_open_mode_change_dialog?: (target: "mode" | "flavor") => void;
 }
 
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-xs, 11px)",
-  fontWeight: 600,
-  color: "var(--color-text-tertiary, #9ca3af)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  display: "block",
-  marginBottom: "var(--space-1, 4px)",
-};
-
 const VALUE_STYLE: React.CSSProperties = {
   fontSize: "var(--font-size-sm, 13px)",
   color: "var(--color-text-primary, #111827)",
-  fontWeight: 500,
-};
-
-const CHANGE_BTN_STYLE: React.CSSProperties = {
-  padding: "var(--space-1, 4px) var(--space-3, 12px)",
-  fontSize: "var(--font-size-xs, 11px)",
-  border: "1px solid var(--color-border-default, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  cursor: "pointer",
-  background: "var(--color-surface-pane, #f9fafb)",
-  color: "var(--color-text-secondary, #6b7280)",
-};
-
-const DISABLED_BTN_STYLE: React.CSSProperties = {
-  ...CHANGE_BTN_STYLE,
-  cursor: "not-allowed",
-  opacity: 0.5,
+  fontWeight: "var(--font-weight-medium)",
 };
 
 export function ModeFlavorSection({
@@ -62,28 +37,38 @@ export function ModeFlavorSection({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
       <div>
-        <span style={LABEL_STYLE}>Mode</span>
+        <h3
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+        >
+          Mode
+        </h3>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={VALUE_STYLE}>{mode_label}</span>
-          <button
-            type="button"
-            style={can_change ? CHANGE_BTN_STYLE : DISABLED_BTN_STYLE}
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={!can_change}
             title={can_change ? undefined : disabled_title}
             onClick={() => on_open_mode_change_dialog?.("mode")}
           >
             Change mode
-          </button>
+          </Button>
         </div>
       </div>
 
       <div>
-        <span style={LABEL_STYLE}>Flavor</span>
+        <h3
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+        >
+          Flavor
+        </h3>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={VALUE_STYLE}>{flavor_label}</span>
-          <button
-            type="button"
-            style={can_change && !flavor_disabled ? CHANGE_BTN_STYLE : DISABLED_BTN_STYLE}
+          <Button
+            variant="secondary"
+            size="sm"
             disabled={!can_change || flavor_disabled}
             title={
               !can_change ? disabled_title : flavor_disabled ? flavor_disabled_title : undefined
@@ -94,7 +79,7 @@ export function ModeFlavorSection({
             }}
           >
             Change flavor
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -103,16 +103,8 @@ export function PremiseReuseSuggestions(props: PremiseReuseSuggestionsProps): Re
         border: "var(--border-thin) solid var(--color-border-tertiary)",
       }}
     >
-      <span
-        style={{
-          fontSize: "var(--font-size-xs, 11px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        }}
-      >
-        Reuse existing premise
-      </span>
+      <span className="argmap-section-heading">Reuse existing premise</span>
+      {/* KEEP RAW: dropdown menu rows (list-item buttons), not the standard Button taxonomy. */}
       {ranked.map(({ premise }) => (
         <button
           key={premise.id}
@@ -126,7 +118,7 @@ export function PremiseReuseSuggestions(props: PremiseReuseSuggestionsProps): Re
             cursor: "pointer",
             fontSize: "var(--font-size-xs, 11px)",
             color: "var(--color-text-primary, #111827)",
-            padding: "4px 6px",
+            padding: "var(--space-1)",
             borderRadius: "var(--border-radius-md, 6px)",
           }}
         >

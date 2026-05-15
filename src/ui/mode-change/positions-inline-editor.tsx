@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { Position } from "@/schema";
+import { Button } from "../primitives";
 
 export interface PositionsInlineEditorProps {
   staged_positions: Position[];
@@ -45,11 +46,13 @@ export function PositionsInlineEditor(props: PositionsInlineEditorProps): ReactE
           style={{ display: "flex", gap: "var(--space-2, 8px)", alignItems: "center" }}
         >
           <span style={{ fontSize: "var(--font-size-sm, 13px)" }}>{p.label}</span>
+          {/* KEEP RAW: tiny inline × glyph in a staged-position row; bespoke micro-control. */}
           <button
             type="button"
             data-testid="remove-staged-position"
             onClick={() => props.onPositionRemoved(p.id)}
             style={{ background: "transparent", border: "none", cursor: "pointer" }}
+            aria-label={`Remove staged position ${p.label}`}
           >
             ×
           </button>
@@ -63,21 +66,25 @@ export function PositionsInlineEditor(props: PositionsInlineEditorProps): ReactE
           data-testid="position-draft-input"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Position label"
-          style={{
-            flex: 1,
-            padding: "var(--space-1, 4px) var(--space-2, 8px)",
-            fontSize: "var(--font-size-sm, 13px)",
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commitDraft();
+            }
           }}
+          placeholder="Position label"
+          className="argmap-input"
+          style={{ flex: 1 }}
         />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="sm"
           data-testid="position-add-button"
           onClick={commitDraft}
           disabled={!draft.trim()}
         >
           + Add
-        </button>
+        </Button>
       </div>
     </div>
   );

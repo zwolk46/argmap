@@ -135,11 +135,14 @@ export function Drawer({
   const baseStyle: React.CSSProperties = {
     position: "fixed",
     background: "var(--color-surface-elevated)",
-    boxShadow: "var(--shadow-md)",
+    boxShadow: "var(--shadow-lg)",
     display: "flex",
     flexDirection: "column",
     transition: "transform var(--duration-medium) var(--ease-emphasized)",
-    zIndex: 100,
+    // Above the sticky top bar (50) so the drawer overlay reads as on top
+    // of chrome. Below dialogs (1000) so confirmation modals can stack
+    // above an open drawer.
+    zIndex: 80,
   };
 
   let positionalStyle: React.CSSProperties;

@@ -1,28 +1,6 @@
 import { useState, useEffect, type ReactElement } from "react";
 import { useFrameStore, useRepository } from "@/state";
 
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-xs, 11px)",
-  fontWeight: 600,
-  color: "var(--color-text-tertiary, #9ca3af)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  marginBottom: "var(--space-1, 4px)",
-  display: "block",
-};
-
-const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "var(--space-2, 8px) var(--space-3, 12px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
-  background: "var(--color-surface-pane, #f9fafb)",
-  border: "var(--border-thin, 1px) solid var(--color-border-default, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
 export function MetadataSection(): ReactElement | null {
   const frame = useFrameStore((s) => s.frame);
   const { frame_store } = useRepository();
@@ -83,44 +61,81 @@ export function MetadataSection(): ReactElement | null {
       )}
 
       <div>
-        <label style={LABEL_STYLE} htmlFor="metadata-title">
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          htmlFor="metadata-title"
+        >
           Title
         </label>
         <input
           id="metadata-title"
           type="text"
           value={title}
-          style={INPUT_STYLE}
+          className="argmap-input"
           onChange={(e) => setTitle(e.target.value)}
           onBlur={commitTitle}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+            else if (e.key === "Escape") {
+              setTitle(frame?.title ?? "");
+              (e.currentTarget as HTMLInputElement).blur();
+            }
+          }}
         />
       </div>
 
       <div>
-        <label style={LABEL_STYLE} htmlFor="metadata-description">
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          htmlFor="metadata-description"
+        >
           Description
         </label>
         <textarea
           id="metadata-description"
           value={description}
           rows={3}
-          style={{ ...INPUT_STYLE, resize: "vertical" }}
+          className="argmap-input"
+          style={{ resize: "vertical" }}
           onChange={(e) => setDescription(e.target.value)}
           onBlur={commitDescription}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              setDescription(frame?.description ?? "");
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            }
+          }}
         />
       </div>
 
       <div>
-        <label style={LABEL_STYLE} htmlFor="metadata-tags">
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          htmlFor="metadata-tags"
+        >
           Tags (comma-separated)
         </label>
         <input
           id="metadata-tags"
           type="text"
           value={tags_raw}
-          style={INPUT_STYLE}
+          className="argmap-input"
           onChange={(e) => setTagsRaw(e.target.value)}
           onBlur={commitTags}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+            else if (e.key === "Escape") {
+              setTagsRaw((frame?.tags ?? []).join(", "));
+              (e.currentTarget as HTMLInputElement).blur();
+            }
+          }}
         />
       </div>
     </div>

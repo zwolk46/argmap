@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { Drawer, DrawerHeader, DrawerBody } from "../../primitives";
+import { Drawer, DrawerHeader, DrawerBody, IconButton } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 import { MetadataSection } from "./metadata-section";
 import { ModeFlavorSection } from "./mode-flavor-section";
 import { JurisdictionSection } from "./jurisdiction-section";
@@ -29,24 +30,12 @@ export function FrameSettingsPanel({
   const mode = useFrameStore((s) => s.frame?.mode);
 
   return (
-    <Drawer open={open} onClose={on_close} width="400px">
+    <Drawer open={open} onClose={on_close} width="420px" aria_label="Frame settings">
       <DrawerHeader>
         <span>Frame settings</span>
-        <button
-          type="button"
-          onClick={on_close}
-          aria-label="Close frame settings"
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "var(--font-size-md, 14px)",
-            color: "var(--color-text-tertiary, #9ca3af)",
-            padding: "var(--space-1, 4px)",
-          }}
-        >
-          ✕
-        </button>
+        <IconButton aria-label="Close frame settings" onClick={on_close} size="sm">
+          <UIcon name="times" size={16} />
+        </IconButton>
       </DrawerHeader>
 
       <DrawerBody>

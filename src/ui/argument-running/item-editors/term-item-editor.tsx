@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { NodeRef, Term, Interpretation, Node, Edge } from "@/schema";
 import { useSessionStore, useRepository, useFrameStore } from "@/state";
+import { Button } from "../../primitives";
 import { PremiseAuthoringSection, type PremiseAuthoringResult } from "./premise-authoring-section";
 import { AuthorityAttachmentSection } from "./authority-attachment-section";
 import { NotesField } from "./notes-field";
@@ -74,6 +75,15 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
   return (
     <div
       data-testid="term-item-editor"
+      onKeyDown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && can_save) {
+          e.preventDefault();
+          on_save();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          on_close();
+        }
+      }}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -91,16 +101,7 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
         >
           {node.name}
         </h3>
-        <span
-          style={{
-            fontSize: "10px",
-            color: "var(--color-text-tertiary, #9ca3af)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
-          Term
-        </span>
+        <span className="argmap-section-heading">Term</span>
       </header>
 
       {node.linked_to ? (
@@ -188,43 +189,18 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
           gap: "var(--space-1, 4px)",
         }}
       >
-        <button
-          type="button"
-          data-testid="term-editor-cancel"
-          onClick={on_close}
-          style={{
-            background: "transparent",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "4px 10px",
-            color: "var(--color-text-secondary, #6b7280)",
-          }}
-        >
+        <Button variant="secondary" size="md" data-testid="term-editor-cancel" onClick={on_close}>
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
           data-testid="term-editor-save"
           onClick={on_save}
           disabled={!can_save}
-          style={{
-            background: can_save
-              ? "var(--color-background-accent, #dbeafe)"
-              : "var(--color-background-secondary, #f3f4f6)",
-            color: can_save
-              ? "var(--color-text-accent, #1d4ed8)"
-              : "var(--color-text-tertiary, #9ca3af)",
-            border: "none",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: can_save ? "pointer" : "default",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "4px 10px",
-          }}
         >
           Save
-        </button>
+        </Button>
       </footer>
     </div>
   );

@@ -29,14 +29,7 @@ export function InspectorValidationBlock(
         gap: "var(--space-2)",
       }}
     >
-      <div
-        className="argmap-section-heading"
-        style={{
-          textTransform: "uppercase",
-        }}
-      >
-        Validation
-      </div>
+      <h3 className="argmap-section-heading">Validation</h3>
       {results.map((r, i) => {
         const tone =
           r.severity === "error"

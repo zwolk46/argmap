@@ -24,16 +24,7 @@ export function FieldAttributionDecoration(props: FieldAttributionDecorationProp
           marginBottom: "var(--space-1, 4px)",
         }}
       >
-        <label
-          style={{
-            textTransform: "uppercase",
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
-            letterSpacing: "0.05em",
-          }}
-        >
-          {label}
-        </label>
+        <label className="argmap-section-heading">{label}</label>
         {attribution && <AiAttributionChip record={attribution} />}
       </div>
       {children}

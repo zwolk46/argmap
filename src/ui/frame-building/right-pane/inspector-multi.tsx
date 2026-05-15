@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { NodeRef, EdgeRef } from "@/schema";
 import { useFrameStore } from "@/state";
+import { Button } from "../../primitives";
 
 export interface InspectorMultiProps {
   node_ids: ReadonlyArray<NodeRef>;
@@ -33,7 +34,11 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
         }}
       >
         <div
-          style={{ fontSize: "var(--font-size-sm, 13px)", fontWeight: 500, marginBottom: "4px" }}
+          style={{
+            fontSize: "var(--font-size-sm, 13px)",
+            fontWeight: "var(--font-weight-medium)",
+            marginBottom: "4px",
+          }}
         >
           Multi-selection
         </div>
@@ -51,7 +56,7 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
         {node_types.length > 0 && (
           <div
             style={{
-              marginTop: "4px",
+              marginTop: "var(--space-1)",
               fontSize: "var(--font-size-xs, 11px)",
               color: "var(--color-text-tertiary, #9ca3af)",
             }}
@@ -64,33 +69,13 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
       {/* Bulk delete */}
       {node_count > 0 && (
         <div>
-          <div
-            style={{
-              textTransform: "uppercase",
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-secondary, #6b7280)",
-              letterSpacing: "0.05em",
-              marginBottom: "8px",
-            }}
-          >
+          <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-2)" }}>
             Bulk actions
-          </div>
-          <button
-            type="button"
-            onClick={() => on_request_delete_multi(node_ids)}
-            style={{
-              padding: "6px 12px",
-              background: "var(--color-danger-subtle, #fef2f2)",
-              color: "var(--color-danger, #dc2626)",
-              border: "1px solid var(--color-danger-border, #fca5a5)",
-              borderRadius: "var(--radius-sm, 4px)",
-              cursor: "pointer",
-              fontSize: "var(--font-size-sm, 13px)",
-            }}
-          >
+          </h3>
+          <Button variant="destructive" size="md" onClick={() => on_request_delete_multi(node_ids)}>
             Delete {node_count} node{node_count !== 1 ? "s" : ""}
             {edge_count > 0 ? ` and ${edge_count} edge${edge_count !== 1 ? "s" : ""}` : ""}
-          </button>
+          </Button>
         </div>
       )}
 

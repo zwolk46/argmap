@@ -66,7 +66,8 @@ export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement
           data-testid="reattach-target-select"
           value={resolution.target_node_id ?? ""}
           onChange={(e) => handleTargetChange(e.target.value as NodeRef)}
-          style={{ alignSelf: "flex-end", fontSize: "var(--font-size-sm, 13px)" }}
+          className="argmap-input"
+          style={{ alignSelf: "flex-end", width: "auto", fontSize: "var(--font-size-sm, 13px)" }}
         >
           {candidate.reattach_candidates.map((c) => (
             <option key={c.target_node_id} value={c.target_node_id}>

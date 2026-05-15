@@ -6,6 +6,7 @@ import { VersionTreeRow } from "./version-tree-row";
 import { buildVersionTreeShape, filterByMilestone } from "./version-tree-shape";
 import type { MilestoneFilterValue } from "./milestone-filter";
 import { useReduceMotion } from "../hooks";
+import { InlineEmpty } from "../primitives";
 
 export type VersionTreeEntityKind = "frame" | "session";
 
@@ -55,19 +56,7 @@ export function VersionTree(props: VersionTreeProps): ReactElement {
       entity_kind === "session"
         ? "No session milestones yet."
         : "No milestones yet — save one to mark a meaningful waypoint.";
-    return (
-      <div
-        data-testid="version-tree-empty"
-        style={{
-          padding: "var(--space-4, 16px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
-          fontSize: "var(--font-size-sm, 13px)",
-          fontStyle: "italic",
-        }}
-      >
-        {empty_msg}
-      </div>
-    );
+    return <InlineEmpty testId="version-tree-empty">{empty_msg}</InlineEmpty>;
   }
 
   return (

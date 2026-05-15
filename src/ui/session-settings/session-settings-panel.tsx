@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, IconButton, Button } from "../primitives";
+import { UIcon } from "../primitives/uicon";
 import { MetadataSection } from "./metadata-section";
 import { G6RemoveRewriteSection } from "./g6-remove-rewrite-section";
 import { G12AdvisoryToggleSection } from "./g12-advisory-toggle-section";
@@ -24,18 +25,7 @@ export function SessionSettingsPanel(props: SessionSettingsPanelProps): ReactEle
           aria-label="Close session settings"
           onClick={props.on_close}
         >
-          <svg
-            width={14}
-            height={14}
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            aria-hidden
-          >
-            <path d="M4 4l8 8M12 4l-8 8" />
-          </svg>
+          <UIcon name="times" size={16} />
         </IconButton>
       </DrawerHeader>
       <DrawerBody>

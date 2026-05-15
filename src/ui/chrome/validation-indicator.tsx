@@ -39,6 +39,7 @@ export function ValidationIndicator({
       : `${count} ${severity === "error" ? SEVERITY_TEXT.error : SEVERITY_TEXT.warning}${count !== 1 ? "s" : ""}`;
 
   return (
+    // KEEP RAW: pill-shaped status indicator with severity-driven tone; not expressible via Button variants.
     <button
       type="button"
       data-testid="validation-indicator"

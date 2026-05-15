@@ -2,6 +2,7 @@ import * as React from "react";
 import type { OutputViewPayload, SessionShape } from "@/state";
 import { useAiSuggestion } from "@/ui";
 import { Button } from "../../primitives/button";
+import { EmptyState } from "../../primitives/loading-screen";
 
 export interface ProseTabProps {
   payload: OutputViewPayload | null;
@@ -31,19 +32,16 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
   const aiSuggestion = useAiSuggestion("session");
 
   if (!payload || !payload.prose) {
+    const shape = payload?.shape;
+    const label =
+      shape === "incomplete" ? "Not enough to write a conclusion yet" : "No prose to render yet";
+    const description =
+      shape === "incomplete"
+        ? "Add premises and answers in the Interview pane on the left. Once the runtime can produce a conclusion, the prose write-up appears here."
+        : "Prose appears once the session resolves. Switch to Path overlay to see the structure on the canvas.";
     return (
-      <div
-        data-testid="prose-tab-empty"
-        style={{
-          padding: "var(--space-6)",
-          color: "var(--color-text-tertiary)",
-          fontSize: "var(--font-size-sm)",
-          fontFamily: "var(--font-serif)",
-          fontStyle: "italic",
-          textAlign: "center",
-        }}
-      >
-        No prose available yet.
+      <div data-testid="prose-tab-empty" style={{ height: "100%" }}>
+        <EmptyState label={label} description={description} />
       </div>
     );
   }
@@ -164,7 +162,7 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
                   textTransform: "uppercase",
                 }}
               >
-                <span aria-hidden style={{ fontSize: "12px" }}>
+                <span aria-hidden style={{ fontSize: "var(--font-size-sm)" }}>
                   ✦
                 </span>
                 AI rewrite

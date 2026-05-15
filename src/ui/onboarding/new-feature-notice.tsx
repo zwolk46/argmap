@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Pill } from "../primitives";
+import { Button, Pill } from "../primitives";
 
 export interface NewFeatureNoticeProps {
   title: string;
@@ -36,7 +36,9 @@ export function NewFeatureNotice(props: NewFeatureNoticeProps): ReactElement {
         >
           New
         </Pill>
-        <span style={{ fontWeight: 500, fontSize: "var(--font-size-sm, 13px)" }}>
+        <span
+          style={{ fontWeight: "var(--font-weight-medium)", fontSize: "var(--font-size-sm, 13px)" }}
+        >
           {props.title}
         </span>
       </header>
@@ -50,24 +52,23 @@ export function NewFeatureNotice(props: NewFeatureNoticeProps): ReactElement {
         }}
       >
         {props.on_learn_more ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="new-feature-learn-more"
             onClick={props.on_learn_more}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--color-mode-current-accent, #1d4ed8)",
-              fontSize: "var(--font-size-xs, 11px)",
-              cursor: "pointer",
-            }}
           >
             Tell me more
-          </button>
+          </Button>
         ) : null}
-        <button type="button" data-testid="new-feature-dismiss" onClick={props.on_dismiss}>
+        <Button
+          variant="secondary"
+          size="md"
+          data-testid="new-feature-dismiss"
+          onClick={props.on_dismiss}
+        >
           Dismiss
-        </button>
+        </Button>
       </div>
     </div>
   );

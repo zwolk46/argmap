@@ -8,6 +8,7 @@ import type {
   Node,
 } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
+import { Button } from "../../../primitives";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface CheckpointEditorProps {
@@ -18,28 +19,14 @@ export interface CheckpointEditorProps {
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
 
 const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
   resize: "vertical",
-};
-
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
 };
 
 const CHIP_STYLE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
-  padding: "2px 8px",
+  gap: "var(--space-1)",
+  padding: "2px var(--space-2)",
   background: "var(--color-primary-subtle, #eff6ff)",
   color: "var(--color-primary, #2563eb)",
   borderRadius: "var(--radius-full, 9999px)",
@@ -84,6 +71,7 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
         <FieldAttributionDecoration node_id={node.id} field_path="question" label="Question">
           <textarea
             rows={3}
+            className="argmap-input"
             style={INPUT_STYLE}
             defaultValue={node.question}
             onBlur={(e) => patch({ question: e.currentTarget.value })}
@@ -92,20 +80,25 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
       </div>
 
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Answer Type</label>
-        <div style={{ display: "flex", gap: "var(--space-1, 4px)", marginTop: "4px" }}>
+        <label className="argmap-section-heading">Answer Type</label>
+        <div style={{ display: "flex", gap: "var(--space-1, 4px)", marginTop: "var(--space-1)" }}>
+          {/* KEEP RAW: pill-toggles for answer-type selection, not the standard Button taxonomy. */}
           {ANSWER_TYPE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
+              type="button"
               style={{
-                padding: "4px 10px",
+                padding: "var(--space-1) 10px",
                 border: "1px solid var(--color-border, #e5e7eb)",
                 borderRadius: "var(--radius-sm, 4px)",
                 fontSize: "var(--font-size-sm, 13px)",
                 cursor: "pointer",
                 background:
                   node.answer_type === opt.value ? "var(--color-primary, #2563eb)" : "transparent",
-                color: node.answer_type === opt.value ? "#fff" : "var(--color-text, #111827)",
+                color:
+                  node.answer_type === opt.value
+                    ? "var(--color-text-on-accent)"
+                    : "var(--color-text, #111827)",
               }}
               onClick={() => patch({ answer_type: opt.value })}
             >
@@ -117,10 +110,10 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
 
       {(node.answer_type === "multiple_choice" || node.answer_type === "graded") && (
         <div style={SECTION_STYLE}>
-          <label style={LABEL_STYLE}>Options</label>
+          <label className="argmap-section-heading">Options</label>
           <div
             style={{
-              marginTop: "4px",
+              marginTop: "var(--space-1)",
               display: "flex",
               flexDirection: "column",
               gap: "var(--space-2, 8px)",
@@ -133,7 +126,8 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
               >
                 <input
                   type="text"
-                  style={{ ...INPUT_STYLE, resize: undefined, flex: 1 }}
+                  className="argmap-input"
+                  style={{ flex: 1 }}
                   defaultValue={opt.label}
                   onBlur={(e) => updateOption(opt.id, { label: e.currentTarget.value })}
                   placeholder="Option label"
@@ -143,21 +137,14 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
                     <span>{opt.target_node_id}</span>
                   </span>
                 ) : (
-                  <button
-                    style={{
-                      padding: "2px 8px",
-                      border: "1px dashed var(--color-border, #e5e7eb)",
-                      borderRadius: "var(--radius-sm, 4px)",
-                      background: "transparent",
-                      color: "var(--color-text-secondary, #6b7280)",
-                      fontSize: "var(--font-size-sm, 13px)",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                    }}
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => on_pick_option_target(opt.id)}
+                    style={{ whiteSpace: "nowrap" }}
                   >
                     + Target
-                  </button>
+                  </Button>
                 )}
               </div>
             ))}
@@ -181,14 +168,15 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
                 defaultChecked={node.requires_authority}
                 onChange={(e) => patch({ requires_authority: e.currentTarget.checked })}
               />
-              <span style={LABEL_STYLE}>Requires Authority</span>
+              <span className="argmap-section-heading">Requires Authority</span>
             </label>
           </div>
 
           <div style={SECTION_STYLE}>
-            <label style={LABEL_STYLE}>Burden Level</label>
+            <label className="argmap-section-heading">Burden Level</label>
             <select
-              style={{ ...INPUT_STYLE, resize: undefined, marginTop: "4px" }}
+              className="argmap-input"
+              style={{ marginTop: "var(--space-1)" }}
               defaultValue={node.burden_level ?? ""}
               onChange={(e) =>
                 patch({

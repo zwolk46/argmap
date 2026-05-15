@@ -17,6 +17,17 @@ export function StructuralEdge(props: EdgeProps<RFEdge<FrameCanvasEdgeData>>): R
   });
 
   const is_gate = data?.gate_glyph !== undefined;
+  const on_primary_path = data?.on_primary_path === true;
+
+  // Primary-path edges get the mode accent color + thicker stroke so the
+  // resolved route from Root Question to Conclusion is visually traceable.
+  // Off-path edges stay quiet neutral. Without this distinction the canvas
+  // in argument-running mode showed only status badges and the user could
+  // not see "the path".
+  const stroke = on_primary_path
+    ? "var(--color-mode-current-accent)"
+    : "var(--color-edge-structural)";
+  const strokeWidth = on_primary_path ? 2.25 : 1;
 
   return (
     <>
@@ -24,8 +35,10 @@ export function StructuralEdge(props: EdgeProps<RFEdge<FrameCanvasEdgeData>>): R
         path={edgePath}
         markerEnd={markerEnd}
         style={{
-          stroke: "var(--color-edge-structural)",
-          strokeWidth: 1,
+          stroke,
+          strokeWidth,
+          transition:
+            "stroke var(--duration-medium) var(--ease-standard), stroke-width var(--duration-medium) var(--ease-standard)",
         }}
       />
       {is_gate && data?.gate_glyph && (
@@ -35,11 +48,16 @@ export function StructuralEdge(props: EdgeProps<RFEdge<FrameCanvasEdgeData>>): R
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
               fontSize: "var(--font-size-xs)",
-              color: "var(--color-edge-structural)",
+              color: on_primary_path
+                ? "var(--color-mode-current-accent)"
+                : "var(--color-edge-structural)",
               background: "var(--color-surface-canvas)",
               padding: "1px 3px",
               borderRadius: "var(--radius-sm)",
               pointerEvents: "none",
+              fontWeight: on_primary_path
+                ? "var(--font-weight-semibold)"
+                : "var(--font-weight-medium)",
             }}
           >
             {data.gate_glyph}

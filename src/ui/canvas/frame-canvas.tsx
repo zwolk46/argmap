@@ -1,7 +1,20 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { ReactFlow, Background, useReactFlow, ReactFlowProvider } from "@xyflow/react";
-import type { Node as RFNode, Edge as RFEdge, Connection } from "@xyflow/react";
+import {
+  ReactFlow,
+  Background,
+  useReactFlow,
+  ReactFlowProvider,
+  applyNodeChanges,
+  applyEdgeChanges,
+} from "@xyflow/react";
+import type {
+  Node as RFNode,
+  Edge as RFEdge,
+  Connection,
+  NodeChange,
+  EdgeChange,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FrameVersion, NodeRef } from "@/schema";
 import type { NodeStatus } from "@/schema";
@@ -115,7 +128,6 @@ function buildRFNodes(
   status_map: Readonly<Record<string, NodeStatus>> | undefined,
   operating_mode: string,
   legal_mode: boolean,
-  selection: ReadonlyArray<NodeRef> | undefined,
   read_only: boolean,
   primary_path_set: ReadonlySet<NodeRef> | undefined,
   active_set: ReadonlySet<NodeRef> | undefined,
@@ -157,9 +169,14 @@ function buildRFNodes(
       Premise: "premise_pill",
     };
 
+    // Selection is owned by the local rf_nodes state (RF mutates it via
+    // applyNodeChanges; external selection changes are merged in by a
+    // dedicated effect). buildRFNodes itself never sets the `selected`
+    // flag — that would clobber RF's mid-interaction state on every
+    // structural re-derivation.
     const display = defaultDisplayFlags(
       node.id as NodeRef,
-      selection,
+      undefined,
       primary_path_set,
       active_set,
       recommended_next_id,
@@ -225,6 +242,17 @@ function buildRFEdges(
       continue;
     }
 
+    // An edge is on the primary path when BOTH endpoints are in the path
+    // sequence AND their indices are adjacent. Source's index must be
+    // one less than target's, so we trace the path in order rather than
+    // highlighting every edge that touches a path node. The structural
+    // edges aren't separately listed in `output.primary_path`, so we
+    // derive on-path status here.
+    const src_idx = path_index_by_node.get(edge.source as NodeRef);
+    const tgt_idx = path_index_by_node.get(edge.target as NodeRef);
+    const on_primary_path =
+      src_idx !== undefined && tgt_idx !== undefined && tgt_idx === src_idx + 1;
+
     edges.push({
       id: edge.id,
       source: edge.source,
@@ -233,6 +261,8 @@ function buildRFEdges(
       data: {
         edge_type: edge.type,
         foreclosure_visibility: edge.type === "FORECLOSES" ? foreclosure_visibility : undefined,
+        on_primary_path,
+        path_index: on_primary_path ? tgt_idx : undefined,
       },
     });
   }
@@ -245,6 +275,13 @@ function buildRFEdges(
       };
       for (const opt of checkpoint.options) {
         if (opt.target_node_id) {
+          // Checkpoint-option synthetic edges: highlight when both ends are
+          // adjacent on the primary path. Carries through the path-index
+          // for animation staggering.
+          const cp_src_idx = path_index_by_node.get(checkpoint.id as NodeRef);
+          const cp_tgt_idx = path_index_by_node.get(opt.target_node_id as NodeRef);
+          const cp_on_path =
+            cp_src_idx !== undefined && cp_tgt_idx !== undefined && cp_tgt_idx === cp_src_idx + 1;
           edges.push({
             id: `checkpoint_option_${checkpoint.id}_${opt.id}`,
             source: checkpoint.id,
@@ -253,6 +290,8 @@ function buildRFEdges(
             data: {
               edge_type: "checkpoint_option",
               option_label: opt.label,
+              on_primary_path: cp_on_path,
+              path_index: cp_on_path ? cp_tgt_idx : undefined,
             },
           });
         }
@@ -294,6 +333,43 @@ function buildRFEdges(
   return edges;
 }
 
+// Reconcile structural updates from external sources (frame_version, layout,
+// status_map, …) into RF's live state, preserving RF-owned transient
+// interaction state (per-node selected flag, drag-in-progress position).
+function reconcileNodes(
+  current: ReadonlyArray<RFNode<FrameCanvasNodeData>>,
+  desired: ReadonlyArray<RFNode<FrameCanvasNodeData>>,
+): RFNode<FrameCanvasNodeData>[] {
+  const current_by_id = new Map(current.map((n) => [n.id, n]));
+  return desired.map((d) => {
+    const c = current_by_id.get(d.id);
+    if (!c) return d;
+    return {
+      ...d,
+      selected: c.selected ?? d.selected,
+      // Preserve RF's live position while the node is being dragged so the
+      // sync doesn't snap it back to the store's pre-drag position.
+      position: c.dragging ? c.position : d.position,
+      dragging: c.dragging,
+    };
+  });
+}
+
+function reconcileEdges(
+  current: ReadonlyArray<RFEdge<FrameCanvasEdgeData>>,
+  desired: ReadonlyArray<RFEdge<FrameCanvasEdgeData>>,
+): RFEdge<FrameCanvasEdgeData>[] {
+  const current_by_id = new Map(current.map((e) => [e.id, e]));
+  return desired.map((d) => {
+    const c = current_by_id.get(d.id);
+    if (!c) return d;
+    return {
+      ...d,
+      selected: c.selected ?? d.selected,
+    };
+  });
+}
+
 function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   const {
     frame_version,
@@ -330,7 +406,6 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   }, [active_set]);
 
   const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
-  const last_connect_position = React.useRef<{ x: number; y: number } | null>(null);
   const [fc_visibility, setFcVisibility] =
     React.useState<ForeclosureVisibility>(foreclosure_visibility);
 
@@ -346,35 +421,184 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     },
   }));
 
-  const rf_nodes = buildRFNodes(
-    frame_version,
-    layout_result,
-    status_map,
-    operating_mode,
-    legal_mode,
-    selection,
+  // React Flow v12 controlled mode requires the `nodes`/`edges` props to be
+  // state we mutate via the `applyNodeChanges` / `applyEdgeChanges` reducers
+  // RF tells us about. Without that wiring every interaction silently falls
+  // through to background panning.
+  //
+  // Architecture (see React Flow docs — state-management guide):
+  // - rf_nodes / rf_edges is the SINGLE source of truth React Flow renders
+  //   against. We own it via plain useState.
+  // - We derive `desired_rf_nodes` / `desired_rf_edges` from external sources
+  //   (frame_version, layout, etc.) — STRUCTURAL deps only. `selection` is
+  //   excluded; that's owned by the user's click state and synced separately
+  //   via the selection effect below.
+  // - When `desired_*` changes (frame_version mutated, a node added from the
+  //   palette, layout recomputed, etc.) we reconcile: keep RF's transient
+  //   state (selection, drag-in-progress position) and pull new structural /
+  //   content data in.
+  // - When the external `selection` prop changes (outline-tree click, etc.)
+  //   we apply ONLY the selected flag, leaving everything else alone.
+  //
+  // Why this matters: the prior approach derived `desired_rf_nodes` from the
+  // unstable `selection` prop and resynced every render, which fought
+  // RF's onNodesChange selection update and meant click-to-select never
+  // visibly stuck.
+  const desired_rf_nodes = React.useMemo(
+    () =>
+      buildRFNodes(
+        frame_version,
+        layout_result,
+        status_map,
+        operating_mode,
+        legal_mode,
+        read_only,
+        primary_path_set,
+        active_set_set,
+        recommended_next_id,
+      ),
+    [
+      frame_version,
+      layout_result,
+      status_map,
+      operating_mode,
+      legal_mode,
+      read_only,
+      primary_path_set,
+      active_set_set,
+      recommended_next_id,
+    ],
+  );
+
+  const desired_rf_edges = React.useMemo(
+    () =>
+      buildRFEdges(
+        frame_version,
+        operating_mode,
+        fc_visibility,
+        argument_overlay,
+        primary_path_node_ids,
+        path_fingerprint,
+      ),
+    [
+      frame_version,
+      operating_mode,
+      fc_visibility,
+      argument_overlay,
+      primary_path_node_ids,
+      path_fingerprint,
+    ],
+  );
+
+  const [rf_nodes, setRfNodes] = React.useState<RFNode<FrameCanvasNodeData>[]>(
+    () => desired_rf_nodes,
+  );
+  const [rf_edges, setRfEdges] = React.useState<RFEdge<FrameCanvasEdgeData>[]>(
+    () => desired_rf_edges,
+  );
+
+  // Reconcile structural changes from external sources into rf_nodes,
+  // preserving RF-owned transient state (selected, dragging, drag position).
+  // Fires only when the deps that drive `buildRFNodes` change (frame_version
+  // mutation, layout completes, etc.) — not on every parent re-render.
+  React.useEffect(() => {
+    setRfNodes((current) => reconcileNodes(current, desired_rf_nodes));
+  }, [desired_rf_nodes]);
+
+  React.useEffect(() => {
+    setRfEdges((current) => reconcileEdges(current, desired_rf_edges));
+  }, [desired_rf_edges]);
+
+  // Mirror the external `selection` prop into RF's `selected` flags so the
+  // outline-tree (or any other parent-driven selection source) updates the
+  // canvas visually. Gated on a content-stable string key so a parent that
+  // rebuilds the selection array each render (e.g., via inline ternary)
+  // doesn't re-fire the effect every render. Idempotent updater: if RF's
+  // current state already matches the wanted set, returns the same ref
+  // (no re-render).
+  const selection_key = React.useMemo(
+    () => (selection ? [...selection].sort().join("|") : ""),
+    [selection],
+  );
+
+  React.useEffect(() => {
+    const wanted = new Set<string>(selection ?? []);
+    setRfNodes((current) => {
+      let changed = false;
+      const next = current.map((n) => {
+        const want = wanted.has(n.id);
+        if ((n.selected ?? false) === want) return n;
+        changed = true;
+        return { ...n, selected: want };
+      });
+      return changed ? next : current;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection_key]);
+
+  const onNodesChange = React.useCallback((changes: NodeChange[]) => {
+    setRfNodes((nds) => applyNodeChanges(changes, nds) as RFNode<FrameCanvasNodeData>[]);
+  }, []);
+  const onEdgesChange = React.useCallback((changes: EdgeChange[]) => {
+    setRfEdges((eds) => applyEdgeChanges(changes, eds) as RFEdge<FrameCanvasEdgeData>[]);
+  }, []);
+
+  // Stable refs for all RF event handlers. React Flow's SelectionListener
+  // wires its useEffect with `onSelectionChange` in the dep list:
+  //
+  //   useEffect(() => { onSelectionChange?.(params); }, [..., onSelectionChange]);
+  //
+  // If our handler ref changes on every parent render (which happens when
+  // callers pass arrow functions / inline function defs as props), that
+  // effect fires every render, calls our handler, which calls setState in
+  // the parent, which re-renders, which gives RF yet another fresh handler
+  // ref — infinite loop, "Maximum update depth exceeded". The fix is to
+  // make the function we pass to <ReactFlow onSelectionChange> stable for
+  // the lifetime of the component, and read the latest caller callbacks
+  // through a ref. We do the same for the other handlers we forward —
+  // SelectionListener is the documented loop today, but stable refs are
+  // the right default for any callback passed into a library that
+  // memoizes against ref identity.
+  const callbacks_ref = React.useRef({
+    onSelectionChange,
+    on_node_moved,
+    on_edge_created,
+    on_node_delete_requested: props.on_node_delete_requested,
+    on_edge_delete_requested: props.on_edge_delete_requested,
     read_only,
-    primary_path_set,
-    active_set_set,
-    recommended_next_id,
-  );
-  const rf_edges = buildRFEdges(
-    frame_version,
-    operating_mode,
-    fc_visibility,
-    argument_overlay,
-    primary_path_node_ids,
-    path_fingerprint,
+  });
+  callbacks_ref.current = {
+    onSelectionChange,
+    on_node_moved,
+    on_edge_created,
+    on_node_delete_requested: props.on_node_delete_requested,
+    on_edge_delete_requested: props.on_edge_delete_requested,
+    read_only,
+  };
+
+  const handleNodeClick = React.useCallback(
+    (_: React.MouseEvent, node: RFNode<FrameCanvasNodeData>) => {
+      const cb = callbacks_ref.current;
+      if (!cb.read_only) cb.onSelectionChange?.([node.data.node_id]);
+    },
+    [],
   );
 
-  function handleNodeDragStop(_: React.MouseEvent, node: RFNode<FrameCanvasNodeData>) {
-    if (read_only) return;
-    on_node_moved?.(node.data.node_id, node.position.x, node.position.y);
-  }
+  const handleNodeDragStop = React.useCallback(
+    (_: React.MouseEvent, node: RFNode<FrameCanvasNodeData>) => {
+      const cb = callbacks_ref.current;
+      if (cb.read_only) return;
+      cb.on_node_moved?.(node.data.node_id, node.position.x, node.position.y);
+    },
+    [],
+  );
 
-  function handleSelectionChange({ nodes }: { nodes: RFNode<FrameCanvasNodeData>[] }) {
-    onSelectionChange?.(nodes.map((n) => n.data.node_id));
-  }
+  const handleSelectionChange = React.useCallback(
+    ({ nodes }: { nodes: RFNode<FrameCanvasNodeData>[] }) => {
+      callbacks_ref.current.onSelectionChange?.(nodes.map((n) => n.data.node_id));
+    },
+    [],
+  );
 
   // P1: handleConnect fires BEFORE handleConnectEnd, so last_connect_position
   // was null when on_edge_created tried to use it — the popup opened at
@@ -383,57 +607,60 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   // which point we have a drop position.
   const pending_connection = React.useRef<{ source: NodeRef; target: NodeRef } | null>(null);
 
-  function handleConnect(connection: Connection) {
-    if (read_only) return;
+  const handleConnect = React.useCallback((connection: Connection) => {
+    const cb = callbacks_ref.current;
+    if (cb.read_only) return;
     if (!connection.source || !connection.target) return;
     if (connection.source === connection.target) return;
     pending_connection.current = {
       source: connection.source as NodeRef,
       target: connection.target as NodeRef,
     };
-  }
+  }, []);
 
-  function handleConnectEnd(event: MouseEvent | TouchEvent) {
+  const handleConnectEnd = React.useCallback((event: MouseEvent | TouchEvent) => {
     const point =
       "clientX" in event
         ? { x: event.clientX, y: event.clientY }
         : event.changedTouches && event.changedTouches[0]
           ? { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY }
           : null;
-    last_connect_position.current = point;
-    // Fire on_edge_created here so the drop position is available.
     if (pending_connection.current) {
-      on_edge_created?.(
+      callbacks_ref.current.on_edge_created?.(
         pending_connection.current.source,
         pending_connection.current.target,
         point ?? undefined,
       );
       pending_connection.current = null;
     }
-  }
+  }, []);
 
   // P1: keyboard delete. React Flow's deleteKeyCode (default Backspace +
   // Delete) emits onNodesDelete / onEdgesDelete when the user presses one
   // with a selection. We forward both as cascade-delete requests for nodes
   // and direct edge removals for edges.
-  function handleNodesDelete(deleted_nodes: RFNode<FrameCanvasNodeData>[]) {
-    if (read_only) return;
-    for (const n of deleted_nodes) {
-      props.on_node_delete_requested?.(n.data.node_id);
-    }
-  }
-  function handleEdgesDelete(deleted_edges: RFEdge<FrameCanvasEdgeData>[]) {
-    if (read_only) return;
+  const handleNodesDelete = React.useCallback((deleted_nodes: RFNode<FrameCanvasNodeData>[]) => {
+    const cb = callbacks_ref.current;
+    if (cb.read_only) return;
+    for (const n of deleted_nodes) cb.on_node_delete_requested?.(n.data.node_id);
+  }, []);
+  const handleEdgesDelete = React.useCallback((deleted_edges: RFEdge<FrameCanvasEdgeData>[]) => {
+    const cb = callbacks_ref.current;
+    if (cb.read_only) return;
     for (const e of deleted_edges) {
       // Skip overlay / option synthetic ids.
       if (e.id.startsWith("overlay_") || e.id.startsWith("checkpoint_option_")) continue;
-      props.on_edge_delete_requested?.(e.id);
+      cb.on_edge_delete_requested?.(e.id);
     }
-  }
+  }, []);
 
+  // Build signal so the user can verify the new code is actually loaded
+  // (HMR through structural state-management changes is unreliable in dev).
+  // Visible in DevTools as `data-canvas-build="2026-05-14-cb-ref-fix"`.
   return (
     <div
       data-testid="frame-canvas"
+      data-canvas-build="2026-05-14-cb-ref-fix"
       data-read-only={read_only}
       style={{ width: "100%", height: "100%", position: "relative" }}
     >
@@ -442,6 +669,9 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         edges={rf_edges}
         nodeTypes={nodeTypes as never}
         edgeTypes={edgeTypes as never}
+        onNodesChange={onNodesChange as never}
+        onEdgesChange={onEdgesChange as never}
+        onNodeClick={handleNodeClick}
         onNodeDragStop={handleNodeDragStop}
         onSelectionChange={handleSelectionChange as never}
         onConnect={handleConnect}

@@ -89,23 +89,15 @@ export function ConditionList(props: ConditionListProps): ReactElement {
       {has_any_of && (
         <div
           style={{
-            marginTop: "8px",
-            padding: "8px",
+            marginTop: "var(--space-2)",
+            padding: "var(--space-2)",
             border: "1px solid var(--color-border, #e5e7eb)",
             borderRadius: "var(--radius-sm, 4px)",
           }}
         >
-          <div
-            style={{
-              fontSize: "var(--font-size-xs, 11px)",
-              textTransform: "uppercase",
-              color: "var(--color-text-secondary, #6b7280)",
-              marginBottom: "6px",
-              letterSpacing: "0.05em",
-            }}
-          >
+          <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
             Any of (disjunction)
-          </div>
+          </h3>
           {(any_of ?? []).map((condition, i) => (
             <ConditionRow
               key={`anyof-${condition.kind}-${i}`}
@@ -126,7 +118,7 @@ export function ConditionList(props: ConditionListProps): ReactElement {
       )}
 
       {/* Add condition picker */}
-      <div style={{ marginTop: "8px" }}>
+      <div style={{ marginTop: "var(--space-2)" }}>
         <ConditionPicker
           mode_flavor={mode_flavor}
           exclude_kinds={existing_kinds}

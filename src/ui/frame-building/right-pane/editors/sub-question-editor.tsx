@@ -11,21 +11,7 @@ export interface SubQuestionEditorProps {
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
 
 const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
   resize: "vertical",
-};
-
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
 };
 
 export function SubQuestionEditor(props: SubQuestionEditorProps): ReactElement {
@@ -43,6 +29,7 @@ export function SubQuestionEditor(props: SubQuestionEditorProps): ReactElement {
         <FieldAttributionDecoration node_id={node.id} field_path="statement" label="Question">
           <textarea
             rows={3}
+            className="argmap-input"
             style={INPUT_STYLE}
             defaultValue={node.statement}
             onBlur={(e) => patch({ statement: e.currentTarget.value })}
@@ -65,7 +52,7 @@ export function SubQuestionEditor(props: SubQuestionEditorProps): ReactElement {
                 defaultChecked={node.is_jurisdictional}
                 onChange={(e) => patch({ is_jurisdictional: e.currentTarget.checked })}
               />
-              <span style={LABEL_STYLE}>Jurisdictional</span>
+              <span className="argmap-section-heading">Jurisdictional</span>
             </label>
           </div>
           <div style={SECTION_STYLE}>
@@ -76,7 +63,7 @@ export function SubQuestionEditor(props: SubQuestionEditorProps): ReactElement {
             >
               <input
                 type="text"
-                style={{ ...INPUT_STYLE, resize: undefined }}
+                className="argmap-input"
                 list="sor-options-sub"
                 defaultValue={node.standard_of_review ?? ""}
                 onBlur={(e) => patch({ standard_of_review: e.currentTarget.value || undefined })}

@@ -9,23 +9,6 @@ export interface EdgeEditorProps {
 
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
 
-const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
-};
-
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
-};
-
 const EDGE_TYPE_BADGE: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 10px",
@@ -33,8 +16,8 @@ const EDGE_TYPE_BADGE: React.CSSProperties = {
   border: "1px solid var(--color-border, #e5e7eb)",
   borderRadius: "var(--radius-sm, 4px)",
   fontSize: "var(--font-size-sm, 13px)",
-  fontWeight: 600,
-  letterSpacing: "0.04em",
+  fontWeight: "var(--font-weight-semibold)",
+  letterSpacing: "var(--letter-spacing-wide)",
 };
 
 const WEIGHT_OPTIONS = ["strong", "moderate", "weak"] as const;
@@ -52,17 +35,18 @@ export function EdgeEditor(props: EdgeEditorProps): ReactElement {
   return (
     <div>
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Edge Type</label>
-        <div style={{ marginTop: "4px" }}>
+        <label className="argmap-section-heading">Edge Type</label>
+        <div style={{ marginTop: "var(--space-1)" }}>
           <span style={EDGE_TYPE_BADGE}>{edge.type}</span>
         </div>
       </div>
 
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Label</label>
+        <label className="argmap-section-heading">Label</label>
         <input
           type="text"
-          style={{ ...INPUT_STYLE, marginTop: "4px" }}
+          className="argmap-input"
+          style={{ marginTop: "var(--space-1)" }}
           defaultValue={edge.label ?? ""}
           onBlur={(e) => patch({ label: e.currentTarget.value || undefined })}
         />
@@ -70,9 +54,10 @@ export function EdgeEditor(props: EdgeEditorProps): ReactElement {
 
       {edge.type === "FORECLOSES" && (
         <div style={SECTION_STYLE}>
-          <label style={LABEL_STYLE}>Scope</label>
+          <label className="argmap-section-heading">Scope</label>
           <select
-            style={{ ...INPUT_STYLE, marginTop: "4px" }}
+            className="argmap-input"
+            style={{ marginTop: "var(--space-1)" }}
             defaultValue={edge.scope ?? ""}
             onChange={(e) =>
               patch({
@@ -94,9 +79,10 @@ export function EdgeEditor(props: EdgeEditorProps): ReactElement {
 
       {(edge.type === "SUPPORTS" || edge.type === "CONTRADICTS") && (
         <div style={SECTION_STYLE}>
-          <label style={LABEL_STYLE}>Weight</label>
+          <label className="argmap-section-heading">Weight</label>
           <select
-            style={{ ...INPUT_STYLE, marginTop: "4px" }}
+            className="argmap-input"
+            style={{ marginTop: "var(--space-1)" }}
             defaultValue={edge.weight ?? ""}
             onChange={(e) =>
               patch({
@@ -118,9 +104,10 @@ export function EdgeEditor(props: EdgeEditorProps): ReactElement {
 
       {edge.type === "CITES" && (
         <div style={SECTION_STYLE}>
-          <label style={LABEL_STYLE}>Strength</label>
+          <label className="argmap-section-heading">Strength</label>
           <select
-            style={{ ...INPUT_STYLE, marginTop: "4px" }}
+            className="argmap-input"
+            style={{ marginTop: "var(--space-1)" }}
             defaultValue={edge.strength ?? ""}
             onChange={(e) =>
               patch({

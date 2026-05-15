@@ -3,6 +3,7 @@ import { useFrameStore } from "@/state";
 import { GLOSSARY_DICTIONARY } from "../primitives/glossary-tooltip";
 import { Drawer, DrawerHeader, DrawerBody } from "../primitives/drawer";
 import { IconButton } from "../primitives/icon-button";
+import { UIcon } from "../primitives/uicon";
 import { OnboardingPreferencesSection } from "../onboarding/onboarding-preferences-section";
 
 export interface HelpGlossaryPaneProps {
@@ -24,32 +25,12 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
       <DrawerHeader>
         <span>Help & Glossary</span>
         <IconButton size="sm" aria-label="Close help" onClick={onClose}>
-          <svg
-            width={14}
-            height={14}
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            aria-hidden
-          >
-            <path d="M4 4l8 8M12 4l-8 8" />
-          </svg>
+          <UIcon name="times" size={14} />
         </IconButton>
       </DrawerHeader>
       <DrawerBody>
         <section>
-          <h3
-            style={{
-              fontSize: "var(--font-size-xs)",
-              fontWeight: "var(--font-weight-medium)",
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "var(--letter-spacing-wide)",
-              margin: "0 0 var(--space-3)",
-            }}
-          >
+          <h3 className="argmap-section-heading" style={{ margin: "0 0 var(--space-3)" }}>
             Frame Concepts
           </h3>
           {frame_entries.map(([key, entry]) => (
@@ -78,16 +59,7 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
         </section>
         {is_legal && legal_entries.length > 0 && (
           <section style={{ marginTop: "var(--space-5)" }}>
-            <h3
-              style={{
-                fontSize: "var(--font-size-xs)",
-                fontWeight: "var(--font-weight-medium)",
-                color: "var(--color-text-secondary)",
-                textTransform: "uppercase",
-                letterSpacing: "var(--letter-spacing-wide)",
-                margin: "0 0 var(--space-3)",
-              }}
-            >
+            <h3 className="argmap-section-heading" style={{ margin: "0 0 var(--space-3)" }}>
               Legal Concepts
             </h3>
             {legal_entries.map(([key, entry]) => (

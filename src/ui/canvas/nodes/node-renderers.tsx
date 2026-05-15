@@ -4,6 +4,7 @@ import type { NodeType } from "@/schema";
 import { NodeFrame } from "./node-frame";
 import type { FrameCanvasNodeData } from "./types";
 import { Pill } from "../../primitives/pill";
+import { UIcon } from "../../primitives/uicon";
 
 type ND = RFNode<FrameCanvasNodeData>;
 
@@ -90,7 +91,10 @@ export function AuthorityNode({ data, selected }: NodeProps<ND>): ReactElement {
                 : "var(--color-subflag-persuasive)"
             }
           >
-            {data.authority_binding_kind === "binding" ? "⚖ Binding" : "⚖ Persuasive"}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <UIcon name="balance-scale-right" size={11} />
+              {data.authority_binding_kind === "binding" ? "Binding" : "Persuasive"}
+            </span>
           </Pill>
         </div>
       )}

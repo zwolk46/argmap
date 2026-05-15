@@ -25,9 +25,18 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
         gap: "var(--space-3)",
         padding: "0 var(--space-4)",
         background: "var(--color-surface-elevated)",
-        borderBottom: "var(--border-thin) solid var(--color-mode-current-accent)",
+        // Neutral hairline instead of mode-accent. The mode is communicated
+        // by the ModeFlavorChip and the toggle — repeating it as the page
+        // top border felt over-emphasized and broke the chrome's neutrality
+        // (Linear / Notion / Vercel all use a single neutral hairline).
+        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
         flexShrink: 0,
-        transition: `border-color var(--duration-slow) var(--ease-standard)`,
+        // Anchored to the viewport top so scroll-context inside the page
+        // body doesn't lose the chrome.
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        backdropFilter: "saturate(120%) blur(2px)",
       }}
     >
       {slots.home && <div style={{ flexShrink: 0 }}>{slots.home}</div>}

@@ -24,7 +24,7 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
       <header
         style={{
           fontSize: "var(--font-size-sm, 13px)",
-          fontWeight: 500,
+          fontWeight: "var(--font-weight-medium)",
           marginBottom: "var(--space-2, 8px)",
         }}
       >
@@ -60,6 +60,7 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
         }}
       >
         Set per-frame in{" "}
+        {/* KEEP RAW: inline text-link inside a paragraph; bespoke micro-control inside body copy. */}
         <button
           type="button"
           data-testid="g12-open-frame-settings"

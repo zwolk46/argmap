@@ -2,40 +2,6 @@ import type { ReactElement } from "react";
 import type { Jurisdiction } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-xs, 11px)",
-  fontWeight: 600,
-  color: "var(--color-text-tertiary, #9ca3af)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  display: "block",
-  marginBottom: "var(--space-1, 4px)",
-};
-
-const SELECT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "var(--space-2, 8px) var(--space-3, 12px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
-  background: "var(--color-surface-pane, #f9fafb)",
-  border: "1px solid var(--color-border-default, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "var(--space-2, 8px) var(--space-3, 12px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  color: "var(--color-text-primary, #111827)",
-  background: "var(--color-surface-pane, #f9fafb)",
-  border: "1px solid var(--color-border-default, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  outline: "none",
-  boxSizing: "border-box",
-};
-
 const US_STATES = [
   "Alabama",
   "Alaska",
@@ -131,13 +97,17 @@ export function JurisdictionSection(): ReactElement | null {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4, 16px)" }}>
       <div>
-        <label style={LABEL_STYLE} htmlFor="jur-level">
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          htmlFor="jur-level"
+        >
           Jurisdiction Level
         </label>
         <select
           id="jur-level"
           value={jur.level}
-          style={SELECT_STYLE}
+          className="argmap-input"
           onChange={(e) =>
             patch({
               level: e.target.value as Jurisdiction["level"],
@@ -156,13 +126,17 @@ export function JurisdictionSection(): ReactElement | null {
 
       {jur.level === "state" && (
         <div>
-          <label style={LABEL_STYLE} htmlFor="jur-region">
+          <label
+            className="argmap-section-heading"
+            style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+            htmlFor="jur-region"
+          >
             State
           </label>
           <select
             id="jur-region"
             value={jur.region ?? ""}
-            style={SELECT_STYLE}
+            className="argmap-input"
             onChange={(e) => patch({ region: e.target.value || undefined })}
           >
             <option value="">— Select state —</option>
@@ -177,14 +151,18 @@ export function JurisdictionSection(): ReactElement | null {
 
       {(jur.level === "tribal" || jur.level === "territory" || jur.level === "international") && (
         <div>
-          <label style={LABEL_STYLE} htmlFor="jur-region-text">
+          <label
+            className="argmap-section-heading"
+            style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+            htmlFor="jur-region-text"
+          >
             Region / Name
           </label>
           <input
             id="jur-region-text"
             type="text"
             value={jur.region ?? ""}
-            style={INPUT_STYLE}
+            className="argmap-input"
             placeholder="Enter jurisdiction name"
             onChange={(e) => patch({ region: e.target.value || undefined })}
           />
@@ -192,14 +170,18 @@ export function JurisdictionSection(): ReactElement | null {
       )}
 
       <div>
-        <label style={LABEL_STYLE} htmlFor="jur-court">
+        <label
+          className="argmap-section-heading"
+          style={{ display: "block", marginBottom: "var(--space-1, 4px)" }}
+          htmlFor="jur-court"
+        >
           Court
         </label>
         {is_federal ? (
           <select
             id="jur-court"
             value={jur.court ?? ""}
-            style={SELECT_STYLE}
+            className="argmap-input"
             onChange={(e) => patch({ court: e.target.value || undefined })}
           >
             <option value="">— Select court —</option>
@@ -214,7 +196,7 @@ export function JurisdictionSection(): ReactElement | null {
             id="jur-court"
             type="text"
             value={jur.court ?? ""}
-            style={INPUT_STYLE}
+            className="argmap-input"
             placeholder="e.g. Supreme Court, Court of Appeals"
             onChange={(e) => patch({ court: e.target.value || undefined })}
           />

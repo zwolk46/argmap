@@ -1,15 +1,20 @@
 import * as React from "react";
 import type { Premise } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
+import { Button, InlineEmpty } from "../../primitives";
 import { PremiseRow } from "./premise-row";
 
 export interface PremisePoolProps {
   on_highlight_on_canvas?: (node_ids: ReadonlyArray<string>) => void;
 }
 
+// Stable fallback so the Zustand selector below never returns a fresh array.
+// (See use-field-attribution.ts for the loop diagnosis.)
+const EMPTY_PREMISES: ReadonlyArray<Premise> = [];
+
 export function PremisePool(props: PremisePoolProps): React.ReactElement {
   const { session_store, now, generateId } = useRepository();
-  const premises: Premise[] = useSessionStore((s) => s.session?.premises ?? []);
+  const premises = useSessionStore((s) => s.session?.premises ?? EMPTY_PREMISES);
 
   const [newly_added_id, setNewlyAddedId] = React.useState<string | null>(null);
 
@@ -50,46 +55,17 @@ export function PremisePool(props: PremisePoolProps): React.ReactElement {
           borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
         }}
       >
-        <span
-          style={{
-            fontSize: "var(--font-size-xs, 11px)",
-            color: "var(--color-text-secondary, #6b7280)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
-          Premises ({sorted.length})
-        </span>
-        <button
-          type="button"
-          data-testid="premise-add"
-          onClick={on_add}
-          style={{
-            background: "var(--color-background-accent, #dbeafe)",
-            color: "var(--color-text-accent, #1d4ed8)",
-            border: "none",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "2px 8px",
-          }}
-        >
+        <span className="argmap-section-heading">Premises ({sorted.length})</span>
+        <Button variant="ghost" size="sm" data-testid="premise-add" onClick={on_add}>
           + Add Premise
-        </button>
+        </Button>
       </header>
       <div style={{ flex: 1, overflowY: "auto" }}>
         {sorted.length === 0 ? (
-          <div
-            data-testid="premise-pool-empty"
-            style={{
-              padding: "var(--space-3, 12px)",
-              fontSize: "var(--font-size-xs, 11px)",
-              color: "var(--color-text-tertiary, #9ca3af)",
-            }}
-          >
+          <InlineEmpty testId="premise-pool-empty" density="compact">
             No premises yet — premises represent the factual or contextual claims your argument
             relies on.
-          </div>
+          </InlineEmpty>
         ) : (
           sorted.map((p) => (
             <PremiseRow

@@ -7,6 +7,13 @@ export interface DialogProps {
   open: boolean;
   onClose: () => void;
   aria_label?: string;
+  /**
+   * ID of an element (typically the DialogHeader's visible title) that names
+   * the dialog. Preferred over `aria_label` when a visible title exists —
+   * SRs announce the title verbatim and sighted/AT users hear the same name.
+   * If both are supplied, `aria_labelledby` wins.
+   */
+  aria_labelledby?: string;
   dismiss_on_click_outside?: boolean;
   dismiss_on_escape?: boolean;
   size?: DialogSize;
@@ -19,9 +26,18 @@ const DIALOG_MAX_WIDTH: Record<DialogSize, string> = {
   lg: "720px",
 };
 
-export function DialogHeader({ children }: { children: ReactNode }): ReactElement {
+export function DialogHeader({
+  children,
+  id,
+}: {
+  children: ReactNode;
+  /** Set this and pass the same value as `aria_labelledby` on the Dialog so
+   *  SRs announce the visible title. */
+  id?: string;
+}): ReactElement {
   return (
     <div
+      id={id}
       style={{
         padding: "var(--space-4) var(--space-5)",
         borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
@@ -73,6 +89,7 @@ export function Dialog({
   open,
   onClose,
   aria_label,
+  aria_labelledby,
   dismiss_on_click_outside = true,
   dismiss_on_escape = true,
   size = "md",
@@ -155,7 +172,8 @@ export function Dialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={aria_label}
+        aria-labelledby={aria_labelledby}
+        aria-label={aria_labelledby ? undefined : aria_label}
         className="argmap-dialog"
         style={{
           background: "var(--color-surface-elevated)",

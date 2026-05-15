@@ -26,15 +26,11 @@ export function NotesField(props: NotesFieldProps): ReactElement {
         value={value}
         placeholder={placeholder ?? "Anything to record about this item…"}
         onChange={(e) => on_change(e.target.value)}
+        className="argmap-input"
         style={{
           minHeight: min_height,
           maxHeight: max_height,
-          padding: "6px 8px",
           fontSize: "var(--font-size-xs, 11px)",
-          fontFamily: "inherit",
-          border: "var(--border-thin) solid var(--color-border-tertiary)",
-          borderRadius: "var(--border-radius-md, 6px)",
-          background: "var(--color-surface-elevated, #ffffff)",
           resize: "vertical",
         }}
       />

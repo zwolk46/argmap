@@ -17,7 +17,7 @@ import {
   type StructuralDiff,
   type SessionStructuralDiff,
 } from "@/state";
-import { IconButton } from "../primitives";
+import { Button, IconButton, InlineLoading } from "../primitives";
 import { CompareEntryList } from "./compare-entry-list";
 import type { CompareEntryRowDescriptor } from "./compare-entry-row";
 
@@ -343,25 +343,25 @@ export function CompareView(props: CompareViewProps): ReactElement {
         </h2>
       </header>
       {state.kind === "loading" ? (
-        <div
-          data-testid="compare-view-loading"
-          style={{
-            padding: "var(--space-4, 16px)",
-            textAlign: "center",
-            color: "var(--color-text-secondary, #6b7280)",
-            fontSize: "var(--font-size-sm, 13px)",
-          }}
-        >
-          Loading…
-        </div>
+        <InlineLoading testId="compare-view-loading" label="Loading comparison…" />
       ) : state.kind === "error" ? (
-        <div data-testid="compare-view-error" style={{ padding: "var(--space-4, 16px)" }}>
-          <div style={{ color: "var(--color-severity-error, #dc2626)", fontSize: "13px" }}>
+        <div data-testid="compare-view-error" style={{ padding: "var(--space-4)" }}>
+          <div
+            style={{
+              color: "var(--color-severity-error)",
+              fontSize: "var(--font-size-base)",
+            }}
+          >
             {state.error.message}
           </div>
-          <button type="button" onClick={on_back} style={{ marginTop: 8 }}>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={on_back}
+            style={{ marginTop: "var(--space-2)" }}
+          >
             Back to history
-          </button>
+          </Button>
         </div>
       ) : (
         <CompareBody

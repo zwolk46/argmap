@@ -130,13 +130,14 @@ export function NodeFrame({
 
   // Build the inner card. For gate variants we counter-rotate the content
   // so labels remain upright while the box is rotated 45°.
+  const isHovered = hovered || display.hovered;
   const cardStyle: React.CSSProperties = {
     position: "relative",
     minWidth: isGate ? "64px" : "140px",
     padding: isGate ? "var(--space-3)" : "var(--space-3) var(--space-4)",
     background: display.selected
       ? "var(--color-surface-selected)"
-      : hovered || display.hovered
+      : isHovered
         ? "var(--color-surface-hover)"
         : "var(--color-surface-elevated)",
     cursor: "grab",
@@ -144,10 +145,18 @@ export function NodeFrame({
     animation: display.recommended_next_pulse
       ? "pulse-recommended var(--duration-pulse) var(--ease-soft) infinite"
       : undefined,
+    // Subtle hover lift + scale. The transform is rebuilt for gate variants
+    // so we don't fight the 45° rotation. Scale and translateY together
+    // give the "card rising toward the cursor" feel production apps use.
+    transform: isGate
+      ? `rotate(45deg)${isHovered && !display.selected ? " scale(1.04)" : ""}`
+      : isHovered && !display.selected
+        ? "translateY(-1px) scale(1.015)"
+        : undefined,
     transition:
-      "opacity var(--duration-base) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard)",
+      "opacity var(--duration-base) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard)",
     ...variantStyle,
-    ...(isGate ? { transform: "rotate(45deg)", width: "60px", height: "60px" } : {}),
+    ...(isGate ? { width: "60px", height: "60px" } : {}),
     ...(selectionShadow ? { boxShadow: selectionShadow } : {}),
     ...(isGate && display.indeterminate_gate_dashed ? { borderStyle: "dashed" } : {}),
   };
@@ -192,6 +201,9 @@ export function NodeFrame({
         data-node-id={node_id}
         data-state={dataState}
         className={nodeFrameClassName}
+        // Native browser tooltip exposes the full statement so long
+        // Interpretation / Conclusion text isn't lost to the 3-line clamp.
+        title={primary_text}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{ position: "relative", display: "inline-block" }}
@@ -241,6 +253,9 @@ export function NodeFrame({
         data-node-id={node_id}
         data-state={dataState}
         className={nodeFrameClassName}
+        // Native browser tooltip exposes the full statement so long
+        // Interpretation / Conclusion text isn't lost to the 3-line clamp.
+        title={primary_text}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -296,6 +311,7 @@ export function NodeFrame({
       data-node-id={node_id}
       data-state={dataState}
       className={nodeFrameClassName}
+      title={primary_text}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

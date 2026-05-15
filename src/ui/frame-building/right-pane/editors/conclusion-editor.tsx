@@ -2,7 +2,9 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { Conclusion, ConclusionDirection, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
+import { Button } from "../../../primitives";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
+import { UIcon } from "../../../primitives/uicon";
 
 export interface ConclusionEditorProps {
   node: Conclusion;
@@ -11,28 +13,14 @@ export interface ConclusionEditorProps {
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3, 12px)" };
 
 const INPUT_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: "4px 8px",
-  border: "1px solid var(--color-border, #e5e7eb)",
-  borderRadius: "var(--radius-sm, 4px)",
-  fontSize: "var(--font-size-sm, 13px)",
-  boxSizing: "border-box",
-  fontFamily: "inherit",
   resize: "vertical",
-};
-
-const LABEL_STYLE: React.CSSProperties = {
-  textTransform: "uppercase",
-  fontSize: "var(--font-size-xs, 11px)",
-  color: "var(--color-text-secondary, #6b7280)",
-  letterSpacing: "0.05em",
 };
 
 const PILL_STYLE: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
-  padding: "2px 8px",
+  gap: "var(--space-1)",
+  padding: "2px var(--space-2)",
   background: "var(--color-surface-muted, #f3f4f6)",
   border: "1px solid var(--color-border, #e5e7eb)",
   borderRadius: "var(--radius-full, 9999px)",
@@ -102,6 +90,7 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
         <FieldAttributionDecoration node_id={node.id} field_path="statement" label="Statement">
           <textarea
             rows={3}
+            className="argmap-input"
             style={INPUT_STYLE}
             defaultValue={node.statement}
             onBlur={(e) => patch({ statement: e.currentTarget.value })}
@@ -110,9 +99,10 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
       </div>
 
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Direction</label>
+        <label className="argmap-section-heading">Direction</label>
         <select
-          style={{ ...INPUT_STYLE, resize: undefined, marginTop: "4px" }}
+          className="argmap-input"
+          style={{ marginTop: "var(--space-1)" }}
           value={currentDirectionValue}
           onChange={(e) => handleDirectionChange(e.currentTarget.value)}
         >
@@ -145,6 +135,7 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
         >
           <textarea
             rows={2}
+            className="argmap-input"
             style={INPUT_STYLE}
             defaultValue={node.reasoning_summary ?? ""}
             onBlur={(e) => patch({ reasoning_summary: e.currentTarget.value || undefined })}
@@ -153,20 +144,22 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
       </div>
 
       <div style={SECTION_STYLE}>
-        <label style={LABEL_STYLE}>Tags</label>
+        <label className="argmap-section-heading">Tags</label>
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
             gap: "var(--space-1, 4px)",
-            marginTop: "4px",
-            marginBottom: "4px",
+            marginTop: "var(--space-1)",
+            marginBottom: "var(--space-1)",
           }}
         >
+          {/* KEEP RAW: tiny inline icon inside a pill chip; IconButton's min 26px is too large for inline-with-text. */}
           {(node.tags ?? []).map((tag) => (
             <span key={tag} style={PILL_STYLE}>
               {tag}
               <button
+                type="button"
                 style={{
                   background: "none",
                   border: "none",
@@ -178,7 +171,7 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
                 onClick={() => removeTag(tag)}
                 aria-label={`Remove tag ${tag}`}
               >
-                ×
+                <UIcon name="times" size={12} />
               </button>
             </span>
           ))}
@@ -186,7 +179,8 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
         <div style={{ display: "flex", gap: "var(--space-2, 8px)" }}>
           <input
             type="text"
-            style={{ ...INPUT_STYLE, resize: undefined, flex: 1 }}
+            className="argmap-input"
+            style={{ flex: 1 }}
             value={tag_input}
             placeholder="Add tag…"
             onChange={(e) => setTagInput(e.currentTarget.value)}
@@ -197,19 +191,9 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
               }
             }}
           />
-          <button
-            style={{
-              padding: "4px 10px",
-              border: "1px solid var(--color-border, #e5e7eb)",
-              borderRadius: "var(--radius-sm, 4px)",
-              background: "transparent",
-              fontSize: "var(--font-size-sm, 13px)",
-              cursor: "pointer",
-            }}
-            onClick={() => addTag(tag_input)}
-          >
+          <Button variant="secondary" size="sm" onClick={() => addTag(tag_input)}>
             Add
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -218,7 +202,7 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
           <FieldAttributionDecoration node_id={node.id} field_path="remedy" label="Remedy">
             <input
               type="text"
-              style={{ ...INPUT_STYLE, resize: undefined }}
+              className="argmap-input"
               defaultValue={node.remedy ?? ""}
               onBlur={(e) => patch({ remedy: e.currentTarget.value || undefined })}
             />

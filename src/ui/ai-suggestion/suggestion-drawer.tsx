@@ -85,9 +85,7 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
             onChange={(e) => setEditedValue(e.target.value)}
             className="argmap-input"
             style={{
-              width: "100%",
               minHeight: "160px",
-              fontFamily: "var(--font-sans)",
               resize: "vertical",
               lineHeight: "var(--line-height-normal)",
             }}

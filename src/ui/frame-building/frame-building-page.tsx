@@ -21,7 +21,8 @@ import type { FrameCanvasHandle } from "../canvas";
 import { EdgeCreationPopup } from "../canvas/edge-creation-popup";
 import { validEdgeTypesFor } from "../canvas/edges/edge-validity";
 import type { EdgeCreationCandidate } from "../canvas/edges/edge-validity";
-import { LoadingScreen, CanvasEmptyState } from "../primitives";
+import { Button, LoadingScreen, CanvasEmptyState, useToast } from "../primitives";
+import { humanizeNodeType } from "../primitives";
 import { SuggestionDrawer } from "../ai-suggestion";
 import { useCascadeConfirmation } from "../hooks";
 import { useNavigate } from "../routing";
@@ -53,9 +54,10 @@ function inverseFlavor(current: Flavor | undefined): Flavor {
 
 export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const { frame_id } = props;
-  const { frame_store, now, generateId } = useRepository();
+  const { frame_store, repository, now, generateId } = useRepository();
   const snapshot = useFrameStore((s) => s);
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [selection, setSelection] = React.useState<InspectorSelection>({ kind: "empty" });
   const [validation_drawer_open, setValidationDrawerOpen] = React.useState(false);
@@ -144,7 +146,20 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     const fv = frame_store.getState().frame_version;
     if (!fv) return;
     const candidates = validEdgeTypesFor(source, target, fv);
-    if (candidates.length === 0) return;
+    if (candidates.length === 0) {
+      // Tell the user *why* the drag-from-handle did nothing. Without this
+      // toast the canvas silently swallows the gesture and the user thinks
+      // the connection feature is broken.
+      const src_node = fv.nodes.find((n) => n.id === source);
+      const tgt_node = fv.nodes.find((n) => n.id === target);
+      const src_label = src_node ? humanizeNodeType(src_node.type) : "this";
+      const tgt_label = tgt_node ? humanizeNodeType(tgt_node.type) : "that";
+      toast.push({
+        kind: "warning",
+        message: `Can't connect ${src_label} → ${tgt_label}: no valid edge type between these node types.`,
+      });
+      return;
+    }
     if (candidates.length === 1) {
       applyCandidate(candidates[0]);
       return;
@@ -169,14 +184,76 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const frame_mode = snapshot.frame?.mode ?? "general";
   const frame_flavor = snapshot.frame?.flavor;
 
+  async function switchToArgumentRunning(): Promise<void> {
+    if (!snapshot.frame || !snapshot.frame_version) return;
+    try {
+      // Prefer the most recently updated session on this frame; if none
+      // exists, mint a blank one and route into it. This removes the
+      // "Sessions are managed from the Home page" detour.
+      const existing = await repository.listSessionsForFrame(frame_id);
+      let session_id = existing[0]?.id;
+      if (!session_id) {
+        const new_session_id = generateId();
+        const new_session_version_id = generateId();
+        const ts = now();
+        const blank_version = {
+          id: new_session_version_id,
+          session_id: new_session_id,
+          version_number: 1,
+          created_at: ts,
+          is_milestone: true,
+          premises: [],
+          argument_edges: [],
+          checkpoint_responses: [],
+          interpretation_selections: [],
+        };
+        const blank_session = {
+          id: new_session_id,
+          frame_id,
+          frame_version_id: snapshot.frame_version.id,
+          frame_version_snapshot: snapshot.frame_version,
+          title: `Argument session — ${snapshot.frame.title}`,
+          premises: [],
+          argument_edges: [],
+          checkpoint_responses: [],
+          interpretation_selections: [],
+          status_map: {},
+          created_at: ts,
+          updated_at: ts,
+          current_version_id: new_session_version_id,
+        };
+        await repository.saveSession(blank_session as never);
+        await repository.saveSessionVersion(blank_version as never);
+        session_id = new_session_id;
+      }
+      navigate({ kind: "argument_running", session_id });
+    } catch (err) {
+      // Surface the error visibly rather than failing silently. Fall back
+      // to the legacy notice so the user has SOME path forward.
+      console.error("[frame-building] switch-to-argument failed:", err);
+      setSwitchToArgumentNoticeOpen(true);
+    }
+  }
+
   const top_bar_slots: TopBarSlots = {
     home: <HomeButton onClick={() => navigate({ kind: "home" })} />,
     modeToggle: (
       <OperatingModeToggle
         current_mode="frame_building"
         validation={snapshot.validation}
-        onSwitchToArgument={() => setSwitchToArgumentNoticeOpen(true)}
-        onSwitchWithWarnings={() => setSwitchToArgumentNoticeOpen(true)}
+        onSwitchToArgument={() => void switchToArgumentRunning()}
+        onSwitchWithWarnings={() => void switchToArgumentRunning()}
+        onValidationBlocked={(errors) => {
+          // Without this handler the toggle silently no-ops on errors; the
+          // user saw nothing happen and assumed the button was broken. We
+          // now both surface the count via toast AND pop open the
+          // validation drawer so they can read and fix the errors.
+          toast.push({
+            kind: "warning",
+            message: `Can't switch yet — ${errors.length} validation error${errors.length === 1 ? "" : "s"} on this frame. Fix them in the drawer below.`,
+          });
+          setValidationDrawerOpen(true);
+        }}
       />
     ),
     title: snapshot.frame ? <FrameTitle /> : null,
@@ -264,18 +341,35 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                     >
                       <div
                         style={{
-                          padding: "var(--space-4) var(--space-5)",
+                          padding: "var(--space-5) var(--space-6)",
                           background: "var(--color-surface-elevated)",
                           color: "var(--color-text-secondary)",
-                          borderRadius: "var(--radius-md)",
-                          boxShadow: "var(--shadow-sm)",
+                          borderRadius: "var(--radius-lg)",
+                          boxShadow: "var(--shadow-md)",
                           fontSize: "var(--font-size-sm)",
+                          lineHeight: "var(--line-height-relaxed)",
                           pointerEvents: "auto",
-                          maxWidth: "320px",
+                          maxWidth: "340px",
                           textAlign: "center",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "var(--space-2)",
                         }}
                       >
-                        Add a Root Question from the palette on the left to begin.
+                        <strong
+                          style={{
+                            color: "var(--color-text-primary)",
+                            fontWeight: "var(--font-weight-semibold)",
+                            fontSize: "var(--font-size-base)",
+                          }}
+                        >
+                          Start with a Root Question
+                        </strong>
+                        <span>
+                          Drag the <em>Root Question</em> tile from the palette on the left onto the
+                          canvas — or click it to drop one in. Every frame builds outward from a
+                          single Root Question.
+                        </span>
                       </div>
                     </div>
                   ) : null}
@@ -307,22 +401,13 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                   label={snapshot.error ? "We couldn't load this frame" : "No frame loaded"}
                   description={snapshot.error ?? undefined}
                   action={
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
+                      size="md"
                       onClick={() => navigate({ kind: "home" })}
-                      style={{
-                        padding: "6px 14px",
-                        background: "var(--color-mode-current-accent)",
-                        color: "var(--color-surface-elevated)",
-                        border: "none",
-                        borderRadius: "var(--radius-sm)",
-                        fontSize: "var(--font-size-sm)",
-                        fontWeight: "var(--font-weight-medium)",
-                        cursor: "pointer",
-                      }}
                     >
                       Back to Home
-                    </button>
+                    </Button>
                   }
                 />
               )

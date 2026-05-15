@@ -59,6 +59,7 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
       title={`Restore version ${ancestor_version_number}?`}
       confirm_label={pending ? "Restoring…" : "Restore"}
       cancel_label="Cancel"
+      confirm_disabled={pending}
       onConfirm={handleConfirm}
       onCancel={onClose}
     >

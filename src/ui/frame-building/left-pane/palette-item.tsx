@@ -27,6 +27,7 @@ export function PaletteItem(props: PaletteItemProps): ReactElement {
   const { node_type, disabled, disabled_reason, on_click, on_drag_start } = props;
 
   return (
+    // KEEP RAW: draggable palette item — uses native drag with HTMLButtonElement-typed drag handlers.
     <button
       type="button"
       disabled={disabled}

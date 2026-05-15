@@ -21,10 +21,10 @@ export const WELCOME_SCREEN_COPY = {
     },
     {
       heading: "Reuse and refine",
-      body: "Save milestones. Compare versions. Migrate sessions across frame revisions.",
+      body: "Save snapshots, compare versions, and carry sessions forward when a frame changes.",
     },
   ],
-  start_label: "Start guided first frame",
+  start_label: "Create your first frame",
   skip_label: "Skip introduction",
 } as const;
 

@@ -2,7 +2,8 @@ import type { ReactElement } from "react";
 import { useSessionStore } from "@/state";
 import { PremisePool } from "./premise-pool";
 import { SessionAuthorities } from "./session-authorities";
-import { Pill } from "../../primitives";
+import { IconButton, Pill } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 
 export interface BottomPanelProps {
   is_expanded: boolean;
@@ -28,46 +29,25 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
           height: 32,
           fontSize: "var(--font-size-xs)",
           color: "var(--color-text-secondary)",
+          background: "var(--color-surface-elevated)",
+          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
         }}
       >
-        <button
-          type="button"
-          data-testid="bottom-panel-toggle"
-          onClick={on_toggle_expanded}
+        <IconButton
           aria-label="Expand bottom panel"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 22,
-            height: 22,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--color-text-secondary)",
-            padding: 0,
-            borderRadius: "var(--radius-sm)",
-          }}
+          onClick={on_toggle_expanded}
+          size="sm"
+          data-testid="bottom-panel-toggle"
+          title="Expand premises and authorities"
         >
-          <svg
-            width={12}
-            height={12}
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M4 10l4-4 4 4" />
-          </svg>
-        </button>
-        <Pill variant="status_open" data-testid="bottom-panel-premise-count">
-          {premise_count} Premises
+          <UIcon name="angle-up" size={16} />
+        </IconButton>
+        <span className="argmap-section-heading">Premises &amp; authorities</span>
+        <Pill variant="status_open" data-testid="bottom-panel-premise-count" size="xs">
+          {premise_count} {premise_count === 1 ? "premise" : "premises"}
         </Pill>
-        <Pill variant="neutral" data-testid="bottom-panel-authority-count">
-          {authority_count} Authorities
+        <Pill variant="neutral" data-testid="bottom-panel-authority-count" size="xs">
+          {authority_count} {authority_count === 1 ? "authority" : "authorities"}
         </Pill>
       </div>
     );
@@ -89,48 +69,19 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
           justifyContent: "space-between",
           padding: "0 var(--space-4)",
           height: 32,
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-secondary)",
-          letterSpacing: "var(--letter-spacing-wide)",
-          textTransform: "uppercase",
-          fontWeight: "var(--font-weight-medium)",
           borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
           background: "var(--color-surface-elevated)",
         }}
       >
-        <span>Premise pool & Session authorities</span>
-        <button
-          type="button"
-          data-testid="bottom-panel-toggle"
-          onClick={on_toggle_expanded}
+        <span className="argmap-section-heading">Premises &amp; authorities</span>
+        <IconButton
           aria-label="Collapse bottom panel"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 22,
-            height: 22,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--color-text-secondary)",
-            padding: 0,
-          }}
+          onClick={on_toggle_expanded}
+          size="sm"
+          data-testid="bottom-panel-toggle"
         >
-          <svg
-            width={12}
-            height={12}
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M4 6l4 4 4-4" />
-          </svg>
-        </button>
+          <UIcon name="angle-down" size={16} />
+        </IconButton>
       </div>
       <div
         style={{

@@ -47,22 +47,39 @@ export function layoutDecisionTreeBranches(
 
 export function DecisionTreeTab(props: DecisionTreeTabProps): ReactElement {
   const { payload, root_node_id_hint, on_branch_clicked } = props;
-  if (!payload || !payload.decision_tree) {
+
+  // Two distinct empty states: payload missing (no resolved session yet) and
+  // payload present but with zero conditional branches (which is the normal
+  // case for `determinate` / `incomplete` / `contested` outputs — only
+  // `conditional` produces real branches). Without the second branch the
+  // user saw a blank SVG and called it a "white screen".
+  const branches = payload?.decision_tree?.branches ?? null;
+  if (!payload || !payload.decision_tree || branches === null || branches.length === 0) {
+    const shape = payload?.shape;
+    const explanation =
+      shape === "determinate"
+        ? "This argument resolves to a single conclusion, so there are no branches to display. Switch to Path overlay or Prose to see the resolution."
+        : shape === "incomplete"
+          ? "The argument isn't resolved yet, so there are no branches. Add premises and answers in the Interview pane on the left, then return here."
+          : shape === "contested"
+            ? "The argument is contested — competing premises support different conclusions. There aren't conditional branches; switch to Prose for a write-up of the dispute."
+            : "There are no conditional branches to display. Decision trees only appear for arguments whose output depends on a future fact (a `conditional` shape).";
     return (
       <div
         data-testid="decision-tree-empty"
         style={{
-          padding: "var(--space-4, 16px)",
-          color: "var(--color-text-tertiary, #9ca3af)",
+          padding: "var(--space-4, 16px) var(--space-5, 20px)",
+          color: "var(--color-text-secondary, #6b7280)",
           fontSize: "var(--font-size-sm, 13px)",
+          lineHeight: "var(--line-height-relaxed, 1.6)",
+          maxWidth: 480,
         }}
       >
-        No conditional branches to display.
+        {explanation}
       </div>
     );
   }
 
-  const branches = payload.decision_tree.branches;
   const boxes = layoutDecisionTreeBranches(branches);
   const last = boxes.length > 0 ? boxes[boxes.length - 1]! : { y: 0, h: 0 };
   const height = last.y + last.h + DEFAULT_V_GAP;

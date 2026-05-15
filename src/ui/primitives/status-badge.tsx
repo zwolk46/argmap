@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeStatus } from "@/schema";
 import { Tooltip } from "./tooltip";
+import { UIcon } from "./uicon";
 
 export const FAILED_CONDITION_MESSAGES: Record<string, string> = {
   no_premise: "No premise has been provided.",
@@ -205,9 +206,8 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
           lineHeight: 1,
         }}
       >
-        <span aria-hidden style={{ fontSize: "11px" }}>
-          ⚖
-        </span>
+        <UIcon name="balance-scale-right" size={11} />
+
         {isBinding ? "B" : "P"}
       </span>
     </span>

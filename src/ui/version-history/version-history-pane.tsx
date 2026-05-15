@@ -9,7 +9,15 @@ import type {
   EdgeRef,
 } from "@/schema";
 import { useFrameStore, useSessionStore } from "@/state";
-import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, IconButton } from "../primitives";
+import {
+  Drawer,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  IconButton,
+  InlineEmpty,
+  InlineLoading,
+} from "../primitives";
 import { useRoute } from "../routing";
 import { PaneTabs, type PaneTabValue } from "./pane-tabs";
 import { MilestoneFilter, type MilestoneFilterValue } from "./milestone-filter";
@@ -267,16 +275,13 @@ function PaneShell(props: PaneShellProps): ReactElement {
             ) : null}
             <MilestoneFilter value={milestone_filter} onChange={setMilestoneFilter} />
             {props.summaries_status === "loading" ? (
-              <div data-testid="version-tree-loading" style={{ padding: 12 }}>
-                Loading versions…
-              </div>
+              <InlineLoading testId="version-tree-loading" label="Loading versions…" />
             ) : props.summaries_status === "error" ? (
-              <div
-                data-testid="version-tree-error"
-                style={{ padding: 12, color: "var(--color-severity-error, #dc2626)" }}
-              >
-                Failed to load versions
-              </div>
+              <InlineEmpty testId="version-tree-error">
+                <span style={{ color: "var(--color-severity-error)" }}>
+                  Failed to load versions
+                </span>
+              </InlineEmpty>
             ) : (
               <VersionTree
                 entity_kind={props.entity_kind}

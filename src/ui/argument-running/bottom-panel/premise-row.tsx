@@ -1,6 +1,8 @@
 import * as React from "react";
 import type { Premise, Edge } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
+import { Button, IconButton, Pill } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 
 export interface PremiseRowProps {
   premise_id: string;
@@ -14,6 +16,10 @@ export interface AttachedEdgeCounts {
   contradicts: number;
   total: number;
 }
+
+// Stable fallback so the Zustand selector below never returns a fresh array.
+// (See use-field-attribution.ts for the loop diagnosis.)
+const EMPTY_EDGES: ReadonlyArray<Edge> = [];
 
 export function countAttachedEdges(
   premise_id: string,
@@ -37,7 +43,7 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
   const premise = useSessionStore(
     (s) => (s.session?.premises ?? []).find((p: Premise) => p.id === premise_id) ?? null,
   );
-  const argument_edges = useSessionStore((s) => s.session?.argument_edges ?? []);
+  const argument_edges = useSessionStore((s) => s.session?.argument_edges ?? EMPTY_EDGES);
   const [editing, setEditing] = React.useState(initial_inline_edit);
   const [draft_statement, setDraftStatement] = React.useState(premise?.statement ?? "");
   const [confirming_delete, setConfirmingDelete] = React.useState(false);
@@ -86,27 +92,33 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
             data-testid={`premise-edit-statement-${premise.id}`}
             value={draft_statement}
             onChange={(e) => setDraftStatement(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                on_save_edit();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setEditing(false);
+              }
+            }}
+            className="argmap-input"
             style={{
               minHeight: 48,
-              padding: "4px 6px",
-              border: "var(--border-thin) solid var(--color-border-tertiary)",
-              borderRadius: "var(--border-radius-md, 6px)",
               fontSize: "var(--font-size-xs, 11px)",
-              fontFamily: "inherit",
             }}
           />
           <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
-            <button
-              type="button"
+            <Button
+              variant="primary"
+              size="md"
               data-testid={`premise-edit-save-${premise.id}`}
               onClick={on_save_edit}
-              style={primary_btn()}
             >
               Save
-            </button>
-            <button type="button" onClick={() => setEditing(false)} style={secondary_btn()}>
+            </Button>
+            <Button variant="secondary" size="md" onClick={() => setEditing(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </>
       ) : (
@@ -128,7 +140,7 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
               display: "flex",
               alignItems: "center",
               gap: "var(--space-1, 4px)",
-              fontSize: "10px",
+              fontSize: "var(--font-size-2xs)",
               color: "var(--color-text-tertiary, #9ca3af)",
             }}
           >
@@ -146,21 +158,19 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
                     .join(", ")}
             </span>
             {counts.total === 0 ? (
-              <span
+              <Pill
+                variant="severity_warning"
+                size="xs"
                 data-testid={`premise-orphan-pill-${premise.id}`}
-                style={{
-                  padding: "0 4px",
-                  borderRadius: "999px",
-                  background: "var(--color-background-warning, #fef3c7)",
-                  color: "var(--color-text-warning, #92400e)",
-                }}
+                title="This premise isn't attached to any frame node yet."
               >
                 orphan
-              </span>
+              </Pill>
             ) : null}
             <span style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1, 4px)" }}>
-              <button
-                type="button"
+              <IconButton
+                aria-label="Highlight on canvas"
+                size="sm"
                 data-testid={`premise-highlight-${premise.id}`}
                 onClick={() => {
                   const targets = argument_edges
@@ -168,31 +178,30 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
                     .map((e) => e.target);
                   on_highlight_on_canvas?.(targets);
                 }}
-                style={icon_btn()}
                 title="Highlight on canvas"
               >
-                ⌖
-              </button>
-              <button
-                type="button"
+                <UIcon name="target" size={14} />
+              </IconButton>
+              <IconButton
+                aria-label="Edit"
+                size="sm"
                 data-testid={`premise-edit-${premise.id}`}
                 onClick={() => setEditing(true)}
-                style={icon_btn()}
                 title="Edit"
               >
-                ✎
-              </button>
-              <button
-                type="button"
+                <UIcon name="pencil" size={14} />
+              </IconButton>
+              <IconButton
+                aria-label="Delete"
+                size="sm"
                 data-testid={`premise-delete-${premise.id}`}
                 onClick={() =>
                   counts.total > 0 ? setConfirmingDelete(true) : on_delete_confirmed()
                 }
-                style={icon_btn()}
                 title="Delete"
               >
-                ⌫
-              </button>
+                <UIcon name="trash" size={14} />
+              </IconButton>
             </span>
           </div>
           {confirming_delete ? (
@@ -213,21 +222,17 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
                 also delete those edges. Continue?
               </span>
               <div style={{ display: "flex", gap: "var(--space-1, 4px)" }}>
-                <button
-                  type="button"
+                <Button
+                  variant="destructive"
+                  size="md"
                   data-testid={`premise-delete-confirm-yes-${premise.id}`}
                   onClick={on_delete_confirmed}
-                  style={primary_btn()}
                 >
                   Delete
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(false)}
-                  style={secondary_btn()}
-                >
+                </Button>
+                <Button variant="secondary" size="md" onClick={() => setConfirmingDelete(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
@@ -235,39 +240,4 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
       )}
     </div>
   );
-}
-
-function icon_btn(): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    color: "var(--color-text-tertiary, #9ca3af)",
-    fontSize: "12px",
-    padding: "0 4px",
-  };
-}
-
-function primary_btn(): React.CSSProperties {
-  return {
-    background: "var(--color-background-accent, #dbeafe)",
-    color: "var(--color-text-accent, #1d4ed8)",
-    border: "none",
-    borderRadius: "var(--border-radius-md, 6px)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
-    padding: "2px 8px",
-  };
-}
-
-function secondary_btn(): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "var(--border-thin) solid var(--color-border-tertiary)",
-    borderRadius: "var(--border-radius-md, 6px)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs, 11px)",
-    padding: "2px 8px",
-    color: "var(--color-text-secondary, #6b7280)",
-  };
 }

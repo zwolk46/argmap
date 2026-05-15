@@ -64,8 +64,11 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
     );
   }
 
+  // P7: rendered as <h1> so the frame title acts as the page's main heading
+  // for AT/SEO. The outer h1 carries the click-to-edit affordance directly;
+  // it inherits the same styling as the previous span.
   return (
-    <span
+    <h1
       data-testid="frame-title"
       onClick={startEdit}
       title={read_only ? undefined : "Click to rename"}
@@ -83,6 +86,11 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
         margin: read_only ? "0" : "0 -6px",
         borderRadius: "var(--radius-sm)",
         transition: "background var(--duration-fast) var(--ease-standard)",
+        // Re-establish layout properties the parent header expects from a
+        // span (h1 default is block; the surrounding chrome lays this out
+        // as an inline-ish element inside a flex row).
+        display: "inline-block",
+        lineHeight: "var(--line-height-tight)",
       }}
       onMouseEnter={(e) => {
         if (!read_only) {
@@ -93,7 +101,7 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
         (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
-      {title || "Untitled Frame"}
-    </span>
+      {title || "Untitled frame"}
+    </h1>
   );
 }

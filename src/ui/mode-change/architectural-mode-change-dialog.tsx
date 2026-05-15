@@ -140,8 +140,14 @@ export function ArchitecturalModeChangeDialog(
   const available_positions: Position[] = [...current_positions, ...staged_positions];
 
   return (
-    <Dialog open={true} onClose={onClose} aria_label="Change architectural mode" size="lg">
-      <DialogHeader>Change architectural mode</DialogHeader>
+    <Dialog
+      open={true}
+      onClose={onClose}
+      aria_labelledby="arch-mode-change-dialog-title"
+      aria_label="Change architectural mode"
+      size="lg"
+    >
+      <DialogHeader id="arch-mode-change-dialog-title">Change architectural mode</DialogHeader>
       <DialogBody>
         <TargetModePicker
           current_mode={current_mode}

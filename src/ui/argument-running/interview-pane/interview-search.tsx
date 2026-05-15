@@ -22,14 +22,8 @@ export const InterviewSearch = React.forwardRef<HTMLInputElement, InterviewSearc
           placeholder="Search items…"
           value={value}
           onChange={(e) => on_change(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "4px 8px",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md, 6px)",
-            fontSize: "var(--font-size-xs, 11px)",
-            background: "var(--color-surface-elevated, #ffffff)",
-          }}
+          className="argmap-input"
+          style={{ fontSize: "var(--font-size-xs, 11px)" }}
         />
       </div>
     );

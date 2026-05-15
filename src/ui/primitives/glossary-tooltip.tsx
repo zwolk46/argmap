@@ -73,6 +73,31 @@ export const GLOSSARY_DICTIONARY: Record<string, GlossaryTerm> = {
       "The standard a party must meet to satisfy a checkpoint (e.g., preponderance, clear and convincing, beyond reasonable doubt).",
     legal_only: true,
   },
+  frame: {
+    term: "Frame",
+    definition:
+      "The logical structure of a legal question — the nodes and edges. Reusable across many arguments; doesn't change as facts come in.",
+  },
+  argument_session: {
+    term: "Argument session",
+    definition:
+      "One set of premises, interpretation selections, and answers evaluated against a frame. Sessions hold the facts and choices; the frame holds the logic.",
+  },
+  primary_path: {
+    term: "Primary path",
+    definition:
+      "The thread from the Root Question to the resolved Conclusion that the runtime followed for this session. Deterministic — same inputs always trace the same path.",
+  },
+  foreclosure: {
+    term: "Foreclosure",
+    definition:
+      "When an interpretation choice rules out other nodes from the analysis. Foreclosed nodes appear dimmed and don't count toward the resolution.",
+  },
+  active_set: {
+    term: "Active set",
+    definition:
+      "Nodes the runtime actually visited under your current selections. Nodes outside the active set were short-circuited by interpretation choices or unmet preconditions.",
+  },
 };
 
 export interface GlossaryTooltipProps {

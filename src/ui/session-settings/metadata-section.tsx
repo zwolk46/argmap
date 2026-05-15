@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
+import { Button } from "../primitives";
 
 export function MetadataSection(): ReactElement {
   const title = useSessionStore((s) => s.session?.title ?? "");
@@ -52,25 +53,15 @@ export function MetadataSection(): ReactElement {
           }}
         >
           <span>This session is archived</span>
-          <button
-            type="button"
-            data-testid="unarchive-button"
-            onClick={unarchive}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--color-mode-current-accent, #1d4ed8)",
-              cursor: "pointer",
-            }}
-          >
+          <Button variant="secondary" size="sm" data-testid="unarchive-button" onClick={unarchive}>
             Unarchive
-          </button>
+          </Button>
         </div>
       ) : null}
       <header
         style={{
           fontSize: "var(--font-size-sm, 13px)",
-          fontWeight: 500,
+          fontWeight: "var(--font-weight-medium)",
           marginBottom: "var(--space-2, 8px)",
         }}
       >
@@ -98,11 +89,7 @@ export function MetadataSection(): ReactElement {
               (e.currentTarget as HTMLInputElement).blur();
             }
           }}
-          style={{
-            width: "100%",
-            padding: "var(--space-1, 4px) var(--space-2, 8px)",
-            fontSize: "var(--font-size-sm, 13px)",
-          }}
+          className="argmap-input"
         />
       </label>
       <label style={{ display: "block" }}>
@@ -119,12 +106,18 @@ export function MetadataSection(): ReactElement {
           value={draft_description}
           onChange={(e) => setDraftDescription(e.target.value)}
           onBlur={commitDescription}
-          rows={3}
-          style={{
-            width: "100%",
-            padding: "var(--space-1, 4px) var(--space-2, 8px)",
-            fontSize: "var(--font-size-sm, 13px)",
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              setDraftDescription(description);
+              (e.currentTarget as HTMLTextAreaElement).blur();
+            }
           }}
+          rows={3}
+          className="argmap-input"
         />
       </label>
     </section>

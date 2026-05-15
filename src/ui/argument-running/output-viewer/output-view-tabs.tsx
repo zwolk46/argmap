@@ -36,6 +36,7 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
         background: "var(--color-surface-elevated)",
       }}
     >
+      {/* KEEP RAW: role="tab" elements with custom selected-tab styling; not a standard Button. */}
       {OUTPUT_VIEW_TAB_ORDER.map((tab) => {
         const active = !computing && tab === current;
         return (

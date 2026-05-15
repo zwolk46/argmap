@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import type { FrameVersion, ValidationResult } from "@/schema";
 import { VALIDATION_RULE_DESCRIPTIONS } from "@/schema";
 import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 
 export interface ValidationRowProps {
   result: ValidationResult;
@@ -49,6 +50,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
         {display_message}
       </span>
 
+      {/* KEEP RAW: validation-row inline action icons (task spec lists validation-row explicitly). */}
       {/* Jump to node */}
       {result.node_id && (
         <button
@@ -58,7 +60,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
           title="Jump to node"
           style={ACTION_BTN_STYLE}
         >
-          ↗
+          <UIcon name="arrow-up-right" size={14} />
         </button>
       )}
 
@@ -72,7 +74,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
             title="Restore warning"
             style={ACTION_BTN_STYLE}
           >
-            ↺
+            <UIcon name="rotate-left" size={14} />
           </button>
         ) : (
           <button
@@ -82,7 +84,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
             title="Dismiss warning"
             style={ACTION_BTN_STYLE}
           >
-            ×
+            <UIcon name="times" size={14} />
           </button>
         ))}
     </div>
@@ -96,7 +98,7 @@ const ACTION_BTN_STYLE: React.CSSProperties = {
   border: "none",
   cursor: "pointer",
   color: "var(--color-text-tertiary, #9ca3af)",
-  padding: "0 4px",
-  fontSize: "14px",
+  padding: "0 var(--space-1)",
+  fontSize: "var(--font-size-sm)",
   flexShrink: 0,
 };

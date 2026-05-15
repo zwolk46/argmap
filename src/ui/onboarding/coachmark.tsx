@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement, RefObject } from "react";
+import { Button } from "../primitives";
 
 export interface CoachmarkProps {
   anchor_ref: RefObject<HTMLElement | null>;
@@ -63,37 +64,23 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
         }}
       >
         {props.on_learn_more ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             data-testid="coachmark-learn-more"
             onClick={props.on_learn_more}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--color-mode-current-accent, #1d4ed8)",
-              fontSize: "var(--font-size-xs, 11px)",
-              cursor: "pointer",
-            }}
           >
             Learn more
-          </button>
+          </Button>
         ) : null}
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
           data-testid="coachmark-dismiss"
           onClick={props.on_dismiss}
-          style={{
-            background: "var(--color-mode-current-accent, #1d4ed8)",
-            color: "var(--color-text-on-accent, #ffffff)",
-            border: "none",
-            borderRadius: "var(--radius-md, 6px)",
-            padding: "var(--space-1, 4px) var(--space-3, 12px)",
-            fontSize: "var(--font-size-xs, 11px)",
-            cursor: "pointer",
-          }}
         >
           Got it
-        </button>
+        </Button>
       </div>
     </div>
   );

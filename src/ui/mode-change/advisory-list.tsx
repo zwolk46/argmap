@@ -24,7 +24,7 @@ export function AdvisoryList(props: AdvisoryListProps): ReactElement {
             style={{
               fontSize: "var(--font-size-xs, 11px)",
               color: "var(--color-text-secondary, #6b7280)",
-              fontWeight: 500,
+              fontWeight: "var(--font-weight-medium)",
               marginTop: "var(--space-2, 8px)",
             }}
           >
@@ -41,6 +41,7 @@ export function AdvisoryList(props: AdvisoryListProps): ReactElement {
               }}
             >
               <span>{v.message}</span>
+              {/* KEEP RAW: pill-shaped node-id chip used to jump to a node; bespoke shape and size. */}
               {v.node_id ? (
                 <button
                   type="button"

@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
-import { ConfirmDialog } from "../primitives";
+import { Button, ConfirmDialog } from "../primitives";
 
 export interface ArchiveDeleteSectionProps {
   on_delete_session: () => void;
@@ -39,41 +39,30 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
       <header
         style={{
           fontSize: "var(--font-size-sm, 13px)",
-          fontWeight: 500,
+          fontWeight: "var(--font-weight-medium)",
           marginBottom: "var(--space-2, 8px)",
         }}
       >
         Archive and Delete
       </header>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="md"
         data-testid="archive-toggle"
         onClick={toggleArchive}
         title="Archived sessions are hidden from the default open-existing-session list"
-        style={{
-          marginRight: "var(--space-2, 8px)",
-          padding: "var(--space-1, 4px) var(--space-3, 12px)",
-          fontSize: "var(--font-size-sm, 13px)",
-        }}
+        style={{ marginRight: "var(--space-2, 8px)" }}
       >
         {archived ? "Unarchive" : "Archive"}
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="destructive"
+        size="md"
         data-testid="delete-session-button"
         onClick={() => setDeleteOpen(true)}
-        style={{
-          padding: "var(--space-1, 4px) var(--space-3, 12px)",
-          fontSize: "var(--font-size-sm, 13px)",
-          color: "var(--color-severity-error, #dc2626)",
-          background: "transparent",
-          border: "var(--border-thin, 1px) solid var(--color-severity-error, #dc2626)",
-          borderRadius: "var(--radius-md, 6px)",
-          cursor: "pointer",
-        }}
       >
         Delete session
-      </button>
+      </Button>
       <ConfirmDialog
         open={delete_open}
         title={`Delete session "${title}"?`}
@@ -98,11 +87,8 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
               type="text"
               value={confirm_text}
               onChange={(e) => setConfirmText(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "var(--space-1, 4px) var(--space-2, 8px)",
-                marginTop: "var(--space-1, 4px)",
-              }}
+              className="argmap-input"
+              style={{ marginTop: "var(--space-1, 4px)" }}
             />
           </label>
           {confirm_text.length > 0 && confirm_text !== title ? (

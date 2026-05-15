@@ -18,7 +18,7 @@ export function OutputEmptyState(props: OutputEmptyStateProps): ReactElement {
         padding: "var(--space-8) var(--space-5)",
         height: "100%",
         textAlign: "center",
-        color: "var(--color-text-tertiary)",
+        color: "var(--color-text-secondary)",
         fontSize: "var(--font-size-sm)",
       }}
     >

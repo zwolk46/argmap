@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
-import { ConfirmDialog } from "../primitives";
+import { Button, ConfirmDialog } from "../primitives";
 
 export function previewProse(text: string | undefined, max_len = 120): string {
   if (!text) return "";
@@ -29,7 +29,7 @@ export function G6RemoveRewriteSection(): ReactElement {
       <header
         style={{
           fontSize: "var(--font-size-sm, 13px)",
-          fontWeight: 500,
+          fontWeight: "var(--font-weight-medium)",
           marginBottom: "var(--space-2, 8px)",
         }}
       >
@@ -58,23 +58,15 @@ export function G6RemoveRewriteSection(): ReactElement {
           >
             {preview_text}
           </p>
-          <button
-            type="button"
+          <Button
+            variant="destructive"
+            size="md"
             data-testid="g6-remove-button"
             onClick={() => setConfirmOpen(true)}
-            style={{
-              marginTop: "var(--space-2, 8px)",
-              color: "var(--color-severity-error, #dc2626)",
-              background: "transparent",
-              border: "var(--border-thin, 1px) solid var(--color-severity-error, #dc2626)",
-              padding: "var(--space-1, 4px) var(--space-3, 12px)",
-              borderRadius: "var(--radius-md, 6px)",
-              cursor: "pointer",
-              fontSize: "var(--font-size-sm, 13px)",
-            }}
+            style={{ marginTop: "var(--space-2, 8px)" }}
           >
             Remove rewrite
-          </button>
+          </Button>
           <ConfirmDialog
             open={confirm_open}
             title="Remove the rewritten prose?"

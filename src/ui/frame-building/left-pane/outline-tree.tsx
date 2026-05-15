@@ -130,6 +130,24 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
     );
   }
 
+  // Empty-outline state. Without this the OutlineTree silently rendered
+  // nothing for a freshly-created frame; the left pane felt blank.
+  if (rows.length === 0) {
+    return (
+      <div
+        data-testid="outline-empty"
+        style={{
+          padding: "var(--space-4) var(--space-3)",
+          color: "var(--color-text-tertiary)",
+          fontSize: "var(--font-size-xs)",
+          lineHeight: "var(--line-height-relaxed)",
+        }}
+      >
+        Outline appears here once nodes exist. Add a Root Question from the palette above.
+      </div>
+    );
+  }
+
   return (
     <div
       role="tree"

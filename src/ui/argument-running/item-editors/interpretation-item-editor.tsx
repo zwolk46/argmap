@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { NodeRef, Interpretation, Edge } from "@/schema";
 import { useRepository } from "@/state";
+import { Button } from "../../primitives";
 import { PremiseAuthoringSection, type PremiseAuthoringResult } from "./premise-authoring-section";
 import { AuthorityAttachmentSection } from "./authority-attachment-section";
 import { NotesField } from "./notes-field";
@@ -68,6 +69,15 @@ export function InterpretationItemEditor(props: InterpretationItemEditorProps): 
   return (
     <div
       data-testid="interpretation-item-editor"
+      onKeyDown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && can_save) {
+          e.preventDefault();
+          on_save();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          on_close();
+        }
+      }}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -85,16 +95,7 @@ export function InterpretationItemEditor(props: InterpretationItemEditorProps): 
         >
           {node.statement}
         </h3>
-        <span
-          style={{
-            fontSize: "10px",
-            color: "var(--color-text-tertiary, #9ca3af)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
-          Interpretation
-        </span>
+        <span className="argmap-section-heading">Interpretation</span>
       </header>
 
       <fieldset
@@ -157,43 +158,23 @@ export function InterpretationItemEditor(props: InterpretationItemEditorProps): 
           gap: "var(--space-1, 4px)",
         }}
       >
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="md"
           data-testid="interpretation-editor-cancel"
           onClick={on_close}
-          style={{
-            background: "transparent",
-            border: "var(--border-thin) solid var(--color-border-tertiary)",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "4px 10px",
-            color: "var(--color-text-secondary, #6b7280)",
-          }}
         >
           Cancel
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
           data-testid="interpretation-editor-save"
           onClick={on_save}
           disabled={!can_save}
-          style={{
-            background: can_save
-              ? "var(--color-background-accent, #dbeafe)"
-              : "var(--color-background-secondary, #f3f4f6)",
-            color: can_save
-              ? "var(--color-text-accent, #1d4ed8)"
-              : "var(--color-text-tertiary, #9ca3af)",
-            border: "none",
-            borderRadius: "var(--border-radius-md, 6px)",
-            cursor: can_save ? "pointer" : "default",
-            fontSize: "var(--font-size-xs, 11px)",
-            padding: "4px 10px",
-          }}
         >
           Save
-        </button>
+        </Button>
       </footer>
     </div>
   );

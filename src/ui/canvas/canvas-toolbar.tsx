@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { IconButton } from "../primitives/icon-button";
+import { UIcon } from "../primitives/uicon";
 import type { ForeclosureVisibility } from "./edges/types";
 
 export type { ForeclosureVisibility };
@@ -13,107 +14,14 @@ export interface CanvasToolbarProps {
   onAutoArrange?: () => void;
 }
 
-// Tiny inline SVG icons to keep the toolbar consistent with the icon-set elsewhere.
-function Glyph(d: string): ReactElement {
-  return (
-    <svg
-      width={14}
-      height={14}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d={d} />
-    </svg>
-  );
-}
+const ZoomIn = <UIcon name="zoom-in" size={16} />;
+const ZoomOut = <UIcon name="zoom-out" size={16} />;
+const FitView = <UIcon name="expand" size={16} />;
+const AutoArrangeGlyph = <UIcon name="apps-sort" size={16} />;
 
-const ZoomIn = Glyph("M8 4v8M4 8h8");
-const ZoomOut = Glyph("M4 8h8");
-const FitView = (
-  <svg
-    width={14}
-    height={14}
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M3 5V3h2M11 3h2v2M13 11v2h-2M5 13H3v-2" />
-  </svg>
-);
-const AutoArrangeGlyph = (
-  <svg
-    width={14}
-    height={14}
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <rect x="2" y="2.5" width="5" height="4" rx="1" />
-    <rect x="9" y="9.5" width="5" height="4" rx="1" />
-    <path d="M4.5 6.5v3M11.5 9.5v-3M4.5 9.5h7" />
-  </svg>
-);
-
-const ForecloseVisibleGlyph = (
-  <svg
-    width={14}
-    height={14}
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M2 8c2-3.5 4.5-5 6-5s4 1.5 6 5c-2 3.5-4.5 5-6 5s-4-1.5-6-5z" />
-    <circle cx="8" cy="8" r="2" />
-  </svg>
-);
-const ForecloseDimmedGlyph = (
-  <svg
-    width={14}
-    height={14}
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-    opacity={0.55}
-  >
-    <path d="M2 8c2-3.5 4.5-5 6-5s4 1.5 6 5c-2 3.5-4.5 5-6 5s-4-1.5-6-5z" />
-  </svg>
-);
-const ForecloseHiddenGlyph = (
-  <svg
-    width={14}
-    height={14}
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.6}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden
-  >
-    <path d="M2 4l12 8M2 12c2-3.5 4.5-5 6-5s4 1.5 6 5" opacity={0.55} />
-  </svg>
-);
+const ForecloseVisibleGlyph = <UIcon name="eye" size={16} />;
+const ForecloseDimmedGlyph = <UIcon name="eye" size={16} style={{ opacity: 0.55 }} />;
+const ForecloseHiddenGlyph = <UIcon name="eye-crossed" size={16} />;
 
 export function CanvasToolbar({
   foreclosure_visibility,
@@ -160,6 +68,7 @@ export function CanvasToolbar({
         borderRadius: "var(--radius-pill)",
         border: "var(--border-hairline) solid var(--color-border-subtle)",
         padding: "4px var(--space-2)",
+        animation: "argmap-overlay-fade-in var(--duration-medium) var(--ease-emphasized)",
       }}
     >
       <IconButton size="sm" aria-label="Zoom in" onClick={() => zoomIn()}>
@@ -172,7 +81,9 @@ export function CanvasToolbar({
         {FitView}
       </IconButton>
       <IconButton size="sm" aria-label="Zoom to 100%" onClick={() => zoomTo(1)}>
-        <span style={{ fontSize: "10px", fontWeight: 500 }}>100%</span>
+        <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-medium)" }}>
+          100%
+        </span>
       </IconButton>
       <span
         aria-hidden
@@ -207,10 +118,9 @@ export function CanvasToolbar({
           placeholder="Search…"
           className="argmap-input"
           style={{
+            // Compact density override for the floating canvas toolbar (small/square).
             height: "26px",
             padding: "0 var(--space-2)",
-            border: "var(--border-thin) solid var(--color-border-subtle)",
-            borderRadius: "var(--radius-md)",
             fontSize: "var(--font-size-xs)",
             width: "140px",
             background: "var(--color-surface-pane)",

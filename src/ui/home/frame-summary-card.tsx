@@ -1,6 +1,8 @@
 import type { ReactElement, KeyboardEvent } from "react";
 import type { FrameId } from "@/schema";
 import { ModeFlavorChip } from "../chrome";
+import { IconButton } from "../primitives";
+import { UIcon } from "../primitives/uicon";
 
 export interface FrameSummary {
   id: FrameId;
@@ -24,6 +26,21 @@ export interface FrameSummaryCardProps {
   is_pinned: boolean;
   onOpen: (frame_id: FrameId) => void;
   onTogglePin: (frame_id: FrameId, pinned: boolean) => void;
+  /**
+   * Optional "Run argument" sub-action. When supplied, the card grows a
+   * secondary action that opens the most-recent argument session for this
+   * frame (auto-creating one if none exists). Without this, the only path
+   * to a session is via Frame Building's mode toggle, which is two clicks
+   * away — and the previous "Sessions are managed from the Home page"
+   * dialog was a flat lie because Home had no sessions UI at all.
+   */
+  onRunArgument?: (frame_id: FrameId) => void;
+  /**
+   * Owner signals an in-flight Run argument call so the button can show a
+   * disabled / pending state and the user can't kick off duplicate
+   * Supabase writes by clicking twice.
+   */
+  run_argument_pending?: boolean;
 }
 
 export function relativeTime(iso: string): string {
@@ -39,7 +56,7 @@ export function relativeTime(iso: string): string {
 }
 
 export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
-  const { summary, is_pinned, onOpen, onTogglePin } = props;
+  const { summary, is_pinned, onOpen, onTogglePin, onRunArgument, run_argument_pending } = props;
 
   function handleKey(e: KeyboardEvent<HTMLElement>) {
     if (e.key === "Enter" || e.key === " ") {
@@ -56,9 +73,10 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
       role="button"
       tabIndex={0}
       onClick={(e) => {
-        // Ignore clicks on the pin button child.
+        // Ignore clicks on either nested action button.
         const target = e.target as HTMLElement;
         if (target.closest('[data-testid="frame-card-pin"]')) return;
+        if (target.closest('[data-testid="frame-card-run-argument"]')) return;
         onOpen(summary.id);
       }}
       onKeyDown={handleKey}
@@ -103,51 +121,18 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         >
           {summary.title || "Untitled frame"}
         </h3>
-        <button
-          type="button"
+        <IconButton
           data-testid="frame-card-pin"
-          aria-pressed={is_pinned}
+          active={is_pinned}
           aria-label={is_pinned ? "Unpin frame" : "Pin frame"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin(summary.id, !is_pinned);
-          }}
+          onClick={() => onTogglePin(summary.id, !is_pinned)}
           title={is_pinned ? "Unpin" : "Pin"}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "26px",
-            height: "26px",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            color: is_pinned ? "var(--color-milestone-star)" : "var(--color-text-tertiary)",
-            borderRadius: "var(--radius-md)",
-            transition: "background-color var(--duration-fast) var(--ease-standard)",
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)")
-          }
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+          size="sm"
         >
           {is_pinned ? (
-            <svg width={14} height={14} viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-              <path d="M8 1.5l1.7 4 4.3.4-3.3 2.9.9 4.2L8 10.8l-3.6 2.2.9-4.2-3.3-2.9 4.3-.4z" />
-            </svg>
+            <UIcon name="star" size={14} />
           ) : (
-            <svg
-              width={14}
-              height={14}
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M8 1.5l1.7 4 4.3.4-3.3 2.9.9 4.2L8 10.8l-3.6 2.2.9-4.2-3.3-2.9 4.3-.4z" />
-            </svg>
+            <UIcon name="star" size={14} style={{ opacity: 0.35 }} />
           )}
           <span
             aria-hidden="true"
@@ -165,7 +150,7 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
           >
             {is_pinned ? "★" : "☆"}
           </span>
-        </button>
+        </IconButton>
       </header>
       <footer
         style={{
@@ -179,15 +164,49 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         }}
       >
         <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
-        <span
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-tertiary)",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {relativeTime(summary.updated_at)}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          {onRunArgument ? (
+            <button
+              type="button"
+              data-testid="frame-card-run-argument"
+              disabled={run_argument_pending}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (run_argument_pending) return;
+                onRunArgument(summary.id);
+              }}
+              aria-label="Open an argument session for this frame"
+              aria-busy={run_argument_pending ? "true" : undefined}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                padding: "2px var(--space-2)",
+                background: "transparent",
+                border: "var(--border-thin) solid var(--color-border-subtle)",
+                borderRadius: "var(--radius-pill)",
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-secondary)",
+                cursor: run_argument_pending ? "default" : "pointer",
+                opacity: run_argument_pending ? 0.6 : 1,
+                lineHeight: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {run_argument_pending ? "Opening…" : "Run argument"}{" "}
+              <UIcon name="arrow-right" size={12} />
+            </button>
+          ) : null}
+          <span
+            style={{
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {relativeTime(summary.updated_at)}
+          </span>
+        </div>
       </footer>
     </article>
   );

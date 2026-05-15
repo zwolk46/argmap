@@ -3,6 +3,7 @@ import type { SatisfactionPolicy } from "@/schema";
 import { DEFAULT_SATISFACTION_POLICIES, resolveEffectivePolicy, toModeFlavor } from "@/schema";
 import type { SatisfactionPolicyKey } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
+import { Button } from "../../primitives";
 import { ConditionList } from "../right-pane/condition-list";
 
 const POLICY_NODE_TYPES: SatisfactionPolicyKey[] = [
@@ -14,14 +15,6 @@ const POLICY_NODE_TYPES: SatisfactionPolicyKey[] = [
   "Conclusion",
   "LogicalGate",
 ];
-
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-xs, 11px)",
-  fontWeight: 600,
-  color: "var(--color-text-tertiary, #9ca3af)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-};
 
 function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey }): ReactElement {
   const [expanded, setExpanded] = useState(false);
@@ -52,9 +45,11 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
         overflow: "hidden",
       }}
     >
+      {/* KEEP RAW: accordion-header button with bespoke layout (full-width row, two ends), not the standard Button taxonomy. */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
         style={{
           width: "100%",
           padding: "var(--space-2, 8px) var(--space-3, 12px)",
@@ -67,7 +62,7 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
           textAlign: "left",
         }}
       >
-        <span style={LABEL_STYLE}>{node_type}</span>
+        <span className="argmap-section-heading">{node_type}</span>
         <span
           style={{
             fontSize: "var(--font-size-xs, 11px)",
@@ -91,22 +86,14 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
             mode_flavor={mode_flavor}
           />
           {frame_default && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => handleChange(DEFAULT_SATISFACTION_POLICIES[node_type])}
-              style={{
-                marginTop: "var(--space-2, 8px)",
-                padding: "var(--space-1, 4px) var(--space-2, 8px)",
-                fontSize: "var(--font-size-xs, 11px)",
-                border: "1px solid var(--color-border-default, #e5e7eb)",
-                borderRadius: "var(--radius-sm, 4px)",
-                cursor: "pointer",
-                background: "transparent",
-                color: "var(--color-text-secondary, #6b7280)",
-              }}
+              style={{ marginTop: "var(--space-2, 8px)" }}
             >
               Reset to library default
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -121,7 +108,7 @@ export function DefaultPoliciesSection(): ReactElement | null {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2, 8px)" }}>
-      <span style={LABEL_STYLE}>Default satisfaction policies</span>
+      <h3 className="argmap-section-heading">Default satisfaction policies</h3>
       <p
         style={{
           margin: 0,

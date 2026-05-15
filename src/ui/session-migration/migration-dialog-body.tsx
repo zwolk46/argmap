@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { OrphanCandidate, OrphanResolution } from "@/state";
+import { Button, InlineEmpty, InlineLoading } from "../primitives";
 import { OrphanCandidateGroup } from "./orphan-candidate-group";
 
 const CARRIER_KIND_ORDER: OrphanCandidate["carrier_kind"][] = [
@@ -42,57 +43,38 @@ export function MigrationDialogBody(props: MigrationDialogBodyProps): ReactEleme
   const { phase } = props;
 
   if (phase.kind === "loading") {
-    return (
-      <div
-        data-testid="migration-loading"
-        style={{
-          padding: "var(--space-4, 16px)",
-          textAlign: "center",
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
-        }}
-      >
-        Computing orphan candidates…
-      </div>
-    );
+    return <InlineLoading testId="migration-loading" label="Computing orphan candidates…" />;
   }
 
   if (phase.kind === "loaded_empty") {
     return (
-      <div
-        data-testid="migration-empty"
-        style={{
-          padding: "var(--space-4, 16px)",
-          textAlign: "center",
-          color: "var(--color-text-secondary, #6b7280)",
-          fontSize: "var(--font-size-sm, 13px)",
-        }}
-      >
+      <InlineEmpty testId="migration-empty">
         This session has no orphans. Migrating is safe.
-      </div>
+      </InlineEmpty>
     );
   }
 
   if (phase.kind === "failed") {
     return (
-      <div data-testid="migration-failed" style={{ padding: "var(--space-4, 16px)" }}>
+      <div data-testid="migration-failed" style={{ padding: "var(--space-4)" }}>
         <div
           style={{
-            color: "var(--color-severity-error, #dc2626)",
-            fontSize: "var(--font-size-sm, 13px)",
+            color: "var(--color-severity-error)",
+            fontSize: "var(--font-size-sm)",
           }}
         >
           {phase.error.message}
         </div>
         {props.onRetry ? (
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="md"
             data-testid="migration-retry"
             onClick={props.onRetry}
-            style={{ marginTop: "var(--space-2, 8px)" }}
+            style={{ marginTop: "var(--space-2)" }}
           >
             Retry
-          </button>
+          </Button>
         ) : null}
       </div>
     );

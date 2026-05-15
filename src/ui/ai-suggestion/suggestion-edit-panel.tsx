@@ -22,15 +22,8 @@ export function SuggestionEditPanel<TOut>({
     <textarea
       value={typeof current_value === "string" ? current_value : JSON.stringify(current_value)}
       onChange={(e) => on_change(e.target.value as unknown as TOut)}
-      style={{
-        width: "100%",
-        minHeight: "80px",
-        padding: "var(--space-2)",
-        border: "var(--border-thin) solid var(--color-border-default)",
-        borderRadius: "var(--radius-md)",
-        fontSize: "var(--font-size-sm)",
-        fontFamily: "var(--font-sans)",
-      }}
+      className="argmap-input"
+      style={{ minHeight: "80px" }}
     />
   );
 }

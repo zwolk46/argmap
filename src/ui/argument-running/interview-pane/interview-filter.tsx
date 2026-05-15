@@ -67,6 +67,7 @@ export function InterviewFilter(props: InterviewFilterProps): ReactElement {
         borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
       }}
     >
+      {/* KEEP RAW: pill-toggle chips with data-active state; not the standard Button taxonomy. */}
       {INTERVIEW_FILTER_NODE_TYPES.map((t) => (
         <button
           key={t}
@@ -140,9 +141,9 @@ function chipStyle(active: boolean): React.CSSProperties {
       : "var(--color-background-secondary, #f3f4f6)",
     color: active ? "var(--color-text-accent, #1d4ed8)" : "var(--color-text-secondary, #6b7280)",
     border: "none",
-    borderRadius: "999px",
+    borderRadius: "var(--radius-pill)",
     cursor: "pointer",
     fontSize: "var(--font-size-xs, 11px)",
-    padding: "2px 8px",
+    padding: "2px var(--space-2)",
   };
 }

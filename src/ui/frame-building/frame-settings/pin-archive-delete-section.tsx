@@ -3,17 +3,7 @@ import type { ReactElement } from "react";
 import type { FrameId } from "@/schema";
 import { useFrameStore, useAppStateStore, useRepository } from "@/state";
 import { useNavigate } from "@/ui";
-import { ConfirmDialog } from "../../primitives";
-
-const SECTION_LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-xs, 11px)",
-  fontWeight: 600,
-  color: "var(--color-text-tertiary, #9ca3af)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  display: "block",
-  marginBottom: "var(--space-2, 8px)",
-};
+import { Button, ConfirmDialog } from "../../primitives";
 
 const ROW_STYLE: React.CSSProperties = {
   display: "flex",
@@ -77,10 +67,16 @@ export function PinArchiveDeleteSection(): ReactElement | null {
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
-      <span style={SECTION_LABEL_STYLE}>Frame actions</span>
+      <h3
+        className="argmap-section-heading"
+        style={{ display: "block", marginBottom: "var(--space-2, 8px)" }}
+      >
+        Frame actions
+      </h3>
 
       <div style={ROW_STYLE}>
         <span style={ROW_LABEL_STYLE}>Pin frame</span>
+        {/* KEEP RAW: pill-toggle with active/inactive visual states, not the standard Button taxonomy. */}
         <button type="button" style={TOGGLE_BTN_STYLE(is_pinned)} onClick={handlePinToggle}>
           {is_pinned ? "Pinned" : "Pin"}
         </button>
@@ -88,6 +84,7 @@ export function PinArchiveDeleteSection(): ReactElement | null {
 
       <div style={ROW_STYLE}>
         <span style={ROW_LABEL_STYLE}>Archive</span>
+        {/* KEEP RAW: pill-toggle with active/inactive visual states, not the standard Button taxonomy. */}
         <button type="button" style={TOGGLE_BTN_STYLE(is_archived)} onClick={handleArchiveToggle}>
           {is_archived ? "Archived" : "Archive"}
         </button>
@@ -104,22 +101,14 @@ export function PinArchiveDeleteSection(): ReactElement | null {
         <span style={{ ...ROW_LABEL_STYLE, color: "var(--color-severity-error, #ef4444)" }}>
           Delete frame
         </span>
-        <button
-          type="button"
+        <Button
+          variant="destructive"
+          size="sm"
           data-testid="delete-frame-button"
           onClick={() => setDeleteOpen(true)}
-          style={{
-            padding: "var(--space-1, 4px) var(--space-3, 12px)",
-            fontSize: "var(--font-size-xs, 11px)",
-            border: "1px solid var(--color-severity-error, #ef4444)",
-            borderRadius: "var(--radius-sm, 4px)",
-            cursor: "pointer",
-            background: "transparent",
-            color: "var(--color-severity-error, #ef4444)",
-          }}
         >
           Delete
-        </button>
+        </Button>
       </div>
 
       {/* P0-21: replaced native window.confirm() — no type-to-confirm, no
@@ -152,9 +141,8 @@ export function PinArchiveDeleteSection(): ReactElement | null {
               type="text"
               value={confirm_text}
               onChange={(e) => setConfirmText(e.target.value)}
+              className="argmap-input"
               style={{
-                width: "100%",
-                padding: "var(--space-1, 4px) var(--space-2, 8px)",
                 marginTop: "var(--space-1, 4px)",
               }}
             />
