@@ -14,7 +14,18 @@ export function ModeFlavorChip({
   onOpenSettings,
 }: ModeFlavorChipProps): ReactElement {
   const primary = mode === "legal" ? "Legal" : "General";
-  const secondary = mode === "legal" ? undefined : flavor === "personal" ? "Personal" : "Academic";
+  // Do NOT fabricate a flavor when one isn't set: legal-mode never carries a
+  // flavor, and a general-mode frame may also be flavor-less (the wizard
+  // defaults to "personal" today, but the schema marks Frame.flavor as
+  // optional, so historical rows or imported frames may omit it).
+  const secondary =
+    mode === "legal"
+      ? undefined
+      : flavor === "personal"
+        ? "Personal"
+        : flavor === "academic"
+          ? "Academic"
+          : undefined;
 
   return (
     <Pill variant="neutral" size="xs" title={onOpenSettings ? "Open frame settings" : undefined}>

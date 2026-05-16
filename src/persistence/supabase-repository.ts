@@ -256,6 +256,7 @@ export class SupabaseRepository implements Repository {
       .select("id, payload, title, updated_at, archived")
       .eq("user_id", this.user_id)
       .eq("frame_id", frame_id)
+      .eq("archived", false)
       .order("updated_at", { ascending: false });
     if (error) throw new RepositoryError("listSessionsForFrame", error.message);
     return (data ?? []).map((row): ArgumentSessionSummary => {

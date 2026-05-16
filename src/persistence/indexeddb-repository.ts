@@ -235,7 +235,12 @@ export class IndexedDbRepository implements Repository {
   async listSessionsForFrame(frame_id: FrameId): Promise<ArgumentSessionSummary[]> {
     const sessions = await this.db.argument_sessions.where("frame_id").equals(frame_id).toArray();
     const frame = await this.db.frames.get(frame_id);
-    return sessions.map((s) => this.toSessionSummary(s, frame));
+    // Filter archived sessions so the caller (Home / FrameBuilding "Run
+    // argument") never silently navigates into an archived session. Mirrors
+    // listFrames' archived filter.
+    return sessions
+      .filter((s) => !((s as { archived?: boolean }).archived ?? false))
+      .map((s) => this.toSessionSummary(s, frame));
   }
 
   async loadSession(session_id: SessionId): Promise<ArgumentSession> {

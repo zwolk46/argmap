@@ -25,20 +25,31 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
   const frames = useAppStateStore((s) => s.frames);
   const recents_ids = useAppStateStore((s) => s.app_state.recents);
   const pinned_ids = useAppStateStore((s) => s.app_state.pinned);
+  const is_loading = useAppStateStore((s) => s.is_loading);
   const { repository, app_state_store, now, generateId } = useRepository();
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [wizard_open, setWizardOpen] = React.useState(false);
   const [tutorial_loading, setTutorialLoading] = React.useState(false);
+  // Track whether listFrames has completed at least once so we can show a
+  // loading affordance on first paint instead of flashing the empty state
+  // before the fetch settles.
+  const [frames_loaded_once, setFramesLoadedOnce] = React.useState(false);
   // P3: per-frame pending state so the Run argument button can disable while
   // Supabase round-trips. A bare bool would race when the user clicks two
   // cards in quick succession; keying by frame_id keeps the indicators
-  // independent.
+  // independent. The ref mirrors the state value so the synchronous guard
+  // in onRunArgument doesn't race with React's state-commit boundary on
+  // double-clicks.
   const [run_argument_pending, setRunArgumentPending] = React.useState<FrameId | null>(null);
+  const run_argument_in_flight = React.useRef<Set<FrameId>>(new Set());
 
   React.useEffect(() => {
-    app_state_store.getState().loadFrames();
+    void app_state_store
+      .getState()
+      .loadFrames()
+      .finally(() => setFramesLoadedOnce(true));
   }, [app_state_store]);
 
   const by_id = new Map<FrameId, FrameSummary>();
@@ -57,7 +68,12 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
       recents.push(f);
     }
   }
-  const is_empty = pinned.length === 0 && recents.length === 0;
+  // Distinguish "user has no frames" from "user has frames but none are
+  // pinned or recent". The empty-state CTA is honest only in the first
+  // case; in the second we'd be telling the user their frames are gone.
+  const is_empty = frames.length === 0 && pinned.length === 0 && recents.length === 0;
+  const non_empty_no_recents =
+    frames.length > 0 && pinned.length === 0 && recents.length === 0;
 
   function onOpen(frame_id: FrameId): void {
     app_state_store.getState().setRecent(frame_id);
@@ -69,7 +85,11 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
     // open the most-recent session on this frame, or create a blank one
     // and open that. Surfaces an error toast on failure instead of
     // navigating into a broken argument-running view.
-    if (run_argument_pending) return; // guard against double-clicks before disabled prop arrives
+    // Synchronous ref guard — React's setState batches across the two
+    // clicks of a double-click so the state-based `run_argument_pending`
+    // check would let the second click through.
+    if (run_argument_in_flight.current.has(frame_id)) return;
+    run_argument_in_flight.current.add(frame_id);
     setRunArgumentPending(frame_id);
     try {
       const existing = await repository.listSessionsForFrame(frame_id);
@@ -114,6 +134,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
       const msg = err instanceof Error ? err.message : String(err);
       toast.push({ kind: "error", message: `Couldn't open an argument session: ${msg}` });
     } finally {
+      run_argument_in_flight.current.delete(frame_id);
       setRunArgumentPending(null);
     }
   }
@@ -121,13 +142,15 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
     try {
       app_state_store.getState().pinFrame(frame_id, pinned);
     } catch (err) {
-      // P1: surface the pin cap as a warning toast instead of throwing
-      // up into React's error boundary.
       if (err instanceof PinnedCapReached) {
         toast.push({ kind: "warning", message: err.message });
         return;
       }
-      throw err;
+      // Surface the failure as a toast instead of letting an unexpected
+      // error in a single pin click crash the whole Home page into the
+      // nearest error boundary.
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.push({ kind: "error", message: `Couldn't update the pin: ${msg}` });
     }
   }
 
@@ -161,17 +184,24 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
   }
 
   async function onSubmitWizard(args: NewFrameWizardSubmitArgs): Promise<void> {
-    const result = await app_state_store
-      .getState()
-      .createFrame({ title: args.title, mode: args.mode, flavor: args.flavor });
-    // P0-13: record the new frame as Most Recent so it appears on the Home
-    // page when the user navigates back. Before this fix, createFrame +
-    // navigate left the new frame reachable only via the URL hash; the Home
-    // page rebuilt Recents from app_state.recents only and the new frame
-    // never landed there.
-    app_state_store.getState().setRecent(result.frame.id);
-    setWizardOpen(false);
-    navigate({ kind: "frame_building", frame_id: result.frame.id });
+    try {
+      const result = await app_state_store
+        .getState()
+        .createFrame({ title: args.title, mode: args.mode, flavor: args.flavor });
+      // P0-13: record the new frame as Most Recent so it appears on the Home
+      // page when the user navigates back. Before this fix, createFrame +
+      // navigate left the new frame reachable only via the URL hash; the Home
+      // page rebuilt Recents from app_state.recents only and the new frame
+      // never landed there.
+      app_state_store.getState().setRecent(result.frame.id);
+      setWizardOpen(false);
+      navigate({ kind: "frame_building", frame_id: result.frame.id });
+    } catch (err) {
+      // Without this catch, a failed createBlankFrame leaves the wizard
+      // open with no feedback and surfaces as an unhandled rejection.
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.push({ kind: "error", message: `Couldn't create the frame: ${msg}` });
+    }
   }
 
   return (
@@ -237,7 +267,23 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
         </div>
       </header>
 
-      {is_empty ? (
+      {!frames_loaded_once && is_loading ? (
+        <div
+          data-testid="home-loading"
+          style={{
+            marginTop: "var(--space-8)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "var(--space-8)",
+            gap: "var(--space-2)",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          <Spinner size={16} />
+          <span>Loading your frames…</span>
+        </div>
+      ) : is_empty ? (
         <div data-testid="home-empty-state" style={{ marginTop: "var(--space-8)" }}>
           <EmptyState
             label={EMPTY_COPY.title}
@@ -317,6 +363,30 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
                   <FrameSummaryCard
                     key={f.id}
                     summary={f}
+                    is_pinned={pinned_set.has(f.id)}
+                    onOpen={onOpen}
+                    onTogglePin={onTogglePin}
+                    onRunArgument={(id) => void onRunArgument(id)}
+                    run_argument_pending={run_argument_pending === f.id}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {non_empty_no_recents ? (
+            <section data-testid="all-frames-section">
+              <SectionHeading>All frames</SectionHeading>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                  gap: "var(--space-3)",
+                }}
+              >
+                {frames.slice(0, 20).map((f) => (
+                  <FrameSummaryCard
+                    key={f.id}
+                    summary={f as FrameSummary}
                     is_pinned={pinned_set.has(f.id)}
                     onOpen={onOpen}
                     onTogglePin={onTogglePin}
