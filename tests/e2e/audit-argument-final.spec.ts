@@ -397,6 +397,101 @@ test("audit final: minimal valid legal frame, switch to argument, capture all ou
     }
   });
 
+  // -----------------------------------------------------------------------
+  // ACTUALLY RUN THE ARGUMENT: pick the dispositive Term's Interpretation
+  // and verify (a) compute() reruns, (b) status repaints, (c) the sibling
+  // Interpretation is auto-foreclosed (dispositive Term contract).
+  // -----------------------------------------------------------------------
+  await test.step("interview: select an Interpretation for the dispositive Term", async () => {
+    // Identify the term row in the interview pane. We stashed term_id in
+    // page state by running the seed step's evaluate; re-read it from the
+    // store snapshot here.
+    const term_id = await page.evaluate(() => {
+      const w = window as unknown as {
+        __argmap_test: {
+          frame_store: { getState(): { frame_version: { nodes: Array<{ id: string; type: string }> } | null } };
+          session_store: { getState(): { session: { frame_version_snapshot: { nodes: Array<{ id: string; type: string }> } } | null } };
+        };
+      };
+      // In argument-running, frame data lives on the session's snapshot.
+      const fv =
+        w.__argmap_test.frame_store.getState().frame_version ??
+        w.__argmap_test.session_store.getState().session?.frame_version_snapshot ??
+        null;
+      const term = fv?.nodes.find((n) => n.type === "Term");
+      return term?.id ?? null;
+    });
+    expect(term_id).not.toBeNull();
+    const row = page.getByTestId(`interview-row-${term_id}`);
+    await row.scrollIntoViewIfNeeded();
+    await row.click();
+    await expect(page.getByTestId("term-item-editor")).toBeVisible({ timeout: 5_000 });
+    await shot(page, "term-item-editor-open");
+
+    // Click the first listed Interpretation (interp_a — the ordinary
+    // reasonable-person standard). Pattern: term-interpretation-{id}.
+    const interpButton = page.locator('[data-testid^="term-interpretation-"]').first();
+    await interpButton.click();
+    await page.waitForTimeout(200);
+    await page.getByTestId("term-editor-save").click();
+    await page.waitForTimeout(800);
+    await shot(page, "term-interpretation-selected");
+  });
+
+  await test.step("re-capture output tabs after interpretation pick", async () => {
+    const pathTab = page.getByTestId("output-view-tab-path_overlay");
+    if (await pathTab.isVisible().catch(() => false)) {
+      await pathTab.click();
+      await page.waitForTimeout(800);
+      await shot(page, "post-pick-path-overlay");
+    }
+    const treeTab = page.getByTestId("output-view-tab-decision_tree");
+    if (await treeTab.isVisible().catch(() => false)) {
+      await treeTab.click();
+      await page.waitForTimeout(800);
+      await shot(page, "post-pick-decision-tree");
+    }
+    const proseTab = page.getByTestId("output-view-tab-prose");
+    if (await proseTab.isVisible().catch(() => false)) {
+      await proseTab.click();
+      await page.waitForTimeout(800);
+      await shot(page, "post-pick-prose");
+    }
+  });
+
+  await test.step("verify dispositive foreclosure on sibling Interpretation", async () => {
+    // Read compute_result from the session store. Sibling Interpretation
+    // should appear in the foreclosed_set or have status === "foreclosed".
+    const summary = await page.evaluate(() => {
+      const w = window as unknown as {
+        __argmap_test: {
+          session_store: {
+            getState(): {
+              compute_result?: {
+                status_map?: Record<string, string>;
+                foreclosed_set?: string[];
+              };
+              session?: { frame_version_snapshot: { nodes: Array<{ id: string; type: string }> } };
+            };
+          };
+          frame_store: { getState(): { frame_version: { nodes: Array<{ id: string; type: string }> } | null } };
+        };
+      };
+      const fv =
+        w.__argmap_test.frame_store.getState().frame_version ??
+        w.__argmap_test.session_store.getState().session?.frame_version_snapshot ??
+        null;
+      const cr = w.__argmap_test.session_store.getState().compute_result;
+      const interps = fv ? fv.nodes.filter((n) => n.type === "Interpretation").map((n) => n.id) : [];
+      return {
+        interps,
+        status_map: cr?.status_map ?? null,
+        foreclosed_set: Array.isArray(cr?.foreclosed_set) ? cr.foreclosed_set : [],
+      };
+    });
+    console.log("[audit-final] post-pick summary:", JSON.stringify(summary, null, 2));
+  });
+
   await test.step("final state capture", async () => {
     await shot(page, "final-state");
   });

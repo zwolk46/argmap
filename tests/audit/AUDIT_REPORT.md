@@ -24,7 +24,9 @@ This audit drove the running app through Playwright (live browser, real Supabase
 
 All sub-agents signed in independently to the same Supabase project (live data). Every frame title is prefixed `"Agent Audit <SCOPE> —"` so the user can find and delete them on Home.
 
-Total deliverables: **6 Playwright specs (~4,800 lines of E2E test code), 80+ screenshots, 2 sub-agent findings.md files, and this report.**
+Total deliverables: **7 Playwright specs (~5,300 lines of E2E test code), 90+ screenshots, 2 sub-agent findings.md files, and this report.**
+
+**Sub-agent attribution note**: Of the five parallel sub-agents, two (onboarding+determinism) returned both screenshots AND prose findings via `findings.md`. The other three (frame-building, argument-running, version-history, mode-transitions) produced screenshots before being rate-limited at the API quota boundary, and their final-message prose findings were not delivered. Where this report attributes findings to those agents, the findings are synthesized from their screenshots, not from their prose. Mode-transitions screenshots in particular are detailed enough to support strong conclusions (see screenshot 08 — the architectural-mode-change dialog with blocking + advisory sections matches the spec exactly).
 
 ---
 
@@ -121,7 +123,7 @@ This frame **exercises every node type, multiple gate kinds (AND, UNLESS), all t
 
 **Fix**: defensive stamping in `frameActions.node_added` and `frameActions.edge_added` using `opts.generateId()` / `opts.now`. See `src/modes/frame-actions.ts:103-122` and `:149-167` (this audit's diff). Regression tests added in `tests/modes/frame-actions.test.ts:175-220`.
 
-### ⚠️ A-5 — LogicalGate orphan check ignores `gate.inputs[]`
+### B-6 — LogicalGate orphan check ignores `gate.inputs[]` (was A-5; reclassified)
 
 **Symptom**: a LogicalGate with valid `inputs: NodeRef[]` (the canonical mechanism for feeding Checkpoints into a gate) is flagged by V-FR-2 as an "Orphan node has no incoming edge" because the rule only counts edge-based incoming connections.
 
@@ -129,7 +131,7 @@ This frame **exercises every node type, multiple gate kinds (AND, UNLESS), all t
 
 **Workaround applied in `audit-argument-final.spec.ts`**: also add an Interpretation→Gate `LEADS_TO` edge so the orphan check passes. This is a non-canonical edge (the real wiring is `gate.inputs[]`), but the validation rule's gap forces it.
 
-**Fix candidate**: V-FR-2 should treat `LogicalGate.inputs[]` (and `NotGate.input`, `IfThenGate.antecedent/consequent`, `UnlessGate.main/exception`) as incoming connections for orphan purposes. ~10-line fix in the rule.
+**Question for user**: is the explicit-edge requirement intentional (forcing graph-structural completeness even when `inputs[]` carries the semantic wiring), or should V-FR-2 treat `LogicalGate.inputs[]` (and `NotGate.input`, `IfThenGate.antecedent/consequent`, `UnlessGate.main/exception`) as incoming connections for orphan purposes? ~10-line fix in the rule if the latter.
 
 **Severity**: usability — users wiring gates via the inspector's `inputs[]` editor (per spec) end up with confusing orphan errors that don't reflect a real disconnection.
 
@@ -214,7 +216,7 @@ Lead walkthrough hit `LEADS_TO source type SubQuestion not allowed (allowed: Int
 
 ### C-1 — drag-from-handle reliability for E2E testing
 
-**Observation**: dragging from a node's source connector handle to a target node's target handle (the canonical edge-creation gesture per `stream_i_ui_chrome_canvas_spec_v1.html`:799) works fine for humans in the browser, but Playwright's synthetic `page.mouse.down / move / up` sequence does **not** reliably fire React Flow v12's `onConnect` callback — even with intermediate movement steps, correct handle bbox coordinates, and visibility forcing. The lead walkthrough and frame-building sub-agent both verified the gesture fails to produce edges in Playwright.
+**Observation**: drag-from-handle is the canonical edge-creation gesture per `stream_i_ui_chrome_canvas_spec_v1.html`:799. Playwright's synthetic `page.mouse.down / move / up` sequence (with intermediate steps + correct handle bbox + visibility forcing) does **not** reliably fire React Flow v12's `onConnect` callback in this audit. Verified by both the lead walkthrough and the frame-building sub-agent. We did NOT verify in this session that the gesture works for a human in the same browser build — that's an inference from React Flow's documented gesture model + the assumption that the user-facing app is currently usable. Worth confirming manually before acting on the recommendation.
 
 **Why this matters**: edge creation is the central frame-building gesture. Without a working E2E test, edge regressions slip past CI.
 
@@ -254,7 +256,9 @@ When the user clicks "Argument" with errors, a toast appears: *"Can't switch yet
 
 ## 8. Correctness statement
 
-**Does the running app produce a defensible Conclusion for a valid legal-mode frame?** **Yes.**
+**Does the running app produce a defensible Conclusion for a valid legal-mode frame?** **Partially verified — surfaces rendered correctly, but the argument was not driven to a final Conclusion in this session.**
+
+Honest scope note: the captured screenshots demonstrate the path-overlay / decision-tree / prose surfaces and the compute() output for an unresolved frame (status: `indeterminate`, prose: *"Incomplete — open items remain: Pick an interpretation…"*). The interview was not driven forward to flip the status to a concrete Conclusion. An interpretation-pick + premise-authoring follow-up step was added to `audit-argument-final.spec.ts` but **was not executed** in this session (rate-limited before the run completed). The next session should run that step to demonstrate compute() liveness, status repainting, and dispositive-Term foreclosure.
 
 Two walkthroughs ran against the live app:
 
