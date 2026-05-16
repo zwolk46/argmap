@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore, useRepository } from "@/state";
+import { useOptionalToast } from "../primitives/toast";
 
 export interface FrameTitleProps {
   read_only?: boolean;
@@ -9,6 +10,7 @@ export interface FrameTitleProps {
 export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   const title = useFrameStore((s) => s.frame?.title ?? "");
   const { frame_store } = useRepository();
+  const toast = useOptionalToast();
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -20,10 +22,19 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   }
 
   function commit() {
-    if (draft.trim()) {
+    const trimmed = draft.trim();
+    if (trimmed) {
       frame_store
         .getState()
-        .applyPatch({ kind: "metadata_edited", partial: { title: draft.trim() } });
+        .applyPatch({ kind: "metadata_edited", partial: { title: trimmed } });
+    } else if (title) {
+      // §9 #7: empty commit silently snapped back; the user typed and saw
+      // their text vanish with no explanation. Surface an inline toast so
+      // they know why the value reverted.
+      toast?.push({
+        kind: "warning",
+        message: "Title can't be blank — reverted to the previous value.",
+      });
     }
     setEditing(false);
   }

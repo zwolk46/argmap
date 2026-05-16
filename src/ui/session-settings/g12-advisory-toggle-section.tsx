@@ -53,8 +53,10 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
           marginTop: "var(--space-1)",
         }}
       >
-        Set per-frame in{" "}
-        {/* KEEP RAW: inline text-link inside a paragraph; bespoke micro-control inside body copy. */}
+        Set per-frame in Frame Building.{" "}
+        {/* §9 #28: link copy reads honestly — navigating doesn't auto-open
+            the frame settings drawer; the user opens it themselves from the
+            top bar. */}
         <button
           type="button"
           data-testid="g12-open-frame-settings"
@@ -67,9 +69,9 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
             padding: 0,
           }}
         >
-          frame settings
-        </button>
-        .
+          Go to Frame Building
+        </button>{" "}
+        and open the settings panel there to configure.
       </p>
     </section>
   );

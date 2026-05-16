@@ -20,8 +20,12 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
       .applyPatch({ kind: "session_metadata_edited", partial: { archived: !archived } });
   }
 
+  const confirm_matches =
+    confirm_text.trim().length > 0 &&
+    confirm_text.trim().toLowerCase() === title.trim().toLowerCase();
+
   function handleDelete(): void {
-    if (confirm_text !== title) return;
+    if (!confirm_matches) return;
     setDeleteOpen(false);
     setConfirmText("");
     props.on_delete_session();
@@ -71,7 +75,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
         confirm_variant="danger"
         // P0-23 ride-along: gate the confirm button on a matching typed title
         // so the dialog cannot silently no-op on empty / wrong input.
-        confirm_disabled={confirm_text !== title}
+        confirm_disabled={!confirm_matches}
         onConfirm={handleDelete}
         onCancel={() => {
           setDeleteOpen(false);
@@ -91,7 +95,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
               style={{ marginTop: "var(--space-1)" }}
             />
           </label>
-          {confirm_text.length > 0 && confirm_text !== title ? (
+          {confirm_text.length > 0 && !confirm_matches ? (
             <p
               style={{
                 marginTop: "var(--space-1)",
@@ -99,7 +103,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
                 fontSize: "var(--font-size-xs)",
               }}
             >
-              Type the title exactly to enable Delete.
+              Type the title (case- and whitespace-insensitive) to enable Delete.
             </p>
           ) : null}
         </div>

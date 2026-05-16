@@ -15,10 +15,19 @@ export function MetadataSection(): ReactElement {
   React.useEffect(() => setDraftDescription(description), [description]);
 
   function commitTitle(): void {
-    if (draft_title !== title) {
+    // §9 #27: empty / whitespace-only titles silently persisted as "" — the
+    // session list later rendered an unnamed row. Require a non-empty trimmed
+    // value; otherwise revert to the live title (the next render resets the
+    // input via the title-effect above).
+    const trimmed = draft_title.trim();
+    if (trimmed.length === 0) {
+      setDraftTitle(title);
+      return;
+    }
+    if (trimmed !== title) {
       session_store
         .getState()
-        .applyPatch({ kind: "session_metadata_edited", partial: { title: draft_title } });
+        .applyPatch({ kind: "session_metadata_edited", partial: { title: trimmed } });
     }
   }
   function commitDescription(): void {

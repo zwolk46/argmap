@@ -24,18 +24,32 @@ export function SegmentedToggle<T extends string>({
   aria_label,
 }: SegmentedToggleProps<T>): ReactElement {
   const [focused_idx, setFocusedIdx] = React.useState<number>(-1);
+  const button_refs = React.useRef<Array<HTMLButtonElement | null>>([]);
 
+  // §9 #5 — ARIA roving radio-group keyboard pattern. Arrow keys MOVE FOCUS
+  // only; the value commits only on click / Enter / Space. Previously arrow
+  // keys called onChange immediately, which triggered the operating-mode
+  // warning dialog from simple keyboard navigation gestures.
   function handleKeyDown(e: React.KeyboardEvent, idx: number) {
     if (e.key === "ArrowRight" || e.key === "ArrowDown") {
       e.preventDefault();
       const next = (idx + 1) % options.length;
       setFocusedIdx(next);
-      onChange(options[next].value);
+      button_refs.current[next]?.focus();
     } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
       e.preventDefault();
       const prev = (idx - 1 + options.length) % options.length;
       setFocusedIdx(prev);
-      onChange(options[prev].value);
+      button_refs.current[prev]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setFocusedIdx(0);
+      button_refs.current[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      const last = options.length - 1;
+      setFocusedIdx(last);
+      button_refs.current[last]?.focus();
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       onChange(options[idx].value);
@@ -68,6 +82,9 @@ export function SegmentedToggle<T extends string>({
             role="radio"
             aria-checked={is_active}
             tabIndex={is_active ? 0 : -1}
+            ref={(el) => {
+              button_refs.current[idx] = el;
+            }}
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => handleKeyDown(e, idx)}

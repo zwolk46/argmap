@@ -216,6 +216,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
 
   const frame_mode = snapshot.frame?.mode ?? "general";
   const frame_flavor = snapshot.frame?.flavor;
+  const frame_jurisdiction = snapshot.frame?.jurisdiction_default;
 
   async function switchToArgumentRunning(): Promise<void> {
     if (!snapshot.frame || !snapshot.frame_version) return;
@@ -290,7 +291,14 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
       />
     ),
     title: snapshot.frame ? <FrameTitle /> : null,
-    chips: <ModeFlavorChip mode={frame_mode} flavor={frame_flavor} />,
+    chips: (
+      <ModeFlavorChip
+        mode={frame_mode}
+        flavor={frame_flavor}
+        jurisdiction={frame_jurisdiction}
+        onOpenSettings={() => setSettingsPanelOpen(true)}
+      />
+    ),
     indicators: (
       <ValidationIndicator
         surface="frame_building"

@@ -102,7 +102,15 @@ export function Drawer({
     const focusables = root.querySelectorAll<HTMLElement>(
       'a, button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
-    const first = Array.from(focusables).find((el) => !el.hasAttribute("disabled"));
+    const enabled_on_open = Array.from(focusables).filter((el) => !el.hasAttribute("disabled"));
+    // §9 #24: skip the close X if it's first in tab order — autofocusing it
+    // means Tab from open lands the user on "close" and away from the drawer
+    // body. Prefer the first non-close focusable; fall back to close if it's
+    // the only thing in the drawer.
+    const first_non_close = enabled_on_open.find(
+      (el) => !/^(close)/i.test(el.getAttribute("aria-label") ?? ""),
+    );
+    const first = first_non_close ?? enabled_on_open[0];
     first?.focus();
 
     function handleKeyDown(e: KeyboardEvent) {
