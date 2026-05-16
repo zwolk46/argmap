@@ -10,10 +10,15 @@ import { useToast } from "./primitives/toast";
  * consumed after the first load — the user's data continued to fail to
  * persist with no feedback.
  *
- * This component renders nothing; it only wires the subscription.
+ * Also surfaces app-state LOAD failures: AppStateStore.loadAppState forces
+ * is_loaded=true on a non-singleton-missing error so the UI is interactive,
+ * but every subsequent pin / dismiss / recent write will fail. Without
+ * this second subscription the user has no signal that something is wrong.
+ *
+ * This component renders nothing; it only wires the subscriptions.
  */
 export function SaveFailureToastBridge(): ReactElement | null {
-  const { autosave } = useRepository();
+  const { autosave, app_state_store } = useRepository();
   const { push } = useToast();
 
   React.useEffect(() => {
@@ -35,6 +40,22 @@ export function SaveFailureToastBridge(): ReactElement | null {
     });
     return unsubscribe;
   }, [autosave, push]);
+
+  React.useEffect(() => {
+    let last_error: string | null = app_state_store.getState().error;
+    const unsubscribe = app_state_store.subscribe((state) => {
+      const next_error = state.error;
+      if (next_error && next_error !== last_error && state.is_loaded) {
+        push({
+          kind: "error",
+          message: `Couldn't load your saved workspace state: ${next_error}. Pins, recents, and dismissals may not persist until you reload the page.`,
+          duration_ms: 0,
+        });
+      }
+      last_error = next_error;
+    });
+    return unsubscribe;
+  }, [app_state_store, push]);
 
   return null;
 }

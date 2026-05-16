@@ -6,6 +6,14 @@ import { frameActions, sessionActions } from "@/modes";
 import { App } from "./App";
 import { getSupabaseClient, SupabaseConfigError } from "./supabase-client";
 import { AuthProvider, useAuth, SignInScreen } from "./ui/auth";
+import { AppErrorBoundary } from "./ui/error-boundary";
+import { LoadingScreen } from "./ui/primitives/loading-screen";
+// Load tokens here (not inside ui/App.tsx) so design-system variables are
+// available to AppErrorBoundary, BootError, AuthGate, and SignInScreen — every
+// pre-App surface that may render before <App> mounts.
+import "./ui/styles/tokens.css";
+import "./ui/styles/global.css";
+import "./ui/styles/react-flow.css";
 
 const llm_settings_default: LlmSettings = {
   build_time_hooks_enabled: false,
@@ -83,7 +91,7 @@ function BootError({ message, hint }: { message: string; hint?: string }): React
 function AuthGate(): React.ReactElement {
   const { user, loading } = useAuth();
   if (loading) {
-    return <div style={{ padding: 24 }}>Loading…</div>;
+    return <LoadingScreen label="Loading your workspace…" />;
   }
   if (!user) {
     return <SignInScreen />;
@@ -136,6 +144,11 @@ function SignedInApp({ user_id }: { user_id: string }): React.ReactElement {
       window.removeEventListener("pagehide", flushOnHide);
       window.removeEventListener("beforeunload", flushOnHide);
       document.removeEventListener("visibilitychange", flushOnVisibilityHidden);
+      // Flush any pending debounced autosave on unmount. Without this, an
+      // external sign-out (session expiry, sign-out in another tab) tears
+      // down SignedInApp before the debounce window elapses and the last
+      // 5-30s of edits are dropped.
+      void autosave.flushAll();
     };
   }, [autosave]);
 
@@ -162,7 +175,7 @@ function Root(): React.ReactElement {
       return (
         <BootError
           message={err.message}
-          hint="Install the Supabase Vercel marketplace integration (see SETUP.md) — it sets VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY automatically."
+          hint="For local dev, copy VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY into .env.local (see SETUP.md). On Vercel, the Supabase Marketplace integration auto-provisions both."
         />
       );
     }
@@ -177,6 +190,12 @@ function Root(): React.ReactElement {
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <Root />
+    {/* AppErrorBoundary wraps Root (rather than living inside <App>) so
+        errors thrown in AuthProvider, AuthGate, SignInScreen, or any
+        useMemo factory in SignedInApp surface as the recoverable error UI
+        instead of a blank white page in production. */}
+    <AppErrorBoundary>
+      <Root />
+    </AppErrorBoundary>
   </React.StrictMode>,
 );

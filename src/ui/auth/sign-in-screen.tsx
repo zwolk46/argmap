@@ -13,12 +13,16 @@ import { useAuth } from "./auth-context";
  * pre-auth screen. Token fallbacks are intentionally omitted — `tokens.css`
  * is imported by `main.tsx` before this component renders, so the variables
  * are defined at first paint.
+ *
+ * A separate `loading` UI lives in AuthGate (main.tsx) — that LoadingScreen
+ * paints while Supabase resolves the existing session, and only then mounts
+ * either SignInScreen or SignedInApp.
  */
 
 type Mode = "sign_in" | "sign_up";
 
 export function SignInScreen(): ReactElement {
-  const { signIn, signUp, loading } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [mode, setMode] = React.useState<Mode>("sign_in");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -47,46 +51,6 @@ export function SignInScreen(): ReactElement {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <div
-        data-testid="sign-in-loading"
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "var(--space-4)",
-          background: "var(--color-surface-canvas)",
-          fontFamily: "var(--font-sans)",
-          padding: "var(--space-5)",
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            fontSize: "var(--font-size-xl)",
-            fontWeight: "var(--font-weight-semibold)",
-            color: "var(--color-text-primary)",
-            letterSpacing: "var(--letter-spacing-tight)",
-          }}
-        >
-          argmap
-        </span>
-        <Spinner size={20} />
-        <span
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
-          }}
-        >
-          Loading your workspace…
-        </span>
-      </div>
-    );
   }
 
   // Once a sign-up email has been dispatched, lock the form so the user
@@ -239,6 +203,7 @@ export function SignInScreen(): ReactElement {
             <Button
               variant="ghost"
               size="sm"
+              disabled={form_locked}
               onClick={() => {
                 setMode("sign_up");
                 setError(null);
@@ -251,6 +216,7 @@ export function SignInScreen(): ReactElement {
             <Button
               variant="ghost"
               size="sm"
+              disabled={form_locked}
               onClick={() => {
                 setMode("sign_in");
                 setError(null);

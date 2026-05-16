@@ -24,6 +24,17 @@ export function routeFromHash(hash: string): Route {
   return { kind: "home" };
 }
 
+/**
+ * True when `hash` is a route hash (or empty). Hashes like `#main` (the
+ * skip-to-content target) or any in-page anchor that doesn't begin with
+ * `#/` are NOT route hashes — the hashchange handler must ignore them so
+ * activating an anchor doesn't yank the user out of frame/session view
+ * onto Home.
+ */
+function isRouteHash(hash: string): boolean {
+  return hash === "" || hash === "#" || hash.startsWith("#/");
+}
+
 export function hashFromRoute(route: Route): string {
   switch (route.kind) {
     case "home":
@@ -43,13 +54,18 @@ export interface RouterContextValue {
 export const RouterContext = React.createContext<RouterContextValue | null>(null);
 
 export function RouterProvider(props: { children: React.ReactNode }): React.ReactElement {
-  const [current, setCurrent] = React.useState<Route>(() =>
-    routeFromHash(typeof window !== "undefined" ? window.location.hash : "#/"),
-  );
+  const [current, setCurrent] = React.useState<Route>(() => {
+    const hash = typeof window !== "undefined" ? window.location.hash : "#/";
+    return isRouteHash(hash) ? routeFromHash(hash) : { kind: "home" };
+  });
 
   React.useEffect(() => {
     function handleHashChange() {
-      setCurrent(routeFromHash(window.location.hash));
+      const hash = window.location.hash;
+      // Anchor links (e.g. `#main` from the skip-to-content link) trigger
+      // hashchange but must not change the current route.
+      if (!isRouteHash(hash)) return;
+      setCurrent(routeFromHash(hash));
     }
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
