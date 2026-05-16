@@ -65,36 +65,68 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   }
 
   // P7: rendered as <h1> so the frame title acts as the page's main heading
-  // for AT/SEO. The outer h1 carries the click-to-edit affordance directly;
-  // it inherits the same styling as the previous span.
+  // for AT/SEO. The h1 contains a real <button> for the edit affordance so
+  // keyboard users can activate it with Enter/Space (the prior onClick-on-h1
+  // pattern was mouse-only).
+  const display_title = title || "Untitled frame";
+  if (read_only) {
+    return (
+      <h1
+        data-testid="frame-title"
+        style={{
+          fontSize: "var(--font-size-lg)",
+          fontWeight: "var(--font-weight-semibold)",
+          fontFamily: "var(--font-sans)",
+          color: "var(--color-text-primary)",
+          letterSpacing: "var(--letter-spacing-tight)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          margin: 0,
+          display: "inline-block",
+          lineHeight: "var(--line-height-tight)",
+        }}
+      >
+        {display_title}
+      </h1>
+    );
+  }
   return (
     <h1
-      data-testid="frame-title"
-      onClick={startEdit}
-      title={read_only ? undefined : "Click to rename"}
-      className={read_only ? undefined : "argmap-row-hover"}
       style={{
-        fontSize: "var(--font-size-lg)",
-        fontWeight: "var(--font-weight-semibold)",
-        fontFamily: "var(--font-sans)",
-        color: "var(--color-text-primary)",
-        cursor: read_only ? "default" : "text",
-        letterSpacing: "var(--letter-spacing-tight)",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        padding: read_only ? "0" : "2px 6px",
-        margin: read_only ? "0" : "0 -6px",
-        borderRadius: "var(--radius-sm)",
-        transition: "background var(--duration-fast) var(--ease-standard)",
-        // Re-establish layout properties the parent header expects from a
-        // span (h1 default is block; the surrounding chrome lays this out
-        // as an inline-ish element inside a flex row).
+        margin: 0,
         display: "inline-block",
         lineHeight: "var(--line-height-tight)",
       }}
     >
-      {title || "Untitled frame"}
+      <button
+        type="button"
+        data-testid="frame-title"
+        onClick={startEdit}
+        title="Click to rename"
+        aria-label={`Rename frame: ${display_title}`}
+        className="argmap-row-hover"
+        style={{
+          all: "unset",
+          cursor: "text",
+          fontSize: "var(--font-size-lg)",
+          fontWeight: "var(--font-weight-semibold)",
+          fontFamily: "var(--font-sans)",
+          color: "var(--color-text-primary)",
+          letterSpacing: "var(--letter-spacing-tight)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          padding: "2px 6px",
+          margin: "0 -6px",
+          borderRadius: "var(--radius-sm)",
+          transition: "background var(--duration-fast) var(--ease-standard)",
+          display: "inline-block",
+          lineHeight: "var(--line-height-tight)",
+        }}
+      >
+        {display_title}
+      </button>
     </h1>
   );
 }

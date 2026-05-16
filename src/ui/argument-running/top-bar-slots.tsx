@@ -144,10 +144,14 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
     );
   }
   return (
-    <span
+    <button
+      type="button"
       data-testid="argument-running-title"
       onClick={() => setEditing(true)}
+      aria-label={`Rename session: ${title}`}
+      title="Click to rename"
       style={{
+        all: "unset",
         fontSize: "var(--font-size-base)",
         fontWeight: "var(--font-weight-medium)",
         color: "var(--color-text-primary)",
@@ -156,10 +160,11 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
         overflow: "hidden",
         textOverflow: "ellipsis",
         maxWidth: "320px",
+        display: "inline-block",
       }}
     >
       {title}
-    </span>
+    </button>
   );
 }
 
