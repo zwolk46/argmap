@@ -131,6 +131,18 @@ export function RepositoryProvider(props: RepositoryProviderProps): ReactElement
     ],
   );
 
+  // Dev-mode test helper: expose the live stores on window so Playwright
+  // specs can apply patches or inspect state without reaching into React
+  // internals. Mirrors the canvas-harness's window.__canvasEvents pattern.
+  // Production builds (import.meta.env.DEV === false) skip this entirely.
+  if (typeof window !== "undefined" && import.meta.env.DEV) {
+    (window as unknown as { __argmap_test?: unknown }).__argmap_test = {
+      frame_store,
+      session_store,
+      app_state_store,
+    };
+  }
+
   return <RepositoryContext.Provider value={value}>{children}</RepositoryContext.Provider>;
 }
 

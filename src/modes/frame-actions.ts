@@ -57,6 +57,26 @@ function applyEdgePartial(existing: Edge, partial: Partial<Edge>): Edge {
   return { ...existing, ...partial, id: existing.id, type: existing.type } as Edge;
 }
 
+function stampNodeIdentity(node: Node, opts: DispatchOpts): Node {
+  if (node.id && node.created_at && node.updated_at) return node;
+  return {
+    ...node,
+    id: node.id ?? (opts.generateId() as NodeRef),
+    created_at: node.created_at ?? opts.now,
+    updated_at: node.updated_at ?? opts.now,
+  } as Node;
+}
+
+function stampEdgeIdentity(edge: Edge, opts: DispatchOpts): Edge {
+  if (edge.id && edge.created_at && edge.updated_at) return edge;
+  return {
+    ...edge,
+    id: edge.id ?? opts.generateId(),
+    created_at: edge.created_at ?? opts.now,
+    updated_at: edge.updated_at ?? opts.now,
+  } as Edge;
+}
+
 function removeNodesAndEdges(
   fv: FrameVersion,
   node_ids: Set<NodeRef>,
@@ -104,9 +124,16 @@ export const frameActions: FrameActionDispatchTable = {
     _frame: Frame,
     fv: FrameVersion,
     patch: Extract<FramePatch, { kind: "node_added" }>,
-    _opts: DispatchOpts,
+    opts: DispatchOpts,
   ): FrameTransformResult {
-    return { next_version: nextFrameVersion(fv, [...fv.nodes, patch.node]) };
+    // Defensive: callers (canonical pattern in frame-building-page.tsx mints
+    // id + timestamps) are expected to fully populate the node, but the
+    // failure mode for a missing id is opaque — downstream validation rules
+    // sort by `n.id.localeCompare(...)` and throw on undefined. Stamp the
+    // required minimum here so the action-runner doesn't deserve to crash on
+    // a partially-formed patch.
+    const node = stampNodeIdentity(patch.node, opts);
+    return { next_version: nextFrameVersion(fv, [...fv.nodes, node]) };
   },
 
   node_edited(
@@ -150,9 +177,16 @@ export const frameActions: FrameActionDispatchTable = {
     _frame: Frame,
     fv: FrameVersion,
     patch: Extract<FramePatch, { kind: "edge_added" }>,
-    _opts: DispatchOpts,
+    opts: DispatchOpts,
   ): FrameTransformResult {
-    return { next_version: nextFrameVersion(fv, undefined, [...fv.edges, patch.edge]) };
+    // See node_added — defensive id/timestamp stamping. Without this an
+    // edge_added patch missing `id` propagates an undefined through to the
+    // validation rules' edge-sort comparator, which throws an opaque
+    // localeCompare TypeError. The canonical call site (frame-building-page
+    // EdgeCreationCandidate handler) stamps id + timestamps; this protects
+    // dev-mode test helpers and future extension points.
+    const edge = stampEdgeIdentity(patch.edge, opts);
+    return { next_version: nextFrameVersion(fv, undefined, [...fv.edges, edge]) };
   },
 
   edge_edited(

@@ -172,6 +172,59 @@ describe("modes/frame-actions", () => {
       expect(result.next_version.edges).toHaveLength(1);
       expect(result.next_version.edges[0]?.id).toBe("e1");
     });
+
+    // Audit (2026-05-16): caller-supplied id/timestamps used to be the only
+    // path. When dev-mode helpers (window.__argmap_test) or future test
+    // callers omit them, validation rules later sort `edges` by
+    // `e.id.localeCompare(...)` and throw an opaque TypeError. The handler
+    // now defensively stamps via DispatchOpts.
+    it("stamps id + timestamps when the caller omits them", () => {
+      const fv = makeFv({ edges: [] });
+      const minimal = {
+        type: "DECOMPOSES_INTO",
+        layer: "frame",
+        source: "root",
+        target: "sub",
+      } as never;
+      const result = frameActions.edge_added(
+        frame,
+        fv,
+        { kind: "edge_added", edge: minimal },
+        opts,
+      );
+      const added = result.next_version.edges[0];
+      expect(added?.id).toBeTruthy();
+      expect(added?.created_at).toBe(T);
+      expect(added?.updated_at).toBe(T);
+    });
+
+    it("preserves caller-supplied id when present", () => {
+      const fv = makeFv({ edges: [] });
+      const edge = makeEdge("caller-id", "DECOMPOSES_INTO", "root", "sub");
+      const result = frameActions.edge_added(frame, fv, { kind: "edge_added", edge }, opts);
+      expect(result.next_version.edges[0]?.id).toBe("caller-id");
+    });
+  });
+
+  describe("node_added (defensive stamping)", () => {
+    it("stamps id + timestamps when the caller omits them", () => {
+      const fv = makeFv({ nodes: [] });
+      const minimal = {
+        type: "RootQuestion",
+        layer: "frame",
+        statement: "Question?",
+      } as never;
+      const result = frameActions.node_added(
+        frame,
+        fv,
+        { kind: "node_added", node: minimal },
+        opts,
+      );
+      const added = result.next_version.nodes[0];
+      expect(added?.id).toBeTruthy();
+      expect(added?.created_at).toBe(T);
+      expect(added?.updated_at).toBe(T);
+    });
   });
 
   describe("edge_removed", () => {
