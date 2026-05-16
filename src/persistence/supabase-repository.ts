@@ -115,13 +115,19 @@ export class SupabaseRepository implements Repository {
   }
 
   async saveFrame(frame: Frame): Promise<void> {
+    // H-11: keep payload.updated_at in lockstep with the column. Previously
+    // the column got `this.now()` but the payload kept whatever stale value
+    // was on the in-memory Frame, so loadFrame returned a wall-clock that
+    // disagreed with listFrames.
+    const now = this.now();
+    const stamped: Frame = { ...frame, updated_at: now };
     const { error } = await this.client.from("frames").upsert({
-      id: frame.id,
+      id: stamped.id,
       user_id: this.user_id,
-      payload: frame,
-      title: frame.title,
-      archived: frame.archived ?? false,
-      updated_at: this.now(),
+      payload: stamped,
+      title: stamped.title,
+      archived: stamped.archived ?? false,
+      updated_at: now,
     });
     if (error) throw new RepositoryError("saveFrame", error.message);
   }
@@ -240,8 +246,15 @@ export class SupabaseRepository implements Repository {
     });
     if (fv_upsert.error) throw new RepositoryError("saveFrameVersion", fv_upsert.error.message);
 
-    // Point the frame at the new current_version_id.
-    const next_frame: Frame = { ...frame, current_version_id: to_write.id };
+    // H-12: bump the parent Frame's payload.updated_at when its
+    // current_version_id changes. saveFrame restamps below, but doing so
+    // here too keeps the in-memory Frame consistent for any caller that
+    // reads `frame.updated_at` between this line and the next saveFrame.
+    const next_frame: Frame = {
+      ...frame,
+      current_version_id: to_write.id,
+      updated_at: this.now(),
+    };
     await this.saveFrame(next_frame);
 
     // Update the per-frame search index with text harvested from nodes.
@@ -647,8 +660,14 @@ export class SupabaseRepository implements Repository {
       .select("payload")
       .eq("user_id", this.user_id)
       .maybeSingle();
-    if (error) throw new RepositoryError("loadAppState", error.message);
-    if (!data) throw new RepositoryError("loadAppState", "AppState singleton missing");
+    if (error) throw new RepositoryError("loadAppState", error.message, "network");
+    // H-16: callers used to string-match the "AppState singleton missing"
+    // message to decide whether to seed defaults. Branch on the typed code
+    // instead so future message text edits don't silently break the
+    // first-launch path.
+    if (!data) {
+      throw new RepositoryError("loadAppState", "AppState singleton missing", "app_state_missing");
+    }
     return data.payload as AppState;
   }
 
@@ -680,10 +699,13 @@ export class SupabaseRepository implements Repository {
       .textSearch("tsv", ts_query, { type: "websearch" })
       .limit(50);
     if (error) {
-      // Surface as empty rather than a hard error; search misses degrade
-      // gracefully. Log for telemetry.
-      console.warn("[SupabaseRepository.searchFrames]", error.message);
-      return [];
+      // H-14: previously swallowed as console.warn + empty array — a search
+      // outage was indistinguishable from "zero hits" for the user. Throw
+      // so the caller can surface "search unavailable" instead of "no
+      // matches". Search is wired through repositories that already
+      // tolerate exceptions in the existing UI; legacy callers that
+      // intentionally want graceful degradation can wrap in try/catch.
+      throw new RepositoryError("searchFrames", error.message, "network");
     }
     return (data ?? []).map((row): FrameSearchHit => {
       const p = row.payload as { title?: string; snippet?: string };

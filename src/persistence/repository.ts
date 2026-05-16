@@ -93,13 +93,27 @@ export class QuotaExceededError extends Error {
   }
 }
 
+export type RepositoryErrorCode =
+  | "not_found"
+  | "app_state_missing"
+  | "network"
+  | "permission_denied"
+  | "unknown";
+
 export class RepositoryError extends Error {
   readonly kind = "repository_error" as const;
   readonly operation: string;
-  constructor(operation: string, message?: string) {
+  /**
+   * Stable code for branching on error kind. Callers prefer this over
+   * message-string matching (which is brittle: the message text drifts as
+   * we surface more context to users).
+   */
+  readonly code: RepositoryErrorCode;
+  constructor(operation: string, message?: string, code: RepositoryErrorCode = "unknown") {
     super(message ?? `Repository operation failed: ${operation}`);
     this.name = "RepositoryError";
     this.operation = operation;
+    this.code = code;
   }
 }
 

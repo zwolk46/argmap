@@ -298,12 +298,17 @@ class AutosaveControllerImpl implements AutosaveController {
   }
 
   private applyChangeSummary(p: PendingFrameSave): PendingFrameSave {
+    // H-10: prefer the new_version's own change_summary if it already has
+    // one — the pending wrapper's value shouldn't silently overwrite a
+    // summary the caller deliberately attached to the version itself.
     if (!p.change_summary) return p;
+    if (p.new_version.change_summary) return p;
     return { ...p, new_version: { ...p.new_version, change_summary: p.change_summary } };
   }
 
   private applySessionChangeSummary(p: PendingSessionSave): PendingSessionSave {
     if (!p.change_summary) return p;
+    if (p.new_version.change_summary) return p;
     return { ...p, new_version: { ...p.new_version, change_summary: p.change_summary } };
   }
 
