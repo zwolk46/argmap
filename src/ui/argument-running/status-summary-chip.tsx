@@ -15,16 +15,20 @@ export function StatusSummaryChip(props: StatusSummaryChipProps): ReactElement |
   let label: string;
   let variant: PillVariant;
 
+  // H4: when conclusion_label is null/empty, drop the "·" and the placeholder
+  // so the chip reads as the status word alone instead of "complete · (no
+  // conclusion)" — empty labels happen between recomputes and the placeholder
+  // misreads as a structured value.
+  const conclusion = summary.conclusion_label?.trim();
   if (summary.shape === "determinate") {
-    label = `complete · ${summary.conclusion_label ?? "(no conclusion)"}`;
+    label = conclusion ? `complete · ${conclusion}` : "complete";
     variant = "status_satisfied";
   } else if (summary.shape === "conditional") {
-    label = `${summary.resolved_count}/${summary.total_count} resolved · ${
-      summary.conclusion_label ?? "(no conclusion)"
-    }`;
+    const counts = `${summary.resolved_count}/${summary.total_count} resolved`;
+    label = conclusion ? `${counts} · ${conclusion}` : counts;
     variant = "status_open";
   } else if (summary.shape === "contested") {
-    label = `contested${summary.conclusion_label ? `: ${summary.conclusion_label}` : ""}`;
+    label = conclusion ? `contested: ${conclusion}` : "contested";
     variant = "severity_warning";
   } else {
     label = "indeterminate";

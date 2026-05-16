@@ -62,6 +62,11 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
   const [reused_id, setReusedId] = React.useState<NodeRef | null>(
     value && value.kind === "reused" ? value.premise_id : null,
   );
+  // H9: surface "Required" only after the user has touched the field. Without
+  // a touched gate, the field renders error-styled on first paint.
+  const [touched, setTouched] = React.useState(false);
+  const show_required =
+    touched && !reused_id && statement.trim().length === 0;
   // P1: stabilize Premise.id + created_at across keystrokes. Without this,
   // every keystroke minted a fresh id and a fresh timestamp, producing
   // churn (parent re-renders) and a created_at that reflected the last
@@ -136,14 +141,32 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
           }
           disabled={!!reused_id}
           placeholder="What does this premise assert?"
+          onBlur={() => setTouched(true)}
           onChange={(e) => on_statement_change(e.target.value)}
+          aria-invalid={show_required || undefined}
+          aria-describedby={show_required ? "premise-statement-required" : undefined}
           className="argmap-input"
           style={{
             minHeight: 56,
             fontSize: "var(--font-size-xs)",
             background: reused_id ? "var(--color-surface-pane-secondary)" : undefined,
+            borderColor: show_required ? "var(--color-severity-error)" : undefined,
           }}
         />
+        {show_required && (
+          <span
+            id="premise-statement-required"
+            data-testid="premise-statement-required"
+            style={{
+              display: "block",
+              marginTop: 2,
+              color: "var(--color-severity-error)",
+              fontSize: "var(--font-size-2xs)",
+            }}
+          >
+            Required
+          </span>
+        )}
       </label>
       <label
         style={{

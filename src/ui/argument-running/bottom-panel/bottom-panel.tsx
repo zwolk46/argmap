@@ -43,10 +43,18 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
           <UIcon name="angle-up" size={16} />
         </IconButton>
         <span className="argmap-section-heading">Premises &amp; authorities</span>
-        <Pill variant="status_open" data-testid="bottom-panel-premise-count" size="xs">
+        <Pill
+          variant={premise_count === 0 ? "neutral" : "status_open"}
+          data-testid="bottom-panel-premise-count"
+          size="xs"
+        >
           {premise_count} {premise_count === 1 ? "premise" : "premises"}
         </Pill>
-        <Pill variant="neutral" data-testid="bottom-panel-authority-count" size="xs">
+        <Pill
+          variant={authority_count === 0 ? "neutral" : "mode_accent"}
+          data-testid="bottom-panel-authority-count"
+          size="xs"
+        >
           {authority_count} {authority_count === 1 ? "authority" : "authorities"}
         </Pill>
       </div>

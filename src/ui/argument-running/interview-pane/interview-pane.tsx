@@ -118,6 +118,19 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
             on_save_milestone={on_save_milestone}
             saving_milestone={saving_milestone}
           />
+        ) : filtered.length === 0 && search_text.length > 0 ? (
+          // M16: search active but no matches — distinguish from "no items"
+          // so the user sees their query, not the all-resolved/none-yet copy.
+          <div
+            data-testid="interview-empty-state-no-search-match"
+            style={{
+              padding: "var(--space-4)",
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            No items match &ldquo;{search_text}&rdquo;. Clear the search to see all open items.
+          </div>
         ) : (
           <InterviewList
             jurisdictional_items={jurisdictional_items}

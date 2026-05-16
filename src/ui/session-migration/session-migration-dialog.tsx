@@ -2,7 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { FrameVersionId } from "@/schema";
 import type { OrphanResolution } from "@/state";
-import { useRepository } from "@/state";
+import { useRepository, useSessionStore, useFrameStore } from "@/state";
 import { Dialog, DialogHeader, DialogBody, DialogFooter, Button, useToast } from "../primitives";
 import { MigrationDialogBody, type MigrationBodyPhase } from "./migration-dialog-body";
 import { usePreviewMigration } from "./use-preview-migration";
@@ -22,6 +22,17 @@ export function SessionMigrationDialog(props: SessionMigrationDialogProps): Reac
     target_frame_version_id,
     enabled: open,
   });
+
+  // H7: surface version numbers so the user reads "v3 → v5" instead of just
+  // "Migrate session". The session's frame_version_snapshot carries its own
+  // version_number; the target's number comes from frame_store's current
+  // frame_version when (as is typical) the target is the head.
+  const session_version = useSessionStore(
+    (s) => s.session?.frame_version_snapshot?.version_number ?? null,
+  );
+  const target_version = useFrameStore((s) =>
+    s.frame_version?.id === target_frame_version_id ? s.frame_version.version_number : null,
+  );
 
   const [resolutions, setResolutions] = React.useState<Map<string, OrphanResolution>>(new Map());
   const [migrating, setMigrating] = React.useState(false);
@@ -104,6 +115,23 @@ export function SessionMigrationDialog(props: SessionMigrationDialogProps): Reac
     >
       <DialogHeader id="session-migration-dialog-title">Migrate session</DialogHeader>
       <DialogBody>
+        {(session_version !== null || target_version !== null) && (
+          <div
+            data-testid="migration-version-preamble"
+            style={{
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-secondary)",
+              marginBottom: "var(--space-3)",
+            }}
+          >
+            Migrating session from frame{" "}
+            <strong style={{ color: "var(--color-text-primary)" }}>
+              v{session_version ?? "?"}
+            </strong>{" "}
+            →{" "}
+            <strong style={{ color: "var(--color-text-primary)" }}>v{target_version ?? "?"}</strong>
+          </div>
+        )}
         <MigrationDialogBody
           phase={phase}
           onResolutionChanged={onResolutionChanged}

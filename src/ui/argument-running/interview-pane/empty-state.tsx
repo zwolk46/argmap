@@ -46,9 +46,13 @@ export function InterviewEmptyState(props: InterviewEmptyStateProps): ReactEleme
           data-testid="save-milestone-button"
           style={{ alignSelf: "flex-start" }}
           title="Save this resolved session as a permanent checkpoint you can come back to."
+          // L8: while saving, the spinner alone carries progress; the button
+          // text stays "Save snapshot" so we don't double-signal (text +
+          // spinner reading as two events).
           leading={props.saving_milestone ? <Spinner size={12} /> : undefined}
+          aria-busy={props.saving_milestone}
         >
-          {props.saving_milestone ? "Saving snapshot…" : "Save snapshot"}
+          Save snapshot
         </Button>
       </div>
     );

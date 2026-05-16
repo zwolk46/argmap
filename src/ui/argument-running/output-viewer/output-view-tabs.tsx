@@ -10,6 +10,7 @@
  *   View switcher  → output viewer (Path / Tree / Prose)
  *   Filter         → milestone filter (All / Milestones / Drafts)
  */
+import * as React from "react";
 import type { ReactElement } from "react";
 import type { OutputViewTab } from "@/state";
 import { Spinner } from "../../primitives";
@@ -36,10 +37,42 @@ export interface OutputViewTabsProps {
 
 export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
   const { current, on_change, computing = false } = props;
+
+  // L2: ARIA tablist arrow-key navigation. The roving-tabindex pattern means
+  // only the active tab is in the tab order; ArrowLeft/Right wraps around
+  // the strip and activates the next tab.
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (computing) return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Home" && e.key !== "End") {
+        return;
+      }
+      const idx = OUTPUT_VIEW_TAB_ORDER.indexOf(current);
+      if (idx < 0) return;
+      let nextIdx = idx;
+      if (e.key === "ArrowLeft") {
+        nextIdx = (idx - 1 + OUTPUT_VIEW_TAB_ORDER.length) % OUTPUT_VIEW_TAB_ORDER.length;
+      } else if (e.key === "ArrowRight") {
+        nextIdx = (idx + 1) % OUTPUT_VIEW_TAB_ORDER.length;
+      } else if (e.key === "Home") {
+        nextIdx = 0;
+      } else if (e.key === "End") {
+        nextIdx = OUTPUT_VIEW_TAB_ORDER.length - 1;
+      }
+      const next = OUTPUT_VIEW_TAB_ORDER[nextIdx];
+      if (next && next !== current) {
+        e.preventDefault();
+        on_change(next);
+      }
+    },
+    [computing, current, on_change],
+  );
+
   return (
     <div
       data-testid="output-view-tabs"
       role="tablist"
+      onKeyDown={handleKeyDown}
       style={{
         display: "flex",
         gap: "var(--space-3)",
@@ -58,6 +91,7 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
             type="button"
             role="tab"
             aria-selected={active}
+            tabIndex={active ? 0 : -1}
             disabled={computing}
             data-testid={`output-view-tab-${tab}`}
             data-active={active ? "true" : "false"}
