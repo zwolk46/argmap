@@ -12,7 +12,11 @@ import type {
 } from "./nodes";
 import type { Edge, EdgeType } from "./edges";
 import { VALID_EDGE_PAIRS } from "./edges";
-import { PREMISE_KIND_VOCABULARIES, type PremiseKindVocabularyKey } from "./frame";
+import {
+  PREMISE_KIND_VOCABULARIES,
+  toModeFlavor,
+  type PremiseKindVocabularyKey,
+} from "./frame";
 
 // ============================================================================
 // Public shapes
@@ -299,15 +303,16 @@ const V_FR_7: ValidationRule = {
   severity: "warning",
   description: "Legal-mode frame has at least one SubQuestion with is_jurisdictional: true.",
   evaluate(frame) {
-    // Only applicable in legal mode. We infer legal mode from presence of any
-    // legal-only signal: a SubQuestion's is_jurisdictional has been deliberately
-    // set, a Conclusion has a legal direction, etc. Since FrameVersion does not
-    // itself carry mode, we apply the rule only when at least one SubQuestion
-    // exists and the parent frame's legal-mode marker (a Conclusion with kind
-    // "legal") is present. Tests pin this contract.
-    const isLegal = frame.nodes.some(
-      (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
-    );
+    // F-028: FrameVersion now snapshots `mode` directly. Prefer that signal
+    // — otherwise we'd false-trigger mid-construction (legal-mode frame with
+    // no Conclusions yet looks "general" by the old inference and the rule
+    // silently doesn't apply, hiding the missing-jurisdictional warning).
+    const isLegal =
+      frame.mode === "legal" ||
+      (frame.mode === undefined &&
+        frame.nodes.some(
+          (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
+        ));
     if (!isLegal) return [];
     const hasJurisdictional = frame.nodes.some(
       (n) =>
@@ -1249,13 +1254,21 @@ const V_ARG_3: ValidationRule = {
     "Every Premise has a kind drawn from the vocabulary corresponding to the frame's mode/flavor.",
   evaluate(_frame, session) {
     if (!session) return [];
-    // Infer mode/flavor from frame_version_snapshot: a Conclusion with kind
-    // "legal" forces legal; otherwise general (flavor defaults to academic
-    // when undetectable — flavor only changes vocabulary within general).
-    const isLegal = session.frame_version_snapshot.nodes.some(
-      (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
-    );
-    const vocab = vocabularyFor(isLegal ? "legal" : "general");
+    // F-028: prefer the explicit mode/flavor from frame_version_snapshot.
+    // The Conclusion-walking inference (kept as a fallback for unsnapped
+    // legacy versions) reads false during mid-construction — e.g. a legal
+    // frame without Conclusions yet looks "general", letting through
+    // legal-only premise kinds without warning.
+    const snap = session.frame_version_snapshot;
+    let vocab: PremiseKindVocabularyKey;
+    if (snap.mode) {
+      vocab = toModeFlavor(snap.mode, snap.flavor) as PremiseKindVocabularyKey;
+    } else {
+      const isLegal = snap.nodes.some(
+        (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
+      );
+      vocab = vocabularyFor(isLegal ? "legal" : "general");
+    }
     const allowed = new Set<string>(PREMISE_KIND_VOCABULARIES[vocab] as readonly string[]);
     const out: ValidationResult[] = [];
     for (const p of [...session.premises].sort((a, b) => a.id.localeCompare(b.id))) {

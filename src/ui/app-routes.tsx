@@ -116,12 +116,20 @@ function RoutedView(): ReactElement {
     }
   }
 
+  // WCAG 2.4.1: activating the skip link must move keyboard focus to the
+  // main landmark — just changing the hash isn't a bypass. Routing already
+  // ignores `#main` (RouterProvider's isRouteHash guard), so navigation
+  // doesn't change; we programmatically focus #main here so the next Tab
+  // lands inside the primary content region.
+  const onSkipToMain = React.useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const main = document.getElementById("main");
+    if (main) main.focus();
+  }, []);
+
   return (
     <>
-      {/* WCAG 2.4.1: skip-to-main-content link. Hidden until focused; the
-          first Tab from the URL bar reveals it so keyboard users can jump
-          past the top-bar chrome straight to the primary content region. */}
-      <a href="#main" className="argmap-skip-link">
+      <a href="#main" className="argmap-skip-link" onClick={onSkipToMain}>
         Skip to main content
       </a>
       {/* `display: contents` makes the <main> a transparent passthrough so

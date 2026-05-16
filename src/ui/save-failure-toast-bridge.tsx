@@ -19,10 +19,14 @@ import { useToast } from "./primitives/toast";
  */
 export function SaveFailureToastBridge(): ReactElement | null {
   const { autosave, app_state_store } = useRepository();
-  const { push } = useToast();
+  const { push, dismiss } = useToast();
+
+  // Track the latest sticky save-failure toast per kind so retries replace
+  // the prior toast instead of stacking, and a successful save can clear it.
+  const active_toast_ids = React.useRef<Map<string, string>>(new Map());
 
   React.useEffect(() => {
-    const unsubscribe = autosave.on("save_failed", (e) => {
+    const unsubFailed = autosave.on("save_failed", (e) => {
       const error = e.error;
       const where = e.kind === "frame" ? "frame" : e.kind === "session" ? "session" : "app state";
       let message: string;
@@ -36,10 +40,26 @@ export function SaveFailureToastBridge(): ReactElement | null {
       } else {
         message = `Couldn't save your ${where}.`;
       }
-      push({ kind: "error", message, duration_ms: 0 });
+      // Dismiss the prior failure toast for this kind (a retry shouldn't
+      // stack a second permanent error on top of the first).
+      const prior = active_toast_ids.current.get(e.kind);
+      if (prior) dismiss(prior);
+      const id = push({ kind: "error", message, duration_ms: 0 });
+      active_toast_ids.current.set(e.kind, id);
     });
-    return unsubscribe;
-  }, [autosave, push]);
+    const unsubSucceeded = autosave.on("save_succeeded", (e) => {
+      // Clear the sticky failure toast for the same kind once a save lands.
+      const prior = active_toast_ids.current.get(e.kind);
+      if (prior) {
+        dismiss(prior);
+        active_toast_ids.current.delete(e.kind);
+      }
+    });
+    return () => {
+      unsubFailed();
+      unsubSucceeded();
+    };
+  }, [autosave, push, dismiss]);
 
   React.useEffect(() => {
     let last_error: string | null = app_state_store.getState().error;

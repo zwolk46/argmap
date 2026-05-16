@@ -11,13 +11,22 @@ export interface SuggestionDrawerProps {
 export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactElement | null {
   const { pending, status, resolve } = useAiSuggestion(store_kind);
   const [editing, setEditing] = React.useState(false);
-  const [edited_value, setEditedValue] = React.useState<unknown>(null);
+  // For structured (non-string) suggestions we hold the textarea's JSON
+  // string here while the user edits. On commit we parse it back into the
+  // original shape so we never hand the raw string into hook.commit (which
+  // would crash any hook that expects a structured payload).
+  const [edit_text, setEditText] = React.useState<string>("");
+  const [parse_error, setParseError] = React.useState<string | null>(null);
 
   const is_open = pending !== null;
   const is_applying = status === "applying";
 
   React.useEffect(() => {
-    if (!is_open) setEditing(false);
+    if (!is_open) {
+      setEditing(false);
+      setEditText("");
+      setParseError(null);
+    }
   }, [is_open]);
 
   if (!is_open) return null;
@@ -28,13 +37,26 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
   }
 
   async function handleEdit() {
+    const result = pending as SuggestionResult<unknown>;
+    const is_string = typeof result.parsed === "string";
     if (!editing) {
-      const result = pending as SuggestionResult<unknown>;
-      setEditedValue(result.parsed);
+      setEditText(is_string ? (result.parsed as string) : JSON.stringify(result.parsed, null, 2));
+      setParseError(null);
       setEditing(true);
-    } else {
-      await resolve({ kind: "edited", final: edited_value } as ConfirmationDecision<unknown>);
+      return;
     }
+    let final: unknown;
+    if (is_string) {
+      final = edit_text;
+    } else {
+      try {
+        final = JSON.parse(edit_text);
+      } catch (e) {
+        setParseError(e instanceof Error ? e.message : "Invalid JSON.");
+        return;
+      }
+    }
+    await resolve({ kind: "edited", final } as ConfirmationDecision<unknown>);
   }
 
   async function handleReject() {
@@ -77,17 +99,36 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
       </DrawerHeader>
       <DrawerBody>
         {editing ? (
-          <textarea
-            data-testid="suggestion-edit-textarea"
-            value={typeof edited_value === "string" ? edited_value : JSON.stringify(edited_value)}
-            onChange={(e) => setEditedValue(e.target.value)}
-            className="argmap-input"
-            style={{
-              minHeight: "160px",
-              resize: "vertical",
-              lineHeight: "var(--line-height-normal)",
-            }}
-          />
+          <>
+            <textarea
+              data-testid="suggestion-edit-textarea"
+              value={edit_text}
+              onChange={(e) => {
+                setEditText(e.target.value);
+                if (parse_error) setParseError(null);
+              }}
+              className="argmap-input"
+              style={{
+                minHeight: "160px",
+                resize: "vertical",
+                lineHeight: "var(--line-height-normal)",
+                fontFamily:
+                  typeof result.parsed === "string" ? "var(--font-sans)" : "var(--font-mono)",
+              }}
+            />
+            {parse_error ? (
+              <p
+                data-testid="suggestion-edit-parse-error"
+                style={{
+                  marginTop: "var(--space-2)",
+                  fontSize: "var(--font-size-sm)",
+                  color: "var(--color-severity-error)",
+                }}
+              >
+                Couldn't parse edit as JSON: {parse_error}
+              </p>
+            ) : null}
+          </>
         ) : (
           <div
             data-testid="suggestion-preview"

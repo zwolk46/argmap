@@ -1,7 +1,7 @@
 import type { FrameId, FrameVersionId, HookId, NodeRef } from "./identifiers";
-import type { Node, NodeType } from "./nodes";
+import type { Node } from "./nodes";
 import type { Edge } from "./edges";
-import type { SatisfactionPolicy } from "./satisfaction-policy";
+import type { SatisfactionPolicy, SatisfactionPolicyKey } from "./satisfaction-policy";
 
 export type Mode = "legal" | "general";
 export type Flavor = "personal" | "academic";
@@ -84,7 +84,7 @@ export interface Frame {
   flavor?: Flavor;
   jurisdiction_default?: Jurisdiction;
   positions?: Position[];
-  default_satisfaction_policies: { [K in NodeType]?: SatisfactionPolicy };
+  default_satisfaction_policies: { [K in SatisfactionPolicyKey]?: SatisfactionPolicy };
   tags: string[];
   pinned: boolean;
   // F-004 #4 / F-008 #3: additive archived flag (default false at the app layer).
@@ -117,7 +117,7 @@ export interface FrameVersion {
   // which silently ignored user edits to Frame.default_satisfaction_policies
   // and Frame.jurisdiction_default, and broke determinism when an older
   // FrameVersion was restored after Frame-level edits.
-  default_satisfaction_policies?: { [K in NodeType]?: SatisfactionPolicy };
+  default_satisfaction_policies?: { [K in SatisfactionPolicyKey]?: SatisfactionPolicy };
   jurisdiction_default?: Jurisdiction;
   mode?: Mode;
   flavor?: Flavor;

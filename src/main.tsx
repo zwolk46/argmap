@@ -48,7 +48,12 @@ const generateId = (): string => {
     Math.floor(Math.random() * 0x10000)
       .toString(16)
       .padStart(4, "0");
-  return `${rand()}${rand()}-${rand()}-4${rand().slice(1)}-${rand()}-${rand()}${rand()}${rand()}`;
+  // RFC 4122 v4 requires the variant nibble (top 2 bits of the 9th hex
+  // octet — the first char of the 4th group) to be one of 8,9,a,b. Force
+  // that here so the fallback id is a conformant UUID and clients that
+  // validate the shape don't reject it.
+  const variant = "89ab"[Math.floor(Math.random() * 4)];
+  return `${rand()}${rand()}-${rand()}-4${rand().slice(1)}-${variant}${rand().slice(1)}-${rand()}${rand()}${rand()}`;
 };
 
 function BootError({ message, hint }: { message: string; hint?: string }): React.ReactElement {
@@ -149,8 +154,12 @@ function SignedInApp({ user_id }: { user_id: string }): React.ReactElement {
       // down SignedInApp before the debounce window elapses and the last
       // 5-30s of edits are dropped.
       void autosave.flushAll();
+      // Close the per-user BroadcastChannel so the previous user's bus
+      // doesn't linger as a zombie listener after SignedInApp unmounts on
+      // a sign-out / user-switch (key={user.id} forces a full remount).
+      crosstab.close();
     };
-  }, [autosave]);
+  }, [autosave, crosstab]);
 
   return (
     <App
