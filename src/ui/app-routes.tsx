@@ -133,9 +133,7 @@ function RoutedView(): ReactElement {
             while the canvas-heavy chunk arrives — same component the
             workspace boot already uses, so the transition reads as one
             continuous load rather than a flash of empty UI. */}
-        <React.Suspense fallback={<LoadingScreen label="Loading…" />}>
-          {page}
-        </React.Suspense>
+        <React.Suspense fallback={<LoadingScreen label="Loading…" />}>{page}</React.Suspense>
       </main>
       <VersionHistoryPane open={version_history_open} onClose={onClose} />
       <AppOnboardingMount />

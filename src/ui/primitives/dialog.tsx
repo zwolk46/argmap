@@ -110,9 +110,7 @@ export function Dialog({
   // intermediate "exiting" so the overlay + panel get a chance to fade
   // out rather than vanishing — production apps with abrupt unmounts
   // read as cheap.
-  const [phase, setPhase] = React.useState<"open" | "exiting" | "closed">(
-    open ? "open" : "closed",
-  );
+  const [phase, setPhase] = React.useState<"open" | "exiting" | "closed">(open ? "open" : "closed");
   const exit_timer_ref = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {

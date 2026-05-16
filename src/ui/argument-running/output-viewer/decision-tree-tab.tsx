@@ -116,9 +116,7 @@ export function DecisionTreeTab(props: DecisionTreeTabProps): ReactElement {
                 rx={6}
                 ry={6}
                 fill={
-                  highlight
-                    ? "var(--color-background-accent)"
-                    : "var(--color-surface-elevated)"
+                  highlight ? "var(--color-background-accent)" : "var(--color-surface-elevated)"
                 }
                 stroke="var(--color-border-secondary)"
               />

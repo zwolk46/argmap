@@ -49,8 +49,8 @@ export function MigrationDialogBody(props: MigrationDialogBodyProps): ReactEleme
   if (phase.kind === "loaded_empty") {
     return (
       <InlineEmpty testId="migration-empty">
-        Nothing in this session points at frame nodes that have moved or been
-        removed. Migrating is safe — no manual decisions needed.
+        Nothing in this session points at frame nodes that have moved or been removed. Migrating is
+        safe — no manual decisions needed.
       </InlineEmpty>
     );
   }

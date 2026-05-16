@@ -1,6 +1,13 @@
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, IconButton, Button } from "../../primitives";
+import {
+  Drawer,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  IconButton,
+  Button,
+} from "../../primitives";
 import { UIcon } from "../../primitives/uicon";
 import { MetadataSection } from "./metadata-section";
 import { ModeFlavorSection } from "./mode-flavor-section";

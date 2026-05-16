@@ -35,7 +35,9 @@ const SOLID_ALIAS: Record<string, string> = {
   times: "cross",
 };
 
-function findUIconName(children: ReactNode): { name: string; solidName: string; size: number } | null {
+function findUIconName(
+  children: ReactNode,
+): { name: string; solidName: string; size: number } | null {
   const list = React.Children.toArray(children);
   if (list.length !== 1) return null;
   const only = list[0];

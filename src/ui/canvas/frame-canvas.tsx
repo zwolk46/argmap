@@ -77,10 +77,7 @@ export interface FrameCanvasProps {
   /** P1: keyboard Delete/Backspace on a selected edge. Caller should dispatch
    *  the matching edge_removed patch. */
   on_edge_delete_requested?: (edge_id: string) => void;
-  onSelectionChange?: (
-    node_ids: ReadonlyArray<NodeRef>,
-    edge_ids?: ReadonlyArray<string>,
-  ) => void;
+  onSelectionChange?: (node_ids: ReadonlyArray<NodeRef>, edge_ids?: ReadonlyArray<string>) => void;
   onAutoArrange?: () => void;
   search?: string;
   handle?: React.Ref<FrameCanvasHandle>;
@@ -620,13 +617,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   );
 
   const handleSelectionChange = React.useCallback(
-    ({
-      nodes,
-      edges,
-    }: {
-      nodes: RFNode<FrameCanvasNodeData>[];
-      edges: Array<{ id: string }>;
-    }) => {
+    ({ nodes, edges }: { nodes: RFNode<FrameCanvasNodeData>[]; edges: Array<{ id: string }> }) => {
       callbacks_ref.current.onSelectionChange?.(
         nodes.map((n) => n.data.node_id),
         edges.map((e) => e.id),
@@ -640,13 +631,10 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   // without this handler InspectorEdge is unreachable). React Flow does
   // emit onSelectionChange for edge clicks, but the call sometimes coalesces
   // with the prior nodes-only selection; we forward synchronously here.
-  const handleEdgeClick = React.useCallback(
-    (_: React.MouseEvent, edge: { id: string }) => {
-      const cb = callbacks_ref.current;
-      if (!cb.read_only) cb.onSelectionChange?.([], [edge.id]);
-    },
-    [],
-  );
+  const handleEdgeClick = React.useCallback((_: React.MouseEvent, edge: { id: string }) => {
+    const cb = callbacks_ref.current;
+    if (!cb.read_only) cb.onSelectionChange?.([], [edge.id]);
+  }, []);
 
   // P1: handleConnect fires BEFORE handleConnectEnd, so last_connect_position
   // was null when on_edge_created tried to use it — the popup opened at

@@ -49,9 +49,7 @@ export function FlavorChangeDialog(props: FlavorChangeDialogProps): ReactElement
         {scan_result && scan_result.advisory.length > 0 ? (
           <AdvisoryList advisory={scan_result.advisory} />
         ) : (
-          <p style={{ color: "var(--color-text-tertiary)", fontStyle: "italic" }}>
-            No advisories.
-          </p>
+          <p style={{ color: "var(--color-text-tertiary)", fontStyle: "italic" }}>No advisories.</p>
         )}
       </div>
     </ConfirmDialog>

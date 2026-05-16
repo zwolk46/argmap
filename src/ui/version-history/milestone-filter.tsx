@@ -41,14 +41,10 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
       >
         <Pill
           bg={
-            !is_milestones
-              ? "var(--color-mode-current-accent-bg)"
-              : "var(--color-status-open-bg)"
+            !is_milestones ? "var(--color-mode-current-accent-bg)" : "var(--color-status-open-bg)"
           }
           color={
-            !is_milestones
-              ? "var(--color-mode-current-accent)"
-              : "var(--color-text-secondary)"
+            !is_milestones ? "var(--color-mode-current-accent)" : "var(--color-text-secondary)"
           }
         >
           All
@@ -72,16 +68,8 @@ export function MilestoneFilter({ value, onChange }: MilestoneFilterProps): Reac
         }}
       >
         <Pill
-          bg={
-            is_milestones
-              ? "var(--color-mode-current-accent-bg)"
-              : "var(--color-status-open-bg)"
-          }
-          color={
-            is_milestones
-              ? "var(--color-mode-current-accent)"
-              : "var(--color-text-secondary)"
-          }
+          bg={is_milestones ? "var(--color-mode-current-accent-bg)" : "var(--color-status-open-bg)"}
+          color={is_milestones ? "var(--color-mode-current-accent)" : "var(--color-text-secondary)"}
         >
           <span
             style={{

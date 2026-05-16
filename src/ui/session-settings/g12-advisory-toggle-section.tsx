@@ -40,14 +40,8 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
       >
         <span style={{ fontSize: "var(--font-size-sm)" }}>Cross-implication advisories</span>
         <Pill
-          color={
-            enabled ? "var(--color-text-success)" : "var(--color-text-secondary)"
-          }
-          bg={
-            enabled
-              ? "var(--color-background-success)"
-              : "var(--color-status-open-bg)"
-          }
+          color={enabled ? "var(--color-text-success)" : "var(--color-text-secondary)"}
+          bg={enabled ? "var(--color-background-success)" : "var(--color-status-open-bg)"}
         >
           <span data-testid="g12-status">{enabled ? "Enabled" : "Disabled"}</span>
         </Pill>

@@ -57,9 +57,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
         }}
       >
         <TypeIcon node_type={node.type} />
-        <span
-          style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}
-        >
+        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
           {humanizeNodeType(node.type)}
         </span>
       </div>

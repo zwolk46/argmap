@@ -260,12 +260,7 @@ export function buildTutorial(opts: TutorialBuildOpts): TutorialBuildResult {
     type: "LogicalGate",
     layer: "frame",
     gate_type: "AND",
-    inputs: [
-      remap(N.sq_duty),
-      remap(N.sq_breach),
-      remap(N.sq_causation),
-      remap(N.sq_damages),
-    ],
+    inputs: [remap(N.sq_duty), remap(N.sq_breach), remap(N.sq_causation), remap(N.sq_damages)],
     output_target: remap(N.liable),
   } as Node;
 
@@ -489,8 +484,7 @@ export function buildTutorial(opts: TutorialBuildOpts): TutorialBuildResult {
     ...stamp(N.cp_damages),
     type: "Checkpoint",
     layer: "frame",
-    question:
-      "Did Mrs. Palsgraf sustain a quantifiable, legally compensable injury?",
+    question: "Did Mrs. Palsgraf sustain a quantifiable, legally compensable injury?",
     answer_type: "boolean",
     options: [
       {

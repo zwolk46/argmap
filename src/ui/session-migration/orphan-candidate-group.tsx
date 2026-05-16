@@ -25,10 +25,7 @@ export function OrphanCandidateGroup(props: OrphanCandidateGroupProps): ReactEle
       data-carrier-kind={props.carrier_kind}
       style={{ marginBottom: "var(--space-3)" }}
     >
-      <h3
-        className="argmap-section-heading"
-        style={{ padding: "var(--space-2) var(--space-3)" }}
-      >
+      <h3 className="argmap-section-heading" style={{ padding: "var(--space-2) var(--space-3)" }}>
         {header} · {props.candidates.length}
       </h3>
       {props.candidates.map((c) => {

@@ -117,14 +117,22 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
     } else if (e.key === "ArrowRight") {
       // WAI-ARIA tree pattern: Right expands (or moves to first child if
       // already expanded); for our simpler tree we just expand.
-      if (current && current.outline_node.children.length > 0 && !expanded.has(current.outline_node.node_id)) {
+      if (
+        current &&
+        current.outline_node.children.length > 0 &&
+        !expanded.has(current.outline_node.node_id)
+      ) {
         e.preventDefault();
         toggle(current.outline_node.node_id);
       }
     } else if (e.key === "ArrowLeft") {
       // Left collapses (or moves to parent if already collapsed); we just
       // collapse here. Parents are reachable via ArrowUp.
-      if (current && current.outline_node.children.length > 0 && expanded.has(current.outline_node.node_id)) {
+      if (
+        current &&
+        current.outline_node.children.length > 0 &&
+        expanded.has(current.outline_node.node_id)
+      ) {
         e.preventDefault();
         toggle(current.outline_node.node_id);
       }

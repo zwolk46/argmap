@@ -178,10 +178,7 @@ export interface InlineLoadingProps {
  * during data fetches. Match this to InlineEmpty's density and color tone so
  * loading and empty states feel like the same primitive at different moments.
  */
-export function InlineLoading({
-  label = "Loading…",
-  testId,
-}: InlineLoadingProps): ReactElement {
+export function InlineLoading({ label = "Loading…", testId }: InlineLoadingProps): ReactElement {
   return (
     <div
       data-testid={testId}

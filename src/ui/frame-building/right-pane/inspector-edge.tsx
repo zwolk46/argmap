@@ -42,9 +42,7 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
         >
           Edge type
         </h3>
-        <div
-          style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}
-        >
+        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
           {edge.type}
         </div>
         <h3

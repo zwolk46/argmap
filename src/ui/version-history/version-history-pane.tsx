@@ -235,7 +235,12 @@ function PaneShell(props: PaneShellProps): ReactElement {
   }
 
   return (
-    <Drawer open={props.open} onClose={props.onClose} width="min(520px, 100vw)" aria_label="Version history">
+    <Drawer
+      open={props.open}
+      onClose={props.onClose}
+      width="min(520px, 100vw)"
+      aria_label="Version history"
+    >
       <DrawerHeader>
         <span data-testid="version-history-header-title">{props.header_title}</span>
         <IconButton

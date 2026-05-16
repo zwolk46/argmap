@@ -338,11 +338,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                     }}
                     on_edge_created={handleEdgeCreated}
                     on_palette_drop={(node_type, position) => {
-                      const defaults = buildNodeDefaults(
-                        node_type as NodeType,
-                        generateId,
-                        now(),
-                      );
+                      const defaults = buildNodeDefaults(node_type as NodeType, generateId, now());
                       const positioned: Node = {
                         ...defaults,
                         presentation: {

@@ -136,9 +136,7 @@ export function passesFilter(
 
 function chipStyle(active: boolean): React.CSSProperties {
   return {
-    background: active
-      ? "var(--color-background-accent)"
-      : "var(--color-background-secondary)",
+    background: active ? "var(--color-background-accent)" : "var(--color-background-secondary)",
     color: active ? "var(--color-text-accent)" : "var(--color-text-secondary)",
     border: "none",
     borderRadius: "var(--radius-pill)",

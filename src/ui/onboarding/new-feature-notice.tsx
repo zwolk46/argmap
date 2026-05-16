@@ -30,15 +30,10 @@ export function NewFeatureNotice(props: NewFeatureNoticeProps): ReactElement {
           marginBottom: "var(--space-2)",
         }}
       >
-        <Pill
-          bg="var(--color-mode-current-accent-bg)"
-          color="var(--color-mode-current-accent)"
-        >
+        <Pill bg="var(--color-mode-current-accent-bg)" color="var(--color-mode-current-accent)">
           New
         </Pill>
-        <span
-          style={{ fontWeight: "var(--font-weight-medium)", fontSize: "var(--font-size-sm)" }}
-        >
+        <span style={{ fontWeight: "var(--font-weight-medium)", fontSize: "var(--font-size-sm)" }}>
           {props.title}
         </span>
       </header>
