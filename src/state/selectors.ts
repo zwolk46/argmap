@@ -378,7 +378,14 @@ export function selectPinnedFrames(frames: FrameSummary[], pinned: string[]): Fr
 // ---- App state selectors ----
 
 export function selectFirstLaunchDismissed(app_state: AppState): boolean {
-  return app_state.dismissed_warnings?.["first_launch"] === true;
+  // The coachmark registry treats the welcome screen as
+  // coachmark_dismissals["welcome_screen"]; legacy writes landed in
+  // dismissed_warnings["first_launch"]. Accept either so users dismissed
+  // under the old key aren't re-shown the wizard.
+  return (
+    app_state.coachmark_dismissals?.["welcome_screen"] === true ||
+    app_state.dismissed_warnings?.["first_launch"] === true
+  );
 }
 
 export function selectCoachmarkDismissed(app_state: AppState, coachmark_id: string): boolean {

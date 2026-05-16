@@ -28,6 +28,12 @@ interface WizardState {
 
 export const WIZARD_STEP_TITLES = ["Mode", "Flavor", "Details"] as const;
 
+// Bound title length client-side so a multi-KB paste doesn't become the
+// frame title (which propagates to tiles, breadcrumbs, search index, and
+// may later fail DB column-length checks). 200 chars comfortably fits the
+// longest sensible legal/citation phrasings.
+const TITLE_MAX_LENGTH = 200;
+
 export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
   const [state, setState] = React.useState<WizardState>({
     mode: null,
@@ -140,8 +146,21 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
           onChange={(e) => setState((s) => ({ ...s, title: e.target.value }))}
           className="argmap-input"
           autoFocus
+          maxLength={TITLE_MAX_LENGTH}
           placeholder="e.g. Smith v. Jones — appellate brief"
         />
+        {state.title.length > TITLE_MAX_LENGTH * 0.8 ? (
+          <p
+            data-testid="wizard-title-counter"
+            style={{
+              marginTop: "var(--space-1)",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {state.title.length} / {TITLE_MAX_LENGTH}
+          </p>
+        ) : null}
       </Section>
 
       <Section title="Description" optional>
@@ -231,17 +250,38 @@ function Choice({
   value: string;
   onChange: (next: string) => void;
 }): ReactElement {
+  // ARIA radiogroup: container carries role=radiogroup; only the checked
+  // option is in the tab order so the group is one tab stop, then arrow
+  // keys move within it. aria-checked (not aria-pressed) is the right
+  // attribute for radio semantics.
+  function handleKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowDown" && e.key !== "ArrowLeft" && e.key !== "ArrowUp") {
+      return;
+    }
+    e.preventDefault();
+    const idx = options.findIndex((o) => o.value === value);
+    const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+    const next = (idx === -1 ? 0 : (idx + dir + options.length) % options.length);
+    onChange(options[next].value);
+  }
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}>
-      {/* KEEP RAW: role="radio" card with rich label + hint content and active-state styling; not the standard Button taxonomy. */}
+    <div
+      role="radiogroup"
+      onKeyDown={handleKey}
+      style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}
+    >
       {options.map((opt) => {
         const active = opt.value === value;
+        // Roving tabindex: if nothing is selected yet, the first option is
+        // focusable so keyboard users can enter the group.
+        const tab_index = active || (value === "" && opt === options[0]) ? 0 : -1;
         return (
           <button
             key={opt.value}
             type="button"
             role="radio"
-            aria-pressed={active}
+            aria-checked={active}
+            tabIndex={tab_index}
             data-testid={opt.testid}
             onClick={() => onChange(opt.value)}
             data-active={active ? "true" : "false"}

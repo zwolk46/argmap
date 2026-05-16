@@ -17,8 +17,6 @@ export function OnboardingWizard(props: OnboardingWizardProps): ReactElement | n
     if (props.open) setStage("welcome");
   }, [props.open]);
 
-  if (!props.open) return null;
-
   async function handleSubmit(args: NewFrameWizardSubmitArgs): Promise<void> {
     await props.onSubmit(args);
   }
@@ -28,8 +26,13 @@ export function OnboardingWizard(props: OnboardingWizardProps): ReactElement | n
     // The Skip button is the only intended dismissal. Before this fix, a
     // backdrop click fired Dialog.onClose → props.onSkip → permanent
     // dismissWarning("first_launch"); the user lost onboarding forever.
+    //
+    // Route `open` through the Dialog (instead of hard-coding `open={true}`
+    // and bailing with `return null`) so the Dialog runs its exit-phase
+    // animation when dismissed. Returning null bypassed that animation
+    // and the screen snapped out instead of fading.
     <Dialog
-      open={true}
+      open={props.open}
       onClose={props.onSkip}
       aria_label="Onboarding"
       dismiss_on_click_outside={false}

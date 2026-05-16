@@ -151,12 +151,16 @@ function RoutedView(): ReactElement {
 
 function AppOnboardingMount(): ReactElement | null {
   const dismissed = useAppStateStore((s) => selectFirstLaunchDismissed(s.app_state));
-  const { app_state_store } = useRepository();
+  const { app_state_store, autosave } = useRepository();
   const navigate = useNavigate();
 
+  // Write to the registry-canonical key (coachmark_dismissals.welcome_screen)
+  // and immediately flush so a quick reload doesn't lose the dismissal in
+  // the 1s app-state debounce window.
   const onSkip = React.useCallback(() => {
-    app_state_store.getState().dismissWarning("first_launch");
-  }, [app_state_store]);
+    app_state_store.getState().dismissCoachmark("welcome_screen", true);
+    void autosave.flushAppState();
+  }, [app_state_store, autosave]);
 
   const onSubmit = React.useCallback(
     async (args: {
@@ -171,10 +175,12 @@ function AppOnboardingMount(): ReactElement | null {
       // P0-13: record as Most Recent so the frame appears on Home when the
       // user navigates back from frame-building.
       app_state_store.getState().setRecent(result.frame.id);
-      app_state_store.getState().dismissWarning("first_launch");
+      app_state_store.getState().dismissCoachmark("welcome_screen", true);
+      // Force-flush so the dismissal+recent survive a quick navigation.
+      void autosave.flushAppState();
       navigate({ kind: "frame_building", frame_id: result.frame.id });
     },
-    [app_state_store, navigate],
+    [app_state_store, autosave, navigate],
   );
 
   return <OnboardingWizard open={!dismissed} onSkip={onSkip} onSubmit={onSubmit} />;
