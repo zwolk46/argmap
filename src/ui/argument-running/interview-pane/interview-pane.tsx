@@ -109,8 +109,8 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
               fontSize: "var(--font-size-sm)",
             }}
           >
-            Couldn't load the frame snapshot for this session. Reload the page or open the
-            session from Home; if it persists, the snapshot may be corrupted.
+            Couldn't load the frame snapshot for this session. Reload the page or open the session
+            from Home; if it persists, the snapshot may be corrupted.
           </div>
         ) : items.length === 0 ? (
           <InterviewEmptyState

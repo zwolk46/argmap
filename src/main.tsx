@@ -154,12 +154,14 @@ function SignedInApp({ user_id }: { user_id: string }): React.ReactElement {
       // down SignedInApp before the debounce window elapses and the last
       // 5-30s of edits are dropped.
       void autosave.flushAll();
-      // Close the per-user BroadcastChannel so the previous user's bus
-      // doesn't linger as a zombie listener after SignedInApp unmounts on
-      // a sign-out / user-switch (key={user.id} forces a full remount).
-      crosstab.close();
+      // Note: per-user BroadcastChannel is NOT closed here. Doing so
+      // would race React 18 StrictMode dev-mode's spurious cleanup ->
+      // remount cycle and leave the bus permanently closed in dev. The
+      // same constraint blocks the store dispose() fix (§1 HIGH) —
+      // both wait on a refactor that moves subscription lifecycle out
+      // of useMemo'd resources.
     };
-  }, [autosave, crosstab]);
+  }, [autosave]);
 
   return (
     <App

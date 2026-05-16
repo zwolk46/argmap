@@ -255,13 +255,18 @@ function Choice({
   // keys move within it. aria-checked (not aria-pressed) is the right
   // attribute for radio semantics.
   function handleKey(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowDown" && e.key !== "ArrowLeft" && e.key !== "ArrowUp") {
+    if (
+      e.key !== "ArrowRight" &&
+      e.key !== "ArrowDown" &&
+      e.key !== "ArrowLeft" &&
+      e.key !== "ArrowUp"
+    ) {
       return;
     }
     e.preventDefault();
     const idx = options.findIndex((o) => o.value === value);
     const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-    const next = (idx === -1 ? 0 : (idx + dir + options.length) % options.length);
+    const next = idx === -1 ? 0 : (idx + dir + options.length) % options.length;
     onChange(options[next].value);
   }
   return (

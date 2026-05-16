@@ -216,11 +216,7 @@ export function NodeFrame({
           animation: display.recommended_next_pulse
             ? "pulse-recommended var(--duration-pulse) var(--ease-soft) infinite"
             : undefined,
-          opacity: display.not_applicable_dim
-            ? 0.4
-            : display.foreclosed_strikethrough
-              ? 0.55
-              : 1,
+          opacity: display.not_applicable_dim ? 0.4 : display.foreclosed_strikethrough ? 0.55 : 1,
         }}
       >
         {handleTarget}
@@ -261,11 +257,7 @@ export function NodeFrame({
         animation: display.recommended_next_pulse
           ? "pulse-recommended var(--duration-pulse) var(--ease-soft) infinite"
           : undefined,
-        opacity: display.not_applicable_dim
-          ? 0.4
-          : display.foreclosed_strikethrough
-            ? 0.55
-            : 1,
+        opacity: display.not_applicable_dim ? 0.4 : display.foreclosed_strikethrough ? 0.55 : 1,
       }}
     >
       {handleTarget}
@@ -277,11 +269,7 @@ export function NodeFrame({
       >
         <div className="cn-status">
           <span className="cn-status-left">
-            <UIcon
-              name={statusGlyph.name}
-              iconStyle={statusGlyph.iconStyle}
-              size={11}
-            />
+            <UIcon name={statusGlyph.name} iconStyle={statusGlyph.iconStyle} size={11} />
             {statusGlyph.label}
           </span>
           <span className="cn-status-right">

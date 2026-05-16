@@ -104,7 +104,6 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
     if (frame_id) navigate({ kind: "frame_building", frame_id });
   }
 
-
   if (snapshot.is_loading) {
     return (
       <div data-testid="argument-running-loading">

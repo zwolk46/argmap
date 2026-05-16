@@ -72,8 +72,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
   // pinned or recent". The empty-state CTA is honest only in the first
   // case; in the second we'd be telling the user their frames are gone.
   const is_empty = frames.length === 0 && pinned.length === 0 && recents.length === 0;
-  const non_empty_no_recents =
-    frames.length > 0 && pinned.length === 0 && recents.length === 0;
+  const non_empty_no_recents = frames.length > 0 && pinned.length === 0 && recents.length === 0;
 
   function onOpen(frame_id: FrameId): void {
     app_state_store.getState().setRecent(frame_id);

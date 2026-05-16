@@ -29,8 +29,7 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
   // resolves the answer to `indeterminate` with no editor-level reason.
   const authority_required = is_legal && node.requires_authority === true;
   const authority_satisfied = !authority_required || authority_id !== null;
-  const can_save =
-    selected_option_id !== null && premise_result !== null && authority_satisfied;
+  const can_save = selected_option_id !== null && premise_result !== null && authority_satisfied;
 
   function on_save(): void {
     if (!can_save) {

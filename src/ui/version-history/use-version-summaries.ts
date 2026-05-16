@@ -37,9 +37,7 @@ export function useVersionSummaries(arg: VersionSummariesArg): VersionSummariesR
     // current_version_id frequently). Keep showing the prior list until
     // the new fetch lands — preserves selection and scroll position
     // and avoids flashing "Loading versions…" on every save.
-    setResult((prev) =>
-      prev.status === "ready" ? prev : { status: "loading", summaries: EMPTY },
-    );
+    setResult((prev) => (prev.status === "ready" ? prev : { status: "loading", summaries: EMPTY }));
     const promise =
       arg.kind === "frame"
         ? repository.listFrameVersionSummaries(arg.frame_id)

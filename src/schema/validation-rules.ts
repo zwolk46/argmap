@@ -12,11 +12,7 @@ import type {
 } from "./nodes";
 import type { Edge, EdgeType } from "./edges";
 import { VALID_EDGE_PAIRS } from "./edges";
-import {
-  PREMISE_KIND_VOCABULARIES,
-  toModeFlavor,
-  type PremiseKindVocabularyKey,
-} from "./frame";
+import { PREMISE_KIND_VOCABULARIES, toModeFlavor, type PremiseKindVocabularyKey } from "./frame";
 
 // ============================================================================
 // Public shapes

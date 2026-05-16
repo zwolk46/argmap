@@ -28,10 +28,7 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
     // Reposition when the anchor (or its ancestors) resize, when the window
     // resizes, or when the page scrolls. Without these the popover sticks
     // to its mount-time coords while the anchor moves around it.
-    const ro =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(reposition)
-        : null;
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(reposition) : null;
     if (ro) ro.observe(el);
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, { capture: true, passive: true });
