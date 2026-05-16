@@ -1221,6 +1221,1312 @@ select.argmap-input {
   letter-spacing: 0.04em;
 }
 
+/* ============================================================
+   CANVAS NODE — whole-node status treatment
+   ============================================================
+   The status of a node is its dominant visual signal. Instead of a
+   small corner badge, the whole node carries the state:
+     • A status HEADER STRIP at the top with the glyph + the word.
+     • A state-tinted body wash.
+     • A state-colored left rail (3px) for an extra cue at a glance.
+     • Per-state texture/decoration where it adds information
+       (foreclosed: diagonal hatch wash + strikethrough title;
+       open: dashed outer border so the node reads as "unstarted";
+       contested: 1px outer halo so the node bleeds amber into its
+       surroundings without changing footprint).
+   The data attributes `data-status` and `data-kind` do all the
+   per-status / per-kind work via the `--state-*` custom property
+   layer; consumer JSX just stamps the attributes.
+   ============================================================ */
+
+.canvas-node {
+  --state-ink: var(--color-text-secondary);
+  --state-tint: var(--color-surface-elevated);
+  --state-rail: var(--color-border-default);
+  --state-border: var(--color-border-default);
+  --state-label-bg: var(--color-surface-pane);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  min-width: 200px;
+  background: var(--state-tint);
+  border: var(--border-thin) solid var(--state-border);
+  border-left: 3px solid var(--state-rail);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+.canvas-node:hover {
+  box-shadow: var(--shadow-md);
+}
+.canvas-node[data-selected="true"] {
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--color-mode-current-accent), transparent 75%),
+    var(--shadow-md);
+  border-color: var(--color-mode-current-accent);
+}
+
+/* Header strip — first thing the eye reads. */
+.cn-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 4px 8px 4px 10px;
+  background: var(--state-label-bg);
+  color: var(--state-ink);
+  border-bottom: var(--border-hairline) solid
+    color-mix(in oklab, var(--state-rail), transparent 70%);
+}
+.cn-status-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.cn-status-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Body */
+.cn-body {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cn-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+}
+.cn-eyebrow > * {
+  color: currentColor;
+}
+.cn-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-snug);
+  letter-spacing: -0.005em;
+  /* 3-line clamp keeps a long Conclusion/Interpretation contained without
+     collapsing into a tooltip-only affordance. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cn-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-snug);
+}
+
+/* Per-state surfaces — set the --state-* layer and add textures. */
+.canvas-node[data-status="satisfied"] {
+  --state-ink: var(--color-status-satisfied);
+  --state-rail: var(--color-status-satisfied);
+  --state-border: color-mix(in oklab, var(--color-status-satisfied), transparent 65%);
+  --state-tint: color-mix(in oklab, var(--color-status-satisfied-bg), white 25%);
+  --state-label-bg: color-mix(in oklab, var(--color-status-satisfied-bg), white 5%);
+}
+.canvas-node[data-status="open"] {
+  --state-ink: var(--color-text-secondary);
+  --state-rail: var(--color-border-strong);
+  --state-border: var(--color-border-default);
+  --state-tint: var(--color-surface-elevated);
+  --state-label-bg: var(--color-surface-pane);
+  border-style: dashed;
+}
+.canvas-node[data-status="open"] .cn-status {
+  border-bottom-style: dashed;
+}
+.canvas-node[data-status="contested"] {
+  --state-ink: var(--color-status-contested);
+  --state-rail: var(--color-status-contested);
+  --state-border: color-mix(in oklab, var(--color-status-contested), transparent 60%);
+  --state-tint: color-mix(in oklab, var(--color-status-contested-bg), white 25%);
+  --state-label-bg: color-mix(in oklab, var(--color-status-contested-bg), white 5%);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-status-contested), transparent 85%),
+    var(--shadow-sm);
+}
+.canvas-node[data-status="foreclosed"] {
+  --state-ink: var(--color-status-foreclosed-accent);
+  --state-rail: var(--color-status-foreclosed-accent);
+  --state-border: color-mix(in oklab, var(--color-status-foreclosed-accent), transparent 65%);
+  --state-tint: var(--color-status-foreclosed-bg);
+  --state-label-bg: color-mix(in oklab, var(--color-status-foreclosed-bg), black 4%);
+}
+.canvas-node[data-status="foreclosed"] .cn-body {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 7px,
+    color-mix(in oklab, var(--color-status-foreclosed-accent), transparent 92%) 7px 8px
+  );
+}
+.canvas-node[data-status="foreclosed"] .cn-title,
+.canvas-node[data-status="foreclosed"] .cn-eyebrow,
+.canvas-node[data-status="foreclosed"] .cn-sub {
+  opacity: 0.6;
+}
+.canvas-node[data-status="foreclosed"] .cn-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-status-foreclosed-accent);
+  text-decoration-thickness: 1px;
+}
+.canvas-node[data-status="not_applicable"] {
+  --state-ink: var(--color-text-tertiary);
+  --state-rail: var(--color-border-default);
+  --state-border: var(--color-border-subtle);
+  --state-tint: var(--color-surface-pane);
+  --state-label-bg: var(--color-surface-pane);
+}
+.canvas-node[data-status="not_applicable"] .cn-title,
+.canvas-node[data-status="not_applicable"] .cn-eyebrow,
+.canvas-node[data-status="not_applicable"] .cn-sub {
+  opacity: 0.7;
+}
+
+/* Kind-specific accents — preserve "shape of kind" cues. */
+.canvas-node[data-kind="root_question"] .cn-body {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-mode-frame-accent), transparent 88%) 0%,
+    transparent 60%
+  );
+}
+.canvas-node[data-kind="conclusion"] {
+  border-top-width: 0;
+}
+.canvas-node[data-kind="conclusion"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -3px;
+  right: 0;
+  height: 3px;
+  background: var(--color-mode-current-accent);
+}
+.canvas-node[data-kind="logical_gate"] {
+  width: auto;
+  min-width: 80px;
+  font-family: var(--font-mono);
+  text-align: center;
+  border-left-width: var(--border-thin);
+}
+.canvas-node[data-kind="logical_gate"] .cn-body {
+  padding: 14px 18px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.12em;
+  font-size: var(--font-size-sm);
+  align-items: center;
+}
+.canvas-node[data-kind="logical_gate"] .cn-title {
+  /* Gates carry only a short label (AND / OR / etc.) — drop the clamp. */
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  overflow: visible;
+}
+.canvas-node[data-kind="term"] .cn-title {
+  font-family: var(--font-serif);
+  font-weight: var(--font-weight-medium);
+}
+.canvas-node[data-kind="authority"] .cn-title {
+  font-family: var(--font-serif);
+  font-weight: var(--font-weight-regular);
+}
+.canvas-node[data-kind="premise"] {
+  /* Premise pills render via the existing premise-pill variant, not the
+     full whole-node treatment. Their data-kind is here only so authors
+     can target them if needed. */
+}
+
+/* Connection handles — the small dots at top/bottom edges. */
+.canvas-handle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-strong);
+  position: absolute;
+}
+.canvas-node:hover .canvas-handle {
+  border-color: var(--color-mode-current-accent);
+}
+
+/* Sub-flag chip inside the cn-status header (binding/persuasive). */
+.cn-subflag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px 1px 4px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.cn-subflag[data-flag="binding"] {
+  background: var(--color-subflag-binding-bg);
+  color: var(--color-subflag-binding);
+}
+.cn-subflag[data-flag="persuasive"] {
+  background: var(--color-subflag-persuasive-bg);
+  color: var(--color-subflag-persuasive);
+}
+
+/* Failed-condition lines beneath the title. Visible only when status
+   is contested/open and the runtime supplies a list of unmet conditions. */
+.cn-failures {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 0;
+  font-size: var(--font-size-2xs);
+  color: var(--state-ink);
+  list-style: none;
+}
+.cn-failure {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 4px;
+  line-height: var(--line-height-snug);
+}
+.cn-failure::before {
+  content: "·";
+  margin-right: 2px;
+  color: var(--state-ink);
+}
+
+/* AI-suggested ribbon (top-right corner). */
+.cn-ai-ribbon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 2px 8px 2px 10px;
+  background: var(--color-ai-accent-bg);
+  color: var(--color-ai-accent-strong);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom-left-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ============================================================
+   FORM CONTROLS — proper class-driven wrappers
+   ============================================================
+   These extend the .argmap-input baseline with sibling classes for
+   the rest of the form family. Consumers that previously hand-rolled
+   <input className="argmap-input" /> get a complete set of styled
+   counterparts here: .argmap-textarea, .argmap-select, .argmap-check,
+   .argmap-radio, .argmap-switch, and the .argmap-input-wrap leading/
+   suffix slots.
+   ============================================================ */
+.argmap-textarea {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 10px;
+  font-size: var(--font-size-base);
+  font-family: var(--font-sans);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  outline: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard);
+}
+.argmap-textarea:hover:not(:disabled):not(:focus) {
+  border-color: var(--color-border-strong);
+}
+.argmap-textarea:focus,
+.argmap-textarea:focus-visible {
+  border-color: var(--color-mode-current-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-mode-current-accent), transparent 80%);
+}
+.argmap-textarea[aria-invalid="true"] {
+  border-color: var(--color-severity-error);
+}
+.argmap-textarea[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-severity-error), transparent 80%);
+}
+.argmap-textarea:disabled {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+}
+.argmap-textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.argmap-select {
+  display: block;
+  width: 100%;
+  height: 30px;
+  padding: 6px 28px 6px 10px;
+  font-size: var(--font-size-base);
+  font-family: var(--font-sans);
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%2358544D' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4.5L6 7.5L9 4.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+.argmap-select:hover:not(:disabled):not(:focus) {
+  border-color: var(--color-border-strong);
+}
+.argmap-select:focus,
+.argmap-select:focus-visible {
+  border-color: var(--color-mode-current-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-mode-current-accent), transparent 80%);
+}
+.argmap-select:disabled {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+}
+
+.argmap-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: var(--border-thin) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-elevated);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  flex-shrink: 0;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+.argmap-check:hover:not(:disabled) {
+  border-color: var(--color-mode-current-accent);
+}
+.argmap-check:checked,
+.argmap-check:indeterminate {
+  background: var(--color-mode-current-accent);
+  border-color: var(--color-mode-current-accent);
+}
+.argmap-check:checked::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: white;
+  clip-path: polygon(15% 50%, 38% 73%, 85% 22%, 95% 32%, 38% 92%, 5% 60%);
+}
+.argmap-check:indeterminate::after {
+  content: "";
+  width: 8px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+}
+.argmap-check:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+.argmap-check:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.argmap-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: var(--border-thin) solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface-elevated);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  flex-shrink: 0;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    border-width var(--duration-fast) var(--ease-standard);
+}
+.argmap-radio:hover:not(:disabled) {
+  border-color: var(--color-mode-current-accent);
+}
+.argmap-radio:checked {
+  border-color: var(--color-mode-current-accent);
+  border-width: 5px;
+}
+.argmap-radio:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+.argmap-radio:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.argmap-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 32px;
+  height: 18px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-default);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background-color var(--duration-base) var(--ease-standard);
+}
+.argmap-switch::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-base) var(--ease-emphasized);
+}
+.argmap-switch:checked {
+  background: var(--color-mode-current-accent);
+}
+.argmap-switch:checked::before {
+  transform: translateX(14px);
+}
+.argmap-switch:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+.argmap-switch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.argmap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.argmap-field-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+.argmap-field-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.4;
+}
+.argmap-field-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-severity-error);
+  line-height: 1.4;
+}
+.argmap-field-required {
+  color: var(--color-severity-error);
+}
+
+.argmap-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.argmap-input-wrap > .argmap-input {
+  padding-left: 32px;
+}
+.argmap-input-wrap > .argmap-input-icon {
+  position: absolute;
+  left: 9px;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  display: inline-flex;
+}
+.argmap-input-wrap > .argmap-input-suffix {
+  position: absolute;
+  right: 9px;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+}
+
+/* Choice row — wraps a check or radio with its label, inline. */
+.choice-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+/* ============================================================
+   SEGMENTED CONTROL — the multi-option toggle
+   ============================================================
+   Distinct from .argmap-segmented-tab (a single tab); .argmap-segmented
+   is the container with siblings .argmap-segmented-item inside. Mirrors
+   the handoff's idiom so consumers can drop in <Segmented> verbatim.
+   ============================================================ */
+.argmap-segmented {
+  display: inline-flex;
+  background: var(--color-surface-pane);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+.argmap-segmented-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 4px 12px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+.argmap-segmented-item:hover:not([data-active="true"]) {
+  color: var(--color-text-primary);
+}
+.argmap-segmented-item[data-active="true"] {
+  background: var(--color-surface-elevated);
+  color: var(--color-mode-current-accent);
+  box-shadow: var(--shadow-sm);
+}
+.argmap-segmented-item:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 0;
+}
+
+/* ============================================================
+   ROW SURFACES — premise, tree, interview
+   ============================================================ */
+
+/* Premise row — the load-bearing pool row. 22px badge | 1fr text | actions. */
+.premise-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  align-items: start;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+.premise-row:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-default);
+}
+.premise-text {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-snug);
+  color: var(--color-text-primary);
+}
+.premise-row[data-foreclosed="true"] .premise-text {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-border-strong);
+}
+.premise-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* Tree row — outline navigation. Selection uses a left rail bar so the
+   row keeps full text width for the label and breadcrumb. */
+.tree-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+  min-height: 26px;
+}
+.tree-row:hover {
+  background: var(--color-surface-hover);
+}
+.tree-row[data-selected="true"] {
+  background: var(--color-surface-selected);
+  font-weight: var(--font-weight-medium);
+}
+.tree-row[data-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--color-mode-current-accent);
+  border-radius: 2px;
+}
+.tree-disclosure {
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+.tree-disclosure svg,
+.tree-disclosure i {
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+.tree-row[data-expanded="false"] .tree-disclosure svg,
+.tree-row[data-expanded="false"] .tree-disclosure i {
+  transform: rotate(-90deg);
+}
+.tree-type-icon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+.tree-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tree-aside {
+  margin-left: auto;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* ============================================================
+   FRAME CARD — home-page grid card
+   ============================================================ */
+.frame-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+.frame-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}
+.frame-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.frame-card-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+}
+.frame-card-meta {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.02em;
+}
+.frame-card-summary {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-snug);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.frame-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  margin-top: auto;
+  border-top: var(--border-hairline) solid var(--color-border-subtle);
+}
+.frame-card-pin {
+  color: var(--color-milestone-star);
+}
+
+/* ============================================================
+   INLINE ALERT — info / success / warning / error tones
+   ============================================================ */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 10px 12px;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-snug);
+  border: var(--border-thin) solid;
+  border-radius: var(--radius-md);
+}
+.alert-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.alert-title {
+  font-weight: var(--font-weight-medium);
+  color: inherit;
+}
+.alert-body {
+  margin-top: 2px;
+  font-size: var(--font-size-sm);
+  color: inherit;
+  line-height: var(--line-height-snug);
+  opacity: 0.85;
+}
+.alert[data-tone="info"] {
+  background: var(--color-mode-current-accent-bg);
+  color: var(--color-mode-current-accent);
+  border-color: color-mix(in oklab, var(--color-mode-current-accent), transparent 70%);
+}
+.alert[data-tone="success"] {
+  background: var(--color-status-satisfied-bg);
+  color: var(--color-status-satisfied);
+  border-color: color-mix(in oklab, var(--color-status-satisfied), transparent 70%);
+}
+.alert[data-tone="warning"] {
+  background: var(--color-status-contested-bg);
+  color: var(--color-status-contested);
+  border-color: color-mix(in oklab, var(--color-status-contested), transparent 70%);
+}
+.alert[data-tone="error"] {
+  background: var(--color-severity-error-bg);
+  color: var(--color-severity-error);
+  border-color: color-mix(in oklab, var(--color-severity-error), transparent 70%);
+}
+
+/* ============================================================
+   TOAST — dark-bg notification, anchored bottom-right.
+   ============================================================ */
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 320px;
+  max-width: 420px;
+  padding: 10px 12px;
+  font-size: var(--font-size-base);
+  background: hsl(30 8% 14%);
+  color: hsl(36 12% 95%);
+  border: var(--border-thin) solid hsla(0 0% 100% / 0.06);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.toast-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+.toast-body {
+  flex: 1;
+  line-height: var(--line-height-snug);
+}
+.toast-title {
+  margin-bottom: 2px;
+  font-weight: var(--font-weight-medium);
+}
+.toast-meta {
+  font-size: var(--font-size-xs);
+  color: hsl(36 6% 70%);
+}
+.toast-action {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: hsl(36 22% 80%);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.toast-action:hover {
+  color: white;
+}
+.toast[data-tone="success"] {
+  border-left: 2px solid var(--color-status-satisfied);
+}
+.toast[data-tone="warning"] {
+  border-left: 2px solid var(--color-status-contested);
+}
+.toast[data-tone="error"] {
+  border-left: 2px solid var(--color-severity-error);
+}
+
+/* ============================================================
+   DROPDOWN MENU — sections, items with icons/shortcuts/checks
+   ============================================================ */
+.menu {
+  min-width: 220px;
+  padding: 4px;
+  background: var(--color-surface-elevated);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.menu-section + .menu-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: var(--border-hairline) solid var(--color-border-subtle);
+}
+.menu-label {
+  padding: 6px 8px 2px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.menu-item:hover,
+.menu-item[data-active="true"] {
+  background: var(--color-surface-hover);
+}
+.menu-item[data-tone="destructive"] {
+  color: var(--color-severity-error);
+}
+.menu-item-icon {
+  width: 16px;
+  color: var(--color-text-tertiary);
+  display: inline-flex;
+}
+.menu-item[data-tone="destructive"] .menu-item-icon {
+  color: var(--color-severity-error);
+}
+.menu-item-shortcut {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.04em;
+}
+.menu-item-trailing-check {
+  margin-left: auto;
+  color: var(--color-mode-current-accent);
+}
+
+/* ============================================================
+   APP BAR / TOP CHROME — 48px height, hairline-separated sections
+   ============================================================ */
+.appbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 48px;
+  padding: 0 var(--space-4);
+  background: var(--color-surface-elevated);
+  border-bottom: var(--border-thin) solid var(--color-border-subtle);
+}
+.appbar-section {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border-subtle);
+}
+.appbar-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+.appbar-title-meta {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+}
+.appbar-spacer {
+  flex: 1;
+}
+
+/* ============================================================
+   MODE FLAVOR CHIP — the at-a-glance "Frame / Argument" indicator
+   ============================================================ */
+.mode-flavor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 3px 10px 3px 7px;
+  background: var(--color-mode-current-accent-bg);
+  color: var(--color-mode-current-accent);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.01em;
+  border: var(--border-hairline) solid
+    color-mix(in oklab, var(--color-mode-current-accent), transparent 75%);
+  border-radius: var(--radius-pill);
+}
+.mode-flavor-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ============================================================
+   BREADCRUMBS
+   ============================================================ */
+.crumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+.crumb {
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.crumb:hover {
+  color: var(--color-text-primary);
+}
+.crumb-current {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  cursor: default;
+}
+.crumb-sep {
+  color: var(--color-border-default);
+}
+
+/* ============================================================
+   EMPTY STATE — the centered illustrated empty pane
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: var(--space-6) var(--space-5);
+  background: var(--color-surface-pane);
+  border: var(--border-thin) dashed var(--color-border-default);
+  border-radius: var(--radius-lg);
+}
+.empty-state-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-4);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-tertiary);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: 50%;
+}
+.empty-state-title {
+  margin-bottom: 6px;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+.empty-state-body {
+  max-width: 36ch;
+  margin: 0 auto var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-snug);
+}
+
+/* ============================================================
+   INSPECTOR PANEL — right-pane sections with eyebrow labels
+   ============================================================ */
+.inspector {
+  background: var(--color-surface-elevated);
+  border-radius: var(--radius-md);
+}
+.inspector-section {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-hairline) solid var(--color-border-subtle);
+}
+.inspector-section:last-child {
+  border-bottom: none;
+}
+.inspector-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.inspector-section-aux {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* ============================================================
+   PROGRESS / SKELETON / AVATAR
+   ============================================================ */
+.progress {
+  height: 4px;
+  background: var(--color-surface-pane);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--color-mode-current-accent);
+  border-radius: inherit;
+  transition: width var(--duration-medium) var(--ease-standard);
+}
+.progress-indeterminate .progress-fill {
+  width: 30%;
+  animation: progress-slide 1400ms infinite ease-in-out;
+}
+@keyframes progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(380%);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-pane) 0%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface-pane) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1800ms ease-in-out infinite;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--color-surface-selected);
+  color: var(--color-text-secondary);
+  border: var(--border-thin) solid var(--color-border-subtle);
+  border-radius: 50%;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ============================================================
+   TABS — the underline-on-active strip
+   ============================================================
+   Mirrors the handoff's .tabs / .tab idiom (with mode-accent
+   underline). The existing .argmap-output-tab keeps its own
+   styling for the 3-tab output viewer in argument-running.
+   ============================================================ */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: var(--border-thin) solid var(--color-border-subtle);
+}
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.tab:hover {
+  color: var(--color-text-primary);
+}
+.tab[data-active="true"] {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+.tab[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-mode-current-accent);
+  border-radius: 2px 2px 0 0;
+}
+.tab-count {
+  min-width: 16px;
+  padding: 1px 5px;
+  font-size: var(--font-size-2xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-pane);
+  border-radius: var(--radius-pill);
+  text-align: center;
+}
+
+/* ============================================================
+   CALLOUT — small mono annotation labels on canvas
+   ============================================================ */
+.callout {
+  position: absolute;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--color-surface-elevated);
+  border: var(--border-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   TOOLTIP — bubble + optional .tt-kbd shortcut chip.
+   The existing Tooltip primitive renders inline styles; this
+   class is here so any consumer migrating to class-driven
+   markup gets the same result without duplicating the chrome.
+   ============================================================ */
+.tt-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.tt-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 9px;
+  background: hsl(30 8% 14%);
+  color: hsl(36 12% 95%);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  z-index: var(--z-tooltip);
+}
+.tt-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: hsl(30 8% 14%);
+}
+.tt-kbd {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: hsla(0 0% 100% / 0.1);
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+
 /* Reduce motion — collapse keyframes to instant. */
 @media (prefers-reduced-motion: reduce) {
   *,

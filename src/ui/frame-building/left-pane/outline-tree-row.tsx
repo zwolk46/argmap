@@ -64,18 +64,11 @@ function OutlineTreeRowImpl(props: OutlineTreeRowProps): ReactElement {
       tabIndex={focused ? 0 : -1}
       data-testid={`outline-row-${outline_node.node_id}`}
       data-focused={focused ? "true" : undefined}
-      className="argmap-row-hover argmap-outline-row"
+      data-selected={selected ? "true" : undefined}
+      data-expanded={has_children ? (expanded ? "true" : "false") : undefined}
+      className="tree-row argmap-outline-row"
       style={{
-        display: "flex",
-        alignItems: "center",
-        paddingLeft: `${indent}px`,
-        paddingTop: "var(--space-1)",
-        paddingBottom: "var(--space-1)",
-        paddingRight: "var(--space-2)",
-        background: selected ? "var(--color-surface-selected)" : "transparent",
-        cursor: "pointer",
-        fontSize: "var(--font-size-sm)",
-        gap: "var(--space-2)",
+        paddingLeft: `${indent + 8}px`,
         minHeight: "28px",
         userSelect: "none",
       }}

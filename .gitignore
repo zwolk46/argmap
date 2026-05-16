@@ -3,6 +3,9 @@ dist
 coverage
 playwright-report
 test-results
+# Visual-smoke outputs from tests/e2e/migration-visual-smoke.spec.ts —
+# regenerated each run, never checked in.
+tests/audit
 .DS_Store
 *.log
 .vite

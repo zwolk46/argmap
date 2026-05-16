@@ -3,8 +3,6 @@ import type { NodeProps, Node as RFNode } from "@xyflow/react";
 import type { NodeType } from "@/schema";
 import { NodeFrame } from "./node-frame";
 import type { FrameCanvasNodeData } from "./types";
-import { Pill } from "../../primitives/pill";
-import { UIcon } from "../../primitives/uicon";
 
 type ND = RFNode<FrameCanvasNodeData>;
 
@@ -36,34 +34,32 @@ export const InterpretationNode = makeNodeRenderer("interpretation", "Interpreta
 export const CheckpointNode = makeNodeRenderer("checkpoint", "Checkpoint");
 
 export function LogicalGateNode({ data, selected }: NodeProps<ND>): ReactElement {
+  // Gate body shows the gate glyph (∧/∨/¬/→/⊘) or, fallback, the primary
+  // text label. The new whole-node treatment keeps the gate auto-width and
+  // mono-styled via .canvas-node[data-kind="logical_gate"].
   return (
     <NodeFrame
       node_id={data.node_id}
       node_type="LogicalGate"
       status={data.status}
       attributions={data.attributions}
-      primary_text={data.primary_text}
+      primary_text={data.gate_glyph ?? data.primary_text ?? "⊕"}
       variant="logical_gate"
       display={{ ...data.display, selected: selected ?? data.display.selected }}
       enable_connector_handle={data.enable_connector_handle}
       legal_mode={data.legal_mode}
-    >
-      <span
-        style={{
-          fontSize: "var(--font-size-lg)",
-          fontWeight: "var(--font-weight-semibold)",
-          color: "var(--color-text-primary)",
-        }}
-      >
-        {data.gate_glyph ?? "⊕"}
-      </span>
-    </NodeFrame>
+    />
   );
 }
 
 export const ConclusionNode = makeNodeRenderer("conclusion", "Conclusion");
 
 export function AuthorityNode({ data, selected }: NodeProps<ND>): ReactElement {
+  // The binding/persuasive subflag now surfaces inside the .cn-status
+  // header as a .cn-subflag chip — we hand it to NodeFrame explicitly
+  // (rather than letting it derive from status.via) because the
+  // authority's binding kind is a property of the node itself, not of
+  // a status path that resolves through it.
   return (
     <NodeFrame
       node_id={data.node_id}
@@ -75,30 +71,8 @@ export function AuthorityNode({ data, selected }: NodeProps<ND>): ReactElement {
       display={{ ...data.display, selected: selected ?? data.display.selected }}
       enable_connector_handle={data.enable_connector_handle}
       legal_mode={data.legal_mode}
-    >
-      {data.legal_mode && data.authority_binding_kind && (
-        <div style={{ marginTop: "var(--space-1)" }}>
-          <Pill
-            size="xs"
-            bg={
-              data.authority_binding_kind === "binding"
-                ? "var(--color-subflag-binding-bg)"
-                : "var(--color-subflag-persuasive-bg)"
-            }
-            color={
-              data.authority_binding_kind === "binding"
-                ? "var(--color-subflag-binding)"
-                : "var(--color-subflag-persuasive)"
-            }
-          >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <UIcon name="balance-scale-right" size={11} />
-              {data.authority_binding_kind === "binding" ? "Binding" : "Persuasive"}
-            </span>
-          </Pill>
-        </div>
-      )}
-    </NodeFrame>
+      subflag={data.legal_mode ? data.authority_binding_kind : undefined}
+    />
   );
 }
 

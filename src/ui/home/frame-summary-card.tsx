@@ -64,7 +64,7 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
     <article
       data-testid="frame-summary-card"
       data-frame-id={summary.id}
-      className="argmap-card"
+      className="frame-card argmap-card"
       role="button"
       tabIndex={0}
       onClick={(e) => {
@@ -75,43 +75,20 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         onOpen(summary.id);
       }}
       onKeyDown={handleKey}
-      style={{
-        padding: "var(--space-4)",
-        borderRadius: "var(--radius-md)",
-        border: "var(--border-thin) solid var(--color-border-subtle)",
-        background: "var(--color-surface-elevated)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-        minWidth: 220,
-        boxShadow: "var(--shadow-sm)",
-        cursor: "pointer",
-        position: "relative",
-      }}
+      style={{ minWidth: 220, position: "relative" }}
     >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "var(--space-2)",
-          minHeight: "44px",
-        }}
-      >
+      <header className="frame-card-head" style={{ minHeight: "44px" }}>
         <h3
           data-testid="frame-card-open"
+          className="frame-card-title"
           style={{
             flex: 1,
-            fontSize: "var(--font-size-base)",
-            fontWeight: "var(--font-weight-semibold)",
-            color: "var(--color-text-primary)",
             margin: 0,
-            lineHeight: "var(--line-height-snug)",
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
             wordBreak: "break-word",
-            letterSpacing: "var(--letter-spacing-tight)",
           }}
         >
           {summary.title || "Untitled frame"}
@@ -129,35 +106,12 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
           ) : (
             <UIcon name="star" size={14} style={{ opacity: 0.35 }} />
           )}
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              width: 1,
-              height: 1,
-              margin: -1,
-              padding: 0,
-              overflow: "hidden",
-              clip: "rect(0 0 0 0)",
-              whiteSpace: "nowrap",
-              border: 0,
-            }}
-          >
+          <span className="argmap-sr-only" aria-hidden="true">
             {is_pinned ? "★" : "☆"}
           </span>
         </IconButton>
       </header>
-      <footer
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--space-2)",
-          marginTop: "auto",
-          paddingTop: "var(--space-1)",
-          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
+      <footer className="frame-card-foot">
         <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
           {onRunArgument ? (
@@ -180,10 +134,10 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
             </Button>
           ) : null}
           <span
+            className="argmap-number-meta"
             style={{
               fontSize: "var(--font-size-xs)",
               color: "var(--color-text-tertiary)",
-              fontVariantNumeric: "tabular-nums",
             }}
           >
             {relativeTime(summary.updated_at)}

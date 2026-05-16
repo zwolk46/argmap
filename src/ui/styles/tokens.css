@@ -8,6 +8,10 @@
   --color-surface-overlay: hsla(30 8% 12% / 0.42);
   --color-surface-hover: hsl(36 14% 92%);
   --color-surface-selected: hsl(36 18% 89%);
+  /* `sunken` is the disabled-input wash; one shade darker than `pane`,
+     used by `.argmap-input:disabled` and `.argmap-select:disabled` so the
+     control reads as clearly inert against the surrounding `pane`. */
+  --color-surface-sunken: hsl(36 14% 94%);
 
   /* Text */
   --color-text-primary: hsl(30 8% 12%);
