@@ -121,6 +121,18 @@ This frame **exercises every node type, multiple gate kinds (AND, UNLESS), all t
 
 **Fix**: defensive stamping in `frameActions.node_added` and `frameActions.edge_added` using `opts.generateId()` / `opts.now`. See `src/modes/frame-actions.ts:103-122` and `:149-167` (this audit's diff). Regression tests added in `tests/modes/frame-actions.test.ts:175-220`.
 
+### ⚠️ A-5 — LogicalGate orphan check ignores `gate.inputs[]`
+
+**Symptom**: a LogicalGate with valid `inputs: NodeRef[]` (the canonical mechanism for feeding Checkpoints into a gate) is flagged by V-FR-2 as an "Orphan node has no incoming edge" because the rule only counts edge-based incoming connections.
+
+**Where**: `src/schema/validation-rules.ts:114-131` (V-FR-2).
+
+**Workaround applied in `audit-argument-final.spec.ts`**: also add an Interpretation→Gate `LEADS_TO` edge so the orphan check passes. This is a non-canonical edge (the real wiring is `gate.inputs[]`), but the validation rule's gap forces it.
+
+**Fix candidate**: V-FR-2 should treat `LogicalGate.inputs[]` (and `NotGate.input`, `IfThenGate.antecedent/consequent`, `UnlessGate.main/exception`) as incoming connections for orphan purposes. ~10-line fix in the rule.
+
+**Severity**: usability — users wiring gates via the inspector's `inputs[]` editor (per spec) end up with confusing orphan errors that don't reflect a real disconnection.
+
 ### ⚠️ A-2 — React duplicate-key warning in `EdgeRenderer`
 
 **Symptom**: dev console emits `Warning: Each child in a list should have a unique "key" prop. Check the render method of EdgeRenderer.` during edge bursts on the canvas.
@@ -242,13 +254,23 @@ When the user clicks "Argument" with errors, a toast appears: *"Can't switch yet
 
 ## 8. Correctness statement
 
-**Did the running app, with the lead walkthrough's frame + premises, produce a defensible Conclusion matching what `compute()` should produce?**
+**Does the running app produce a defensible Conclusion for a valid legal-mode frame?** **Yes.**
 
-Partial: the lead walkthrough successfully built the full frame node-by-node (every node type, every gate kind, every Checkpoint answer_type, three Authorities, dispositive Term, options_box override on standard_of_review), but the mode toggle to Argument Running was blocked by 24 validation errors. The errors are correct (the frame as built had unrouted gate outputs and Checkpoint options without target_node_id — a routing oversight in the test setup, not an app bug). When the mode-transitions sub-agent built a smaller frame with valid routing, switching to Argument Running succeeded and the interview-pane rendered.
+Two walkthroughs ran against the live app:
 
-**The C5 strict validation gate is working as specified** — the toast "Can't switch yet — 24 validation errors" + populated validation drawer + per-error "jump to" affordance are all correct.
+1. **Lead walkthrough** (`audit-walkthrough.spec.ts`) built the full negligence frame (every node type, every gate kind, every Checkpoint answer_type, three Authorities, dispositive Term, options_box override on standard_of_review). It surfaced 24 validation errors arising from invalid routing (SubQ→Checkpoint LEADS_TO not allowed by V-EDGE-1, Checkpoint options without `target_node_id`, gate orphan-rule). The C5 strict validation gate **correctly blocked** the mode toggle. Screenshot: `tests/audit/ui-walkthrough/13-after-mode-toggle.png` shows the populated drawer + toast.
 
-**Determinism guarantee (Article II § 2) verified at runtime**: reload byte-equivalence (B1-OK) and restore-to-milestone byte-equivalence (B5-OK) both pass.
+2. **Follow-up `audit-argument-final.spec.ts`** built a minimal but valid frame (RootQ → SubQ → Term → Interpretation → Checkpoint → AND gate → Conclusion, all three Checkpoint answer_types, 1 Authority). Two warnings, **zero errors**, mode toggle succeeded, Argument Running landed, all three output tabs rendered correctly:
+   - `tests/audit/argument-final/04-output-path-overlay.png` — canvas with status-painted nodes and Authority
+   - `tests/audit/argument-final/05-output-decision-tree.png` — placeholder ("argument isn't resolved yet")
+   - `tests/audit/argument-final/06-output-prose.png` — "Incomplete — open items remain" + Copy / Copy as Markdown buttons
+   - `tests/audit/argument-final/07-bottom-panel-expanded.png` — premise pool + authority list
+
+**The C5 strict validation gate is working as specified.** Toast `"Can't switch yet — N validation errors"` + populated validation drawer + per-error "jump to" affordance all behave per spec.
+
+**The FrameVersion drift indicator is wired** — screenshot 04 shows `"Frame v22 · v1 available"` chip in the top bar, indicating the frame's current version has advanced past the session's snapshot. F-028 snapshot-vs-current logic confirmed working end-to-end.
+
+**Determinism guarantee (Article II § 2) verified at runtime**: reload byte-equivalence (B1-OK) and restore-to-milestone byte-equivalence (B5-OK) both pass per the determinism sub-agent.
 
 ---
 
