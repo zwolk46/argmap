@@ -24,22 +24,38 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
   const [notes, setNotes] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  const can_save = selected_option_id !== null && premise_result !== null;
+  // Legal-mode Checkpoints flagged requires_authority must have an
+  // authority attached before save — otherwise the runtime quietly
+  // resolves the answer to `indeterminate` with no editor-level reason.
+  const authority_required = is_legal && node.requires_authority === true;
+  const authority_satisfied = !authority_required || authority_id !== null;
+  const can_save =
+    selected_option_id !== null && premise_result !== null && authority_satisfied;
 
   function on_save(): void {
-    if (!can_save) return;
+    if (!can_save) {
+      if (authority_required && !authority_id) {
+        setError("This Checkpoint requires an Authority. Attach one before saving.");
+      }
+      return;
+    }
     setError(null);
     try {
       const store = session_store.getState();
       let premise_id: string;
+      const trimmed_notes = notes.trim() ? notes : undefined;
       if (premise_result!.kind === "new") {
         // P0-16: stash the Authority selection on the new Premise via
         // authority_ref so it persists. The Premise schema supports
         // authority_ref out of the box; before this fix the editor's
         // `authority_id` was silently discarded.
+        // Also include `notes` on the new Premise so reuse and the Pool
+        // surfaces don't lose the user-typed context when the same
+        // Premise is referenced from a later editor.
         const enriched = {
           ...premise_result!.premise,
           ...(authority_id ? { authority_ref: authority_id } : {}),
+          ...(trimmed_notes ? { notes: trimmed_notes } : {}),
         };
         store.applyPatch({ kind: "premise_added", premise: enriched });
         premise_id = enriched.id;
@@ -52,7 +68,7 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
         answer: {
           selected_option_id: selected_option_id!,
           premise_id,
-          notes: notes.trim() ? notes : undefined,
+          notes: trimmed_notes,
         },
       });
       on_saved();

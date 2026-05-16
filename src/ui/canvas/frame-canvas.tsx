@@ -194,6 +194,13 @@ function buildRFNodes(
     );
     display.indeterminate_gate_dashed = is_indeterminate && node.type === "LogicalGate";
 
+    const authority_binding_kind: "binding" | "persuasive" | undefined =
+      node.type === "Authority" && "is_binding" in node
+        ? (node as { is_binding?: boolean }).is_binding === true
+          ? "binding"
+          : "persuasive"
+        : undefined;
+
     return {
       id: node.id,
       type: node.type,
@@ -204,6 +211,7 @@ function buildRFNodes(
         variant: variant_map[node.type] ?? "sub_question",
         status,
         display,
+        authority_binding_kind,
         enable_connector_handle: !read_only && operating_mode === "frame_building",
         legal_mode,
         gate_glyph:
@@ -420,6 +428,11 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   const { fitView, zoomIn, zoomOut, setCenter, screenToFlowPosition } = useReactFlow();
   const [fc_visibility, setFcVisibility] =
     React.useState<ForeclosureVisibility>(foreclosure_visibility);
+  // Sync local state when the parent updates the prop. Without this the
+  // initial value seeded once and later parent updates were ignored.
+  React.useEffect(() => {
+    setFcVisibility(foreclosure_visibility);
+  }, [foreclosure_visibility]);
 
   React.useImperativeHandle(handle, () => ({
     fitToScreen: () => fitView(),
@@ -771,7 +784,10 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         edgesReconnectable={!read_only}
         nodesConnectable={!read_only}
         fitView
-        proOptions={{ hideAttribution: true }}
+        // xyflow's MIT licence requires the attribution badge to remain
+        // visible unless a Pro subscription has been purchased. Suppressing
+        // it without a Pro key is a licence violation; the project has not
+        // bought one (yet), so render the badge.
         style={{ background: "var(--color-surface-canvas)" }}
       >
         {/* Dot grid gap matches --canvas-grid-gap in tokens.css. The grid

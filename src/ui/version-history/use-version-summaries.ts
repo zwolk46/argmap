@@ -33,7 +33,13 @@ export function useVersionSummaries(arg: VersionSummariesArg): VersionSummariesR
 
   React.useEffect(() => {
     let cancelled = false;
-    setResult({ status: "loading", summaries: EMPTY });
+    // Don't reset to "loading" on every dependency change (autosave bumps
+    // current_version_id frequently). Keep showing the prior list until
+    // the new fetch lands — preserves selection and scroll position
+    // and avoids flashing "Loading versions…" on every save.
+    setResult((prev) =>
+      prev.status === "ready" ? prev : { status: "loading", summaries: EMPTY },
+    );
     const promise =
       arg.kind === "frame"
         ? repository.listFrameVersionSummaries(arg.frame_id)

@@ -104,9 +104,6 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
     if (frame_id) navigate({ kind: "frame_building", frame_id });
   }
 
-  function bumpRecompute(): void {
-    setRecomputeCounter((v) => v + 1);
-  }
 
   if (snapshot.is_loading) {
     return (
@@ -193,8 +190,11 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
                       selected_item_id={selected_item_id}
                       on_close={() => setSelectedItemId(null)}
                       on_saved={() => {
+                        // The compute_result identity change above is the
+                        // single source of truth for the recompute pulse —
+                        // calling bumpRecompute here too would double-count
+                        // and cancel the animation mid-keyframe.
                         setSelectedItemId(null);
-                        bumpRecompute();
                       }}
                     />
                   </div>

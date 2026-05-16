@@ -103,6 +103,17 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
 
   React.useEffect(() => {
     frame_store.getState().loadFrame(frame_id);
+    // Reset page-local UI state when the user navigates to a different
+    // frame so the inspector doesn't render content referencing the
+    // prior frame's selection / open dialogs.
+    setSelection({ kind: "empty" });
+    setValidationDrawerOpen(false);
+    setSettingsPanelOpen(false);
+    setHelpPaneOpen(false);
+    setAutoArrangeOpen(false);
+    setSwitchToArgumentNoticeOpen(false);
+    setEdgePopup({ open: false, position: { x: 0, y: 0 }, candidates: [] });
+    setModeChangeDialog({ open: false });
   }, [frame_id, frame_store]);
 
   function handleDeleteFrame() {
@@ -322,6 +333,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                     frame_version={frame_version}
                     layout_result={layout_result}
                     operating_mode="frame_building"
+                    legal_mode={snapshot.frame?.mode === "legal"}
                     selection={
                       selection.kind === "node"
                         ? [selection.node_id]

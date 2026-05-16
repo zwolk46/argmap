@@ -94,7 +94,25 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
       <InterviewFilter state={filter} on_change={on_filter_change} />
       <InterviewSearch value={search_text} on_change={on_search_change} />
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {items.length === 0 || !frame_version ? (
+        {!frame_version ? (
+          // Missing frame_version is a load/migration failure, NOT the
+          // happy "all resolved" path — surface it as an error so the
+          // user doesn't read "All resolved" as success.
+          <div
+            data-testid="interview-pane-error"
+            role="alert"
+            style={{
+              padding: "var(--space-4)",
+              color: "var(--color-severity-error)",
+              background: "var(--color-severity-error-bg)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-sm)",
+            }}
+          >
+            Couldn't load the frame snapshot for this session. Reload the page or open the
+            session from Home; if it persists, the snapshot may be corrupted.
+          </div>
+        ) : items.length === 0 ? (
           <InterviewEmptyState
             conclusion_label={summary?.conclusion_label}
             on_save_milestone={on_save_milestone}
