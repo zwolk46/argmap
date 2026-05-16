@@ -21,7 +21,11 @@ export function DrawerHeader({ children }: { children: ReactNode }): ReactElemen
       style={{
         padding: "var(--space-4) var(--space-5)",
         borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        fontSize: "var(--font-size-md)",
+        // §14 #11: align with DialogHeader (--font-size-lg) so drawer titles
+        // and dialog titles read as the same priority level. Previously
+        // drawer was --font-size-md (15px) while dialog was --font-size-lg
+        // (17px); the size mismatch made drawers feel quieter than dialogs.
+        fontSize: "var(--font-size-lg)",
         fontWeight: "var(--font-weight-semibold)",
         color: "var(--color-text-primary)",
         display: "flex",
@@ -134,9 +138,19 @@ export function Drawer({
     return () => {
       root.removeEventListener("keydown", handleKeyDown);
       // Restore focus to wherever it came from when the drawer closes.
+      // §13 #11: confirm the stored ref is still attached to the document
+      // before focusing; if the triggering element unmounted while the
+      // drawer was open, focus() throws no-op into the void and the user
+      // lands on document.body. Fall back to body explicitly.
       const restore_to = last_focus_before_open_ref.current;
-      if (restore_to && typeof restore_to.focus === "function") {
+      if (
+        restore_to &&
+        typeof restore_to.focus === "function" &&
+        document.body.contains(restore_to)
+      ) {
         restore_to.focus();
+      } else {
+        document.body.focus();
       }
     };
   }, [open]);

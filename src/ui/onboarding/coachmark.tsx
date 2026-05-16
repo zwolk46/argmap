@@ -48,12 +48,20 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [props]);
 
+  // §13 #10: autofocus the dismiss button on mount so keyboard users land
+  // in the coachmark instead of needing to Tab from the page background.
+  // Also surface a unique aria-label that includes the message, so
+  // screen-reader users hear what the coachmark is about (not just
+  // "Coachmark").
+
   if (!pos) return null;
+  const aria_label = props.message ? `Coachmark: ${props.message}` : "Coachmark";
   return (
     <div
       data-testid="coachmark"
       role="dialog"
-      aria-label="Coachmark"
+      aria-modal="true"
+      aria-label={aria_label}
       style={{
         position: "fixed",
         top: pos.top,
@@ -98,6 +106,7 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
           variant="primary"
           size="sm"
           data-testid="coachmark-dismiss"
+          autoFocus
           onClick={props.on_dismiss}
         >
           Got it

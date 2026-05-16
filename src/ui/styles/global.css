@@ -337,7 +337,14 @@ input[type="checkbox"]:disabled:not(.argmap-skip-restyle) {
 .argmap-output-tab:focus-visible,
 .argmap-row-hover:focus-visible,
 .argmap-segmented-tab:focus-visible,
-.argmap-outline-row[data-focused="true"] {
+.argmap-outline-row[data-focused="true"],
+/* §14 #33: extend halo to interactive chrome chips and indicators that
+   previously fell back to the platform's generic outline (or nothing). */
+[data-testid="mode-flavor-chip"]:focus-visible,
+[data-testid="validation-indicator"]:focus-visible,
+[data-testid="frame-version-drift-indicator"]:focus-visible,
+[data-testid="recompute-indicator"]:focus-visible,
+.argmap-pill:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 3px var(--color-mode-current-accent-bg),

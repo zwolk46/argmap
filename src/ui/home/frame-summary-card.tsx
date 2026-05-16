@@ -115,9 +115,9 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
           ) : (
             <UIcon name="star" size={14} style={{ opacity: 0.35 }} />
           )}
-          <span className="argmap-sr-only" aria-hidden="true">
-            {is_pinned ? "★" : "☆"}
-          </span>
+          {/* §13 #16: aria-pressed on IconButton already carries the state;
+              the literal-glyph sr-only span double-announced "★" and was
+              aria-hidden anyway. Removed — keep one carrier (aria-pressed). */}
         </IconButton>
       </header>
       <footer className="frame-card-foot">

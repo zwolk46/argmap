@@ -134,56 +134,62 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
 
           {/* Errors */}
           {errors.length > 0 && (
-            <div>
+            <div role="region" aria-label="Error messages">
               <h3
                 className="argmap-section-heading"
                 style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
               >
                 Errors
               </h3>
-              {errors.map((e, i) => (
-                <ValidationRow
-                  key={`${e.rule_id}-${i}`}
-                  result={{
-                    rule_id: e.rule_id,
-                    severity: "error",
-                    message: e.message,
-                    node_id: e.node_id,
-                    edge_id: e.edge_id,
-                  }}
-                  is_dismissed={false}
-                  on_jump_to_node={on_jump_to_node}
-                  on_dismiss={() => {}}
-                  on_restore={() => {}}
-                  frame_version={frame_version}
-                />
-              ))}
+              {/* §13 #17: row[role="listitem"] needs an enclosing role="list"
+                  parent for valid ARIA semantics. */}
+              <div role="list">
+                {errors.map((e, i) => (
+                  <ValidationRow
+                    key={`${e.rule_id}-${i}`}
+                    result={{
+                      rule_id: e.rule_id,
+                      severity: "error",
+                      message: e.message,
+                      node_id: e.node_id,
+                      edge_id: e.edge_id,
+                    }}
+                    is_dismissed={false}
+                    on_jump_to_node={on_jump_to_node}
+                    on_dismiss={() => {}}
+                    on_restore={() => {}}
+                    frame_version={frame_version}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
           {/* Active warnings */}
           {active.length > 0 && (
-            <div>
+            <div role="region" aria-label="Warning messages">
               <h3
                 className="argmap-section-heading"
                 style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
               >
                 Warnings
               </h3>
-              {active.map((r, i) => (
-                <ValidationRow
-                  key={`${r.rule_id}-${i}`}
-                  result={r}
-                  is_dismissed={false}
-                  on_jump_to_node={on_jump_to_node}
-                  on_dismiss={() => {
-                    const key = dismissalKeyFor(r, frame_id ?? "frame");
-                    app_store.getState().dismissWarning(key);
-                  }}
-                  on_restore={() => {}}
-                  frame_version={frame_version}
-                />
-              ))}
+              <div role="list">
+                {active.map((r, i) => (
+                  <ValidationRow
+                    key={`${r.rule_id}-${i}`}
+                    result={r}
+                    is_dismissed={false}
+                    on_jump_to_node={on_jump_to_node}
+                    on_dismiss={() => {
+                      const key = dismissalKeyFor(r, frame_id ?? "frame");
+                      app_store.getState().dismissWarning(key);
+                    }}
+                    on_restore={() => {}}
+                    frame_version={frame_version}
+                  />
+                ))}
+              </div>
             </div>
           )}
 

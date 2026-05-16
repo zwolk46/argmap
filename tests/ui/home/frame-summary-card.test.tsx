@@ -83,7 +83,10 @@ describe("FrameSummaryCard", () => {
     expect(onTogglePin).toHaveBeenCalledWith("f1", false);
   });
 
-  it("pin button shows ★ when is_pinned, ☆ otherwise (visual derived from is_pinned, not summary.pinned)", () => {
+  it("pin button reflects is_pinned via aria-pressed (visual derived from is_pinned, not summary.pinned)", () => {
+    // §13 #16 (post-2026-05-16 audit): aria-pressed is the single carrier for
+    // pinned state; the duplicate sr-only star literal was removed because
+    // it doubled with the IconButton's aria-pressed announcement.
     const { getByTestId, rerender } = render(
       <FrameSummaryCard
         summary={summary}
@@ -92,7 +95,7 @@ describe("FrameSummaryCard", () => {
         onTogglePin={() => {}}
       />,
     );
-    expect(getByTestId("frame-card-pin").textContent).toBe("☆");
+    expect(getByTestId("frame-card-pin").getAttribute("aria-pressed")).toBe("false");
     rerender(
       <FrameSummaryCard
         summary={summary /* Frame.pinned stays false */}
@@ -101,7 +104,7 @@ describe("FrameSummaryCard", () => {
         onTogglePin={() => {}}
       />,
     );
-    expect(getByTestId("frame-card-pin").textContent).toBe("★");
+    expect(getByTestId("frame-card-pin").getAttribute("aria-pressed")).toBe("true");
   });
 
   it("regression: stale summary.pinned does NOT control the star (P0-14)", () => {
@@ -113,6 +116,6 @@ describe("FrameSummaryCard", () => {
         onTogglePin={() => {}}
       />,
     );
-    expect(getByTestId("frame-card-pin").textContent).toBe("☆");
+    expect(getByTestId("frame-card-pin").getAttribute("aria-pressed")).toBe("false");
   });
 });

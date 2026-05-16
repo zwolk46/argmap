@@ -102,8 +102,11 @@ export function SegmentedToggle<T extends string>({
               fontWeight: is_active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
               fontFamily: "var(--font-sans)",
               cursor: disabled ? "default" : "pointer",
+              // §14 #27: was 350ms (--duration-slow); too slow vs the rest
+              // of the app (100–150ms). Drop to --duration-base so the
+              // toggle commits visually in step with content swaps.
               transition:
-                "background-color var(--duration-slow) var(--ease-standard), color var(--duration-slow) var(--ease-standard)",
+                "background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard)",
               boxShadow: is_active ? "var(--shadow-sm)" : "none",
             }}
           >
