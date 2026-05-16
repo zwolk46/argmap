@@ -77,14 +77,52 @@ export function computeDeletionCascade(frame: FrameVersion, target: NodeRef): Ca
   const root = frame.nodes.find((n) => n.type === "RootQuestion");
 
   if (!root) {
+    // F-15: without a RootQuestion to anchor reachability, compute the
+    // cascade by treating any node still reachable from at least one of the
+    // remaining nodes as "kept" — orphans (nothing points at them anymore)
+    // are part of the cascade. Without this, a mid-construction frame that
+    // deletes the only parent of a chain leaves orphan children behind, and
+    // the user has to delete them one-by-one.
+    const adj1 = buildAdj(frame);
+    const adj2 = buildAdj(frame, target);
+
+    // Roots-of-cascade-detection: every node that still has any inbound
+    // structural edge (or is itself an entry-point with no inbound edges)
+    // can anchor reachability when there's no RootQuestion.
+    const targets_with_inbound = new Set<NodeRef>();
+    for (const e of frame.edges) {
+      if (e.target === target || e.source === target) continue;
+      targets_with_inbound.add(e.target as NodeRef);
+    }
+    const all_node_ids = new Set<NodeRef>(frame.nodes.map((n) => n.id as NodeRef));
+    const roots_for_cascade: NodeRef[] = [];
+    for (const id of all_node_ids) {
+      if (id === target) continue;
+      if (!targets_with_inbound.has(id)) roots_for_cascade.push(id);
+    }
+    if (roots_for_cascade.length === 0) {
+      // Pure island around the target — fall back to direct-edge removal.
+      const deleted_edge_ids = frame.edges
+        .filter((e) => e.source === target || e.target === target)
+        .map((e) => e.id)
+        .sort((a, b) => a.localeCompare(b));
+      return { deleted_node_ids: [target], deleted_edge_ids };
+    }
+    const R1 = new Set<NodeRef>();
+    for (const r of roots_for_cascade) for (const id of bfsReachable(r, adj1)) R1.add(id);
+    R1.add(target);
+    const R2 = new Set<NodeRef>();
+    for (const r of roots_for_cascade) for (const id of bfsReachable(r, adj2)) R2.add(id);
+    const cascade = new Set<NodeRef>([target]);
+    for (const id of R1) {
+      if (!R2.has(id)) cascade.add(id);
+    }
+    const deleted_node_ids = [...cascade].sort((a, b) => a.localeCompare(b));
     const deleted_edge_ids = frame.edges
-      .filter((e) => e.source === target || e.target === target)
+      .filter((e) => cascade.has(e.source as NodeRef) || cascade.has(e.target as NodeRef))
       .map((e) => e.id)
       .sort((a, b) => a.localeCompare(b));
-    return {
-      deleted_node_ids: [target],
-      deleted_edge_ids,
-    };
+    return { deleted_node_ids, deleted_edge_ids };
   }
 
   const adj1 = buildAdj(frame);

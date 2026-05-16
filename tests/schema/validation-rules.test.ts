@@ -99,6 +99,7 @@ const EXPECTED_IDS = [
   "V-NODE-7",
   "V-NODE-8",
   "V-NODE-9",
+  "V-NODE-10",
   "V-EDGE-1",
   "V-EDGE-2",
   "V-EDGE-3",
@@ -117,6 +118,7 @@ const EXPECTED_IDS = [
   "V-ARG-6",
   "V-ARG-7",
   "V-ARG-8",
+  "V-ARG-9",
 ];
 
 describe("schema/validation-rules — registry shape", () => {

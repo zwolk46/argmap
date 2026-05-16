@@ -11,33 +11,37 @@ authority-aware features specific to law.
 
 ## Repo state
 
-Pre-coding planning complete for Streams A–H. Stream I (the "build kit")
-design phase complete (I.1–I.10). Coding phase in progress:
-
-- I.1 skeleton + I.2 schema: complete (this session).
-- I.3 runtime, I.4 persistence, I.5 state, I.6 modes, I.7 layout, I.8 llm-hooks,
-  I.9 ui sub-modules, I.10 Home page + integration tests + E2E: pending.
+All Stream I coding modules (I.1 skeleton through I.10 Home page + integration)
+are implemented and exercised by the test suite. The application boots, signs
+users in, lets them create frames, build them in Frame Building, and run
+argument sessions against them in Argument Running. Persistence is Supabase
+(Postgres) via the `src/persistence/` layer. Deployments are on Vercel.
 
 ## Running
 
 ```bash
 npm install
-npm run dev            # http://localhost:5173 — placeholder page
+npm run dev            # http://localhost:5173 — sign-in screen, then the app
 npm run ci             # typecheck + lint + format + unit tests + plugin self-test + iteration audit
 npm run test:e2e       # Playwright smoke (requires app built or dev server running)
 ```
 
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` to point
+at a Supabase project — the boot screen will surface a fail-fast banner if
+they're missing.
+
 ## Layout
 
 ```
-src/schema/      — types, validators, JSON envelope, migrations (this session, I.2)
-src/runtime/     — placeholder; I.3 implements the compute pipeline. iteration-helpers ship now.
-src/persistence/ — placeholder; I.4
-src/state/       — placeholder; I.5
-src/modes/       — placeholder; I.6
-src/layout/      — placeholder; I.7
-src/llm-hooks/   — placeholder; I.8
-src/ui/          — placeholder; I.9a–I.9d4 + I.10
+src/schema/      — types, validators, JSON envelope, migrations (I.2)
+src/runtime/     — pure compute pipeline for the determinism guarantee (I.3)
+src/persistence/ — Supabase repository + autosave + cross-tab broadcast (I.4)
+src/state/       — Zustand stores wrapping the runtime (I.5)
+src/modes/       — mode/flavor transition orchestration (I.6)
+src/layout/      — ELK layout planning + xyflow integration (I.7)
+src/llm-hooks/   — G1..G13 LLM hook orchestration (I.8)
+src/ui/          — UI surfaces: chrome, frame-building, argument-running, etc. (I.9)
+src/ui/home/     — Home / sign-in / app-routes integration (I.10)
 ```
 
 ## Working in this repo
@@ -56,3 +60,8 @@ Append-only flag register: `docs/flags.html`.
 - `eslint-plugin-argmap-determinism/no-unsorted-iteration` (workspace package).
 - Frozen-clock Vitest at `2026-05-10T00:00:00Z`.
 - Per-PR `scripts/audit-iteration-order.mjs` belt-and-braces audit.
+- F-028 snapshot: `FrameVersion` carries `mode`, `flavor`,
+  `default_satisfaction_policies`, and `jurisdiction_default` so the runtime
+  computes purely from `FrameVersion + ArgumentSession` without inference.
+- LLM hooks pinned to `claude-3-7-sonnet-20250219` with `temperature: 0`
+  (`src/llm-hooks/providers/anthropic.ts`).

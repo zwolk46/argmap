@@ -1443,6 +1443,105 @@ const V_ARG_8: ValidationRule = {
   },
 };
 
+// F-5: cross-check selected_option_id against the Checkpoint's options list.
+// Without this, deleting an option the user previously selected leaves a
+// dangling reference and the runtime silently produces no target.
+const V_ARG_9: ValidationRule = {
+  id: "V-ARG-9",
+  severity: "error",
+  description:
+    "Every CheckpointResponse.selected_option_id and AnswersEdge.selected_option_id references a real CheckpointOption on the target Checkpoint.",
+  evaluate(_frame, session) {
+    if (!session) return [];
+    const cpById = new Map<string, Checkpoint>();
+    for (const n of session.frame_version_snapshot.nodes) {
+      if (n.type === "Checkpoint") cpById.set(n.id, n as Checkpoint);
+    }
+    const out: ValidationResult[] = [];
+    for (const r of [...session.checkpoint_responses].sort((a, b) =>
+      a.checkpoint_id.localeCompare(b.checkpoint_id),
+    )) {
+      // selected_option_id is optional on CheckpointResponse; only validate
+      // when it's set.
+      const sel = (r as { selected_option_id?: string }).selected_option_id;
+      if (sel === undefined) continue;
+      const cp = cpById.get(r.checkpoint_id);
+      if (!cp) continue; // V-ARG-1 already flagged the missing Checkpoint.
+      if (!cp.options.some((o) => o.id === sel)) {
+        out.push({
+          rule_id: "V-ARG-9",
+          severity: "error",
+          node_id: r.checkpoint_id,
+          message: `CheckpointResponse for ${r.checkpoint_id} references option "${sel}" which no longer exists.`,
+        });
+      }
+    }
+    // ANSWERS edges may also carry selected_option_id (per AnswersEdge).
+    for (const e of [...session.frame_version_snapshot.edges].sort((a, b) =>
+      a.id.localeCompare(b.id),
+    )) {
+      if (e.type !== "ANSWERS") continue;
+      const sel = (e as { selected_option_id?: string }).selected_option_id;
+      if (sel === undefined) continue;
+      const cp = cpById.get(e.target);
+      if (!cp) continue;
+      if (!cp.options.some((o) => o.id === sel)) {
+        out.push({
+          rule_id: "V-ARG-9",
+          severity: "error",
+          node_id: e.target,
+          message: `ANSWERS edge ${e.id} references option "${sel}" which no longer exists on Checkpoint ${e.target}.`,
+        });
+      }
+    }
+    return out;
+  },
+};
+
+// F-14: every Checkpoint has at least one option and every option carries a
+// non-empty id + label. V-NODE-5/6/7 covered specific answer_type counts; this
+// rule covers the universal "must have an option" floor.
+const V_NODE_10: ValidationRule = {
+  id: "V-NODE-10",
+  severity: "error",
+  description: "Every Checkpoint has at least one option, and every option has a non-empty id and label.",
+  evaluate(frame) {
+    const out: ValidationResult[] = [];
+    for (const n of [...frame.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (n.type !== "Checkpoint") continue;
+      const c = n as Checkpoint;
+      if (c.options.length === 0) {
+        out.push({
+          rule_id: "V-NODE-10",
+          severity: "error",
+          node_id: n.id,
+          message: `Checkpoint ${n.id} has no options; users have nothing to pick.`,
+        });
+        continue;
+      }
+      for (const opt of [...c.options].sort((a, b) => a.id.localeCompare(b.id))) {
+        if (!opt.id || opt.id.trim().length === 0) {
+          out.push({
+            rule_id: "V-NODE-10",
+            severity: "error",
+            node_id: n.id,
+            message: `Checkpoint ${n.id} has an option with an empty id.`,
+          });
+        }
+        if (!opt.label || opt.label.trim().length === 0) {
+          out.push({
+            rule_id: "V-NODE-10",
+            severity: "error",
+            node_id: n.id,
+            message: `Checkpoint ${n.id} option "${opt.id}" has an empty label.`,
+          });
+        }
+      }
+    }
+    return out;
+  },
+};
+
 // ============================================================================
 // Full registry
 // ============================================================================
@@ -1469,6 +1568,7 @@ export const VALIDATION_RULES: ReadonlyArray<ValidationRule> = [
   V_NODE_7,
   V_NODE_8,
   V_NODE_9,
+  V_NODE_10,
   V_EDGE_1,
   V_EDGE_2,
   V_EDGE_3,
@@ -1487,6 +1587,7 @@ export const VALIDATION_RULES: ReadonlyArray<ValidationRule> = [
   V_ARG_6,
   V_ARG_7,
   V_ARG_8,
+  V_ARG_9,
 ];
 
 // Priority map: rule_id → index, for canonical ordering of ValidationResults.
