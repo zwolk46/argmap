@@ -139,13 +139,18 @@ export function computeStatusMap(
       }
     }
 
-    // 5) Policy evaluation. FrameVersion does not carry frame_default; fall
-    // through to library defaults. Downstream sessions holding Frame may
-    // override by passing per-instance options_box through resolution.
+    // 5) Policy evaluation. F-028: FrameVersion now snapshots
+    // Frame.default_satisfaction_policies at version-mint time so the
+    // runtime resolves the full per-instance > frame-default > library
+    // chain deterministically from the version snapshot alone.
+    const frame_defaults = frame.default_satisfaction_policies;
+    const frame_default_policy = frame_defaults
+      ? frame_defaults[node.type as keyof typeof frame_defaults]
+      : undefined;
     const policy = resolveEffectivePolicy(
       node.type as Parameters<typeof resolveEffectivePolicy>[0],
       "options_box" in node ? node.options_box : undefined,
-      undefined,
+      frame_default_policy,
     );
     const r = evaluatePolicy(policy, node, frame, session, out, jurisdiction_default);
     if (r.passed) {

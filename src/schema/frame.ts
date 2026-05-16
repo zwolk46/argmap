@@ -111,4 +111,14 @@ export interface FrameVersion {
   llm_settings_snapshot?: {
     calibrated_thresholds?: BurdenThresholdMap;
   };
+  // F-028: Frame-level compute-affecting fields snapshotted at version-mint
+  // time so the runtime computes purely from FrameVersion + ArgumentSession
+  // (Article II § 2). Without these, the runtime inferred or defaulted —
+  // which silently ignored user edits to Frame.default_satisfaction_policies
+  // and Frame.jurisdiction_default, and broke determinism when an older
+  // FrameVersion was restored after Frame-level edits.
+  default_satisfaction_policies?: { [K in NodeType]?: SatisfactionPolicy };
+  jurisdiction_default?: Jurisdiction;
+  mode?: Mode;
+  flavor?: Flavor;
 }

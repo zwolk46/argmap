@@ -74,12 +74,13 @@ const DEFAULT_BURDEN_THRESHOLD: Readonly<Record<BurdenLevel, number>> = {
   beyond_reasonable_doubt: 95,
 };
 
-// FrameVersion does not carry Frame.mode or Frame.flavor. Inference path:
-// presence of any Conclusion with direction.kind === "legal" → legal mode.
-// Otherwise general; flavor defaults to academic (unmatched kinds fall back
-// to default weight 30, so flavor-mismatch is benign). Downstream sessions
-// holding the parent Frame may extend this surface to pass mode/flavor
-// explicitly without changing condition signatures.
+// F-028: FrameVersion now snapshots Frame.mode / Frame.flavor at version-mint
+// time. Prefer the explicit snapshot; fall back to content inference only for
+// older on-disk FrameVersions that pre-date the snapshot fields.
+// Inference (legacy fallback): presence of any Conclusion with
+// direction.kind === "legal" → legal mode. Otherwise general; flavor defaults
+// to academic when no signal points to personal (unmatched Premise.kind falls
+// back to default weight 30, so flavor-mismatch is benign).
 function inferLegal(frame: FrameVersion): boolean {
   for (const n of sortedBy(frame.nodes, (x) => x.id)) {
     if (n.type === "Conclusion" && n.direction.kind === "legal") return true;
@@ -88,9 +89,6 @@ function inferLegal(frame: FrameVersion): boolean {
 }
 
 function inferPersonalFlavor(frame: FrameVersion, session: ArgumentSession): boolean {
-  // Hint at "personal" from Premise kinds: presence of any premise whose kind
-  // is in {observation, value, assumption} biases toward personal flavor.
-  // Academic kinds {empirical, definitional, normative} bias the other way.
   let personalSignals = 0;
   let academicSignals = 0;
   const premisePool = [...frame.nodes, ...session.premises];
@@ -107,6 +105,13 @@ function pickKindWeights(
   frame: FrameVersion,
   session: ArgumentSession,
 ): Readonly<Record<string, number>> {
+  // Explicit snapshot first (F-028); inference only for legacy versions.
+  if (frame.mode === "legal") return PREMISE_KIND_WEIGHT_LEGAL;
+  if (frame.mode === "general") {
+    return frame.flavor === "personal"
+      ? PREMISE_KIND_WEIGHT_PERSONAL
+      : PREMISE_KIND_WEIGHT_ACADEMIC;
+  }
   if (inferLegal(frame)) return PREMISE_KIND_WEIGHT_LEGAL;
   if (inferPersonalFlavor(frame, session)) return PREMISE_KIND_WEIGHT_PERSONAL;
   return PREMISE_KIND_WEIGHT_ACADEMIC;

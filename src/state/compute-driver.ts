@@ -15,7 +15,7 @@ export function createComputeDriver(opts: CreateComputeDriverOpts): ComputeDrive
   const { now } = opts;
 
   function buildInput(session: ArgumentSession, computed_at: string): ComputeInput {
-    return {
+    const input: ComputeInput = {
       frame_version_snapshot: session.frame_version_snapshot,
       checkpoint_responses: session.checkpoint_responses,
       interpretation_selections: session.interpretation_selections,
@@ -24,6 +24,13 @@ export function createComputeDriver(opts: CreateComputeDriverOpts): ComputeDrive
       session_authorities: session.session_authorities ?? [],
       computed_at,
     };
+    // F-028: thread the FrameVersion-snapshotted jurisdiction_default through
+    // ComputeInput so the legal-mode authority_binding condition can evaluate.
+    // Without this, condAuthorityBinding always saw `undefined` and "binding
+    // authority" was unreachable — silently neutering an editable Frame field.
+    const snap_jur = session.frame_version_snapshot.jurisdiction_default;
+    if (snap_jur) input.jurisdiction_default = snap_jur;
+    return input;
   }
 
   return {

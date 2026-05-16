@@ -334,6 +334,16 @@ export function runFrameAction(input: RunFrameActionInput): FrameActionResult {
   const transform = handler(frame, current_version, patch, opts);
 
   const new_version_id = generateId();
+
+  // Compute next_frame BEFORE next_version so the new version can snapshot the
+  // (possibly-just-updated) Frame-level compute-affecting fields. F-028.
+  const next_frame: Frame = {
+    ...frame,
+    ...(transform.frame_partial ?? {}),
+    current_version_id: new_version_id,
+    updated_at: now,
+  };
+
   const next_version: FrameVersion = {
     ...transform.next_version,
     id: new_version_id,
@@ -343,13 +353,12 @@ export function runFrameAction(input: RunFrameActionInput): FrameActionResult {
     created_at: now,
     is_milestone: false,
     change_summary: transform.change_summary,
-  };
-
-  const next_frame: Frame = {
-    ...frame,
-    ...(transform.frame_partial ?? {}),
-    current_version_id: new_version_id,
-    updated_at: now,
+    // F-028: snapshot Frame-level compute-affecting fields so the runtime
+    // computes purely from FrameVersion + ArgumentSession.
+    default_satisfaction_policies: next_frame.default_satisfaction_policies,
+    jurisdiction_default: next_frame.jurisdiction_default,
+    mode: next_frame.mode,
+    flavor: next_frame.flavor,
   };
 
   const validation = runValidation(next_version);
