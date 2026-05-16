@@ -32,6 +32,16 @@ function flatten(
   }
 }
 
+function seedExpanded(root: OutlineNode | null): Set<string> {
+  if (!root) return new Set();
+  const exp = new Set<string>();
+  (function seed(node: OutlineNode) {
+    if (!node.initially_collapsed) exp.add(node.node_id);
+    for (const c of node.children) seed(c);
+  })(root);
+  return exp;
+}
+
 export function OutlineTree(props: OutlineTreeProps): ReactElement {
   const { selection, on_selection_change } = props;
   const frame_version = useFrameStore((s) => s.frame_version);
@@ -42,18 +52,22 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
   );
 
   // Seed expanded state: expand all by default unless initially_collapsed
-  const [expanded, set_expanded] = React.useState<Set<string>>(() => {
-    if (!root) return new Set();
-    const exp = new Set<string>();
-    function seed(node: OutlineNode) {
-      if (!node.initially_collapsed) exp.add(node.node_id);
-      for (const c of node.children) seed(c);
-    }
-    seed(root);
-    return exp;
-  });
+  const [expanded, set_expanded] = React.useState<Set<string>>(() => seedExpanded(root));
 
   const [focused_id, set_focused_id] = React.useState<string | null>(null);
+
+  // P0-5: when the user switches frames, the previous frame's expansion set
+  // is stale — its node ids don't exist in the new outline. Re-seed from
+  // the new root and clear focus so the tree opens in a predictable state.
+  const frame_id = frame_version?.frame_id;
+  React.useEffect(() => {
+    set_expanded(seedExpanded(root));
+    set_focused_id(null);
+    // root is the outline derived from the current frame_version; using
+    // frame_id as a discriminator means we don't re-seed on every save of
+    // the same frame (which would clobber the user's expand/collapse state).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frame_id]);
 
   const rows = React.useMemo<FlatRow[]>(() => {
     if (!root) return [];

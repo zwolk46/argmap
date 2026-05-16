@@ -32,6 +32,12 @@ export interface NodeDisplayFlags {
    * decided it doesn't contribute to the resolution. Render desaturated.
    */
   off_active_set?: boolean;
+  /**
+   * The canvas search query is active and this node's primary text does
+   * not contain it (case-insensitive). Render at reduced opacity so the
+   * matches stand out without removing surrounding structure.
+   */
+  search_dimmed?: boolean;
 }
 
 export interface FrameCanvasNodeData {
