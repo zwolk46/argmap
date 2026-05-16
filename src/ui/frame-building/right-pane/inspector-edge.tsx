@@ -1,8 +1,52 @@
 import type { ReactElement } from "react";
-import type { EdgeRef, NodeRef, Edge } from "@/schema";
+import type { EdgeRef, NodeRef, Edge, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 import { Button } from "../../primitives";
 import { EdgeEditor } from "./editors";
+
+function describeNode(nodes: ReadonlyArray<Node>, node_id: NodeRef): string {
+  const n = nodes.find((x) => x.id === node_id);
+  if (!n) return node_id.slice(0, 8);
+  if ("question" in n && typeof n.question === "string") return n.question;
+  if ("statement" in n && typeof n.statement === "string") return n.statement;
+  if ("name" in n && typeof (n as { name?: unknown }).name === "string")
+    return (n as { name: string }).name;
+  if ("citation" in n && typeof (n as { citation?: unknown }).citation === "string")
+    return (n as { citation: string }).citation;
+  return `${n.type} ${node_id.slice(0, 8)}`;
+}
+
+function EndpointButton({
+  label,
+  onClick,
+}: {
+  node_id: NodeRef;
+  label: string;
+  onClick: () => void;
+}): ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Jump to ${label}`}
+      style={{
+        all: "unset",
+        cursor: "pointer",
+        color: "var(--color-mode-current-accent)",
+        textDecoration: "underline",
+        textDecorationStyle: "dotted",
+        maxWidth: "160px",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        display: "inline-block",
+        verticalAlign: "bottom",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 export interface InspectorEdgeProps {
   edge_id: EdgeRef;
@@ -10,8 +54,11 @@ export interface InspectorEdgeProps {
 }
 
 export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
-  const { edge_id, on_navigate_to_node: _on_navigate_to_node } = props;
+  const { edge_id, on_navigate_to_node } = props;
   const edge = useFrameStore((s) => s.frame_version?.edges.find((e) => e.id === edge_id));
+  // Look up display labels so the source/target buttons read as something
+  // human, not as truncated UUIDs.
+  const nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
   const { frame_store } = useRepository();
 
   if (!edge) {
@@ -53,12 +100,24 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
         </h3>
         <div
           style={{
-            fontSize: "var(--font-size-xs)",
-            fontFamily: "monospace",
+            fontSize: "var(--font-size-sm)",
             color: "var(--color-text-secondary)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
           }}
         >
-          {edge.source.slice(0, 8)} → {edge.target.slice(0, 8)}
+          <EndpointButton
+            node_id={edge.source as NodeRef}
+            label={describeNode(nodes, edge.source as NodeRef)}
+            onClick={() => on_navigate_to_node(edge.source as NodeRef)}
+          />
+          <span aria-hidden="true">→</span>
+          <EndpointButton
+            node_id={edge.target as NodeRef}
+            label={describeNode(nodes, edge.target as NodeRef)}
+            onClick={() => on_navigate_to_node(edge.target as NodeRef)}
+          />
         </div>
       </div>
 

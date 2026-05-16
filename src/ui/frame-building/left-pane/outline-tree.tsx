@@ -187,8 +187,12 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
           focused={focused_id === outline_node.node_id}
           expanded={expanded.has(outline_node.node_id)}
           has_children={outline_node.children.length > 0}
-          on_select={() =>
-            handleSelect(outline_node.node_id, { shiftKey: false } as React.MouseEvent)
+          on_select={(modifiers) =>
+            handleSelect(outline_node.node_id, {
+              shiftKey: modifiers.shift_key,
+              metaKey: modifiers.meta_key,
+              ctrlKey: modifiers.meta_key,
+            } as React.MouseEvent)
           }
           on_toggle_expanded={() => toggle(outline_node.node_id)}
           on_focus={() => set_focused_id(outline_node.node_id)}
