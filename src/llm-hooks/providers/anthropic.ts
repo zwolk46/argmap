@@ -30,6 +30,17 @@ export class AnthropicProvider implements LlmProvider {
   private readonly default_model: string;
 
   constructor(config: AnthropicProviderConfig) {
+    // F-13: fail loudly if anyone wires this provider into a browser bundle.
+    // The API key is a long-lived secret that must never ship to clients; the
+    // long-term plan is a server-side AI Gateway proxy. Until then, throwing
+    // here prevents an accidental Vite import path from leaking the key.
+    if (typeof window !== "undefined") {
+      throw new ProviderError(
+        "AnthropicProvider instantiated in a browser context. " +
+          "The API key must never ship to clients — route hook calls through a server-side proxy.",
+        "anthropic",
+      );
+    }
     this.client = new Anthropic({ apiKey: config.api_key, baseURL: config.base_url });
     this.default_model = config.default_model ?? DEFAULT_ANTHROPIC_MODEL;
   }

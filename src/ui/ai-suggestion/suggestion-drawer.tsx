@@ -4,6 +4,54 @@ import type { SuggestionResult, ConfirmationDecision } from "@/llm-hooks";
 import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, Button, AiSparkle } from "../primitives";
 import { useAiSuggestion } from "../hooks/use-ai-suggestion";
 
+// F-17: previous preview was a raw JSON.stringify dump for any structured
+// suggestion. Render arrays as a bullet list and objects as a key: value
+// pair list so non-technical users see human structure instead of JSON
+// punctuation. The textarea-edit path still uses pretty-printed JSON so
+// power users can hand-tune fields.
+function formatPreview(value: unknown): React.ReactNode {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <em>(empty)</em>;
+    return (
+      <ul style={{ margin: 0, paddingLeft: "var(--space-4)" }}>
+        {value.map((item, i) => (
+          <li key={i} style={{ marginBottom: "var(--space-1)" }}>
+            {formatPreview(item)}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    if (entries.length === 0) return <em>(empty)</em>;
+    return (
+      <dl style={{ margin: 0 }}>
+        {entries.map(([k, v]) => (
+          <React.Fragment key={k}>
+            <dt
+              style={{
+                fontWeight: "var(--font-weight-semibold)",
+                marginTop: "var(--space-1)",
+                color: "var(--color-text-secondary)",
+                fontSize: "var(--font-size-xs)",
+                textTransform: "uppercase",
+                letterSpacing: "var(--letter-spacing-wide)",
+              }}
+            >
+              {k}
+            </dt>
+            <dd style={{ margin: 0, marginLeft: "var(--space-3)" }}>{formatPreview(v)}</dd>
+          </React.Fragment>
+        ))}
+      </dl>
+    );
+  }
+  return String(value);
+}
+
 export interface SuggestionDrawerProps {
   store_kind: "frame" | "session";
 }
@@ -65,8 +113,16 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
 
   const result = pending as SuggestionResult<unknown>;
 
+  // F-16: Drawer Escape was a no-op for AI suggestions because no onClose
+  // handler was wired. Treat Escape as "Reject" so the keyboard-only flow
+  // matches every other dismissible overlay in the app.
   return (
-    <Drawer open={is_open} width="min(420px, 100vw)" aria_label="AI suggestion review">
+    <Drawer
+      open={is_open}
+      width="min(420px, 100vw)"
+      aria_label="AI suggestion review"
+      onClose={is_applying ? undefined : handleReject}
+    >
       <DrawerHeader>
         <span
           style={{
@@ -146,9 +202,7 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
               border: "var(--border-hairline) solid var(--color-border-subtle)",
             }}
           >
-            {typeof result.parsed === "string"
-              ? result.parsed
-              : JSON.stringify(result.parsed, null, 2)}
+            {formatPreview(result.parsed)}
           </div>
         )}
       </DrawerBody>

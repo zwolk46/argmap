@@ -123,6 +123,25 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
     },
 
     async invokeHook(hook_id: string, args: unknown): Promise<void> {
+      // F-05: respect the per-frame LlmSettings gates. build-time / runtime
+      // / output-time hook groups, plus the per-hook enable map, are written
+      // to disk; without this gate the toggles existed but were inert.
+      const llm = get().frame?.llm_settings;
+      if (llm) {
+        const per_hook = llm.per_hook_enabled?.[hook_id];
+        if (per_hook === false) {
+          set({ error: `${hook_id} is disabled in Frame Settings.`, suggestion_status: "idle" });
+          return;
+        }
+        // Frame-store hooks run at build time on the frame.
+        if (per_hook !== true && llm.build_time_hooks_enabled === false) {
+          set({
+            error: "Build-time AI hooks are disabled in Frame Settings.",
+            suggestion_status: "idle",
+          });
+          return;
+        }
+      }
       set({ suggestion_status: "invoking" });
       try {
         const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
