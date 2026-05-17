@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { FrameVersionId, SessionVersionId } from "@/schema";
-import { ConfirmDialog } from "../primitives";
+import { ConfirmDialog, useOptionalToast } from "../primitives";
 import { useRepository } from "@/state";
 
 export interface RestoreConfirmDialogProps {
@@ -25,6 +25,7 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
     on_restored,
   } = props;
   const { frame_store, session_store } = useRepository();
+  const toast = useOptionalToast();
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -45,6 +46,13 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
         await session_store.getState().restoreVersion(ancestor_version_id as SessionVersionId);
       }
       setPending(false);
+      // §8 #8: confirm the restore happened. Previously the dialog and pane
+      // both closed with no feedback and the user wasn't sure whether
+      // anything had occurred.
+      toast?.push({
+        kind: "success",
+        message: `Restored v${ancestor_version_number} — now editing v${current_version_number + 1} forked from v${ancestor_version_number}.`,
+      });
       on_restored();
       onClose();
     } catch (e: unknown) {
@@ -59,6 +67,9 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
       title={`Restore version ${ancestor_version_number}?`}
       confirm_label={pending ? "Restoring…" : "Restore"}
       cancel_label="Cancel"
+      // §8 #9: restore is a state-changing action; use the destructive
+      // confirm variant so its visual weight matches its consequence.
+      confirm_variant="danger"
       confirm_disabled={pending}
       onConfirm={handleConfirm}
       onCancel={onClose}

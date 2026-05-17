@@ -61,7 +61,7 @@ export {
   EDGE_TYPE_LABELS,
 } from "./humanize";
 
-export { ToastProvider, useToast } from "./toast";
+export { ToastProvider, useToast, useOptionalToast } from "./toast";
 export type { ToastInput, ToastKind } from "./toast";
 
 export { UIcon } from "./uicon";

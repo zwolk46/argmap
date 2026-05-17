@@ -52,8 +52,16 @@ export function VersionTree(props: VersionTreeProps): ReactElement {
   }, [current_version_id, reduce_motion]);
 
   if (display_entries.length === 0) {
-    const empty_msg =
-      entity_kind === "session"
+    // §8 #10: distinguish "no milestones / no versions" from "filter is
+    // hiding them". When the filter is the cause, prompt the user to clear
+    // it instead of implying nothing exists.
+    const has_underlying = summaries.length > 0;
+    const filter_hiding = has_underlying && milestone_filter === "milestones_only";
+    const empty_msg = filter_hiding
+      ? entity_kind === "session"
+        ? "No session milestones match the current filter — switch to All to see drafts."
+        : "No milestones match the current filter — switch to All to see drafts."
+      : entity_kind === "session"
         ? "No session milestones yet."
         : "No milestones yet — save one to mark a meaningful waypoint.";
     return <InlineEmpty testId="version-tree-empty">{empty_msg}</InlineEmpty>;

@@ -110,13 +110,18 @@ function SessionVariant(props: SessionVariantProps): ReactElement {
 
   const [active_tab, setActiveTab] = React.useState<PaneTabValue>("sessions");
 
+  // §8 #4 + #7: only fetch summaries the active tab is showing. Pass null
+  // when the other tab is active so the hook short-circuits without issuing
+  // a query. Eliminates the bogus "__unused__" frame_id sentinel that was
+  // emitting real queries.
   const session_summaries = useVersionSummaries({
     kind: "session",
-    session_id: props.session_id,
+    session_id: active_tab === "sessions" ? props.session_id : null,
   });
-  const frame_summaries = useVersionSummaries(
-    frame_id ? { kind: "frame", frame_id } : { kind: "frame", frame_id: "__unused__" as FrameId },
-  );
+  const frame_summaries = useVersionSummaries({
+    kind: "frame",
+    frame_id: active_tab === "frames" ? frame_id : null,
+  });
 
   return (
     <PaneShell
@@ -192,6 +197,27 @@ function PaneShell(props: PaneShellProps): ReactElement {
     setCompareState(null);
     setMilestoneFilter("all");
   }, [route_key, props.active_tab]);
+
+  // §8 #11: the pane is just hidden when closed (not unmounted), so
+  // selection/compare/restore state survives close→reopen and the user
+  // jumps back into the previous Compare view unexpectedly. Reset on close.
+  React.useEffect(() => {
+    if (!props.open) {
+      setSelectedVersionId(null);
+      setCompareState(null);
+      setRestoreOpen(false);
+    }
+  }, [props.open]);
+
+  // §8 #12: validate `selected_summary` against the current summary list
+  // each render. If the selected id no longer exists (e.g., a peer-tab save
+  // rebuilt the list while the dialog was open), clear it so Restore can't
+  // fire against a stale id.
+  React.useEffect(() => {
+    if (selected_version_id && !props.summaries.some((s) => s.id === selected_version_id)) {
+      setSelectedVersionId(null);
+    }
+  }, [props.summaries, selected_version_id]);
 
   const selected_summary = props.summaries.find((s) => s.id === selected_version_id) ?? null;
 
