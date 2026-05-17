@@ -46,6 +46,8 @@ interface SessionStoreActions {
     resolutions: OrphanResolution[],
   ): Promise<void>;
   invokeHook(hook_id: string, args: unknown): Promise<void>;
+  /** F-05: set by useAiSuggestion when the per-frame gate denies a hook. */
+  rejectSuggestion(reason: string): void;
   resolveSuggestion(decision: unknown): Promise<void>;
   clearPendingSuggestion(): void;
   dispose(): void;
@@ -186,18 +188,11 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
     },
 
     async invokeHook(hook_id: string, args: unknown): Promise<void> {
-      // F-05: respect per-frame LlmSettings — session-store hooks run at
-      // runtime / output-time against premises. Both gates apply; the
-      // per_hook map overrides the group gate when explicit.
-      const llm = get().session?.frame_version_snapshot?.llm_settings_snapshot
-        ? undefined // F-028 snapshot path doesn't carry the full gate map yet; fall through to frame.
-        : undefined;
-      // Real LlmSettings live on Frame; the session-store can't reach the
-      // frame_store directly without a coupling. Use the optional invoke_hook
-      // contract — callers (e.g., useAiSuggestion) that DO want the gate
-      // enforced pass null/skip when disabled. We still check the snapshot's
-      // own LlmSettings if it grows to carry them.
-      void llm;
+      // F-05 (session half): the LlmSettings gate lives on Frame, not Session,
+      // and session-store deliberately does not import frame-store. The gate
+      // is applied one layer up in useAiSuggestion, where both stores are in
+      // scope. By the time we get here, the caller has already decided the
+      // hook is allowed.
       set({ suggestion_status: "invoking" });
       try {
         const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
@@ -208,6 +203,10 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
         const message = e instanceof Error ? e.message : "AI suggestion failed";
         set({ suggestion_status: "idle", error: message });
       }
+    },
+    /** F-05: set by useAiSuggestion when the per-frame gate denies a hook. */
+    rejectSuggestion(reason: string): void {
+      set({ error: reason, suggestion_status: "idle" });
     },
 
     async resolveSuggestion(decision: unknown): Promise<void> {

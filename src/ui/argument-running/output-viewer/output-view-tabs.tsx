@@ -115,7 +115,7 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
             fontSize: "var(--font-size-sm)",
           }}
         >
-          <Spinner size={12} />
+          <Spinner size={12} decorative />
           <span>Computing…</span>
         </div>
       ) : null}

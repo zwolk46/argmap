@@ -1263,7 +1263,10 @@ const V_ARG_3: ValidationRule = {
       const isLegal = snap.nodes.some(
         (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
       );
-      vocab = vocabularyFor(isLegal ? "legal" : "general");
+      // F-12: pass flavor through. Defaulting flavor to academic silently
+      // mis-validates premises on personal-flavor legacy frames whose
+      // FrameVersion was minted before the F-028 snapshot fields existed.
+      vocab = vocabularyFor(isLegal ? "legal" : "general", snap.flavor);
     }
     const allowed = new Set<string>(PREMISE_KIND_VOCABULARIES[vocab] as readonly string[]);
     const out: ValidationResult[] = [];

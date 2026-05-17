@@ -74,6 +74,8 @@ export function buildInvocationRecord(
     provider_id: suggestion.provider_id,
     model_id: suggestion.model_id,
     input_hash: suggestion.input_hash,
+    prompt_body_hash: suggestion.prompt_body_hash,
+    rendered_prompt_hash: suggestion.rendered_prompt_hash,
     raw_response: suggestion.raw_response,
     decision: decision_kind,
     final_value,

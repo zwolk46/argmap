@@ -55,6 +55,13 @@ export interface HookInvocationRecord {
   provider_id: string;
   model_id: string;
   input_hash: string;
+  /** F-03 (audit §12): SHA-256 of the un-rendered prompt body, recorded so
+   *  replay can prove the prompt was byte-identical even if the bundle or
+   *  the archived prompt row drifts. Optional for backwards compatibility
+   *  with records persisted before the field existed. */
+  prompt_body_hash?: string;
+  /** F-03 (audit §12): SHA-256 of the final rendered prompt string. */
+  rendered_prompt_hash?: string;
   raw_response?: string;
   decision: "accepted" | "edited" | "rejected";
   final_value?: unknown;

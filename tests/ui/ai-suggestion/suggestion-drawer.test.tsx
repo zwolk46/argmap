@@ -15,6 +15,8 @@ const PENDING = {
   prompt_name: "p",
   prompt_version: "1.0",
   input_hash: "h",
+  prompt_body_hash: "pb",
+  rendered_prompt_hash: "pr",
   raw_response: "raw",
   generated_at: "2026-01-01T00:00:00Z",
 };

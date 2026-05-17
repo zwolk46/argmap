@@ -1106,26 +1106,6 @@ select.argmap-input {
   border-color: transparent;
 }
 
-.argmap-pill[data-tone="binding"] {
-  background: var(--color-subflag-binding-bg);
-  color: var(--color-subflag-binding);
-  border-color: transparent;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: var(--font-size-2xs);
-}
-
-.argmap-pill[data-tone="persuasive"] {
-  background: var(--color-subflag-persuasive-bg);
-  color: var(--color-subflag-persuasive);
-  border-color: transparent;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: var(--font-size-2xs);
-}
-
 .argmap-pill[data-tone="milestone"] {
   background: var(--color-status-not-applicable-bg);
   color: var(--color-milestone-star);

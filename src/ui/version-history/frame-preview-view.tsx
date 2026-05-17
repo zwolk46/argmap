@@ -50,6 +50,8 @@ export function FramePreviewView(props: FramePreviewViewProps): ReactElement {
       {result.status === "loading" ? (
         <div
           data-testid="frame-preview-loading"
+          role="status"
+          aria-live="polite"
           style={{
             display: "flex",
             alignItems: "center",
@@ -60,7 +62,7 @@ export function FramePreviewView(props: FramePreviewViewProps): ReactElement {
             fontSize: "var(--font-size-sm)",
           }}
         >
-          <Spinner size={16} />
+          <Spinner size={16} decorative />
           <span>Loading version {version_number}…</span>
         </div>
       ) : result.status === "error" ? (

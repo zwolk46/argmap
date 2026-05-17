@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeStatus } from "@/schema";
+import { Pill } from "./pill";
 import { Tooltip } from "./tooltip";
 import { UIcon } from "./uicon";
 
@@ -188,28 +189,14 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
       {wrappedBadge}
-      <span
+      <Pill
+        size="xs"
+        variant={isBinding ? "subflag_binding" : "subflag_persuasive"}
         data-testid={isBinding ? "subflag-binding" : "subflag-persuasive"}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "2px",
-          padding: "1px var(--space-1)",
-          borderRadius: "var(--radius-pill)",
-          background: isBinding
-            ? "var(--color-subflag-binding-bg)"
-            : "var(--color-subflag-persuasive-bg)",
-          color: isBinding ? "var(--color-subflag-binding)" : "var(--color-subflag-persuasive)",
-          fontSize: "var(--font-size-2xs)",
-          fontWeight: "var(--font-weight-semibold)",
-          letterSpacing: "var(--letter-spacing-wide)",
-          lineHeight: 1,
-        }}
       >
         <UIcon name="balance-scale-right" size={11} />
-
         {isBinding ? "B" : "P"}
-      </span>
+      </Pill>
     </span>
   );
 }

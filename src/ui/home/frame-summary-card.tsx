@@ -136,7 +136,7 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
               }}
               aria-label="Open an argument session for this frame"
               aria-busy={run_argument_pending ? "true" : undefined}
-              leading={run_argument_pending ? <Spinner size={12} /> : undefined}
+              leading={run_argument_pending ? <Spinner size={12} decorative /> : undefined}
               trailing={run_argument_pending ? undefined : <UIcon name="arrow-right" size={12} />}
             >
               {run_argument_pending ? "Opening…" : "Run argument"}

@@ -10,9 +10,10 @@ import type {
   ParseResult,
   FallbackResult,
 } from "./types";
-import { ProviderError } from "./types";
+import { ParseError, ProviderError } from "./types";
 import { loadPrompt } from "./prompt-loader";
 import { canonicalize, hashCanonical, buildInvocationRecord } from "./provenance";
+import { validateAgainstSchema } from "./schema-validate";
 
 export interface RunHookOptions {
   prompt_version: string;
@@ -34,6 +35,8 @@ export async function runHook<TIn, TOut>(
 
   const prompt_file = await loadPrompt(hook.name, options.prompt_version, context.repository);
   const rendered = hook.renderPrompt(input, prompt_file);
+  const prompt_body_hash = await hashCanonical(prompt_file.body, deps);
+  const rendered_prompt_hash = await hashCanonical(rendered, deps);
 
   let raw_text = "";
   let model_id = provider.id;
@@ -52,7 +55,19 @@ export async function runHook<TIn, TOut>(
     model_id = response.model_id;
     const parse_result: ParseResult<TOut> = hook.parseOutput(raw_text, prompt_file.schema_out);
     if (parse_result.kind === "ok") {
-      parsed = parse_result.value;
+      // F-04: hook.parseOutput is permitted to ignore schema_out (most do).
+      // Enforce the declared output schema here so malformed LLM responses
+      // can never reach hook.commit even when parseOutput accepts them.
+      const v = validateAgainstSchema(parse_result.value, prompt_file.schema_out);
+      if (v.ok) {
+        parsed = parse_result.value;
+      } else {
+        const fallback = hook.fallback(
+          input,
+          new ParseError(`output schema violation at ${v.path}: ${v.message}`, raw_text),
+        );
+        ({ parsed, parse_status } = projectFallback(fallback, "fallback"));
+      }
     } else {
       const fallback = hook.fallback(input, parse_result.error);
       ({ parsed, parse_status } = projectFallback(fallback, "fallback"));
@@ -73,6 +88,8 @@ export async function runHook<TIn, TOut>(
     provider_id: provider.id,
     model_id,
     input_hash,
+    prompt_body_hash,
+    rendered_prompt_hash,
     raw_response: raw_text,
     parsed: parsed as TOut,
     parse_status,

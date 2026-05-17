@@ -251,7 +251,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
             data-testid="home-start-tutorial"
             onClick={onStartTutorial}
             disabled={tutorial_loading}
-            leading={tutorial_loading ? <Spinner size={12} /> : undefined}
+            leading={tutorial_loading ? <Spinner size={12} decorative /> : undefined}
           >
             {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
           </Button>
@@ -269,6 +269,8 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
       {!frames_loaded_once && is_loading ? (
         <div
           data-testid="home-loading"
+          role="status"
+          aria-live="polite"
           style={{
             marginTop: "var(--space-8)",
             display: "flex",
@@ -279,7 +281,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
             color: "var(--color-text-secondary)",
           }}
         >
-          <Spinner size={16} />
+          <Spinner size={16} decorative />
           <span>Loading your frames…</span>
         </div>
       ) : is_empty ? (
@@ -307,7 +309,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
                   data-testid="home-empty-start-tutorial"
                   onClick={onStartTutorial}
                   disabled={tutorial_loading}
-                  leading={tutorial_loading ? <Spinner size={12} /> : undefined}
+                  leading={tutorial_loading ? <Spinner size={12} decorative /> : undefined}
                 >
                   {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
                 </Button>

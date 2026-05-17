@@ -94,6 +94,10 @@ export interface SuggestionResult<TOut> {
   provider_id: string;
   model_id: string;
   input_hash: string;
+  /** SHA-256 of the un-rendered prompt body bytes (post-frontmatter Markdown). */
+  prompt_body_hash: string;
+  /** SHA-256 of the final rendered prompt string sent to the provider. */
+  rendered_prompt_hash: string;
   raw_response: string;
   parsed: TOut;
   parse_status: "ok" | "fallback" | "error";

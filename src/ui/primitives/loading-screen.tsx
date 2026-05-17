@@ -7,6 +7,8 @@ export interface LoadingScreenProps {
 export function LoadingScreen({ label = "Loading…" }: LoadingScreenProps): ReactElement {
   return (
     <div
+      role="status"
+      aria-live="polite"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -29,7 +31,7 @@ export function LoadingScreen({ label = "Loading…" }: LoadingScreenProps): Rea
       >
         argmap
       </span>
-      <Spinner size={20} />
+      <Spinner size={20} decorative />
       <p
         style={{
           color: "var(--color-text-secondary)",
@@ -45,15 +47,29 @@ export function LoadingScreen({ label = "Loading…" }: LoadingScreenProps): Rea
   );
 }
 
-export function Spinner({ size = 22 }: { size?: number }): ReactElement {
+export interface SpinnerProps {
+  size?: number;
+  /**
+   * §13 #15: when the spinner is nested inside another element that already
+   * announces loading (a Button leading slot, an InlineLoading row, a status
+   * region), pass decorative so the spinner does not double-announce. The
+   * parent should expose aria-busy or its own role="status" to surface the
+   * loading state. Default false to preserve the bare-spinner contract.
+   */
+  decorative?: boolean;
+}
+
+export function Spinner({ size = 22, decorative = false }: SpinnerProps): ReactElement {
   // The animation duration becomes ~0.01ms under prefers-reduced-motion
   // (see tokens.css), which would freeze the rotation mid-frame. Switch
   // to a non-spinning pulse instead so the affordance still communicates
   // "something is happening" without motion.
+  const a11y = decorative
+    ? ({ "aria-hidden": true } as const)
+    : ({ role: "status", "aria-label": "Loading" } as const);
   return (
     <span
-      role="status"
-      aria-label="Loading"
+      {...a11y}
       className="argmap-spinner"
       style={{
         display: "inline-block",
@@ -182,6 +198,8 @@ export function InlineLoading({ label = "Loading…", testId }: InlineLoadingPro
   return (
     <div
       data-testid={testId}
+      role="status"
+      aria-live="polite"
       style={{
         padding: "var(--space-4)",
         display: "flex",
@@ -191,7 +209,7 @@ export function InlineLoading({ label = "Loading…", testId }: InlineLoadingPro
         fontSize: "var(--font-size-sm)",
       }}
     >
-      <Spinner size={14} />
+      <Spinner size={14} decorative />
       <span>{label}</span>
     </div>
   );

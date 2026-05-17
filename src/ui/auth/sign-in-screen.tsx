@@ -187,7 +187,7 @@ export function SignInScreen(): ReactElement {
           data-testid="sign-in-submit"
           disabled={form_locked || email.length === 0 || password.length === 0}
           full_width
-          leading={busy ? <Spinner size={14} /> : undefined}
+          leading={busy ? <Spinner size={14} decorative /> : undefined}
         >
           {busy
             ? mode === "sign_in"

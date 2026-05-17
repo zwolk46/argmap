@@ -86,6 +86,8 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
       {result.status === "loading" ? (
         <div
           data-testid="session-preview-loading"
+          role="status"
+          aria-live="polite"
           style={{
             display: "flex",
             alignItems: "center",
@@ -96,7 +98,7 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
             fontSize: "var(--font-size-sm)",
           }}
         >
-          <Spinner size={16} />
+          <Spinner size={16} decorative />
           <span>Loading session version {version_number}…</span>
         </div>
       ) : result.status === "error" ? (

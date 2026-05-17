@@ -13,6 +13,8 @@ export function OutputEmptyState(props: OutputEmptyStateProps): ReactElement {
   return (
     <div
       data-testid="output-empty-state"
+      role="status"
+      aria-live="polite"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -26,7 +28,7 @@ export function OutputEmptyState(props: OutputEmptyStateProps): ReactElement {
         fontSize: "var(--font-size-sm)",
       }}
     >
-      <Spinner size={18} />
+      <Spinner size={18} decorative />
       <span>{props.message ?? "Computing…"}</span>
     </div>
   );
