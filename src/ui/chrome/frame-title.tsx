@@ -24,9 +24,7 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   function commit() {
     const trimmed = draft.trim();
     if (trimmed) {
-      frame_store
-        .getState()
-        .applyPatch({ kind: "metadata_edited", partial: { title: trimmed } });
+      frame_store.getState().applyPatch({ kind: "metadata_edited", partial: { title: trimmed } });
     } else if (title) {
       // §9 #7: empty commit silently snapped back; the user typed and saw
       // their text vanish with no explanation. Surface an inline toast so

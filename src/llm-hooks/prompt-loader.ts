@@ -71,9 +71,7 @@ export async function loadPrompt(
         // If the bundle lacks a created_at, use the current time so we don't
         // stamp epoch zero — that's a sentinel for "never seen" rather than
         // a real authorship timestamp.
-        added_at:
-          bundled.created_at ??
-          (existing?.added_at ?? new Date().toISOString()),
+        added_at: bundled.created_at ?? existing?.added_at ?? new Date().toISOString(),
       });
     }
     return bundled;

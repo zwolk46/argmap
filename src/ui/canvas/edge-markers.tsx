@@ -12,10 +12,7 @@ const MARKER_DEFS: ReadonlyArray<{ id: string; cssVar: string }> = [
 
 export function EdgeMarkerDefs(): ReactElement {
   return (
-    <svg
-      aria-hidden
-      style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
-    >
+    <svg aria-hidden style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}>
       <defs>
         {MARKER_DEFS.map(({ id, cssVar }) => (
           <marker
@@ -36,10 +33,7 @@ export function EdgeMarkerDefs(): ReactElement {
   );
 }
 
-export function markerEndFor(
-  edge_type: string,
-  on_primary_path: boolean,
-): string {
+export function markerEndFor(edge_type: string, on_primary_path: boolean): string {
   if (on_primary_path) return "url(#argmap-arrow-path)";
   switch (edge_type) {
     case "FORECLOSES":

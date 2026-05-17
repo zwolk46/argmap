@@ -65,8 +65,7 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
   // H9: surface "Required" only after the user has touched the field. Without
   // a touched gate, the field renders error-styled on first paint.
   const [touched, setTouched] = React.useState(false);
-  const show_required =
-    touched && !reused_id && statement.trim().length === 0;
+  const show_required = touched && !reused_id && statement.trim().length === 0;
   // P1: stabilize Premise.id + created_at across keystrokes. Without this,
   // every keystroke minted a fresh id and a fresh timestamp, producing
   // churn (parent re-renders) and a created_at that reflected the last

@@ -2,6 +2,12 @@ import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 import { Z } from "./z-index";
 
+// §13 #12: focus-trap selector. Module-scoped so the focus effects don't
+// need it in their dep arrays. Includes ARIA-role focusables.
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]),' +
+  ' [role="button"], [role="radio"], [role="menuitem"], [role="tab"]';
+
 export type DialogSize = "sm" | "md" | "lg";
 
 export interface DialogProps {
@@ -138,13 +144,6 @@ export function Dialog({
       if (exit_timer_ref.current !== null) clearTimeout(exit_timer_ref.current);
     };
   }, []);
-
-  // §13 #12: include ARIA-role focusables (role="button" divs, role="radio"
-  // cards, role="menuitem", role="tab") in the focus-trap selector. Previously
-  // the bare HTML element list left those un-trappable.
-  const FOCUSABLE_SELECTOR =
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]),' +
-    ' [role="button"], [role="radio"], [role="menuitem"], [role="tab"]';
 
   React.useEffect(() => {
     if (phase === "open") {

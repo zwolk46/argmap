@@ -223,9 +223,7 @@ export function scanArchitecturalModeChange(
     if (n.type === "Premise") {
       const p = n as Premise;
       const target_vocab = toModeFlavor(target_mode) as PremiseKindVocabularyKey;
-      const allowed = new Set<string>(
-        PREMISE_KIND_VOCABULARIES[target_vocab] as readonly string[],
-      );
+      const allowed = new Set<string>(PREMISE_KIND_VOCABULARIES[target_vocab] as readonly string[]);
       if (!allowed.has(p.kind)) {
         advisory.push({
           rule_id: "MODE-CHANGE-PREMISE-KIND-CROSS-VOCABULARY",
@@ -280,9 +278,7 @@ export function scanFlavorChange(
     // F-8: same premise-kind cross-vocabulary check as architectural mode
     // change, but for the general-mode flavor flip (academic ↔ personal).
     const target_vocab = toModeFlavor("general", target_flavor) as PremiseKindVocabularyKey;
-    const allowed = new Set<string>(
-      PREMISE_KIND_VOCABULARIES[target_vocab] as readonly string[],
-    );
+    const allowed = new Set<string>(PREMISE_KIND_VOCABULARIES[target_vocab] as readonly string[]);
     for (const n of nodes) {
       if (n.type !== "Premise") continue;
       const p = n as Premise;

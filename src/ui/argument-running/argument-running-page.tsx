@@ -260,8 +260,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
             if (frame_id) navigate({ kind: "frame_building", frame_id });
             else navigate({ kind: "home" });
           } catch (e: unknown) {
-            const message =
-              e instanceof Error ? e.message : "Couldn't delete the session.";
+            const message = e instanceof Error ? e.message : "Couldn't delete the session.";
             toast.push({ kind: "error", message: `Delete failed: ${message}` });
           }
         }}

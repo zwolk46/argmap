@@ -1504,7 +1504,8 @@ const V_ARG_9: ValidationRule = {
 const V_NODE_10: ValidationRule = {
   id: "V-NODE-10",
   severity: "error",
-  description: "Every Checkpoint has at least one option, and every option has a non-empty id and label.",
+  description:
+    "Every Checkpoint has at least one option, and every option has a non-empty id and label.",
   evaluate(frame) {
     const out: ValidationResult[] = [];
     for (const n of [...frame.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
