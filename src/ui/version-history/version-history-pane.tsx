@@ -79,6 +79,10 @@ function FrameVariant(props: FrameVariantProps): ReactElement {
       onClose={props.onClose}
       header_title={`Version history${frame_title ? ` · ${frame_title}` : ""}`}
       entity_kind="frame"
+      // §8 #2: pass the frame_id so the restore-confirm dialog can disclose
+      // how many sessions are anchored to this frame before the user
+      // commits to creating a new head.
+      frame_id={props.frame_id}
       summaries={summaries_result.summaries}
       summaries_status={summaries_result.status}
       current_version_id={current_version_id}
@@ -154,6 +158,12 @@ interface PaneShellProps {
   onClose: () => void;
   header_title: string;
   entity_kind: VersionTreeEntityKind;
+  /**
+   * §8 #2: parent frame id for `entity_kind === "frame"` panes. Forwarded to
+   * the RestoreConfirmDialog so it can render the affected-session count.
+   * Omitted for session entities.
+   */
+  frame_id?: FrameId;
   summaries: ReadonlyArray<{
     id: string;
     version_number: number;
@@ -339,6 +349,10 @@ function PaneShell(props: PaneShellProps): ReactElement {
           ancestor_version_id={selected_summary.id as FrameVersionId}
           ancestor_version_number={selected_summary.version_number}
           current_version_number={props.current_version_number}
+          // §8 #2: only forward for frame restores. PaneShell receives
+          // frame_id only when entity_kind="frame" (FrameVariant); session
+          // restores stay frame_id-less and skip the advisory.
+          frame_id={props.entity_kind === "frame" ? props.frame_id : undefined}
           on_restored={() => {
             setRestoreOpen(false);
             props.onClose();

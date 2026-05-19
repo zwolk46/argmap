@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { FrameVersionId, SessionVersionId } from "@/schema";
+import type { FrameId, FrameVersionId, SessionVersionId } from "@/schema";
 import { ConfirmDialog, useOptionalToast } from "../primitives";
 import { useRepository } from "@/state";
 
@@ -11,6 +11,15 @@ export interface RestoreConfirmDialogProps {
   ancestor_version_id: FrameVersionId | SessionVersionId;
   ancestor_version_number: number;
   current_version_number: number;
+  /**
+   * §8 #2: parent frame id, supplied only when `entity_kind === "frame"`. The
+   * dialog fetches `listSessionsForFrame(frame_id)` so it can disclose how
+   * many active argument sessions are anchored to this frame and will
+   * effectively go off-path once the restore creates a new head. Optional
+   * because session restores don't strand anything and don't need the
+   * advisory.
+   */
+  frame_id?: FrameId;
   on_restored: () => void;
 }
 
@@ -22,19 +31,51 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
     ancestor_version_id,
     ancestor_version_number,
     current_version_number,
+    frame_id,
     on_restored,
   } = props;
-  const { frame_store, session_store } = useRepository();
+  const { frame_store, session_store, repository } = useRepository();
   const toast = useOptionalToast();
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // §8 #2: count of non-archived sessions anchored to this frame, fetched
+  // when the dialog opens for a frame restore. `null` = not yet fetched or
+  // not applicable (session restore); `number` = fetched count.
+  const [affected_sessions, setAffectedSessions] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (!open) {
       setPending(false);
       setError(null);
+      setAffectedSessions(null);
     }
   }, [open]);
+
+  // §8 #2: fetch the affected session count whenever the dialog opens for a
+  // frame restore. listSessionsForFrame already excludes archived rows in
+  // both repos, so the count reflects live sessions only.
+  React.useEffect(() => {
+    if (!open) return;
+    if (entity_kind !== "frame" || !frame_id) {
+      setAffectedSessions(null);
+      return;
+    }
+    let cancelled = false;
+    void repository
+      .listSessionsForFrame(frame_id)
+      .then((summaries) => {
+        if (!cancelled) setAffectedSessions(summaries.length);
+      })
+      .catch(() => {
+        // Failure here only suppresses the advisory; it must not block the
+        // restore itself. A toast or error UI would be misleading because
+        // the user hasn't done anything yet.
+        if (!cancelled) setAffectedSessions(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, entity_kind, frame_id, repository]);
 
   async function handleConfirm(): Promise<void> {
     setPending(true);
@@ -79,6 +120,24 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
         {current_version_number + 1}) that branches from version {ancestor_version_number}. The
         current version (v{current_version_number}) and any later versions remain on their own
         branch — they aren't overwritten or deleted.
+        {entity_kind === "frame" && affected_sessions !== null && affected_sessions > 0 ? (
+          <div
+            data-testid="restore-confirm-sessions-advisory"
+            style={{
+              marginTop: "var(--space-2)",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            {affected_sessions === 1
+              ? "1 argument session"
+              : `${affected_sessions} argument sessions`}{" "}
+            currently reference{affected_sessions === 1 ? "s" : ""} this frame. After restoring,{" "}
+            {affected_sessions === 1 ? "it stays" : "they stay"} anchored to{" "}
+            {affected_sessions === 1 ? "its" : "their"} existing frame version, which becomes a side
+            branch from the new head. You can migrate each session to the new head from its Version
+            history later.
+          </div>
+        ) : null}
         {error ? (
           <div
             data-testid="restore-confirm-error"
