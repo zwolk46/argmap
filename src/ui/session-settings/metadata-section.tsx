@@ -11,8 +11,25 @@ export function MetadataSection(): ReactElement {
 
   const [draft_title, setDraftTitle] = React.useState(title);
   const [draft_description, setDraftDescription] = React.useState(description);
-  React.useEffect(() => setDraftTitle(title), [title]);
-  React.useEffect(() => setDraftDescription(description), [description]);
+  // §9 #39: only resync the draft from the store when the user has no
+  // uncommitted edits. Otherwise a cross-tab update via Supabase realtime
+  // silently overwrote whatever the user was typing. Compare against the
+  // committed value (which is the previous store snapshot) — drift means
+  // the user has unsaved input we shouldn't trample.
+  const last_synced_title = React.useRef(title);
+  const last_synced_description = React.useRef(description);
+  React.useEffect(() => {
+    if (draft_title === last_synced_title.current) {
+      setDraftTitle(title);
+    }
+    last_synced_title.current = title;
+  }, [title, draft_title]);
+  React.useEffect(() => {
+    if (draft_description === last_synced_description.current) {
+      setDraftDescription(description);
+    }
+    last_synced_description.current = description;
+  }, [description, draft_description]);
 
   // §13 #18: surface the pending silent-revert state through aria-invalid.
   const title_blank = draft_title.trim().length === 0;

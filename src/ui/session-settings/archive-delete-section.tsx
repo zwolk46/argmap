@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
 import { Button, ConfirmDialog } from "../primitives";
+import { useOptionalToast } from "../primitives/toast";
 
 // §9 #30. Auto-generated session titles include the parent frame title, which
 // can be up to 200 chars; injecting that whole string into the dialog header
@@ -20,13 +21,22 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
   const archived = useSessionStore((s) => s.session?.archived ?? false);
   const title = useSessionStore((s) => s.session?.title ?? "");
   const { session_store } = useRepository();
+  const toast = useOptionalToast();
   const [delete_open, setDeleteOpen] = React.useState(false);
   const [confirm_text, setConfirmText] = React.useState("");
 
   function toggleArchive(): void {
+    const next_archived = !archived;
     session_store
       .getState()
-      .applyPatch({ kind: "session_metadata_edited", partial: { archived: !archived } });
+      .applyPatch({ kind: "session_metadata_edited", partial: { archived: next_archived } });
+    // §9 #33: surface a toast so the action lands somewhere visible —
+    // the button label flip alone is silent feedback that cross-tab
+    // observers won't see.
+    toast?.push({
+      kind: "info",
+      message: next_archived ? "Session archived." : "Session unarchived.",
+    });
   }
 
   const confirm_matches =

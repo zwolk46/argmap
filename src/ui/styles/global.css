@@ -209,7 +209,14 @@ body,
    chip decorations hide (the user can re-derive them from the page
    body); below 560px the indicators (recompute counter, drift, etc.)
    also hide. Home button, mode toggle, frame title, primary chrome
-   buttons stay visible at all widths. */
+   buttons stay visible at all widths.
+
+   §9 #15: below 480px the title slot collapses (frame title moves to a
+   one-line truncated form on the page body, not duplicated in chrome)
+   so the remaining chrome — home, mode toggle, primary buttons — fits
+   in a 320px viewport without horizontal page scroll. The chrome bar
+   itself gets overflow-x:auto so any leftover horizontal slop scrolls
+   inside the header instead of the page. */
 @media (max-width: 720px) {
   .argmap-topbar-chips {
     display: none !important;
@@ -218,6 +225,16 @@ body,
 @media (max-width: 560px) {
   .argmap-topbar-indicators {
     display: none !important;
+  }
+}
+@media (max-width: 480px) {
+  .argmap-topbar-title {
+    display: none !important;
+  }
+  .argmap-topbar {
+    overflow-x: auto;
+    gap: var(--space-1) !important;
+    padding: 0 var(--space-2) !important;
   }
 }
 
