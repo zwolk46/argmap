@@ -7,6 +7,7 @@ import type {
   FrameVersion,
   Node,
   ConditionalBranch,
+  HookInvocationRecord,
 } from "@/schema";
 import { VALIDATION_RULE_PRIORITY } from "@/schema";
 import type { AppState, FrameSummary } from "@/persistence";
@@ -193,7 +194,15 @@ export type OutputViewTab = "path_overlay" | "decision_tree" | "prose";
 
 export interface OutputViewPayload {
   shape: SessionShape;
-  prose?: { canonical: string; rewritten?: string };
+  prose?: {
+    canonical: string;
+    rewritten?: string;
+    // §12 F-09: optional provenance record for the rewrite (model, prompt,
+    // generated_at). Populated only when the apply_decision shim has written
+    // output_overrides.rewrite_invocation alongside output_overrides.rewritten_prose.
+    // The chip in prose-tab falls back to hook_id-only attribution when absent.
+    rewrite_invocation?: HookInvocationRecord;
+  };
   decision_tree?: { branches: ConditionalBranch[] };
   path_overlay?: { active_path: NodeRef[]; conclusion?: NodeRef };
 }
@@ -225,7 +234,8 @@ export function selectOutputForView(
     if (tab === "prose") {
       const canonical = cr.output.prose_summary ?? "";
       const rewritten = session_version?.output_overrides?.rewritten_prose;
-      value = { shape, prose: { canonical, rewritten } };
+      const rewrite_invocation = session_version?.output_overrides?.rewrite_invocation;
+      value = { shape, prose: { canonical, rewritten, rewrite_invocation } };
     } else if (tab === "decision_tree") {
       value = { shape, decision_tree: { branches: cr.output.branches ?? [] } };
     } else {

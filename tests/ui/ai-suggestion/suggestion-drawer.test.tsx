@@ -287,3 +287,49 @@ describe("SuggestionDrawer — CommitPlan preview (§12 F-18)", () => {
     expect(text).toMatch(/…and 3 more/);
   });
 });
+
+describe("SuggestionDrawer — G6 baseline subtitle (§12 F-10)", () => {
+  it("renders 'Refining your previous rewrite' when echo_input.baseline_kind === 'rewrite'", () => {
+    currentPending = {
+      ...PENDING_DEFAULT,
+      hook_id: "G6",
+      parsed: "rewritten prose" as unknown,
+      // SuggestionResult shape carries echo_input — the structured snapshot of
+      // buildInput's output. Add it to the pending fixture for this test.
+      echo_input: { baseline: "Polished", baseline_kind: "rewrite" },
+    } as typeof PENDING_DEFAULT;
+    const { getByTestId } = render(<SuggestionDrawer store_kind="session" />);
+    expect(getByTestId("g6-baseline-subtitle").textContent).toContain("Refining");
+  });
+
+  it("renders 'Rewriting from canonical' when echo_input.baseline_kind === 'canonical'", () => {
+    currentPending = {
+      ...PENDING_DEFAULT,
+      hook_id: "G6",
+      parsed: "rewritten prose" as unknown,
+      echo_input: { baseline: "Canonical", baseline_kind: "canonical" },
+    } as typeof PENDING_DEFAULT;
+    const { getByTestId } = render(<SuggestionDrawer store_kind="session" />);
+    expect(getByTestId("g6-baseline-subtitle").textContent).toContain("Rewriting from canonical");
+  });
+
+  it("renders nothing for non-G6 hooks", () => {
+    currentPending = {
+      ...PENDING_DEFAULT,
+      hook_id: "G1",
+      echo_input: { baseline_kind: "canonical" },
+    } as typeof PENDING_DEFAULT;
+    const { queryByTestId } = render(<SuggestionDrawer store_kind="frame" />);
+    expect(queryByTestId("g6-baseline-subtitle")).toBeNull();
+  });
+
+  it("renders nothing for G6 when echo_input is missing baseline_kind", () => {
+    currentPending = {
+      ...PENDING_DEFAULT,
+      hook_id: "G6",
+      echo_input: { baseline: "Canonical" },
+    } as typeof PENDING_DEFAULT;
+    const { queryByTestId } = render(<SuggestionDrawer store_kind="session" />);
+    expect(queryByTestId("g6-baseline-subtitle")).toBeNull();
+  });
+});

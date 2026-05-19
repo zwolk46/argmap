@@ -6,7 +6,7 @@ import type {
   SessionVersionId,
   HookId,
 } from "./identifiers";
-import type { FrameVersion } from "./frame";
+import type { FrameVersion, HookInvocationRecord } from "./frame";
 import type { Authority, Premise } from "./nodes";
 import type { Edge } from "./edges";
 
@@ -153,5 +153,18 @@ export interface ArgumentSessionVersion {
     rewritten_prose?: string;
     rewritten_at?: string;
     rewritten_by_hook?: HookId;
+    // §12 F-09: G6 commits to the session, but the HookInvocationRecord
+    // historically only lived on Frame.llm_settings.invocations — leaving the
+    // session-side rewrite with no link back to its prompt/model/timestamp,
+    // so the AiAttributionChip in prose-tab couldn't render provenance. This
+    // field is the session-side anchor for that record. Populated by the
+    // apply_decision shim (not yet wired in main.tsx), which receives the
+    // record from llm-hooks/confirmation.applyDecision after the user
+    // accepts a G6 suggestion. The shim should strip heavy fields
+    // (raw_response, final_value, hash fields used only for audit replay)
+    // before writing — only the chip-tooltip fields (hook_id, prompt_name,
+    // prompt_version, provider_id, model_id, invoked_at, decision) need to
+    // ride along on every saved session version.
+    rewrite_invocation?: HookInvocationRecord;
   };
 }

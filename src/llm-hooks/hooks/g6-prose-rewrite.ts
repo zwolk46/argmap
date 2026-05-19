@@ -4,6 +4,11 @@ import { renderTemplate } from "../prompt-template";
 
 export interface G6Input {
   baseline_prose: string;
+  // §12 F-10: which surface the baseline came from. Threaded into echo_input
+  // so the SuggestionDrawer can render an explicit "Refining your previous
+  // rewrite" vs "Rewriting from canonical" subtitle, closing the audit's
+  // "no copy explains this" finding.
+  baseline_kind: "canonical" | "rewrite";
   conclusion_direction?: unknown;
   frame_mode: "legal" | "general";
   frame_flavor: "personal" | "academic" | null;
@@ -21,8 +26,28 @@ export const g6Hook: HookContract<G6Input, G6Output> = {
   mode_visibility: { legal: true, general: { personal: true, academic: true } },
 
   buildInput(ctx: HookContext): G6Input {
+    // §12 F-10: accept either a structured { baseline, baseline_kind } payload
+    // (current prose-tab call site) or a plain baseline string (the
+    // pre-F-10 contract some tests still exercise). Without this, the
+    // prior `String(ctx.user_input ?? "")` evaluated to "[object Object]"
+    // when given the prose-tab's `{ canonical }` object — a latent crash
+    // that was unreachable only because the apply_decision wiring isn't
+    // live yet.
+    const arg = ctx.user_input;
+    let baseline_prose = "";
+    let baseline_kind: "canonical" | "rewrite" = "canonical";
+    if (typeof arg === "string") {
+      baseline_prose = arg;
+    } else if (arg && typeof arg === "object") {
+      const o = arg as { baseline?: unknown; baseline_kind?: unknown };
+      if (typeof o.baseline === "string") baseline_prose = o.baseline;
+      if (o.baseline_kind === "rewrite" || o.baseline_kind === "canonical") {
+        baseline_kind = o.baseline_kind;
+      }
+    }
     return {
-      baseline_prose: String(ctx.user_input ?? ""),
+      baseline_prose,
+      baseline_kind,
       conclusion_direction: undefined,
       frame_mode: ctx.frame?.mode ?? "general",
       frame_flavor: ctx.frame?.flavor ?? null,

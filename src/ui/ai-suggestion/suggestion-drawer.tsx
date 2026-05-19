@@ -76,6 +76,33 @@ export function suggestionDrawerWidth(hook_id: string): string {
   return WIDE_DRAWER_HOOK_IDS.has(hook_id) ? "min(640px, 100vw)" : "min(420px, 100vw)";
 }
 
+// §12 F-10: render a small subtitle in the drawer body when G6 is the active
+// suggestion, naming the baseline the rewrite was generated against. Reads
+// from SuggestionResult.echo_input — the structured snapshot of buildInput's
+// output — which carries baseline_kind as of the F-10 fix. Other hooks render
+// nothing.
+function renderG6BaselineSubtitle(result: SuggestionResult<unknown>): React.ReactElement | null {
+  if (result.hook_id !== "G6") return null;
+  const echo = result.echo_input as { baseline_kind?: unknown } | undefined;
+  const kind = echo?.baseline_kind;
+  if (kind !== "rewrite" && kind !== "canonical") return null;
+  const label = kind === "rewrite" ? "Refining your previous rewrite" : "Rewriting from canonical";
+  return (
+    <p
+      data-testid="g6-baseline-subtitle"
+      style={{
+        margin: 0,
+        marginBottom: "var(--space-3)",
+        fontSize: "var(--font-size-xs)",
+        color: "var(--color-text-secondary)",
+        fontStyle: "italic",
+      }}
+    >
+      {label}
+    </p>
+  );
+}
+
 function formatCommitWrite(w: FrameFieldWrite): string {
   if (w.op === "set" || w.op === "append") {
     const target = w.target_node_id ?? w.target_edge_id;
@@ -273,6 +300,12 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
         </span>
       </DrawerHeader>
       <DrawerBody>
+        {/* §12 F-10: surface the baseline the rewrite was run against so the
+            user (and the SuggestionResult audit log via echo_input) has an
+            explicit record of which surface was passed in. The prose-tab
+            now offers "Refine rewrite" vs "Rewrite from canonical" as
+            discrete buttons; this subtitle echoes that choice back. */}
+        {renderG6BaselineSubtitle(result)}
         {editing ? (
           <>
             <textarea
