@@ -1546,6 +1546,49 @@ const V_NODE_10: ValidationRule = {
   },
 };
 
+// §15 F-9. Authority is the only node type whose `layer` is multi-valued
+// ("frame" | "argument"). Without this rule a programmatic edit or buggy
+// migration can land an Authority with layer="argument" inside frame.nodes
+// (or layer="frame" inside session.session_authorities), and any downstream
+// consumer that filters by layer silently drops it (e.g., frame-canvas's
+// `.filter(n => n.layer === "frame")`).
+const V_NODE_11: ValidationRule = {
+  id: "V-NODE-11",
+  severity: "error",
+  description:
+    "Authority nodes carry a layer that matches their container: frame-layer for frame.nodes Authorities, argument-layer for session.session_authorities.",
+  evaluate(frame, session) {
+    const out: ValidationResult[] = [];
+    for (const n of [...frame.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (n.type !== "Authority") continue;
+      const a = n as Authority;
+      if (a.layer !== "frame") {
+        out.push({
+          rule_id: "V-NODE-11",
+          severity: "error",
+          node_id: n.id,
+          message: `Authority ${n.id} is stored in frame.nodes but has layer="${a.layer}"; expected "frame".`,
+        });
+      }
+    }
+    if (session) {
+      for (const a of [...(session.session_authorities ?? [])].sort((x, y) =>
+        x.id.localeCompare(y.id),
+      )) {
+        if (a.layer !== "argument") {
+          out.push({
+            rule_id: "V-NODE-11",
+            severity: "error",
+            node_id: a.id,
+            message: `Authority ${a.id} is stored in session.session_authorities but has layer="${a.layer}"; expected "argument".`,
+          });
+        }
+      }
+    }
+    return out;
+  },
+};
+
 // ============================================================================
 // Full registry
 // ============================================================================
@@ -1573,6 +1616,7 @@ export const VALIDATION_RULES: ReadonlyArray<ValidationRule> = [
   V_NODE_8,
   V_NODE_9,
   V_NODE_10,
+  V_NODE_11,
   V_EDGE_1,
   V_EDGE_2,
   V_EDGE_3,

@@ -51,6 +51,16 @@ const CASES: RuleCase[] = [
   { rule_id: "V-NODE-7", malformed: fixtures.multipleChoiceTooFew, expected_count_min: 1 },
   { rule_id: "V-NODE-8", malformed: fixtures.satisfyingOptionMissingTarget, expected_count_min: 1 },
   { rule_id: "V-NODE-9", malformed: fixtures.duplicateOptionIds, expected_count_min: 1 },
+  {
+    rule_id: "V-NODE-11",
+    malformed: fixtures.authorityLayerMismatchInFrame,
+    expected_count_min: 1,
+  },
+  {
+    rule_id: "V-NODE-11",
+    malformed: fixtures.authorityLayerMismatchInSession,
+    expected_count_min: 1,
+  },
 
   // V-EDGE
   { rule_id: "V-EDGE-1", malformed: fixtures.badEdgeTypePair, expected_count_min: 1 },
@@ -100,6 +110,7 @@ const EXPECTED_IDS = [
   "V-NODE-8",
   "V-NODE-9",
   "V-NODE-10",
+  "V-NODE-11",
   "V-EDGE-1",
   "V-EDGE-2",
   "V-EDGE-3",

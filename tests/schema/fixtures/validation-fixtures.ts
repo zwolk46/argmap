@@ -587,6 +587,29 @@ export function satisfyingOptionMissingTarget(): Bundle {
   });
 }
 
+export function authorityLayerMismatchInFrame(): Bundle {
+  return withMutFrame(({ frame }) => {
+    const a = frame.nodes.find((n) => n.id === "n-auth") as Authority;
+    a.layer = "argument";
+  });
+}
+
+export function authorityLayerMismatchInSession(): Bundle {
+  return withMutFrame(({ session }) => {
+    if (!session) return;
+    session.session_authorities = [
+      {
+        id: "n-auth-session",
+        type: "Authority",
+        layer: "frame",
+        citation: "Misplaced v. Authority, 2 U.S. 2 (2027).",
+        created_at: T,
+        updated_at: T,
+      },
+    ];
+  });
+}
+
 export function duplicateOptionIds(): Bundle {
   return withMutFrame(({ frame }) => {
     const cp = frame.nodes.find((n) => n.id === "n-cp") as Checkpoint;
