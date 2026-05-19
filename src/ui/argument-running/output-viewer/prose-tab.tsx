@@ -50,7 +50,10 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
 
   const canonical = payload.prose.canonical ?? "";
   const rewritten = payload.prose.rewritten;
+  const rewrite_invocation = payload.prose.rewrite_invocation;
   const shape = payload.shape;
+  const has_rewrite = typeof rewritten === "string" && rewritten.length > 0;
+  const invoke_disabled = aiSuggestion.status === "invoking";
 
   return (
     <div
@@ -94,17 +97,64 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
           >
             Copy as Markdown
           </Button>
+          {/* §12 F-10: when a prior rewrite exists, give the user an explicit
+              baseline choice — "Refine" iterates on the existing rewrite,
+              "Rewrite from canonical" discards it and starts fresh from the
+              deterministic prose. Previously the single "Suggest rewrite"
+              button silently rewrote canonical, dropping the user's prior
+              edit on every re-run. Constitution Art III §4 (Clarity): explicit
+              discrete choices over compressed copy. */}
           {shape !== "incomplete" && aiSuggestion.enabled ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              data-testid="prose-suggest-rewrite"
-              onClick={() => aiSuggestion.invoke("G6", { canonical })}
-              disabled={aiSuggestion.status === "invoking"}
-              leading={<AiSparkle />}
-            >
-              Suggest rewrite
-            </Button>
+            has_rewrite ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  data-testid="prose-refine-rewrite"
+                  onClick={() =>
+                    aiSuggestion.invoke("G6", {
+                      baseline: rewritten,
+                      baseline_kind: "rewrite",
+                    })
+                  }
+                  disabled={invoke_disabled}
+                  leading={<AiSparkle />}
+                >
+                  Refine rewrite
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  data-testid="prose-rewrite-from-canonical"
+                  onClick={() =>
+                    aiSuggestion.invoke("G6", {
+                      baseline: canonical,
+                      baseline_kind: "canonical",
+                    })
+                  }
+                  disabled={invoke_disabled}
+                  leading={<AiSparkle />}
+                >
+                  Rewrite from canonical
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                data-testid="prose-suggest-rewrite"
+                onClick={() =>
+                  aiSuggestion.invoke("G6", {
+                    baseline: canonical,
+                    baseline_kind: "canonical",
+                  })
+                }
+                disabled={invoke_disabled}
+                leading={<AiSparkle />}
+              >
+                Suggest rewrite
+              </Button>
+            )
           ) : null}
         </div>
 
@@ -146,7 +196,12 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
                 marginBottom: "var(--space-2)",
               }}
             >
-              <AiAttributionChip hook_id="G6" />
+              {/* §12 F-09: pass the rewrite invocation record when available
+                  so the chip's tooltip renders model + prompt-version + invoked-at.
+                  Falls back to the hook_id-only chip until the apply_decision
+                  shim is wired (main.tsx) and starts populating
+                  output_overrides.rewrite_invocation. */}
+              <AiAttributionChip record={rewrite_invocation ?? null} hook_id="G6" />
               <Button
                 size="sm"
                 variant="ghost"

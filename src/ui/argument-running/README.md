@@ -119,9 +119,13 @@ an additive Premise field or a CITES edge).
 ### `AiAttributionChip` divergence
 
 The spec references `AIAttributionChip variant="rewritten"`. The actual primitive
-takes a full `HookInvocationRecord`, which the `ArgumentSessionVersion.output_overrides`
-shape doesn't carry. The prose tab renders an inline AI-attribution span instead,
-preserving the F-002 UI constraint without requiring a synthetic record.
+accepts either a full `HookInvocationRecord` (rich tooltip with model / prompt
+version / generated-at) or a bare `hook_id` (chip with no tooltip — §12 F-22).
+`ArgumentSessionVersion.output_overrides.rewrite_invocation` (§12 F-09) now
+carries the record so the prose-tab chip can render the rich tooltip when the
+record is present, and falls back to hook-id-only attribution otherwise. The
+field is populated by the `apply_decision` shim — not yet wired in `main.tsx`
+— so until that wiring lands the chip silently no-ops to the hook-id-only mode.
 
 ## Import boundary
 

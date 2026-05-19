@@ -25,9 +25,34 @@ const makeCtx = (overrides?: Partial<HookContext>): HookContext => ({
 });
 
 describe("g6Hook — prose_rewrite", () => {
-  it("buildInput uses user_input as baseline_prose", () => {
+  it("buildInput uses user_input as baseline_prose when given a string (legacy contract)", () => {
     const input = g6Hook.buildInput(makeCtx());
     expect(input.baseline_prose).toBe("The court held the act unconstitutional.");
+    expect(input.baseline_kind).toBe("canonical");
+  });
+
+  it("buildInput reads baseline + baseline_kind from a structured payload (F-10)", () => {
+    const refine = g6Hook.buildInput(
+      makeCtx({ user_input: { baseline: "Polished draft.", baseline_kind: "rewrite" } }),
+    );
+    expect(refine.baseline_prose).toBe("Polished draft.");
+    expect(refine.baseline_kind).toBe("rewrite");
+    const fresh = g6Hook.buildInput(
+      makeCtx({ user_input: { baseline: "Canonical draft.", baseline_kind: "canonical" } }),
+    );
+    expect(fresh.baseline_prose).toBe("Canonical draft.");
+    expect(fresh.baseline_kind).toBe("canonical");
+  });
+
+  it("buildInput defaults baseline_kind to 'canonical' and baseline to '' for malformed input (F-10)", () => {
+    // Previously `String({canonical: "x"})` would silently produce "[object Object]";
+    // the F-10 fix replaces that with explicit baseline + baseline_kind parsing.
+    const garbage = g6Hook.buildInput(makeCtx({ user_input: { canonical: "x" } }));
+    expect(garbage.baseline_prose).toBe("");
+    expect(garbage.baseline_kind).toBe("canonical");
+    const undef = g6Hook.buildInput(makeCtx({ user_input: undefined }));
+    expect(undef.baseline_prose).toBe("");
+    expect(undef.baseline_kind).toBe("canonical");
   });
 
   it("parseOutput returns ok for valid response", () => {
