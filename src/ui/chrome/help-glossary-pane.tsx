@@ -1,6 +1,5 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { useFrameStore } from "@/state";
 import { GLOSSARY_DICTIONARY } from "../primitives/glossary-tooltip";
 import { Drawer, DrawerHeader, DrawerBody } from "../primitives/drawer";
 import { IconButton } from "../primitives/icon-button";
@@ -13,8 +12,8 @@ export interface HelpGlossaryPaneProps {
 }
 
 export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): ReactElement {
-  const frame = useFrameStore((s) => s.frame);
-  const is_legal = frame?.mode === "legal";
+  // §9 #20: legal-concept definitions are needed *before* choosing a mode,
+  // so they always render — not only when a legal frame is already loaded.
   const [query, setQuery] = React.useState("");
 
   // §9 #19: glossary has ~25 entries; a filter input keeps "How do I find X"
@@ -32,9 +31,16 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
     .filter(matches);
 
   return (
-    <Drawer open={open} onClose={onClose} width="min(360px, 100vw)" aria_label="Help and glossary">
+    <Drawer
+      open={open}
+      onClose={onClose}
+      width="min(360px, 100vw)"
+      aria_label="Help, glossary, and app preferences"
+    >
       <DrawerHeader>
-        <span>Help & Glossary</span>
+        {/* §9 #21: app preferences (reset coachmarks) live in this drawer;
+            rename so users don't land here expecting only glossary entries. */}
+        <span>Help & Settings</span>
         <IconButton size="sm" aria-label="Close help" onClick={onClose}>
           <UIcon name="times" size={14} />
         </IconButton>
@@ -92,7 +98,7 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
             </div>
           ))}
         </section>
-        {is_legal && legal_entries.length > 0 && (
+        {legal_entries.length > 0 && (
           <section style={{ marginTop: "var(--space-5)" }}>
             <h3 className="argmap-section-heading" style={{ margin: "0 0 var(--space-3)" }}>
               Legal Concepts

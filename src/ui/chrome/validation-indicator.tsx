@@ -8,11 +8,12 @@ export interface ValidationIndicatorProps {
   onOpenDrawer?: (results: ReadonlyArray<ValidationResult>) => void;
 }
 
-const SEVERITY_TEXT: Record<string, string> = {
-  pass: "No issues",
-  warning: "warning",
-  error: "issue",
-};
+// §9 #12: surface error count and warning count separately so a mixed
+// validation set ("1 error + 4 warnings") doesn't collapse to "5 issues"
+// — the user needs to see at a glance whether anything blocks.
+function pluralize(noun: string, n: number): string {
+  return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
 
 export function ValidationIndicator({
   surface,
@@ -25,7 +26,8 @@ export function ValidationIndicator({
     surface === "frame_building" ? frame_validation : (compute_result?.validation_results ?? []);
 
   const severity = severityFromValidation(results);
-  const count = results.length;
+  const error_count = results.filter((r) => r.severity === "error").length;
+  const warning_count = results.filter((r) => r.severity === "warning").length;
   const tone =
     severity === "error"
       ? "var(--color-severity-error)"
@@ -33,10 +35,16 @@ export function ValidationIndicator({
         ? "var(--color-severity-warning)"
         : "var(--color-text-tertiary)";
 
-  const label =
-    count === 0
-      ? SEVERITY_TEXT.pass
-      : `${count} ${severity === "error" ? SEVERITY_TEXT.error : SEVERITY_TEXT.warning}${count !== 1 ? "s" : ""}`;
+  let label: string;
+  if (error_count === 0 && warning_count === 0) {
+    label = "No issues";
+  } else if (error_count > 0 && warning_count > 0) {
+    label = `${pluralize("error", error_count)}, ${pluralize("warning", warning_count)}`;
+  } else if (error_count > 0) {
+    label = pluralize("error", error_count);
+  } else {
+    label = pluralize("warning", warning_count);
+  }
 
   return (
     // KEEP RAW: pill-shaped status indicator with severity-driven tone; not expressible via Button variants.

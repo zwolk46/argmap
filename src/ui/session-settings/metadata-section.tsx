@@ -17,6 +17,16 @@ export function MetadataSection(): ReactElement {
   // §13 #18: surface the pending silent-revert state through aria-invalid.
   const title_blank = draft_title.trim().length === 0;
 
+  // §9 #40: bound both inputs and surface a counter only when nearing the
+  // cap. 200 char title matches FrameTitle and the wizard; the description
+  // gets a more generous cap since users use it for context notes.
+  const title_counter_id = React.useId();
+  const description_counter_id = React.useId();
+  const title_max = 200;
+  const description_max = 2000;
+  const show_title_counter = draft_title.length > title_max * 0.8;
+  const show_description_counter = draft_description.length > description_max * 0.8;
+
   function commitTitle(): void {
     // §9 #27: empty / whitespace-only titles silently persisted as "" — the
     // session list later rendered an unnamed row. Require a non-empty trimmed
@@ -95,6 +105,8 @@ export function MetadataSection(): ReactElement {
           required
           aria-required="true"
           aria-invalid={title_blank ? true : undefined}
+          aria-describedby={show_title_counter ? title_counter_id : undefined}
+          maxLength={title_max}
           onChange={(e) => setDraftTitle(e.target.value)}
           onBlur={commitTitle}
           onKeyDown={(e) => {
@@ -106,6 +118,19 @@ export function MetadataSection(): ReactElement {
           }}
           className="argmap-input"
         />
+        {show_title_counter ? (
+          <p
+            id={title_counter_id}
+            data-testid="metadata-title-counter"
+            style={{
+              margin: "var(--space-1) 0 0",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {draft_title.length} / {title_max}
+          </p>
+        ) : null}
       </label>
       <label style={{ display: "block" }}>
         <span
@@ -119,6 +144,8 @@ export function MetadataSection(): ReactElement {
         <textarea
           data-testid="metadata-description-input"
           value={draft_description}
+          maxLength={description_max}
+          aria-describedby={show_description_counter ? description_counter_id : undefined}
           onChange={(e) => setDraftDescription(e.target.value)}
           onBlur={commitDescription}
           onKeyDown={(e) => {
@@ -134,6 +161,19 @@ export function MetadataSection(): ReactElement {
           rows={3}
           className="argmap-input"
         />
+        {show_description_counter ? (
+          <p
+            id={description_counter_id}
+            data-testid="metadata-description-counter"
+            style={{
+              margin: "var(--space-1) 0 0",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {draft_description.length} / {description_max}
+          </p>
+        ) : null}
       </label>
     </section>
   );

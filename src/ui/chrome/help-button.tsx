@@ -9,7 +9,7 @@ export interface HelpButtonProps {
 
 export function HelpButton({ active, onToggle }: HelpButtonProps): ReactElement {
   return (
-    <IconButton aria-label="Help and glossary" active={active} onClick={onToggle}>
+    <IconButton aria-label="Help and settings" active={active} onClick={onToggle}>
       <UIcon name="question" size={18} />
     </IconButton>
   );
