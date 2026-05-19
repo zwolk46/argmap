@@ -3,6 +3,15 @@ import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
 import { Button, ConfirmDialog } from "../primitives";
 
+// §9 #30. Auto-generated session titles include the parent frame title, which
+// can be up to 200 chars; injecting that whole string into the dialog header
+// overflows the modal. Truncate with an ellipsis for display only — the
+// type-to-confirm comparison still uses the full title.
+function truncateForHeader(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1).trimEnd() + "…";
+}
+
 export interface ArchiveDeleteSectionProps {
   on_delete_session: () => void;
 }
@@ -69,7 +78,11 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
       </Button>
       <ConfirmDialog
         open={delete_open}
-        title={`Delete session "${title}"?`}
+        // §9 #30: cap the interpolated title so an auto-generated 200-char
+        // session title (e.g. "Argument session — <long frame title>") doesn't
+        // overflow the dialog header. Type-to-confirm input still uses the
+        // full title for comparison; only the display label is truncated.
+        title={`Delete session "${truncateForHeader(title, 60)}"?`}
         confirm_label="Delete"
         cancel_label="Cancel"
         confirm_variant="danger"

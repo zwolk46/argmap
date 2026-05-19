@@ -30,6 +30,19 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
       >
         Advisory notes (G12)
       </header>
+      {/* §9 #36: an inline gloss replaces the bare "Cross-implication advisories"
+          label — a first-time user opening the panel had no way to learn what
+          the feature did without leaving the panel for the help glossary. */}
+      <p
+        style={{
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
+          margin: "0 0 var(--space-1) 0",
+        }}
+      >
+        Surface non-blocking notes when an answer in one sub-question may bear on another (e.g.,
+        findings reused across elements).
+      </p>
       <div
         style={{
           display: "flex",
