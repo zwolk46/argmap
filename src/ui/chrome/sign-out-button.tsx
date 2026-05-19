@@ -16,7 +16,10 @@ export function SignOutButton(): ReactElement | null {
   if (!user) return null;
   return (
     <IconButton
-      aria-label={`Sign out (${user.email ?? "signed in"})`}
+      // §9 #10: omit the parenthetical entirely when there's no email rather
+      // than reading "Sign out (signed in)" — the original fallback was usable
+      // but jarring; "Sign out" alone is correct when we have nothing to add.
+      aria-label={user.email ? `Sign out (${user.email})` : "Sign out"}
       title={`Signed in as ${user.email ?? "your account"} — click to sign out`}
       onClick={async () => {
         // §9 #6 — confirm before signing out so a stray click doesn't tear

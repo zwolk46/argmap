@@ -3,6 +3,18 @@ import type { ReactElement } from "react";
 import { useFrameStore, useRepository } from "@/state";
 import { useOptionalToast } from "../primitives/toast";
 
+// §9 #8: hard cap on title length to prevent runaway pastes / accidental
+// novella-sized titles. 200 chars comfortably covers the longest practical
+// case-name / topic phrasing while keeping the field a single visual line.
+export const FRAME_TITLE_MAX_LENGTH = 200;
+
+// §9 #8: a multi-line paste (e.g. copy from a heading + subtitle) used to
+// land with embedded newlines and tabs, breaking the single-line layout.
+// Replace all whitespace runs (incl. \r, \n, \t) with single spaces.
+function flattenWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ");
+}
+
 export interface FrameTitleProps {
   read_only?: boolean;
 }
@@ -51,7 +63,26 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
         ref={inputRef}
         data-testid="frame-title-input"
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        maxLength={FRAME_TITLE_MAX_LENGTH}
+        onChange={(e) => setDraft(flattenWhitespace(e.target.value))}
+        onPaste={(e) => {
+          // Intercept paste so multi-line clipboard content is flattened
+          // before it lands in the input (more graceful than letting it
+          // arrive multi-line and getting stripped after the fact).
+          const pasted = e.clipboardData.getData("text");
+          if (/\s/.test(pasted) && pasted !== flattenWhitespace(pasted)) {
+            e.preventDefault();
+            const input = e.currentTarget;
+            const start = input.selectionStart ?? draft.length;
+            const end = input.selectionEnd ?? draft.length;
+            const cleaned = flattenWhitespace(pasted);
+            const next = (draft.slice(0, start) + cleaned + draft.slice(end)).slice(
+              0,
+              FRAME_TITLE_MAX_LENGTH,
+            );
+            setDraft(next);
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") commit();
           if (e.key === "Escape") cancel();

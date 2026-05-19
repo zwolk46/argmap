@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
-import { FrameTitle } from "@/ui/chrome/frame-title";
+import { FrameTitle, FRAME_TITLE_MAX_LENGTH } from "@/ui/chrome/frame-title";
 
 const mockApplyPatch = vi.fn();
 
@@ -62,5 +62,26 @@ describe("FrameTitle", () => {
     fireEvent.keyDown(input, { key: "Escape" });
     expect(mockApplyPatch).not.toHaveBeenCalled();
     expect(queryByTestId("frame-title-input")).toBeNull();
+  });
+
+  it("§9 #8: input enforces FRAME_TITLE_MAX_LENGTH via maxLength attribute", () => {
+    const { getByText, getByTestId } = render(<FrameTitle />);
+    fireEvent.click(getByText("My Frame"));
+    const input = getByTestId("frame-title-input") as HTMLInputElement;
+    expect(input.maxLength).toBe(FRAME_TITLE_MAX_LENGTH);
+  });
+
+  it("§9 #8: pasted multi-line content is flattened before insertion", () => {
+    const { getByText, getByTestId } = render(<FrameTitle />);
+    fireEvent.click(getByText("My Frame"));
+    const input = getByTestId("frame-title-input") as HTMLInputElement;
+    // Clear existing value to make assertion deterministic.
+    fireEvent.change(input, { target: { value: "" } });
+
+    const clipboardData = {
+      getData: (type: string) => (type === "text" ? "Heading\nSubheading\twith tab" : ""),
+    };
+    fireEvent.paste(input, { clipboardData });
+    expect(input.value).toBe("Heading Subheading with tab");
   });
 });
