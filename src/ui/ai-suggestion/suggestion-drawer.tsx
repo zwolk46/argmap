@@ -6,7 +6,15 @@ import type {
   CommitPlan,
   FrameFieldWrite,
 } from "@/llm-hooks";
-import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, Button, AiSparkle } from "../primitives";
+import {
+  Drawer,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  Button,
+  AiSparkle,
+  hookShortName,
+} from "../primitives";
 import { useAiSuggestion } from "../hooks/use-ai-suggestion";
 
 // §12 F-18: render a CommitPlan as a human-readable summary so users see
@@ -131,6 +139,9 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
   // would crash any hook that expects a structured payload).
   const [edit_text, setEditText] = React.useState<string>("");
   const [parse_error, setParseError] = React.useState<string | null>(null);
+  // §12 F-20: record which button triggered the applying state so the other
+  // disabled buttons read as "operation in flight" rather than "broken".
+  const [inflight, setInflight] = React.useState<"accepted" | "edited" | "rejected" | null>(null);
 
   const is_open = pending !== null;
   const is_applying = status === "applying";
@@ -140,13 +151,19 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
       setEditing(false);
       setEditText("");
       setParseError(null);
+      setInflight(null);
     }
   }, [is_open]);
+
+  React.useEffect(() => {
+    if (!is_applying) setInflight(null);
+  }, [is_applying]);
 
   if (!is_open) return null;
 
   async function handleAccept() {
     const result = pending as SuggestionResult<unknown>;
+    setInflight("accepted");
     await resolve({ kind: "accepted", final: result.parsed } as ConfirmationDecision<unknown>);
   }
 
@@ -170,10 +187,12 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
         return;
       }
     }
+    setInflight("edited");
     await resolve({ kind: "edited", final } as ConfirmationDecision<unknown>);
   }
 
   async function handleReject() {
+    setInflight("rejected");
     await resolve({ kind: "rejected" } as ConfirmationDecision<unknown>);
   }
 
@@ -234,7 +253,11 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
             textTransform: "uppercase",
           }}
         >
-          {result.hook_id}
+          {/* §12 F-28: prefer the human short name ("checkpoint", "interp")
+              over the bare hook id ("G1"). Matches AiAttributionChip
+              elsewhere. The chip styling still uppercase-monospaces the
+              label, which reads as a category tag rather than a code. */}
+          {hookShortName(result.hook_id)}
         </span>
       </DrawerHeader>
       <DrawerBody>
@@ -375,31 +398,49 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
           </section>
         ) : null}
       </DrawerBody>
+      {/* §12 F-20: when an action is in flight all three buttons disable.
+          Previously only Accept's label changed to "Applying…", so Reject
+          and Edit looked broken. Show specific in-flight copy on the
+          triggering button and a neutral "Working…" on the others; the
+          aria-busy wrapper signals state to assistive tech without
+          changing the visual layout. */}
       <DrawerFooter>
-        <Button
-          variant="ghost"
-          data-testid="suggestion-reject"
-          onClick={handleReject}
-          disabled={is_applying}
+        <span
+          data-testid="suggestion-footer-buttons"
+          aria-busy={is_applying || undefined}
+          style={{ display: "contents" }}
         >
-          Reject
-        </Button>
-        <Button
-          variant="secondary"
-          data-testid="suggestion-edit"
-          onClick={handleEdit}
-          disabled={is_applying}
-        >
-          {editing ? "Confirm edit" : "Edit"}
-        </Button>
-        <Button
-          variant="primary"
-          data-testid="suggestion-accept"
-          onClick={handleAccept}
-          disabled={is_applying}
-        >
-          {is_applying ? "Applying…" : "Accept"}
-        </Button>
+          <Button
+            variant="ghost"
+            data-testid="suggestion-reject"
+            onClick={handleReject}
+            disabled={is_applying}
+          >
+            {is_applying ? (inflight === "rejected" ? "Cancelling…" : "Working…") : "Reject"}
+          </Button>
+          <Button
+            variant="secondary"
+            data-testid="suggestion-edit"
+            onClick={handleEdit}
+            disabled={is_applying}
+          >
+            {is_applying
+              ? inflight === "edited"
+                ? "Saving…"
+                : "Working…"
+              : editing
+                ? "Confirm edit"
+                : "Edit"}
+          </Button>
+          <Button
+            variant="primary"
+            data-testid="suggestion-accept"
+            onClick={handleAccept}
+            disabled={is_applying}
+          >
+            {is_applying ? (inflight === "accepted" ? "Applying…" : "Working…") : "Accept"}
+          </Button>
+        </span>
       </DrawerFooter>
     </Drawer>
   );

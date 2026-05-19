@@ -8,7 +8,7 @@ import type { CommitPlan, ConfirmationDecision } from "@/llm-hooks";
 const mockResolveSuggestion = vi.fn().mockResolvedValue(undefined);
 
 const PENDING_DEFAULT = {
-  hook_id: "g1-checkpoint-suggestion",
+  hook_id: "G1",
   parsed: "suggested text" as unknown,
   parse_status: "ok",
   model_id: "claude",
@@ -23,6 +23,7 @@ const PENDING_DEFAULT = {
 };
 
 let currentPending: typeof PENDING_DEFAULT = { ...PENDING_DEFAULT };
+let currentStatus: AiSuggestionStatus = "awaiting_decision";
 
 // §12 F-18: each test can override previewCommit by setting this. The
 // default returns null so legacy tests that don't care about the preview
@@ -32,7 +33,7 @@ let mockPreviewCommit: (decision: ConfirmationDecision<unknown>) => CommitPlan |
 vi.mock("@/ui/hooks/use-ai-suggestion", () => ({
   useAiSuggestion: () => ({
     pending: currentPending,
-    status: "awaiting_decision" as AiSuggestionStatus,
+    status: currentStatus,
     invoke: vi.fn(),
     resolve: mockResolveSuggestion,
     dismiss: vi.fn().mockImplementation(() => mockResolveSuggestion({ kind: "rejected" })),
@@ -42,6 +43,7 @@ vi.mock("@/ui/hooks/use-ai-suggestion", () => ({
 
 beforeEach(() => {
   currentPending = { ...PENDING_DEFAULT };
+  currentStatus = "awaiting_decision";
   mockPreviewCommit = () => null;
 });
 
@@ -73,6 +75,15 @@ describe("SuggestionDrawer", () => {
     const { getByTestId, queryByTestId } = render(<SuggestionDrawer store_kind="frame" />);
     fireEvent.click(getByTestId("suggestion-edit"));
     expect(queryByTestId("suggestion-edit-textarea")).toBeTruthy();
+  });
+
+  // §12 F-28.
+  it("shows the human-readable short name in the header chip, not the bare hook id", () => {
+    const { container } = render(<SuggestionDrawer store_kind="frame" />);
+    // hook_id "G1" -> "checkpoint" via hookShortName. Don't pin to a specific
+    // element selector; the chip is the only place rendering "checkpoint".
+    expect(container.textContent ?? "").toContain("checkpoint");
+    expect(container.textContent ?? "").not.toMatch(/\bG1\b/);
   });
 });
 
@@ -196,6 +207,47 @@ describe("SuggestionDrawer — CommitPlan preview (§12 F-18)", () => {
     fireEvent.click(getByTestId("suggestion-edit"));
     expect(queryByTestId("suggestion-edit-parse-error")).toBeTruthy();
     expect(queryByTestId("commit-plan-preview")).toBeFalsy();
+  });
+
+  // §12 F-20.
+  it("labels all buttons 'Working…' under generic applying state with no triggering button known", () => {
+    currentStatus = "applying";
+    const { getByTestId } = render(<SuggestionDrawer store_kind="frame" />);
+    expect(getByTestId("suggestion-reject").textContent).toContain("Working");
+    expect(getByTestId("suggestion-edit").textContent).toContain("Working");
+    expect(getByTestId("suggestion-accept").textContent).toContain("Working");
+  });
+
+  it("shows Applying… on the Accept button when the user just clicked Accept", () => {
+    const { getByTestId, rerender } = render(<SuggestionDrawer store_kind="frame" />);
+    // Click Accept; inflight = "accepted" in the drawer's local state.
+    fireEvent.click(getByTestId("suggestion-accept"));
+    // Now flip the mock to "applying" and re-render — the drawer's inflight
+    // state survives across re-renders, so Accept's label specializes.
+    currentStatus = "applying";
+    rerender(<SuggestionDrawer store_kind="frame" />);
+    expect(getByTestId("suggestion-accept").textContent).toContain("Applying");
+    expect(getByTestId("suggestion-reject").textContent).toContain("Working");
+    expect(getByTestId("suggestion-edit").textContent).toContain("Working");
+  });
+
+  it("shows Cancelling… on the Reject button when the user just clicked Reject", () => {
+    const { getByTestId, rerender } = render(<SuggestionDrawer store_kind="frame" />);
+    fireEvent.click(getByTestId("suggestion-reject"));
+    currentStatus = "applying";
+    rerender(<SuggestionDrawer store_kind="frame" />);
+    expect(getByTestId("suggestion-reject").textContent).toContain("Cancelling");
+    expect(getByTestId("suggestion-accept").textContent).toContain("Working");
+  });
+
+  it("marks the footer aria-busy when applying, and clear when not", () => {
+    currentStatus = "applying";
+    const { getByTestId, rerender } = render(<SuggestionDrawer store_kind="frame" />);
+    expect(getByTestId("suggestion-footer-buttons").getAttribute("aria-busy")).toBe("true");
+    currentStatus = "awaiting_decision";
+    rerender(<SuggestionDrawer store_kind="frame" />);
+    // aria-busy is removed (undefined) once the action settles.
+    expect(getByTestId("suggestion-footer-buttons").getAttribute("aria-busy")).toBeNull();
   });
 
   it("collapses groups beyond 6 items into '…and N more'", () => {
