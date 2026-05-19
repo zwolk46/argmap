@@ -116,6 +116,16 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
     navigate({ kind: "frame_building", frame_id });
   }
 
+  async function on_go_home(): Promise<void> {
+    // §9 #11: same flush-before-route-change as on_switch_to_frame above.
+    try {
+      await autosave.flushAll();
+    } catch {
+      // Toast bridge surfaces failures; don't block navigation.
+    }
+    navigate({ kind: "home" });
+  }
+
   if (snapshot.is_loading) {
     return (
       <div data-testid="argument-running-loading">
@@ -145,7 +155,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
             on_open_session_settings: () => setSessionSettingsOpen(true),
             on_toggle_version_history: props.on_toggle_version_history,
             on_toggle_help: () => setHelpPaneOpen((v) => !v),
-            on_go_home: () => navigate({ kind: "home" }),
+            on_go_home: () => void on_go_home(),
             version_history_open: props.version_history_open,
             help_pane_open,
             title: session.title,

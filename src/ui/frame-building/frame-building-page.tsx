@@ -54,7 +54,7 @@ function inverseFlavor(current: Flavor | undefined): Flavor {
 
 export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
   const { frame_id } = props;
-  const { frame_store, repository, now, generateId } = useRepository();
+  const { frame_store, repository, autosave, now, generateId } = useRepository();
   // Discrete-field subscriptions avoid the whole-snapshot subscription
   // that caused every page-level patch (drag, edit, validation change) to
   // re-render the entire frame-building tree above FrameCanvas. Each
@@ -269,8 +269,21 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     }
   }
 
+  async function on_go_home(): Promise<void> {
+    // §9 #11: leaving Frame Building while autosave is mid-debounce can drop
+    // the in-flight edit because the per-user repository unmounts when the
+    // route changes. Mirror on_switch_to_frame in argument-running-page and
+    // flush before navigating.
+    try {
+      await autosave.flushAll();
+    } catch {
+      // Flush failures already surface via the save-failure toast bridge.
+    }
+    navigate({ kind: "home" });
+  }
+
   const top_bar_slots: TopBarSlots = {
-    home: <HomeButton onClick={() => navigate({ kind: "home" })} />,
+    home: <HomeButton onClick={() => void on_go_home()} />,
     modeToggle: (
       <OperatingModeToggle
         current_mode="frame_building"
