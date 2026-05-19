@@ -1,4 +1,4 @@
-Branch: worktree-audit-fixes-20260516 at /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-fixes-20260516. Not merged to main. The deployed Vercel build matches this branch (last deploy: audit-fixes-20260516.vercel.app, audit-fixes-20260516-d7ntwplih); main itself is still at c380c71.
+Branch: worktree-audit-fixes-20260516 at /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-fixes-20260516. Not merged to main. The deployed Vercel build matches this branch (last deploy: audit-fixes-20260516.vercel.app, audit-fixes-20260516-60a0ugvum); main itself is still at c380c71.
 
 Audit source of truth: /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-report-20260516/.claude/audit/2026-05-16/ (15 per-area markdown files: 01-boot-auth.md through 16-performance-misc.md).
 
