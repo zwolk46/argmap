@@ -1010,6 +1010,54 @@ const V_EDGE_4: ValidationRule = {
   },
 };
 
+// §15 F-10. V-EDGE-3/4 check storage location but not the .layer field itself.
+// A DECOMPOSES_INTO with layer="argument" (or an ANSWERS with layer="frame") passes
+// those rules clean; consumers that branch on e.layer silently misclassify it.
+const FRAME_LAYER_EDGE_TYPES = new Set<EdgeType>([
+  "DECOMPOSES_INTO",
+  "TURNS_ON",
+  "INTERPRETED_AS",
+  "LEADS_TO",
+  "FORECLOSES",
+  "GATES",
+  "CITES",
+  "BINDING_IN",
+  "DISTINGUISHED_BY",
+]);
+const ARGUMENT_LAYER_EDGE_TYPES = new Set<EdgeType>(["ANSWERS", "SUPPORTS", "CONTRADICTS"]);
+
+const V_EDGE_5: ValidationRule = {
+  id: "V-EDGE-5",
+  severity: "error",
+  description:
+    "Every edge's .layer field matches the layer declared by its type: frame-layer types need layer='frame'; argument-layer types need layer='argument'.",
+  evaluate(frame, session) {
+    const out: ValidationResult[] = [];
+    const checkEdge = (e: Edge): void => {
+      const expected = FRAME_LAYER_EDGE_TYPES.has(e.type)
+        ? "frame"
+        : ARGUMENT_LAYER_EDGE_TYPES.has(e.type)
+          ? "argument"
+          : null;
+      if (expected !== null && e.layer !== expected) {
+        out.push({
+          rule_id: "V-EDGE-5",
+          severity: "error",
+          edge_id: e.id,
+          message: `Edge ${e.id} (type ${e.type}) must have layer="${expected}" but has "${e.layer}".`,
+        });
+      }
+    };
+    for (const e of [...frame.edges].sort((a, b) => a.id.localeCompare(b.id))) checkEdge(e);
+    if (session) {
+      for (const e of [...session.argument_edges].sort((a, b) => a.id.localeCompare(b.id))) {
+        checkEdge(e);
+      }
+    }
+    return out;
+  },
+};
+
 // ============================================================================
 // V-GATE-1..6
 // ============================================================================
@@ -1589,6 +1637,64 @@ const V_NODE_11: ValidationRule = {
   },
 };
 
+// §15 F-10 (node side). Every non-Authority node's .layer must match the layer
+// declared by its type. RootQuestion/SubQuestion/Term/Interpretation/Checkpoint/
+// LogicalGate/Conclusion are always frame-layer; Premise is always argument-layer.
+// Authority is multi-valued and handled by V-NODE-11 (container-based check).
+const FRAME_ONLY_NODE_TYPES = new Set<NodeType>([
+  "RootQuestion",
+  "SubQuestion",
+  "Term",
+  "Interpretation",
+  "Checkpoint",
+  "LogicalGate",
+  "Conclusion",
+]);
+
+const V_NODE_12: ValidationRule = {
+  id: "V-NODE-12",
+  severity: "error",
+  description:
+    "Every non-Authority node's .layer field matches the layer declared by its type: frame-only types need layer='frame'; Premise needs layer='argument'. (Authority handled by V-NODE-11.)",
+  evaluate(frame, session) {
+    const out: ValidationResult[] = [];
+    for (const n of [...frame.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (n.type === "Authority") continue;
+      if (FRAME_ONLY_NODE_TYPES.has(n.type) && n.layer !== "frame") {
+        out.push({
+          rule_id: "V-NODE-12",
+          severity: "error",
+          node_id: n.id,
+          message: `Node ${n.id} (type ${n.type}) must have layer="frame" but has "${n.layer}".`,
+        });
+      }
+      if (n.type === "Premise" && (n.layer as string) !== "argument") {
+        out.push({
+          rule_id: "V-NODE-12",
+          severity: "error",
+          node_id: n.id,
+          message: `Premise ${n.id} must have layer="argument" but has "${n.layer as string}".`,
+        });
+      }
+    }
+    if (session) {
+      for (const p of [...session.premises].sort((a, b) => a.id.localeCompare(b.id))) {
+        // Cast: TS knows layer:"argument" is the literal type, but database data
+        // may deliver a different string at runtime — this rule exists for that case.
+        if ((p.layer as string) !== "argument") {
+          out.push({
+            rule_id: "V-NODE-12",
+            severity: "error",
+            node_id: p.id,
+            message: `Premise ${p.id} in session.premises must have layer="argument" but has "${p.layer as string}".`,
+          });
+        }
+      }
+    }
+    return out;
+  },
+};
+
 // ============================================================================
 // Full registry
 // ============================================================================
@@ -1617,10 +1723,12 @@ export const VALIDATION_RULES: ReadonlyArray<ValidationRule> = [
   V_NODE_9,
   V_NODE_10,
   V_NODE_11,
+  V_NODE_12,
   V_EDGE_1,
   V_EDGE_2,
   V_EDGE_3,
   V_EDGE_4,
+  V_EDGE_5,
   V_GATE_1,
   V_GATE_2,
   V_GATE_3,

@@ -61,12 +61,14 @@ const CASES: RuleCase[] = [
     malformed: fixtures.authorityLayerMismatchInSession,
     expected_count_min: 1,
   },
+  { rule_id: "V-NODE-12", malformed: fixtures.nodeLayerFieldMismatch, expected_count_min: 1 },
 
   // V-EDGE
   { rule_id: "V-EDGE-1", malformed: fixtures.badEdgeTypePair, expected_count_min: 1 },
   { rule_id: "V-EDGE-2", malformed: fixtures.duplicateEdge, expected_count_min: 1 },
   { rule_id: "V-EDGE-3", malformed: fixtures.argEdgeInFrameLayer, expected_count_min: 1 },
   { rule_id: "V-EDGE-4", malformed: fixtures.frameEdgeInArgLayer, expected_count_min: 1 },
+  { rule_id: "V-EDGE-5", malformed: fixtures.edgeLayerFieldMismatch, expected_count_min: 1 },
 
   // V-GATE
   { rule_id: "V-GATE-1", malformed: fixtures.andGateTooFewInputs, expected_count_min: 1 },
@@ -111,10 +113,12 @@ const EXPECTED_IDS = [
   "V-NODE-9",
   "V-NODE-10",
   "V-NODE-11",
+  "V-NODE-12",
   "V-EDGE-1",
   "V-EDGE-2",
   "V-EDGE-3",
   "V-EDGE-4",
+  "V-EDGE-5",
   "V-GATE-1",
   "V-GATE-2",
   "V-GATE-3",
