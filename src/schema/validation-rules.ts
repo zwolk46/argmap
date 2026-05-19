@@ -1,5 +1,5 @@
 import type { NodeRef, EdgeRef } from "./identifiers";
-import type { FrameVersion } from "./frame";
+import type { Frame, FrameVersion } from "./frame";
 import type { ArgumentSession, NodeStatus } from "./session";
 import type {
   Node,
@@ -44,6 +44,41 @@ export function runValidation(
   const sorted = [...rules].sort((a, b) => a.id.localeCompare(b.id));
   const out: ValidationResult[] = [];
   for (const r of sorted) out.push(...r.evaluate(frame, session));
+  return out;
+}
+
+/**
+ * §15 F-11: cross-Frame extension to V-FR-10. Validation rules operate on
+ * FrameVersion only; positions live on Frame. This helper runs at the
+ * Frame+FrameVersion load boundary (frame-store load/restore, runFrameAction
+ * post-transform) and reports general-mode Conclusions whose non-empty
+ * position_id doesn't resolve to any Position on the Frame. Returns sorted
+ * by node_id for determinism (Article II § 2).
+ */
+export function validateFrameVersionAgainstFrame(
+  frame: Frame,
+  version: FrameVersion,
+): ValidationResult[] {
+  if (frame.mode !== "general") return [];
+  const known = new Set((frame.positions ?? []).map((p) => p.id));
+  const out: ValidationResult[] = [];
+  for (const n of [...version.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+    if (n.type !== "Conclusion") continue;
+    const c = n as Conclusion;
+    if (c.direction.kind !== "general") continue;
+    const pid = c.direction.position_id;
+    // Empty position_id is caught by V-FR-10's local check; only emit here
+    // when the id is non-empty but absent from Frame.positions.
+    if (!pid || pid.trim() === "") continue;
+    if (!known.has(pid)) {
+      out.push({
+        rule_id: "V-FR-10",
+        severity: "error",
+        node_id: n.id,
+        message: `Conclusion ${n.id} references unknown position_id "${pid}" (not in Frame.positions).`,
+      });
+    }
+  }
   return out;
 }
 

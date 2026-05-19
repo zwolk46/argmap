@@ -59,7 +59,9 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
       try {
         const frame = await repo.loadFrame(frame_id);
         const frame_version = await repo.loadFrameVersion(frame.current_version_id);
-        const validation = validateOnly(frame_version, compute_driver);
+        // §15 F-11: pass `frame` so V-FR-10 picks up Conclusions whose
+        // position_id no longer resolves on the current Frame.
+        const validation = validateOnly(frame_version, compute_driver, frame);
         set({ frame, frame_version, validation, is_loading: false });
       } catch (e) {
         set({ error: (e as Error).message, is_loading: false });
@@ -118,7 +120,9 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
         change_summary && change_summary.length > 0 ? change_summary : undefined,
       );
       const next_frame: Frame = { ...frame, current_version_id: new_version.id };
-      const validation = validateOnly(new_version, compute_driver);
+      // §15 F-11: pair the restored version with the live Frame so an older
+      // version referencing a Position the user has since deleted surfaces.
+      const validation = validateOnly(new_version, compute_driver, next_frame);
       set({ frame: next_frame, frame_version: new_version, validation });
     },
 
