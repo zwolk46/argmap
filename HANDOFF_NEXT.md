@@ -16,7 +16,7 @@ Every CRITICAL across §1–§16, and the HIGHs in each section that didn't requ
 - §12 LLM hooks F-03, F-04, F-05 (frame + session halves both done), F-07, F-13, F-16, F-17 — schema_out is now enforced by runHook before commit (src/llm-hooks/schema-validate.ts); SuggestionResult and HookInvocationRecord carry prompt_body_hash + rendered_prompt_hash; the per-frame LlmSettings gate runs in useAiSuggestion for session-store hooks via session_store.rejectSuggestion(reason)
 - §13 a11y HIGH #7, #8, #10, #11, #12, #13, #15, #16, #17
 - §14 visual design HIGH #6, #7, #11, #27, #33
-- §15 schema F-3, F-4, F-5, F-7, F-8, F-12, F-14, F-15 (new V-ARG-9, V-NODE-10, transition advisories)
+- §15 schema F-3, F-4, F-5, F-7, F-8, F-9, F-12, F-14, F-15 (new V-ARG-9, V-NODE-10, V-NODE-11, transition advisories)
 - §16 perf F-07 (README), F-08 (smoke already correct)
 
 Material still to resolve — ordered by ROI
@@ -45,21 +45,20 @@ A11y / UX (mid-size):
 Schema (smaller):
 
 13. §15 F-6 Premise.kind discriminated union. **DEFERRED** — V-ARG-3 runtime already validates the cross-vocabulary leak, but the static type is a wide union. A real static guard requires either (a) splitting Premise into per-mode-flavor sub-types with consequence at every call site, or (b) carrying mode_flavor on each Premise (denormalization). Both break the Premise contract widely; the call is a schema design decision that warrants user input or its own focused session. Per Article IV § 4 substantial-hesitation standard.
-14. §15 F-9 Authority.layer enforcement. Add validation rule iterating frame.nodes Authority entries asserting layer === "frame", and session.session_authorities asserting layer === "argument". Audit (§15 finding F-9) has the spec.
-15. §15 F-10 Edge.layer / Node.layer type-pin rules. Per-edge-type and per-node-type layer constraints not enforced at runtime. New V-EDGE-5 and V-NODE-11 rules covering the cross-product.
-16. §15 F-11 cross-Frame position_id consistency. V-FR-10 only checks non-empty; the cross-Frame check is documented as deferred to repository layer but never wired. Add to src/persistence/supabase-repository.ts load paths.
-17. §15 F-13 linked_to SubQuestion-parent check. V-NODE-4 only checks the target Term exists in-FrameVersion. Audit wants same-SubQuestion parentage enforced.
+14. §15 F-10 Edge.layer / Node.layer type-pin rules. Per-edge-type and per-node-type layer constraints not enforced at runtime. New V-EDGE-5 and V-NODE-12 rules covering the cross-product. (V-NODE-11 is now taken by F-9.)
+15. §15 F-11 cross-Frame position_id consistency. V-FR-10 only checks non-empty; the cross-Frame check is documented as deferred to repository layer but never wired. Add to src/persistence/supabase-repository.ts load paths.
+16. §15 F-13 `linked_to` SubQuestion-parent check. **AMBIGUOUS — needs user input before implementing.** The audit header (15-schema-edges.md:121) says "Terms share the same SubQuestion parent," but the audit body describes the contract as "shared interpretations across SubQuestions" — the literal text says `linked_to` is meant to connect Terms ACROSS different SubQuestions, which the same-parent rule would forbid. Two defensible rules: (a) enforce same-SubQuestion parent (header reading; restrictive); (b) enforce that linked Terms have matching `INTERPRETED_AS` child sets (body reading; preserves the cross-SubQuestion feature). Pick before writing the new V-NODE rule. Per Article IV § 4 substantial-hesitation standard.
 
 Polish / dead-code:
 
-18. §16 F-13 audit-code rationale comments. // P0-N, // P1-N, // F-NNN markers leak into ~25 source files. Mechanical sweep. Don't touch unless you're already touching that file for a real fix — orphan diffs aren't worth the review burden.
-19. §16 F-26 error-boundary remote reporting. src/ui/error-boundary.tsx:24 logs to console only. Add Sentry / equivalent (out of scope for non-architectural pass).
-20. §16 F-28 vercel.json security headers. Missing CSP, X-Frame-Options, X-Content-Type-Options. Project root.
+17. §16 F-13 audit-code rationale comments. // P0-N, // P1-N, // F-NNN markers leak into ~25 source files. Mechanical sweep. Don't touch unless you're already touching that file for a real fix — orphan diffs aren't worth the review burden.
+18. §16 F-26 error-boundary remote reporting. src/ui/error-boundary.tsx:24 logs to console only. Add Sentry / equivalent (out of scope for non-architectural pass).
+19. §16 F-28 vercel.json security headers. Missing CSP, X-Frame-Options, X-Content-Type-Options. Project root.
 
 Working notes for the next agent
 
 - The codebase is on worktree-audit-fixes-20260516, NOT main. Main is unchanged at c380c71 (last commit: F-028 snapshot). Before continuing, either git checkout worktree-audit-fixes-20260516 from main repo, or work directly in /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-fixes-20260516. The user has not asked for a merge to main yet; do not push or merge without explicit consent.
-- Run npm test && npm run typecheck && npm run lint && npm run format -- --check from the worktree dir before each commit. All four were green at 1f8964b. Test count: 1658.
+- Run npm test && npm run typecheck && npm run lint && npm run format -- --check from the worktree dir before each commit. All four were green at 2c9450d. Test count: 1662.
 - CLAUDE.md determinism constraints are still binding: F-028 snapshot fields on FrameVersion, LLM model pinned to claude-3-7-sonnet-20250219 with temperature: 0, no dispose() on useMemo([]) resources (StrictMode), detectSessionInUrl: false in supabase-client.ts.
 - Use useOptionalToast (not useToast) in any primitive that may render in test harnesses without <ToastProvider>. Pattern established in chrome/frame-title.tsx and version-history/restore-confirm-dialog.tsx.
 - ESLint module boundaries: src/ui/ may only type-import from @/llm-hooks (no value imports). src/state/ may not import @/llm-hooks at all. If you need hook metadata at the UI layer (e.g., activation strings, mode_visibility), either pass it through @/schema or hardcode the minimum needed (see use-ai-suggestion.ts gate which uses both runtime + output-time group flags coarsely rather than activation lookup).
