@@ -1,4 +1,4 @@
-Branch: worktree-audit-fixes-20260516 at /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-fixes-20260516. Last passing-gate commit: f2c2774; deployed as dpl_F6cAJpfcXTFzpVgmBeoNJAgDtfaR via the primary directory after merge to main (user consented this session because the branch-scoped Vercel deployment was missing API keys). Test count: 1724. main is at HEAD of this branch after the merge.
+Branch: main (audit-fix work merged in this session at 0064bb5). Primary directory: /Users/zacharywolk/zwolk/argmap. Worktree at .claude/worktrees/audit-fixes-20260516 is now stale — future sessions should work on main directly, since the branch-scoped Vercel deployment was missing API keys and the user routed deploys through main. Last passing-gate commit: 1685829; production deploy: dpl_F6cAJpfcXTFzpVgmBeoNJAgDtfaR. Test count: 1724.
 
 **Manual verification needed on deployed build:**
 
