@@ -64,6 +64,18 @@ function commitPlanSummary(
   });
 }
 
+// §12 F-21: hooks that emit arrays of statements (G2 interpretations, G9
+// authorities, G11 gate clauses) cram into a 420px drawer with long lines
+// truncating mid-sentence. Widen them; everything else keeps the default.
+// Declared here rather than on HookContract because src/ui/ may only
+// type-import from @/llm-hooks — same pattern as `hookShortName` in
+// src/ui/primitives.
+const WIDE_DRAWER_HOOK_IDS: ReadonlySet<string> = new Set(["G2", "G9", "G11"]);
+
+export function suggestionDrawerWidth(hook_id: string): string {
+  return WIDE_DRAWER_HOOK_IDS.has(hook_id) ? "min(640px, 100vw)" : "min(420px, 100vw)";
+}
+
 function formatCommitWrite(w: FrameFieldWrite): string {
   if (w.op === "set" || w.op === "append") {
     const target = w.target_node_id ?? w.target_edge_id;
@@ -222,7 +234,7 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
   return (
     <Drawer
       open={is_open}
-      width="min(420px, 100vw)"
+      width={suggestionDrawerWidth(result.hook_id)}
       aria_label="AI suggestion review"
       onClose={is_applying ? undefined : handleReject}
     >

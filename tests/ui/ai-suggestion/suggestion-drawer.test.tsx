@@ -87,6 +87,30 @@ describe("SuggestionDrawer", () => {
   });
 });
 
+// §12 F-21: hooks that emit arrays of statements (G2/G9/G11) need a wider
+// drawer; the rest keep the default. Pure helper test — the drawer rendering
+// itself goes through the Drawer primitive width prop and is verified there.
+describe("suggestionDrawerWidth (§12 F-21)", () => {
+  it("widens G2/G9/G11 drawers to 640px", async () => {
+    const { suggestionDrawerWidth } = await import("@/ui/ai-suggestion/suggestion-drawer");
+    expect(suggestionDrawerWidth("G2")).toBe("min(640px, 100vw)");
+    expect(suggestionDrawerWidth("G9")).toBe("min(640px, 100vw)");
+    expect(suggestionDrawerWidth("G11")).toBe("min(640px, 100vw)");
+  });
+
+  it("keeps every other hook at the 420px default", async () => {
+    const { suggestionDrawerWidth } = await import("@/ui/ai-suggestion/suggestion-drawer");
+    for (const id of ["G1", "G3", "G4", "G5", "G6", "G7", "G8", "G10", "G12", "G13"]) {
+      expect(suggestionDrawerWidth(id)).toBe("min(420px, 100vw)");
+    }
+  });
+
+  it("falls back to 420px for unknown hook ids", async () => {
+    const { suggestionDrawerWidth } = await import("@/ui/ai-suggestion/suggestion-drawer");
+    expect(suggestionDrawerWidth("nonexistent")).toBe("min(420px, 100vw)");
+  });
+});
+
 describe("SuggestionDrawer — CommitPlan preview (§12 F-18)", () => {
   it("hides the preview section when previewCommit returns null", () => {
     mockPreviewCommit = () => null;
