@@ -58,12 +58,18 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   }, [editing]);
 
   if (editing) {
+    // §13 #18: while draft is blank, commit() will silently revert with a
+    // toast warning — mark the input aria-invalid so SR users hear the
+    // pending-revert state before they tab away.
+    const draft_blank = draft.trim().length === 0;
     return (
       <input
         ref={inputRef}
         data-testid="frame-title-input"
         value={draft}
         maxLength={FRAME_TITLE_MAX_LENGTH}
+        aria-invalid={draft_blank ? true : undefined}
+        aria-label="Frame title"
         onChange={(e) => setDraft(flattenWhitespace(e.target.value))}
         onPaste={(e) => {
           // Intercept paste so multi-line clipboard content is flattened

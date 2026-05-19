@@ -14,6 +14,9 @@ export function MetadataSection(): ReactElement {
   React.useEffect(() => setDraftTitle(title), [title]);
   React.useEffect(() => setDraftDescription(description), [description]);
 
+  // §13 #18: surface the pending silent-revert state through aria-invalid.
+  const title_blank = draft_title.trim().length === 0;
+
   function commitTitle(): void {
     // §9 #27: empty / whitespace-only titles silently persisted as "" — the
     // session list later rendered an unnamed row. Require a non-empty trimmed
@@ -89,6 +92,9 @@ export function MetadataSection(): ReactElement {
           data-testid="metadata-title-input"
           type="text"
           value={draft_title}
+          required
+          aria-required="true"
+          aria-invalid={title_blank ? true : undefined}
           onChange={(e) => setDraftTitle(e.target.value)}
           onBlur={commitTitle}
           onKeyDown={(e) => {

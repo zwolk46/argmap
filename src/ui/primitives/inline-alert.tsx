@@ -8,6 +8,8 @@ export interface InlineAlertProps {
   testId?: string;
   /** Override the implicit aria role (default: alert for error, status otherwise). */
   role?: "alert" | "status";
+  /** DOM id, so a related form input can point at this alert via aria-describedby. */
+  id?: string;
 }
 
 /**
@@ -37,11 +39,12 @@ const KIND_STYLES: Record<InlineAlertKind, { fg: string; bg: string }> = {
   },
 };
 
-export function InlineAlert({ kind, children, testId, role }: InlineAlertProps): ReactElement {
+export function InlineAlert({ kind, children, testId, role, id }: InlineAlertProps): ReactElement {
   const styles = KIND_STYLES[kind];
   const resolvedRole = role ?? (kind === "error" ? "alert" : "status");
   return (
     <div
+      id={id}
       data-testid={testId}
       role={resolvedRole}
       aria-live={kind === "error" ? "assertive" : "polite"}

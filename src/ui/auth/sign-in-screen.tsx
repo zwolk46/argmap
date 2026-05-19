@@ -32,6 +32,20 @@ export function SignInScreen(): ReactElement {
 
   const email_id = React.useId();
   const password_id = React.useId();
+  const error_id = React.useId();
+  const password_hint_id = React.useId();
+
+  // §13 #18: link the password length hint and any inline error back to the
+  // inputs that produced them. Supabase's auth errors don't reliably identify
+  // which field is at fault, so when an error is shown we mark both inputs
+  // aria-invalid and point both at the error message — a sighted user sees
+  // the same one alert, and SR users get the alert announced from either
+  // field they're standing on.
+  const password_describedby =
+    [mode === "sign_up" ? password_hint_id : null, error ? error_id : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
+  const email_describedby = error ? error_id : undefined;
 
   async function onSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
@@ -128,6 +142,8 @@ export function SignInScreen(): ReactElement {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={form_locked}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={email_describedby}
             className="argmap-input"
             style={{ fontSize: "var(--font-size-base)" }}
           />
@@ -150,11 +166,14 @@ export function SignInScreen(): ReactElement {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={form_locked}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={password_describedby}
             className="argmap-input"
             style={{ fontSize: "var(--font-size-base)" }}
           />
           {mode === "sign_up" ? (
             <span
+              id={password_hint_id}
               style={{
                 fontSize: "var(--font-size-xs)",
                 color: "var(--color-text-tertiary)",
@@ -170,7 +189,7 @@ export function SignInScreen(): ReactElement {
         </div>
 
         {error ? (
-          <InlineAlert kind="error" testId="sign-in-error">
+          <InlineAlert kind="error" id={error_id} testId="sign-in-error">
             {error}
           </InlineAlert>
         ) : null}

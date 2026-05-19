@@ -41,6 +41,8 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
     title: "",
     description: "",
   });
+  const title_counter_id = React.useId();
+  const counter_visible = state.title.length > TITLE_MAX_LENGTH * 0.8;
 
   function canSubmit(): boolean {
     if (!state.mode) return false;
@@ -146,11 +148,15 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
           onChange={(e) => setState((s) => ({ ...s, title: e.target.value }))}
           className="argmap-input"
           autoFocus
+          required
+          aria-required="true"
           maxLength={TITLE_MAX_LENGTH}
+          aria-describedby={counter_visible ? title_counter_id : undefined}
           placeholder="e.g. Smith v. Jones — appellate brief"
         />
-        {state.title.length > TITLE_MAX_LENGTH * 0.8 ? (
+        {counter_visible ? (
           <p
+            id={title_counter_id}
             data-testid="wizard-title-counter"
             style={{
               marginTop: "var(--space-1)",
