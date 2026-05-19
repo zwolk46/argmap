@@ -240,6 +240,8 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
           argument_edges: [],
           checkpoint_responses: [],
           interpretation_selections: [],
+          // §8 #1: snapshot the frame this version is authored against.
+          frame_version_snapshot: snapshot.frame_version,
         };
         const blank_session = {
           id: new_session_id,

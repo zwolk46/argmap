@@ -31,6 +31,21 @@ const EMPTY_VERSION: FrameVersion = {
   is_milestone: false,
 };
 
+/**
+ * §8 #1: pick the FrameVersion that the version-history preview should
+ * render. Prefer the session-version's own snapshot (captured when the ASV
+ * was written) so historical previews render the historical frame. Fall
+ * back to the live session's snapshot for legacy ASVs persisted before the
+ * field existed; finally fall back to EMPTY_VERSION while the version is
+ * still loading or for orphan rows.
+ */
+export function pickFrameForSessionPreview(
+  session_version: ArgumentSessionVersion | null,
+  live_session_snapshot: FrameVersion | null,
+): FrameVersion {
+  return session_version?.frame_version_snapshot ?? live_session_snapshot ?? EMPTY_VERSION;
+}
+
 export function buildArgumentOverlayFromSessionVersion(
   v: ArgumentSessionVersion | null,
 ): ArgumentOverlay {
@@ -55,7 +70,10 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
   const { version_id, version_number } = props;
   const result = useVersionFullLoad({ kind: "session", version_id });
   const preview = useVersionHistoryPreview();
-  const frame_version_snapshot = useSessionStore((s) => s.session?.frame_version_snapshot ?? null);
+  // §8 #1: legacy ArgumentSessionVersions written before the snapshot field
+  // existed fall back to the live session's snapshot. New versions always
+  // carry their own snapshot, so preview renders the historical frame.
+  const live_frame_snapshot = useSessionStore((s) => s.session?.frame_version_snapshot ?? null);
   const [selected, setSelected] = React.useState<ReadonlyArray<NodeRef>>([]);
 
   const session_version =
@@ -68,7 +86,10 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
     [session_version],
   );
 
-  const frame_for_canvas: FrameVersion = frame_version_snapshot ?? EMPTY_VERSION;
+  const frame_for_canvas: FrameVersion = pickFrameForSessionPreview(
+    session_version,
+    live_frame_snapshot,
+  );
   const layout_status = useLayoutResult(frame_for_canvas);
   const layout_result =
     layout_status.kind === "ready"

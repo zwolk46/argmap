@@ -819,6 +819,8 @@ export function buildTutorial(opts: TutorialBuildOpts): TutorialBuildResult {
     checkpoint_responses,
     interpretation_selections,
     is_milestone: true,
+    // §8 #1: snapshot the frame this version is authored against.
+    frame_version_snapshot: frame_version,
   };
 
   const session: ArgumentSession = {

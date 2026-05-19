@@ -383,11 +383,19 @@ export class SupabaseRepository implements Repository {
     }
     const session = session_row.data.payload as ArgumentSession;
 
+    // §8 #1: backfill the frame snapshot from the parent session if the
+    // caller didn't supply one (legacy persistence-test paths, raw writes).
+    // Action-runner, migrate, restore, and initial-creation paths all set
+    // it directly; this is the safety net for everything else.
+    const with_snapshot: ArgumentSessionVersion = version.frame_version_snapshot
+      ? version
+      : { ...version, frame_version_snapshot: session.frame_version_snapshot };
+
     let to_write: ArgumentSessionVersion;
     if (existing.data) {
       to_write = {
-        ...version,
-        parent_version_id: existing.data.parent_version_id ?? version.parent_version_id,
+        ...with_snapshot,
+        parent_version_id: existing.data.parent_version_id ?? with_snapshot.parent_version_id,
         version_number: existing.data.version_number,
       };
     } else {
@@ -407,7 +415,7 @@ export class SupabaseRepository implements Repository {
         }
       }
       to_write = {
-        ...version,
+        ...with_snapshot,
         parent_version_id: prior_real_id,
         version_number: prior_real_id ? prior_version_number + 1 : 1,
       };
@@ -592,6 +600,8 @@ export class SupabaseRepository implements Repository {
       argument_edges: new_arg_edges,
       checkpoint_responses: new_checkpoint_responses,
       session_authorities: new_session_authorities,
+      // §8 #1: the new version is authored against the target frame.
+      frame_version_snapshot: target,
     };
     // Point session at the new frame_version_id + snapshot.
     const next_session: ArgumentSession = {
@@ -635,6 +645,7 @@ export class SupabaseRepository implements Repository {
     change_summary?: string,
   ): Promise<ArgumentSessionVersion> {
     const ancestor = await this.loadSessionVersion(ancestor_version_id);
+    const session = await this.loadSession(session_id);
     const existing = await this.listSessionVersionSummaries(session_id);
     const max_version = existing.reduce((m, v) => Math.max(m, v.version_number), 0);
     const ts = this.now();
@@ -647,6 +658,10 @@ export class SupabaseRepository implements Repository {
       created_at: ts,
       is_milestone: true,
       change_summary: change_summary ?? `Restored from version ${ancestor.version_number}`,
+      // §8 #1: restore replays the ancestor's premises into a new head that
+      // lives in the *current* frame context — the live session's
+      // frame_version_id is unchanged by restore. Snapshot today's frame.
+      frame_version_snapshot: session.frame_version_snapshot,
     };
     await this.saveSessionVersion(new_version);
     return new_version;

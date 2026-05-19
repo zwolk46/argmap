@@ -124,6 +124,8 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
           argument_edges: [],
           checkpoint_responses: [],
           interpretation_selections: [],
+          // §8 #1: snapshot the frame this version is authored against.
+          frame_version_snapshot: frame_version,
         } as never);
         session_id = new_session_id;
       }

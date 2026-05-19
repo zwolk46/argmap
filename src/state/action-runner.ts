@@ -398,6 +398,8 @@ export function runSessionAction(input: RunSessionActionInput): SessionActionRes
   const transform = handler(session, current_version, patch, opts);
 
   const new_version_id = generateId();
+  // §8 #1: capture the frame the session is currently anchored against so
+  // version-history preview renders the historical frame.
   const next_version: ArgumentSessionVersion = {
     ...transform.next_version_raw,
     id: new_version_id,
@@ -406,6 +408,7 @@ export function runSessionAction(input: RunSessionActionInput): SessionActionRes
     parent_version_id: current_version.id,
     created_at: now,
     is_milestone: false,
+    frame_version_snapshot: session.frame_version_snapshot,
   };
 
   const compute_result = compute_driver.runFor(transform.next_session_raw, now);
