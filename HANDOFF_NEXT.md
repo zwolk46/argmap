@@ -1,4 +1,6 @@
-Branch: worktree-audit-fixes-20260516 at /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-fixes-20260516. Not merged to main. Last passing-gate commit: 3faf1b5; HEAD currently at 3faf1b5 (not yet redeployed since 60a0ugvum). Test count: 1669. main itself is still at c380c71.
+Branch: worktree-audit-fixes-20260516 at /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-fixes-20260516. Not merged to main. Last passing-gate commit: 859eb1f; deployed as dpl_4LzZqy8QXNy3H91rht8VV9YBvSzC → audit-fixes-20260516.vercel.app. Test count: 1669. main itself is still at c380c71.
+
+**Manual verification needed on deployed build (CSP from §16 F-28):** Open https://audit-fixes-20260516.vercel.app in a browser with DevTools Console open and walk: sign-in (Supabase + Google Fonts), Frame Building canvas (ELK worker), AI hook flow (Anthropic API). Any console line starting with "Refused to … because it violates …" indicates the CSP needs widening in vercel.json. Curl confirmed all five headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) are served correctly — only runtime CSP compliance remains to confirm.
 
 Audit source of truth: /Users/zacharywolk/zwolk/argmap/.claude/worktrees/audit-report-20260516/.claude/audit/2026-05-16/ (15 per-area markdown files: 01-boot-auth.md through 16-performance-misc.md).
 
