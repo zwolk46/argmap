@@ -72,9 +72,11 @@ export function ValidationIndicator({
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
+        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border-subtle)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLElement).style.background = "transparent";
+        (e.currentTarget as HTMLElement).style.borderColor = "transparent";
       }}
     >
       <SeverityIcon severity={severity} size={14} />

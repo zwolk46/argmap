@@ -34,6 +34,7 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
     <Drawer
       open={open}
       onClose={onClose}
+      show_backdrop
       width="min(360px, 100vw)"
       aria_label="Help, glossary, and app preferences"
     >

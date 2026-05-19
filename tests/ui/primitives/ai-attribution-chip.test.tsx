@@ -48,6 +48,19 @@ describe("AiAttributionChip", () => {
     expect(getByText(FIXTURE.hook_id)).toBeTruthy();
     expect(getByText(FIXTURE.model_id)).toBeTruthy();
   });
+
+  // §12 F-22: hook_id-only path (no provenance record yet — used by the
+  // session-level G6 rewrite header until F-09 wires invocation linkage).
+  it("renders the hook short name when given only hook_id", () => {
+    const { container, getByTestId } = render(<AiAttributionChip hook_id="G6" />);
+    expect(getByTestId("ai-attribution-chip")).toBeTruthy();
+    expect(container.textContent).toContain("rewrite");
+  });
+
+  it("renders nothing when neither record nor hook_id is provided", () => {
+    const { container } = render(<AiAttributionChip />);
+    expect(container.querySelector("[data-testid='ai-attribution-chip']")).toBeNull();
+  });
 });
 
 describe("hookShortName", () => {

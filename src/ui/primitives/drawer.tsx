@@ -8,6 +8,12 @@ export interface DrawerProps {
   open: boolean;
   onClose?: () => void;
   dismiss_on_escape?: boolean;
+  // §9 #25: opt-in semi-transparent backdrop + click-outside-to-dismiss.
+  // Off by default so async drawers (e.g. SuggestionDrawer) can't lose
+  // user work via accidental scrim click; the two side panels that share
+  // the same Z.drawer band — HelpGlossaryPane and SessionSettingsPanel —
+  // turn it on to get a global "dismiss" affordance and visual layering.
+  show_backdrop?: boolean;
   width?: string;
   height?: string;
   side?: DrawerSide;
@@ -72,6 +78,7 @@ export function Drawer({
   open,
   onClose,
   dismiss_on_escape = true,
+  show_backdrop = false,
   width = "360px",
   height = "260px",
   side = "right",
@@ -205,20 +212,42 @@ export function Drawer({
   // The `inert` attribute removes the subtree from both tab order and
   // pointer events while keeping it in the DOM for the transition.
   return (
-    <div
-      data-testid="drawer"
-      data-open={open}
-      data-side={side}
-      role="dialog"
-      aria-label={aria_label}
-      aria-hidden={!open}
-      // React passes `inert` straight through to the DOM element since
-      // React 19 / TS lib.dom; for older typings we coerce.
-      {...(!open ? ({ inert: "" } as { inert: string }) : {})}
-      ref={root_ref}
-      style={{ ...baseStyle, ...positionalStyle }}
-    >
-      {children}
-    </div>
+    <>
+      {show_backdrop ? (
+        <div
+          data-testid="drawer-backdrop"
+          data-open={open}
+          aria-hidden="true"
+          onClick={open ? onClose : undefined}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--color-surface-overlay)",
+            // One band below the drawer so the panel renders above the
+            // scrim. The scrim still sits above topbar (50) so chrome
+            // dims along with canvas content while the drawer is open.
+            zIndex: Z.drawer - 1,
+            opacity: open ? 1 : 0,
+            pointerEvents: open ? "auto" : "none",
+            transition: "opacity var(--duration-medium) var(--ease-emphasized)",
+          }}
+        />
+      ) : null}
+      <div
+        data-testid="drawer"
+        data-open={open}
+        data-side={side}
+        role="dialog"
+        aria-label={aria_label}
+        aria-hidden={!open}
+        // React passes `inert` straight through to the DOM element since
+        // React 19 / TS lib.dom; for older typings we coerce.
+        {...(!open ? ({ inert: "" } as { inert: string }) : {})}
+        ref={root_ref}
+        style={{ ...baseStyle, ...positionalStyle }}
+      >
+        {children}
+      </div>
+    </>
   );
 }
