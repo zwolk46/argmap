@@ -5,6 +5,8 @@ import { useAiSuggestion } from "@/ui/hooks/use-ai-suggestion";
 
 const mockInvokeHook = vi.fn().mockResolvedValue(undefined);
 const mockResolveSuggestion = vi.fn().mockResolvedValue(undefined);
+const mockPreviewCommitFrame = vi.fn(() => null as unknown);
+const mockPreviewCommitSession = vi.fn(() => null as unknown);
 
 vi.mock("@/state", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/state")>();
@@ -20,10 +22,18 @@ vi.mock("@/state", async (importOriginal) => {
     ),
     useRepository: vi.fn(() => ({
       frame_store: {
-        getState: () => ({ invokeHook: mockInvokeHook, resolveSuggestion: mockResolveSuggestion }),
+        getState: () => ({
+          invokeHook: mockInvokeHook,
+          resolveSuggestion: mockResolveSuggestion,
+          previewCommit: mockPreviewCommitFrame,
+        }),
       },
       session_store: {
-        getState: () => ({ invokeHook: mockInvokeHook, resolveSuggestion: mockResolveSuggestion }),
+        getState: () => ({
+          invokeHook: mockInvokeHook,
+          resolveSuggestion: mockResolveSuggestion,
+          previewCommit: mockPreviewCommitSession,
+        }),
       },
     })),
   };
@@ -55,5 +65,31 @@ describe("useAiSuggestion", () => {
     const { result } = renderHook(() => useAiSuggestion("frame"));
     await act(() => result.current.dismiss());
     expect(mockResolveSuggestion).toHaveBeenCalledWith({ kind: "rejected" });
+  });
+
+  // §12 F-18.
+  it("previewCommit routes to frame_store when store_kind=frame", () => {
+    mockPreviewCommitFrame.mockClear();
+    mockPreviewCommitFrame.mockReturnValue({ writes: [], versioned: false });
+    const { result } = renderHook(() => useAiSuggestion("frame"));
+    const plan = result.current.previewCommit({ kind: "accepted", final: "x" });
+    expect(mockPreviewCommitFrame).toHaveBeenCalledWith({ kind: "accepted", final: "x" });
+    expect(plan).toEqual({ writes: [], versioned: false });
+  });
+
+  it("previewCommit routes to session_store when store_kind=session", () => {
+    mockPreviewCommitSession.mockClear();
+    mockPreviewCommitSession.mockReturnValue({ writes: [], versioned: true });
+    const { result } = renderHook(() => useAiSuggestion("session"));
+    const plan = result.current.previewCommit({ kind: "accepted", final: "x" });
+    expect(mockPreviewCommitSession).toHaveBeenCalledWith({ kind: "accepted", final: "x" });
+    expect(plan).toEqual({ writes: [], versioned: true });
+  });
+
+  it("previewCommit returns null when store returns null", () => {
+    mockPreviewCommitFrame.mockClear();
+    mockPreviewCommitFrame.mockReturnValue(null);
+    const { result } = renderHook(() => useAiSuggestion("frame"));
+    expect(result.current.previewCommit({ kind: "accepted", final: "x" })).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { HookId, SuggestionResult, ConfirmationDecision } from "@/llm-hooks";
+import type { HookId, SuggestionResult, ConfirmationDecision, CommitPlan } from "@/llm-hooks";
 import type { LlmSettings } from "@/schema";
 import { useFrameStore, useSessionStore, useRepository } from "@/state";
 
@@ -46,6 +46,13 @@ export interface UseAiSuggestionReturn<TOut> {
   invoke: (hook_id: HookId, args: unknown) => Promise<void>;
   resolve: (decision: ConfirmationDecision<TOut>) => Promise<void>;
   dismiss: () => Promise<void>;
+  /**
+   * §12 F-18: synchronous preview of the CommitPlan that resolve(decision) would
+   * produce. Returns null when no plan can be computed (no pending suggestion,
+   * no preview wired, or hook.commit threw). Drawer renders the plan above the
+   * Reject/Edit/Accept buttons so users see what they're signing off on.
+   */
+  previewCommit: (decision: ConfirmationDecision<TOut>) => CommitPlan | null;
 }
 
 export function useAiSuggestion<TOut>(
@@ -98,5 +105,14 @@ export function useAiSuggestion<TOut>(
     await resolve({ kind: "rejected" } as ConfirmationDecision<TOut>);
   }, [resolve]);
 
-  return { pending, status, enabled: ai_hooks_enabled, invoke, resolve, dismiss };
+  const previewCommit = React.useCallback(
+    (decision: ConfirmationDecision<TOut>): CommitPlan | null => {
+      const store = store_kind === "frame" ? frame_store : session_store;
+      const plan = store.getState().previewCommit(decision);
+      return (plan as CommitPlan | null) ?? null;
+    },
+    [store_kind, frame_store, session_store],
+  );
+
+  return { pending, status, enabled: ai_hooks_enabled, invoke, resolve, dismiss, previewCommit };
 }

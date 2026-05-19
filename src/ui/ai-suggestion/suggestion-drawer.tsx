@@ -1,8 +1,74 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { SuggestionResult, ConfirmationDecision } from "@/llm-hooks";
+import type {
+  SuggestionResult,
+  ConfirmationDecision,
+  CommitPlan,
+  FrameFieldWrite,
+} from "@/llm-hooks";
 import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, Button, AiSparkle } from "../primitives";
 import { useAiSuggestion } from "../hooks/use-ai-suggestion";
+
+// §12 F-18: render a CommitPlan as a human-readable summary so users see
+// the writes that Accept would persist (e.g., a G2 interpretation
+// suggestion that quietly creates 3 Authority nodes + 3 CITES edges in
+// legal mode). Constitution Art III § 2 — practitioners need to know
+// what they're signing off on.
+function commitPlanSummary(
+  plan: CommitPlan | null,
+): { label: string; items: ReadonlyArray<string> }[] {
+  if (!plan || plan.writes.length === 0) return [];
+  const order: string[] = [];
+  const groups = new Map<string, FrameFieldWrite[]>();
+  for (const w of plan.writes) {
+    const value_type =
+      typeof w.value === "object" && w.value !== null
+        ? ((w.value as { type?: unknown }).type ?? null)
+        : null;
+    const key = `${w.op}:${typeof value_type === "string" ? value_type : "·"}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+      order.push(key);
+    }
+    groups.get(key)!.push(w);
+  }
+  return order.map((key) => {
+    const writes = groups.get(key)!;
+    const [op, type] = key.split(":", 2);
+    const count = writes.length;
+    const has_type = type && type !== "·";
+    let label: string;
+    if (op === "create_node") {
+      label = has_type
+        ? `Create ${count} ${type} node${count === 1 ? "" : "s"}`
+        : `Create ${count} node${count === 1 ? "" : "s"}`;
+    } else if (op === "create_edge") {
+      label = has_type
+        ? `Create ${count} ${type} edge${count === 1 ? "" : "s"}`
+        : `Create ${count} edge${count === 1 ? "" : "s"}`;
+    } else if (op === "set") {
+      label = `Update ${count} field${count === 1 ? "" : "s"}`;
+    } else {
+      label = `Append to ${count} field${count === 1 ? "" : "s"}`;
+    }
+    const items = writes.map(formatCommitWrite).filter((s) => s.length > 0);
+    return { label, items };
+  });
+}
+
+function formatCommitWrite(w: FrameFieldWrite): string {
+  if (w.op === "set" || w.op === "append") {
+    const target = w.target_node_id ?? w.target_edge_id;
+    return target ? `${target} · ${w.field_path}` : w.field_path;
+  }
+  const v = w.value;
+  if (typeof v !== "object" || v === null) return String(v);
+  const human = v as { statement?: unknown; name?: unknown; label?: unknown };
+  if (typeof human.statement === "string") return human.statement;
+  if (typeof human.name === "string") return human.name;
+  if (typeof human.label === "string") return human.label;
+  return "";
+}
 
 // F-17: previous preview was a raw JSON.stringify dump for any structured
 // suggestion. Render arrays as a bullet list and objects as a key: value
@@ -57,7 +123,7 @@ export interface SuggestionDrawerProps {
 }
 
 export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactElement | null {
-  const { pending, status, resolve } = useAiSuggestion(store_kind);
+  const { pending, status, resolve, previewCommit } = useAiSuggestion(store_kind);
   const [editing, setEditing] = React.useState(false);
   // For structured (non-string) suggestions we hold the textarea's JSON
   // string here while the user edits. On commit we parse it back into the
@@ -112,6 +178,24 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
   }
 
   const result = pending as SuggestionResult<unknown>;
+
+  // §12 F-18: derive a hypothetical decision matching the user's current
+  // state (raw suggestion or in-progress edit) so we can preview the writes
+  // hook.commit() will produce. Edit with a parse error has no previewable
+  // value — leave commit_plan null in that branch so the section hides.
+  const preview_decision: ConfirmationDecision<unknown> | null = (() => {
+    if (!editing) return { kind: "accepted", final: result.parsed };
+    if (parse_error !== null) return null;
+    const is_string = typeof result.parsed === "string";
+    if (is_string) return { kind: "edited", final: edit_text };
+    try {
+      return { kind: "edited", final: JSON.parse(edit_text) };
+    } catch {
+      return null;
+    }
+  })();
+  const commit_plan: CommitPlan | null = preview_decision ? previewCommit(preview_decision) : null;
+  const commit_summary = commitPlanSummary(commit_plan);
 
   // F-16: Drawer Escape was a no-op for AI suggestions because no onClose
   // handler was wired. Treat Escape as "Reject" so the keyboard-only flow
@@ -205,6 +289,91 @@ export function SuggestionDrawer({ store_kind }: SuggestionDrawerProps): ReactEl
             {formatPreview(result.parsed)}
           </div>
         )}
+        {commit_plan ? (
+          <section
+            data-testid="commit-plan-preview"
+            aria-label="Changes that will be applied"
+            style={{
+              marginTop: "var(--space-3)",
+              padding: "var(--space-3)",
+              background: "var(--color-surface-pane)",
+              borderRadius: "var(--radius-md)",
+              border: "var(--border-hairline) solid var(--color-border-subtle)",
+            }}
+          >
+            <header
+              style={{
+                fontSize: "var(--font-size-xs)",
+                fontWeight: "var(--font-weight-semibold)",
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                letterSpacing: "var(--letter-spacing-wide)",
+                marginBottom: "var(--space-2)",
+              }}
+            >
+              Changes that will be applied
+            </header>
+            {commit_summary.length === 0 ? (
+              <p
+                data-testid="commit-plan-empty"
+                style={{
+                  margin: 0,
+                  fontSize: "var(--font-size-sm)",
+                  color: "var(--color-text-secondary)",
+                  fontStyle: "italic",
+                }}
+              >
+                No structural changes — this is an advisory only.
+              </p>
+            ) : (
+              <ul
+                data-testid="commit-plan-groups"
+                style={{
+                  margin: 0,
+                  paddingLeft: "var(--space-4)",
+                  fontSize: "var(--font-size-sm)",
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                {commit_summary.map((group, gi) => (
+                  <li key={gi} style={{ marginBottom: "var(--space-1)" }}>
+                    <span style={{ fontWeight: "var(--font-weight-medium)" }}>{group.label}</span>
+                    {group.items.length > 0 ? (
+                      <ul
+                        style={{
+                          margin: "var(--space-1) 0 0",
+                          paddingLeft: "var(--space-4)",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        {group.items.slice(0, 6).map((item, ii) => (
+                          <li key={ii}>{item}</li>
+                        ))}
+                        {group.items.length > 6 ? (
+                          <li style={{ fontStyle: "italic" }}>
+                            …and {group.items.length - 6} more
+                          </li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {commit_plan.versioned && commit_plan.writes.length > 0 ? (
+              <p
+                data-testid="commit-plan-versioned"
+                style={{
+                  margin: "var(--space-2) 0 0",
+                  fontSize: "var(--font-size-xs)",
+                  color: "var(--color-text-tertiary)",
+                }}
+              >
+                A new version will be saved.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
       </DrawerBody>
       <DrawerFooter>
         <Button

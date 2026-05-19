@@ -24,6 +24,12 @@ interface FrameStoreActions {
   restoreVersion(ancestor_version_id: FrameVersionId, change_summary?: string): Promise<void>;
   invokeHook(hook_id: string, args: unknown): Promise<void>;
   resolveSuggestion(decision: unknown): Promise<void>;
+  /**
+   * §12 F-18: synchronous preview of the CommitPlan that resolveSuggestion(decision)
+   * would produce. Returns null when there is no pending suggestion or no preview_commit
+   * is wired. UI casts the unknown return to a CommitPlan via @/llm-hooks type imports.
+   */
+  previewCommit(decision: unknown): unknown;
   clearPendingSuggestion(): void;
   dispose(): void;
 }
@@ -40,6 +46,14 @@ export interface CreateFrameStoreOpts {
   generateId: () => string;
   invoke_hook?: (hook_id: string, args: unknown) => Promise<unknown>;
   apply_decision?: (hook_id: string, suggestion: unknown, decision: unknown) => Promise<void>;
+  /**
+   * §12 F-18: synchronous CommitPlan preview. Called by the SuggestionDrawer
+   * before Accept so the user sees the writes that resolveSuggestion would
+   * produce. Implementation lives outside the store (it routes to hook.commit
+   * in @/llm-hooks, which state may not import). Returns null when no plan
+   * can be computed (e.g., rejected, or hook produced an error fallback).
+   */
+  preview_commit?: (hook_id: string, suggestion: unknown, decision: unknown) => unknown;
 }
 
 export function createFrameStore(opts: CreateFrameStoreOpts) {
@@ -170,6 +184,25 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
         }
       } finally {
         set({ pending_suggestion: null, suggestion_status: "idle" });
+      }
+    },
+
+    previewCommit(decision: unknown): unknown {
+      const { pending_suggestion } = get();
+      if (!pending_suggestion) return null;
+      // §12 F-18: a rejected decision always yields an empty plan; we don't
+      // need a wired preview_commit to know that.
+      if ((decision as { kind?: string } | null)?.kind === "rejected") {
+        return { writes: [], versioned: false };
+      }
+      if (!opts.preview_commit) return null;
+      const hook_id = (pending_suggestion as { hook_id?: string }).hook_id ?? "";
+      try {
+        return opts.preview_commit(hook_id, pending_suggestion, decision);
+      } catch {
+        // hook.commit throwing during preview should not crash the drawer.
+        // Caller renders "preview unavailable" when this returns null.
+        return null;
       }
     },
 
