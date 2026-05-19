@@ -1,8 +1,7 @@
-import type { ReactElement } from "react";
-import type { NodeRef } from "@/schema";
+import { useMemo, type ReactElement } from "react";
+import type { NodeRef, ValidationResult } from "@/schema";
 import { VALIDATION_RULE_DESCRIPTIONS } from "@/schema";
 import { useFrameStore } from "@/state";
-import { selectValidationByNode } from "@/state";
 import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
 
 export interface InspectorValidationBlockProps {
@@ -13,12 +12,21 @@ export function InspectorValidationBlock(
   props: InspectorValidationBlockProps,
 ): ReactElement | null {
   const { node_id } = props;
-  const snapshot = useFrameStore((s) => s);
-  const by_node = selectValidationByNode(snapshot);
-  const results = by_node.get(node_id);
-  const frame_version = snapshot.frame_version;
+  // Subscribe via narrow selectors — `useFrameStore((s) => s)` re-renders
+  // on every patch (drag, edit) including ones that don't touch validation
+  // or the frame version, which is the anti-pattern frame-building-page
+  // explicitly avoids.
+  const validation = useFrameStore((s) => s.validation);
+  const frame_version = useFrameStore((s) => s.frame_version);
+  const results = useMemo(() => {
+    const out: ValidationResult[] = [];
+    for (const r of validation) {
+      if (r.node_id === node_id) out.push(r);
+    }
+    return out;
+  }, [validation, node_id]);
 
-  if (!results || results.length === 0) return null;
+  if (results.length === 0) return null;
 
   return (
     <div

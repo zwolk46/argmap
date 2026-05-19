@@ -137,6 +137,17 @@ export interface ArgumentSessionVersion {
   interpretation_selections: InterpretationSelection[];
   is_milestone: boolean;
 
+  // §8 #1: snapshot of the FrameVersion this session-version was authored
+  // against. Optional in the type for backwards-compatibility with persisted
+  // rows written before this field existed; new writes always populate it
+  // (action-runner, migrateSession, restoreSessionVersion, initial save, and
+  // saveSessionVersion's repository-side backfill all set it). The
+  // version-history preview reads this to render the historical frame, not
+  // the live frame — without it the preview shows old premises against
+  // today's frame after a migration, which both misrepresents history and
+  // breaks Article II §2 (Determinism) for replay of the same version_id.
+  frame_version_snapshot?: FrameVersion;
+
   // F-002: G6 prose-rewrite carrier. Canonical ConditionalOutput.prose_summary unchanged.
   output_overrides?: {
     rewritten_prose?: string;

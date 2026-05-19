@@ -10,6 +10,7 @@ import {
   VersionHistoryButton,
   HelpButton,
   SignOutButton,
+  ValidationIndicator,
 } from "@/ui";
 import type { TopBarSlots } from "@/ui";
 import { useFrameStore, useRepository } from "@/state";
@@ -31,6 +32,7 @@ export interface ArgumentRunningTopBarDeps {
 export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): TopBarSlots {
   const frame_mode = useFrameStore((s) => s.frame?.mode ?? "general");
   const frame_flavor = useFrameStore((s) => s.frame?.flavor);
+  const frame_jurisdiction = useFrameStore((s) => s.frame?.jurisdiction_default);
   const has_frame = useFrameStore((s) => s.frame !== null);
 
   return {
@@ -69,19 +71,32 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
     ),
     chips: (
       <>
-        <ModeFlavorChip mode={frame_mode} flavor={frame_flavor} />
+        {/* #4: pass the session-settings opener so the chip's onOpenSettings
+            affordance lands on the right surface in argument-running mode. */}
+        <ModeFlavorChip
+          mode={frame_mode}
+          flavor={frame_flavor}
+          jurisdiction={frame_jurisdiction}
+          onOpenSettings={deps.on_open_session_settings}
+        />
         <FrameVersionDriftIndicator on_open_migration_dialog={deps.on_open_migration_dialog} />
         <StatusSummaryChip />
       </>
     ),
-    indicators: null,
+    indicators: <ValidationIndicator surface="argument_running" />,
     buttons: (
       <>
         <VersionHistoryButton
           active={deps.version_history_open}
           onToggle={deps.on_toggle_version_history}
         />
-        <FrameSettingsButton onOpen={deps.on_open_session_settings} />
+        {/* #1: in Argument Running, this button opens session settings, not
+            frame settings — surface the correct label. */}
+        <FrameSettingsButton
+          onOpen={deps.on_open_session_settings}
+          aria_label="Session settings"
+          title="Session settings"
+        />
         <HelpButton active={deps.help_pane_open} onToggle={deps.on_toggle_help} />
         <SignOutButton />
       </>
@@ -144,10 +159,14 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
     );
   }
   return (
-    <span
+    <button
+      type="button"
       data-testid="argument-running-title"
       onClick={() => setEditing(true)}
+      aria-label={`Rename session: ${title}`}
+      title="Click to rename"
       style={{
+        all: "unset",
         fontSize: "var(--font-size-base)",
         fontWeight: "var(--font-weight-medium)",
         color: "var(--color-text-primary)",
@@ -156,10 +175,11 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
         overflow: "hidden",
         textOverflow: "ellipsis",
         maxWidth: "320px",
+        display: "inline-block",
       }}
     >
       {title}
-    </span>
+    </button>
   );
 }
 

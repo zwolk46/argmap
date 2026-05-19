@@ -203,6 +203,28 @@ describe("runSessionAction", () => {
     expect(result.compute_result).toBeDefined();
     expect(result.next_session.output).toBeDefined();
   });
+
+  // §8 #1: every session-version captures the frame it was authored against
+  // so version-history preview can render the historical frame.
+  it("snapshots session.frame_version_snapshot onto next_version (§8 #1)", () => {
+    const session = makeSession();
+    const version = makeSessionVersion();
+    const dispatch = makeSessionDispatch();
+    const id_gen = makeId();
+
+    const result = runSessionAction({
+      session,
+      current_version: version,
+      patch: { kind: "output_overrides_cleared" },
+      now: TEST_NOW,
+      generateId: id_gen,
+      dispatch,
+      compute_driver,
+    });
+
+    expect(result.next_version.frame_version_snapshot).toBeDefined();
+    expect(result.next_version.frame_version_snapshot?.id).toBe(session.frame_version_snapshot.id);
+  });
 });
 
 // AT-STATE-AR-3: validateOnly returns errors for invalid frame

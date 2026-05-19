@@ -127,6 +127,13 @@ export function NodeFrame({
   // pool; the pill belongs in inline contexts (premise rows, edge
   // labels) where its job is to read as an identifier, not a node.
   // ────────────────────────────────────────────────────────────────
+  const baseOpacity = display.not_applicable_dim
+    ? 0.3
+    : display.foreclosed_strikethrough
+      ? 0.55
+      : 1;
+  const finalOpacity = display.search_dimmed ? Math.min(baseOpacity, 0.25) : baseOpacity;
+
   if (isPremisePill) {
     return (
       <div
@@ -150,7 +157,7 @@ export function NodeFrame({
           fontSize: "var(--font-size-sm)",
           color: "var(--color-text-primary)",
           cursor: "grab",
-          opacity: display.not_applicable_dim ? 0.3 : 1,
+          opacity: display.search_dimmed ? Math.min(finalOpacity, 0.25) : finalOpacity,
           boxShadow: display.selected
             ? "0 0 0 var(--border-medium) var(--color-mode-current-accent)"
             : "var(--shadow-sm)",
@@ -216,11 +223,13 @@ export function NodeFrame({
           animation: display.recommended_next_pulse
             ? "pulse-recommended var(--duration-pulse) var(--ease-soft) infinite"
             : undefined,
-          opacity: display.not_applicable_dim
-            ? 0.4
-            : display.foreclosed_strikethrough
-              ? 0.55
-              : 1,
+          opacity: display.search_dimmed
+            ? 0.25
+            : display.not_applicable_dim
+              ? 0.4
+              : display.foreclosed_strikethrough
+                ? 0.55
+                : 1,
         }}
       >
         {handleTarget}
@@ -261,11 +270,13 @@ export function NodeFrame({
         animation: display.recommended_next_pulse
           ? "pulse-recommended var(--duration-pulse) var(--ease-soft) infinite"
           : undefined,
-        opacity: display.not_applicable_dim
-          ? 0.4
-          : display.foreclosed_strikethrough
-            ? 0.55
-            : 1,
+        opacity: display.search_dimmed
+          ? 0.25
+          : display.not_applicable_dim
+            ? 0.4
+            : display.foreclosed_strikethrough
+              ? 0.55
+              : 1,
       }}
     >
       {handleTarget}
@@ -277,11 +288,7 @@ export function NodeFrame({
       >
         <div className="cn-status">
           <span className="cn-status-left">
-            <UIcon
-              name={statusGlyph.name}
-              iconStyle={statusGlyph.iconStyle}
-              size={11}
-            />
+            <UIcon name={statusGlyph.name} iconStyle={statusGlyph.iconStyle} size={11} />
             {statusGlyph.label}
           </span>
           <span className="cn-status-right">

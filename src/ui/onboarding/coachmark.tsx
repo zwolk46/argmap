@@ -15,8 +15,29 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
   React.useEffect(() => {
     const el = props.anchor_ref.current;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
-    setPos({ top: rect.bottom + 12, left: rect.left });
+    let raf_id: number | null = null;
+    const reposition = (): void => {
+      if (raf_id !== null) return;
+      raf_id = requestAnimationFrame(() => {
+        raf_id = null;
+        const rect = el.getBoundingClientRect();
+        setPos({ top: rect.bottom + 12, left: rect.left });
+      });
+    };
+    reposition();
+    // Reposition when the anchor (or its ancestors) resize, when the window
+    // resizes, or when the page scrolls. Without these the popover sticks
+    // to its mount-time coords while the anchor moves around it.
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(reposition) : null;
+    if (ro) ro.observe(el);
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, { capture: true, passive: true });
+    return () => {
+      if (raf_id !== null) cancelAnimationFrame(raf_id);
+      if (ro) ro.disconnect();
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, { capture: true } as EventListenerOptions);
+    };
   }, [props.anchor_ref]);
 
   React.useEffect(() => {
@@ -27,12 +48,20 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [props]);
 
+  // §13 #10: autofocus the dismiss button on mount so keyboard users land
+  // in the coachmark instead of needing to Tab from the page background.
+  // Also surface a unique aria-label that includes the message, so
+  // screen-reader users hear what the coachmark is about (not just
+  // "Coachmark").
+
   if (!pos) return null;
+  const aria_label = props.message ? `Coachmark: ${props.message}` : "Coachmark";
   return (
     <div
       data-testid="coachmark"
       role="dialog"
-      aria-label="Coachmark"
+      aria-modal="true"
+      aria-label={aria_label}
       style={{
         position: "fixed",
         top: pos.top,
@@ -77,6 +106,7 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
           variant="primary"
           size="sm"
           data-testid="coachmark-dismiss"
+          autoFocus
           onClick={props.on_dismiss}
         >
           Got it

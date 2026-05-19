@@ -11,7 +11,7 @@ export interface OutlineTreeRowProps {
   focused: boolean;
   expanded: boolean;
   has_children: boolean;
-  on_select: () => void;
+  on_select: (modifiers: { shift_key: boolean; meta_key: boolean }) => void;
   on_toggle_expanded: () => void;
   on_focus: () => void;
 }
@@ -38,7 +38,7 @@ function OutlineTreeRowImpl(props: OutlineTreeRowProps): ReactElement {
 
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation();
-    on_select();
+    on_select({ shift_key: e.shiftKey, meta_key: e.metaKey || e.ctrlKey });
   }
 
   function handleChevronClick(e: React.MouseEvent) {
@@ -49,7 +49,7 @@ function OutlineTreeRowImpl(props: OutlineTreeRowProps): ReactElement {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
       e.preventDefault();
-      on_select();
+      on_select({ shift_key: e.shiftKey, meta_key: e.metaKey || e.ctrlKey });
     } else if (e.key === " ") {
       e.preventDefault();
       on_toggle_expanded();

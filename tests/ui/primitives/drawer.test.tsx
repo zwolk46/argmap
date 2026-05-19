@@ -67,4 +67,65 @@ describe("Drawer", () => {
     const drawer = container.querySelector("[data-testid='drawer']") as HTMLElement;
     expect(drawer.hasAttribute("inert")).toBe(false);
   });
+
+  // §9 #25: opt-in backdrop scrim + click-outside-to-dismiss.
+  it("does not render a backdrop by default", () => {
+    const { container } = render(<TestDrawer open />);
+    expect(container.querySelector("[data-testid='drawer-backdrop']")).toBeNull();
+  });
+
+  it("renders a backdrop when show_backdrop=true", () => {
+    const { container } = render(
+      <Drawer open show_backdrop>
+        <DrawerBody>
+          <p data-testid="drawer-body">Drawer body</p>
+        </DrawerBody>
+      </Drawer>,
+    );
+    const backdrop = container.querySelector(
+      "[data-testid='drawer-backdrop']",
+    ) as HTMLElement | null;
+    expect(backdrop).not.toBeNull();
+    expect(backdrop?.getAttribute("data-open")).toBe("true");
+  });
+
+  it("calls onClose when the backdrop is clicked while open", () => {
+    let closed = false;
+    const { container } = render(
+      <Drawer
+        open
+        show_backdrop
+        onClose={() => {
+          closed = true;
+        }}
+      >
+        <DrawerBody>
+          <p>body</p>
+        </DrawerBody>
+      </Drawer>,
+    );
+    const backdrop = container.querySelector("[data-testid='drawer-backdrop']") as HTMLElement;
+    fireEvent.click(backdrop);
+    expect(closed).toBe(true);
+  });
+
+  it("does NOT call onClose when the backdrop is clicked while closed", () => {
+    let closed = false;
+    const { container } = render(
+      <Drawer
+        open={false}
+        show_backdrop
+        onClose={() => {
+          closed = true;
+        }}
+      >
+        <DrawerBody>
+          <p>body</p>
+        </DrawerBody>
+      </Drawer>,
+    );
+    const backdrop = container.querySelector("[data-testid='drawer-backdrop']") as HTMLElement;
+    fireEvent.click(backdrop);
+    expect(closed).toBe(false);
+  });
 });

@@ -51,7 +51,11 @@ const VARIANTS: Record<PillVariant, { color: string; bg: string; border?: string
     bg: "var(--color-status-contested-bg)",
   },
   status_foreclosed: {
-    color: "var(--color-status-foreclosed)",
+    // §14 #6: align the Pill variant with .argmap-pill[data-tone="foreclosed"]
+    // — both now use the accent red color. Previously the JS Pill rendered
+    // neutral gray while the CSS sibling rendered red, and the same status
+    // label looked like two different things on the same screen.
+    color: "var(--color-status-foreclosed-accent)",
     bg: "var(--color-status-foreclosed-bg)",
   },
   status_na: {

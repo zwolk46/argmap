@@ -44,17 +44,26 @@ export function ConclusionDirectionEditorRow(
     return opt.label;
   };
 
+  // H1: the red error strip should only show while the editor is unresolved.
+  // Once the user has picked a value (selected non-empty), shift to a calm
+  // success treatment so the row reads as "done" rather than "still wrong".
+  const resolved = selected !== "";
   return (
     <div
       data-testid="conclusion-direction-editor-row"
       data-node-id={editor.node_id}
+      data-resolved={resolved ? "true" : "false"}
       style={{
         display: "flex",
         alignItems: "center",
         gap: "var(--space-2)",
         padding: "var(--space-2) var(--space-3)",
-        borderLeft: "var(--border-thick) solid var(--color-severity-error)",
-        background: "var(--color-severity-error-bg)",
+        borderLeft: resolved
+          ? "var(--border-thick) solid var(--color-status-satisfied)"
+          : "var(--border-thick) solid var(--color-severity-error)",
+        background: resolved
+          ? "var(--color-status-satisfied-bg)"
+          : "var(--color-severity-error-bg)",
         borderRadius: "0 var(--radius-md) var(--radius-md) 0",
         marginBottom: "var(--space-2)",
       }}

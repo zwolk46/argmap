@@ -25,6 +25,7 @@ import { edgeTypes } from "./edges";
 import type { FrameCanvasEdgeData, ForeclosureVisibility } from "./edges";
 import { CanvasToolbar } from "./canvas-toolbar";
 import { CanvasMinimap } from "./minimap";
+import { EdgeMarkerDefs, markerEndFor } from "./edge-markers";
 
 // Background dot pitch. Mirrors --canvas-grid-gap in tokens.css. React
 // Flow's <Background gap> prop takes a number, so we hold the value in
@@ -109,10 +110,11 @@ export interface FrameCanvasProps {
 
 function defaultDisplayFlags(
   node_id: NodeRef,
-  selection?: ReadonlyArray<NodeRef>,
-  primary_path_set?: ReadonlySet<NodeRef>,
-  active_set_set?: ReadonlySet<NodeRef>,
-  recommended_next_id?: NodeRef | null,
+  selection: ReadonlyArray<NodeRef> | undefined,
+  primary_path_set: ReadonlySet<NodeRef> | undefined,
+  active_set_set: ReadonlySet<NodeRef> | undefined,
+  recommended_next_id: NodeRef | null | undefined,
+  search_dimmed: boolean,
 ): NodeDisplayFlags {
   // P0-17: on-primary-path / off-active-set determine the heatmap; when
   // either input is absent, both flags stay false and the canvas renders
@@ -130,6 +132,7 @@ function defaultDisplayFlags(
     indeterminate_gate_dashed: false,
     on_primary_path,
     off_active_set,
+    search_dimmed,
   };
 }
 
@@ -143,8 +146,12 @@ function buildRFNodes(
   primary_path_set: ReadonlySet<NodeRef> | undefined,
   active_set: ReadonlySet<NodeRef> | undefined,
   recommended_next_id: NodeRef | null | undefined,
+  search_query: string,
 ): RFNode<FrameCanvasNodeData>[] {
-  return frame_version.nodes.map((node) => {
+  const search_q = search_query.trim().toLowerCase();
+  const search_active = search_q.length > 0;
+  const out: RFNode<FrameCanvasNodeData>[] = [];
+  for (const node of frame_version.nodes) {
     // P0-10: prefer the node's own anchored coordinates (set by a drag) over
     // the layout result. This pins user drags immediately even when the
     // layout consumer's structural hash hasn't caused ELK to re-run, AND
@@ -153,7 +160,13 @@ function buildRFNodes(
       node.presentation?.x !== undefined && node.presentation?.y !== undefined
         ? { x: node.presentation.x, y: node.presentation.y }
         : null;
-    const pos = anchor ?? layout_result?.positions.find((p) => p.node_id === node.id);
+    const layoutPos = layout_result?.positions.find((p) => p.node_id === node.id);
+    const pos = anchor ?? layoutPos;
+    // P0-9: once ELK has produced a layout, nodes excluded by
+    // computeVisibleNodes (collapsed SubQuestion children, etc.) will have
+    // no entry in layout_result.positions. Don't render them at (0,0); they
+    // were intentionally hidden.
+    if (!pos && layout_result) continue;
     const status = status_map?.[node.id];
     const is_indeterminate = status?.failed_conditions?.includes("inputs_indeterminate") ?? false;
 
@@ -180,6 +193,8 @@ function buildRFNodes(
       Premise: "premise_pill",
     };
 
+    const search_dimmed = search_active && !primary_text.toLowerCase().includes(search_q);
+
     // Selection is owned by the local rf_nodes state (RF mutates it via
     // applyNodeChanges; external selection changes are merged in by a
     // dedicated effect). buildRFNodes itself never sets the `selected`
@@ -191,10 +206,18 @@ function buildRFNodes(
       primary_path_set,
       active_set,
       recommended_next_id,
+      search_dimmed,
     );
     display.indeterminate_gate_dashed = is_indeterminate && node.type === "LogicalGate";
 
-    return {
+    const authority_binding_kind: "binding" | "persuasive" | undefined =
+      node.type === "Authority" && "is_binding" in node
+        ? (node as { is_binding?: boolean }).is_binding === true
+          ? "binding"
+          : "persuasive"
+        : undefined;
+
+    out.push({
       id: node.id,
       type: node.type,
       position: pos ? { x: pos.x, y: pos.y } : { x: 0, y: 0 },
@@ -204,6 +227,7 @@ function buildRFNodes(
         variant: variant_map[node.type] ?? "sub_question",
         status,
         display,
+        authority_binding_kind,
         enable_connector_handle: !read_only && operating_mode === "frame_building",
         legal_mode,
         gate_glyph:
@@ -222,8 +246,9 @@ function buildRFNodes(
               )[(node as { gate_type: string }).gate_type] ?? "⊕")
             : undefined,
       } satisfies FrameCanvasNodeData,
-    };
-  });
+    });
+  }
+  return out;
 }
 
 function buildRFEdges(
@@ -269,6 +294,7 @@ function buildRFEdges(
       source: edge.source,
       target: edge.target,
       type: edge.type,
+      markerEnd: markerEndFor(edge.type, on_primary_path),
       data: {
         edge_type: edge.type,
         foreclosure_visibility: edge.type === "FORECLOSES" ? foreclosure_visibility : undefined,
@@ -298,6 +324,7 @@ function buildRFEdges(
             source: checkpoint.id,
             target: opt.target_node_id,
             type: "checkpoint_option",
+            markerEnd: markerEndFor("checkpoint_option", cp_on_path),
             data: {
               edge_type: "checkpoint_option",
               option_label: opt.label,
@@ -330,6 +357,7 @@ function buildRFEdges(
         source: ae.source,
         target: ae.target,
         type: ae.type,
+        markerEnd: markerEndFor(ae.type, on_primary_path),
         data: {
           edge_type: ae.type,
           weight_tier: (ae.weight ?? 1) as 0 | 1 | 2 | 3 | 4 | 5,
@@ -402,7 +430,27 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     active_set,
     path_fingerprint,
     recommended_next_id = null,
+    search: search_prop,
   } = props;
+
+  // Local search query. Stays a controlled state inside the canvas so the
+  // input lives next to the canvas chrome; the parent can also seed it via
+  // the `search` prop for deep-linking or external "find" affordances.
+  const [search_query, setSearchQuery] = React.useState(search_prop ?? "");
+  React.useEffect(() => {
+    if (search_prop !== undefined) setSearchQuery(search_prop);
+  }, [search_prop]);
+
+  // P0-7: <Background color="var(...)"> doesn't resolve CSS vars to a usable
+  // fill — xyflow paints the dots into a Canvas2D context, where var(...)
+  // is meaningless. Resolve once at mount via getComputedStyle.
+  const [bg_dot_color, setBgDotColor] = React.useState("#e0dcd8");
+  React.useEffect(() => {
+    const c = getComputedStyle(document.documentElement)
+      .getPropertyValue("--color-border-subtle")
+      .trim();
+    if (c) setBgDotColor(c);
+  }, []);
 
   // Normalize to sets for O(1) membership lookup during render. The hook
   // re-runs when the referenced array changes — fine because the page
@@ -420,6 +468,11 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
   const { fitView, zoomIn, zoomOut, setCenter, screenToFlowPosition } = useReactFlow();
   const [fc_visibility, setFcVisibility] =
     React.useState<ForeclosureVisibility>(foreclosure_visibility);
+  // Sync local state when the parent updates the prop. Without this the
+  // initial value seeded once and later parent updates were ignored.
+  React.useEffect(() => {
+    setFcVisibility(foreclosure_visibility);
+  }, [foreclosure_visibility]);
 
   React.useImperativeHandle(handle, () => ({
     fitToScreen: () => fitView(),
@@ -477,6 +530,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         primary_path_set,
         active_set_set,
         recommended_next_id,
+        search_query,
       ),
     [
       frame_version,
@@ -488,6 +542,7 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
       primary_path_set,
       active_set_set,
       recommended_next_id,
+      search_query,
     ],
   );
 
@@ -740,9 +795,6 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     }
   }, []);
 
-  // Build signal so the user can verify the new code is actually loaded
-  // (HMR through structural state-management changes is unreliable in dev).
-  // Visible in DevTools as `data-canvas-build="2026-05-14-cb-ref-fix"`.
   return (
     <div
       data-testid="frame-canvas"
@@ -771,17 +823,22 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
         edgesReconnectable={!read_only}
         nodesConnectable={!read_only}
         fitView
-        proOptions={{ hideAttribution: true }}
+        // xyflow's MIT licence requires the attribution badge to remain
+        // visible unless a Pro subscription has been purchased. Suppressing
+        // it without a Pro key is a licence violation; the project has not
+        // bought one (yet), so render the badge.
         style={{ background: "var(--color-surface-canvas)" }}
       >
         {/* Dot grid gap matches --canvas-grid-gap in tokens.css. The grid
             is dense enough that nodes appear to "float" on it without the
             grid reading as gridded paper. */}
-        <Background gap={CANVAS_GRID_GAP} size={1} color="var(--color-border-subtle)" />
+        <Background gap={CANVAS_GRID_GAP} size={1} color={bg_dot_color} />
+        <EdgeMarkerDefs />
         <CanvasMinimap />
         <CanvasToolbar
           foreclosure_visibility={fc_visibility}
           onForeclosureVisibilityChange={setFcVisibility}
+          onSearch={setSearchQuery}
           onAutoArrange={onAutoArrange}
         />
       </ReactFlow>

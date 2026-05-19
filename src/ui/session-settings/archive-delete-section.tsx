@@ -2,6 +2,16 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
 import { Button, ConfirmDialog } from "../primitives";
+import { useOptionalToast } from "../primitives/toast";
+
+// §9 #30. Auto-generated session titles include the parent frame title, which
+// can be up to 200 chars; injecting that whole string into the dialog header
+// overflows the modal. Truncate with an ellipsis for display only — the
+// type-to-confirm comparison still uses the full title.
+function truncateForHeader(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1).trimEnd() + "…";
+}
 
 export interface ArchiveDeleteSectionProps {
   on_delete_session: () => void;
@@ -11,17 +21,30 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
   const archived = useSessionStore((s) => s.session?.archived ?? false);
   const title = useSessionStore((s) => s.session?.title ?? "");
   const { session_store } = useRepository();
+  const toast = useOptionalToast();
   const [delete_open, setDeleteOpen] = React.useState(false);
   const [confirm_text, setConfirmText] = React.useState("");
 
   function toggleArchive(): void {
+    const next_archived = !archived;
     session_store
       .getState()
-      .applyPatch({ kind: "session_metadata_edited", partial: { archived: !archived } });
+      .applyPatch({ kind: "session_metadata_edited", partial: { archived: next_archived } });
+    // §9 #33: surface a toast so the action lands somewhere visible —
+    // the button label flip alone is silent feedback that cross-tab
+    // observers won't see.
+    toast?.push({
+      kind: "info",
+      message: next_archived ? "Session archived." : "Session unarchived.",
+    });
   }
 
+  const confirm_matches =
+    confirm_text.trim().length > 0 &&
+    confirm_text.trim().toLowerCase() === title.trim().toLowerCase();
+
   function handleDelete(): void {
-    if (confirm_text !== title) return;
+    if (!confirm_matches) return;
     setDeleteOpen(false);
     setConfirmText("");
     props.on_delete_session();
@@ -65,13 +88,17 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
       </Button>
       <ConfirmDialog
         open={delete_open}
-        title={`Delete session "${title}"?`}
+        // §9 #30: cap the interpolated title so an auto-generated 200-char
+        // session title (e.g. "Argument session — <long frame title>") doesn't
+        // overflow the dialog header. Type-to-confirm input still uses the
+        // full title for comparison; only the display label is truncated.
+        title={`Delete session "${truncateForHeader(title, 60)}"?`}
         confirm_label="Delete"
         cancel_label="Cancel"
         confirm_variant="danger"
         // P0-23 ride-along: gate the confirm button on a matching typed title
         // so the dialog cannot silently no-op on empty / wrong input.
-        confirm_disabled={confirm_text !== title}
+        confirm_disabled={!confirm_matches}
         onConfirm={handleDelete}
         onCancel={() => {
           setDeleteOpen(false);
@@ -91,7 +118,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
               style={{ marginTop: "var(--space-1)" }}
             />
           </label>
-          {confirm_text.length > 0 && confirm_text !== title ? (
+          {confirm_text.length > 0 && !confirm_matches ? (
             <p
               style={{
                 marginTop: "var(--space-1)",
@@ -99,7 +126,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
                 fontSize: "var(--font-size-xs)",
               }}
             >
-              Type the title exactly to enable Delete.
+              Type the title (case- and whitespace-insensitive) to enable Delete.
             </p>
           ) : null}
         </div>

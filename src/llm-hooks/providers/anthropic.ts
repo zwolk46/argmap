@@ -7,7 +7,11 @@ import type {
 } from "../types";
 import { ProviderError } from "../types";
 
-export const DEFAULT_ANTHROPIC_MODEL = "claude-3-7-sonnet-latest";
+// Pin to a specific snapshot. `*-latest` aliases rotate without notice on
+// Anthropic's side, which would directly break the Article II § 2
+// determinism guarantee the moment a user enables hooks. Bumping the model
+// is a deliberate migration step — change this constant explicitly.
+export const DEFAULT_ANTHROPIC_MODEL = "claude-3-7-sonnet-20250219";
 
 export interface AnthropicProviderConfig {
   api_key: string;
@@ -26,6 +30,17 @@ export class AnthropicProvider implements LlmProvider {
   private readonly default_model: string;
 
   constructor(config: AnthropicProviderConfig) {
+    // F-13: fail loudly if anyone wires this provider into a browser bundle.
+    // The API key is a long-lived secret that must never ship to clients; the
+    // long-term plan is a server-side AI Gateway proxy. Until then, throwing
+    // here prevents an accidental Vite import path from leaking the key.
+    if (typeof window !== "undefined") {
+      throw new ProviderError(
+        "AnthropicProvider instantiated in a browser context. " +
+          "The API key must never ship to clients — route hook calls through a server-side proxy.",
+        "anthropic",
+      );
+    }
     this.client = new Anthropic({ apiKey: config.api_key, baseURL: config.base_url });
     this.default_model = config.default_model ?? DEFAULT_ANTHROPIC_MODEL;
   }
@@ -36,7 +51,10 @@ export class AnthropicProvider implements LlmProvider {
       const response = await this.client.messages.create({
         model,
         max_tokens: req.max_tokens ?? 1024,
-        temperature: req.temperature ?? 0.2,
+        // Article II § 2: hooks that affect computation must be deterministic.
+        // Default temperature to 0 — callers may pass an explicit non-zero
+        // when sampling noise is acceptable (e.g., creative title hooks).
+        temperature: req.temperature ?? 0,
         messages: [{ role: "user", content: req.prompt }],
       });
       const raw_text = response.content

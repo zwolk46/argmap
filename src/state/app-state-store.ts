@@ -106,11 +106,17 @@ export function createAppStateStore(opts: CreateAppStateStoreOpts) {
         const app_state = await repo.loadAppState();
         set({ app_state, is_loading: false, is_loaded: true });
       } catch (e) {
+        // First-launch users have no AppState singleton. RepositoryError
+        // carries a typed code now (H-16); branch on that instead of the
+        // message string. Fall back to the legacy message check so older
+        // repository implementations still work.
+        const err = e as { code?: string; message?: string } | Error;
+        const code = (err as { code?: string }).code;
         const msg = (e as Error).message;
-        // First-launch users have no AppState singleton. The repository throws
-        // a RepositoryError with "AppState singleton missing"; seed defaults
-        // and persist them so subsequent boots take the fast path.
-        if (typeof msg === "string" && msg.includes("AppState singleton missing")) {
+        const is_missing =
+          code === "app_state_missing" ||
+          (typeof msg === "string" && msg.includes("AppState singleton missing"));
+        if (is_missing) {
           try {
             await repo.saveAppState(DEFAULT_APP_STATE);
           } catch (saveErr) {

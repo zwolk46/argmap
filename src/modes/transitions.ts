@@ -5,7 +5,10 @@ import type {
   Flavor,
   ValidationResult,
   Position,
+  Premise,
+  PremiseKindVocabularyKey,
 } from "@/schema";
+import { PREMISE_KIND_VOCABULARIES, toModeFlavor } from "@/schema";
 import type { ComputeResult } from "@/runtime";
 
 export const TRANSITION_KINDS = [
@@ -211,6 +214,27 @@ export function scanArchitecturalModeChange(
         });
       }
     }
+
+    // F-7: surface premise-kind vocabulary drift on architectural mode change.
+    // Argument-layer Premise nodes can live on the frame snapshot for
+    // round-trippable composition; if their kind isn't in the target mode's
+    // vocabulary they fail V-ARG-3 later — warn here so the user sees the
+    // problem before committing.
+    if (n.type === "Premise") {
+      const p = n as Premise;
+      const target_vocab = toModeFlavor(target_mode) as PremiseKindVocabularyKey;
+      const allowed = new Set<string>(PREMISE_KIND_VOCABULARIES[target_vocab] as readonly string[]);
+      if (!allowed.has(p.kind)) {
+        advisory.push({
+          rule_id: "MODE-CHANGE-PREMISE-KIND-CROSS-VOCABULARY",
+          severity: "warning",
+          node_id: n.id,
+          message:
+            `Premise '${n.id}' has kind "${p.kind}" which is not in the ${target_vocab} ` +
+            `vocabulary; it will fail V-ARG-3 after the mode change.`,
+        });
+      }
+    }
   }
 
   return {
@@ -247,6 +271,25 @@ export function scanFlavorChange(
           message:
             `${authority_nodes.length} Authority node(s) will be relabeled to "Source" ` +
             `with academic-flavor field visibility (author, venue, position).`,
+        });
+      }
+    }
+
+    // F-8: same premise-kind cross-vocabulary check as architectural mode
+    // change, but for the general-mode flavor flip (academic ↔ personal).
+    const target_vocab = toModeFlavor("general", target_flavor) as PremiseKindVocabularyKey;
+    const allowed = new Set<string>(PREMISE_KIND_VOCABULARIES[target_vocab] as readonly string[]);
+    for (const n of nodes) {
+      if (n.type !== "Premise") continue;
+      const p = n as Premise;
+      if (!allowed.has(p.kind)) {
+        advisory.push({
+          rule_id: "FLAVOR-CHANGE-PREMISE-KIND-CROSS-VOCABULARY",
+          severity: "warning",
+          node_id: n.id,
+          message:
+            `Premise '${n.id}' has kind "${p.kind}" which is not in the ${target_vocab} ` +
+            `vocabulary; it will fail V-ARG-3 after the flavor change.`,
         });
       }
     }

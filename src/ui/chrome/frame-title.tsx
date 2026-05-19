@@ -1,6 +1,19 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore, useRepository } from "@/state";
+import { useOptionalToast } from "../primitives/toast";
+
+// §9 #8: hard cap on title length to prevent runaway pastes / accidental
+// novella-sized titles. 200 chars comfortably covers the longest practical
+// case-name / topic phrasing while keeping the field a single visual line.
+export const FRAME_TITLE_MAX_LENGTH = 200;
+
+// §9 #8: a multi-line paste (e.g. copy from a heading + subtitle) used to
+// land with embedded newlines and tabs, breaking the single-line layout.
+// Replace all whitespace runs (incl. \r, \n, \t) with single spaces.
+function flattenWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ");
+}
 
 export interface FrameTitleProps {
   read_only?: boolean;
@@ -9,6 +22,7 @@ export interface FrameTitleProps {
 export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   const title = useFrameStore((s) => s.frame?.title ?? "");
   const { frame_store } = useRepository();
+  const toast = useOptionalToast();
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -20,10 +34,17 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   }
 
   function commit() {
-    if (draft.trim()) {
-      frame_store
-        .getState()
-        .applyPatch({ kind: "metadata_edited", partial: { title: draft.trim() } });
+    const trimmed = draft.trim();
+    if (trimmed) {
+      frame_store.getState().applyPatch({ kind: "metadata_edited", partial: { title: trimmed } });
+    } else if (title) {
+      // §9 #7: empty commit silently snapped back; the user typed and saw
+      // their text vanish with no explanation. Surface an inline toast so
+      // they know why the value reverted.
+      toast?.push({
+        kind: "warning",
+        message: "Title can't be blank — reverted to the previous value.",
+      });
     }
     setEditing(false);
   }
@@ -37,12 +58,37 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   }, [editing]);
 
   if (editing) {
+    // §13 #18: while draft is blank, commit() will silently revert with a
+    // toast warning — mark the input aria-invalid so SR users hear the
+    // pending-revert state before they tab away.
+    const draft_blank = draft.trim().length === 0;
     return (
       <input
         ref={inputRef}
         data-testid="frame-title-input"
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        maxLength={FRAME_TITLE_MAX_LENGTH}
+        aria-invalid={draft_blank ? true : undefined}
+        aria-label="Frame title"
+        onChange={(e) => setDraft(flattenWhitespace(e.target.value))}
+        onPaste={(e) => {
+          // Intercept paste so multi-line clipboard content is flattened
+          // before it lands in the input (more graceful than letting it
+          // arrive multi-line and getting stripped after the fact).
+          const pasted = e.clipboardData.getData("text");
+          if (/\s/.test(pasted) && pasted !== flattenWhitespace(pasted)) {
+            e.preventDefault();
+            const input = e.currentTarget;
+            const start = input.selectionStart ?? draft.length;
+            const end = input.selectionEnd ?? draft.length;
+            const cleaned = flattenWhitespace(pasted);
+            const next = (draft.slice(0, start) + cleaned + draft.slice(end)).slice(
+              0,
+              FRAME_TITLE_MAX_LENGTH,
+            );
+            setDraft(next);
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") commit();
           if (e.key === "Escape") cancel();
@@ -65,36 +111,68 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
   }
 
   // P7: rendered as <h1> so the frame title acts as the page's main heading
-  // for AT/SEO. The outer h1 carries the click-to-edit affordance directly;
-  // it inherits the same styling as the previous span.
+  // for AT/SEO. The h1 contains a real <button> for the edit affordance so
+  // keyboard users can activate it with Enter/Space (the prior onClick-on-h1
+  // pattern was mouse-only).
+  const display_title = title || "Untitled frame";
+  if (read_only) {
+    return (
+      <h1
+        data-testid="frame-title"
+        style={{
+          fontSize: "var(--font-size-lg)",
+          fontWeight: "var(--font-weight-semibold)",
+          fontFamily: "var(--font-sans)",
+          color: "var(--color-text-primary)",
+          letterSpacing: "var(--letter-spacing-tight)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          margin: 0,
+          display: "inline-block",
+          lineHeight: "var(--line-height-tight)",
+        }}
+      >
+        {display_title}
+      </h1>
+    );
+  }
   return (
     <h1
-      data-testid="frame-title"
-      onClick={startEdit}
-      title={read_only ? undefined : "Click to rename"}
-      className={read_only ? undefined : "argmap-row-hover"}
       style={{
-        fontSize: "var(--font-size-lg)",
-        fontWeight: "var(--font-weight-semibold)",
-        fontFamily: "var(--font-sans)",
-        color: "var(--color-text-primary)",
-        cursor: read_only ? "default" : "text",
-        letterSpacing: "var(--letter-spacing-tight)",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        padding: read_only ? "0" : "2px 6px",
-        margin: read_only ? "0" : "0 -6px",
-        borderRadius: "var(--radius-sm)",
-        transition: "background var(--duration-fast) var(--ease-standard)",
-        // Re-establish layout properties the parent header expects from a
-        // span (h1 default is block; the surrounding chrome lays this out
-        // as an inline-ish element inside a flex row).
+        margin: 0,
         display: "inline-block",
         lineHeight: "var(--line-height-tight)",
       }}
     >
-      {title || "Untitled frame"}
+      <button
+        type="button"
+        data-testid="frame-title"
+        onClick={startEdit}
+        title="Click to rename"
+        aria-label={`Rename frame: ${display_title}`}
+        className="argmap-row-hover"
+        style={{
+          all: "unset",
+          cursor: "text",
+          fontSize: "var(--font-size-lg)",
+          fontWeight: "var(--font-weight-semibold)",
+          fontFamily: "var(--font-sans)",
+          color: "var(--color-text-primary)",
+          letterSpacing: "var(--letter-spacing-tight)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          padding: "2px 6px",
+          margin: "0 -6px",
+          borderRadius: "var(--radius-sm)",
+          transition: "background var(--duration-fast) var(--ease-standard)",
+          display: "inline-block",
+          lineHeight: "var(--line-height-tight)",
+        }}
+      >
+        {display_title}
+      </button>
     </h1>
   );
 }

@@ -1,5 +1,5 @@
+import * as React from "react";
 import type { ReactElement } from "react";
-import { useFrameStore } from "@/state";
 import { GLOSSARY_DICTIONARY } from "../primitives/glossary-tooltip";
 import { Drawer, DrawerHeader, DrawerBody } from "../primitives/drawer";
 import { IconButton } from "../primitives/icon-button";
@@ -12,23 +12,65 @@ export interface HelpGlossaryPaneProps {
 }
 
 export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): ReactElement {
-  const frame = useFrameStore((s) => s.frame);
-  const is_legal = frame?.mode === "legal";
+  // §9 #20: legal-concept definitions are needed *before* choosing a mode,
+  // so they always render — not only when a legal frame is already loaded.
+  const [query, setQuery] = React.useState("");
 
-  const frame_entries = Object.entries(GLOSSARY_DICTIONARY).filter(
-    ([, entry]) => !entry.legal_only,
-  );
-  const legal_entries = Object.entries(GLOSSARY_DICTIONARY).filter(([, entry]) => entry.legal_only);
+  // §9 #19: glossary has ~25 entries; a filter input keeps "How do I find X"
+  // workflows tight. Match term + definition (case-insensitive trimmed).
+  const q = query.trim().toLowerCase();
+  const matches = ([, entry]: [string, { term: string; definition: string }]) =>
+    q.length === 0 ||
+    entry.term.toLowerCase().includes(q) ||
+    entry.definition.toLowerCase().includes(q);
+  const frame_entries = Object.entries(GLOSSARY_DICTIONARY)
+    .filter(([, entry]) => !entry.legal_only)
+    .filter(matches);
+  const legal_entries = Object.entries(GLOSSARY_DICTIONARY)
+    .filter(([, entry]) => entry.legal_only)
+    .filter(matches);
 
   return (
-    <Drawer open={open} onClose={onClose} width="min(360px, 100vw)" aria_label="Help and glossary">
+    <Drawer
+      open={open}
+      onClose={onClose}
+      show_backdrop
+      width="min(360px, 100vw)"
+      aria_label="Help, glossary, and app preferences"
+    >
       <DrawerHeader>
-        <span>Help & Glossary</span>
+        {/* §9 #21: app preferences (reset coachmarks) live in this drawer;
+            rename so users don't land here expecting only glossary entries. */}
+        <span>Help & Settings</span>
         <IconButton size="sm" aria-label="Close help" onClick={onClose}>
           <UIcon name="times" size={14} />
         </IconButton>
       </DrawerHeader>
       <DrawerBody>
+        <input
+          data-testid="help-glossary-search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search glossary…"
+          aria-label="Search glossary"
+          className="argmap-input"
+          style={{
+            marginBottom: "var(--space-3)",
+            fontSize: "var(--font-size-sm)",
+          }}
+        />
+        {frame_entries.length === 0 && legal_entries.length === 0 && q.length > 0 ? (
+          <div
+            style={{
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-secondary)",
+              padding: "var(--space-2) 0",
+            }}
+          >
+            No glossary entries match &ldquo;{query}&rdquo;.
+          </div>
+        ) : null}
         <section>
           <h3 className="argmap-section-heading" style={{ margin: "0 0 var(--space-3)" }}>
             Frame Concepts
@@ -57,7 +99,7 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
             </div>
           ))}
         </section>
-        {is_legal && legal_entries.length > 0 && (
+        {legal_entries.length > 0 && (
           <section style={{ marginTop: "var(--space-5)" }}>
             <h3 className="argmap-section-heading" style={{ margin: "0 0 var(--space-3)" }}>
               Legal Concepts

@@ -8,6 +8,12 @@ export interface DrawerProps {
   open: boolean;
   onClose?: () => void;
   dismiss_on_escape?: boolean;
+  // §9 #25: opt-in semi-transparent backdrop + click-outside-to-dismiss.
+  // Off by default so async drawers (e.g. SuggestionDrawer) can't lose
+  // user work via accidental scrim click; the two side panels that share
+  // the same Z.drawer band — HelpGlossaryPane and SessionSettingsPanel —
+  // turn it on to get a global "dismiss" affordance and visual layering.
+  show_backdrop?: boolean;
   width?: string;
   height?: string;
   side?: DrawerSide;
@@ -21,7 +27,11 @@ export function DrawerHeader({ children }: { children: ReactNode }): ReactElemen
       style={{
         padding: "var(--space-4) var(--space-5)",
         borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        fontSize: "var(--font-size-md)",
+        // §14 #11: align with DialogHeader (--font-size-lg) so drawer titles
+        // and dialog titles read as the same priority level. Previously
+        // drawer was --font-size-md (15px) while dialog was --font-size-lg
+        // (17px); the size mismatch made drawers feel quieter than dialogs.
+        fontSize: "var(--font-size-lg)",
         fontWeight: "var(--font-weight-semibold)",
         color: "var(--color-text-primary)",
         display: "flex",
@@ -68,6 +78,7 @@ export function Drawer({
   open,
   onClose,
   dismiss_on_escape = true,
+  show_backdrop = false,
   width = "360px",
   height = "260px",
   side = "right",
@@ -102,7 +113,15 @@ export function Drawer({
     const focusables = root.querySelectorAll<HTMLElement>(
       'a, button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
-    const first = Array.from(focusables).find((el) => !el.hasAttribute("disabled"));
+    const enabled_on_open = Array.from(focusables).filter((el) => !el.hasAttribute("disabled"));
+    // §9 #24: skip the close X if it's first in tab order — autofocusing it
+    // means Tab from open lands the user on "close" and away from the drawer
+    // body. Prefer the first non-close focusable; fall back to close if it's
+    // the only thing in the drawer.
+    const first_non_close = enabled_on_open.find(
+      (el) => !/^(close)/i.test(el.getAttribute("aria-label") ?? ""),
+    );
+    const first = first_non_close ?? enabled_on_open[0];
     first?.focus();
 
     function handleKeyDown(e: KeyboardEvent) {
@@ -126,9 +145,19 @@ export function Drawer({
     return () => {
       root.removeEventListener("keydown", handleKeyDown);
       // Restore focus to wherever it came from when the drawer closes.
+      // §13 #11: confirm the stored ref is still attached to the document
+      // before focusing; if the triggering element unmounted while the
+      // drawer was open, focus() throws no-op into the void and the user
+      // lands on document.body. Fall back to body explicitly.
       const restore_to = last_focus_before_open_ref.current;
-      if (restore_to && typeof restore_to.focus === "function") {
+      if (
+        restore_to &&
+        typeof restore_to.focus === "function" &&
+        document.body.contains(restore_to)
+      ) {
         restore_to.focus();
+      } else {
+        document.body.focus();
       }
     };
   }, [open]);
@@ -183,20 +212,42 @@ export function Drawer({
   // The `inert` attribute removes the subtree from both tab order and
   // pointer events while keeping it in the DOM for the transition.
   return (
-    <div
-      data-testid="drawer"
-      data-open={open}
-      data-side={side}
-      role="dialog"
-      aria-label={aria_label}
-      aria-hidden={!open}
-      // React passes `inert` straight through to the DOM element since
-      // React 19 / TS lib.dom; for older typings we coerce.
-      {...(!open ? ({ inert: "" } as { inert: string }) : {})}
-      ref={root_ref}
-      style={{ ...baseStyle, ...positionalStyle }}
-    >
-      {children}
-    </div>
+    <>
+      {show_backdrop ? (
+        <div
+          data-testid="drawer-backdrop"
+          data-open={open}
+          aria-hidden="true"
+          onClick={open ? onClose : undefined}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "var(--color-surface-overlay)",
+            // One band below the drawer so the panel renders above the
+            // scrim. The scrim still sits above topbar (50) so chrome
+            // dims along with canvas content while the drawer is open.
+            zIndex: Z.drawer - 1,
+            opacity: open ? 1 : 0,
+            pointerEvents: open ? "auto" : "none",
+            transition: "opacity var(--duration-medium) var(--ease-emphasized)",
+          }}
+        />
+      ) : null}
+      <div
+        data-testid="drawer"
+        data-open={open}
+        data-side={side}
+        role="dialog"
+        aria-label={aria_label}
+        aria-hidden={!open}
+        // React passes `inert` straight through to the DOM element since
+        // React 19 / TS lib.dom; for older typings we coerce.
+        {...(!open ? ({ inert: "" } as { inert: string }) : {})}
+        ref={root_ref}
+        style={{ ...baseStyle, ...positionalStyle }}
+      >
+        {children}
+      </div>
+    </>
   );
 }

@@ -2,6 +2,12 @@ import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 import { Z } from "./z-index";
 
+// §13 #12: focus-trap selector. Module-scoped so the focus effects don't
+// need it in their dep arrays. Includes ARIA-role focusables.
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"]),' +
+  ' [role="button"], [role="radio"], [role="menuitem"], [role="tab"]';
+
 export type DialogSize = "sm" | "md" | "lg";
 
 export interface DialogProps {
@@ -142,10 +148,15 @@ export function Dialog({
   React.useEffect(() => {
     if (phase === "open") {
       previousFocusRef.current = document.activeElement;
-      const focusable = dialogRef.current?.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      focusable?.focus();
+      const focusable = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      // §13 #13: if zero focusables, focus the dialog element itself so Tab
+      // doesn't escape into the obscured background.
+      if (focusable) {
+        focusable.focus();
+      } else if (dialogRef.current) {
+        dialogRef.current.tabIndex = -1;
+        dialogRef.current.focus();
+      }
       document.body.style.overflow = "hidden";
     } else if (phase === "closed") {
       document.body.style.overflow = "";
@@ -163,10 +174,14 @@ export function Dialog({
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && dismiss_on_escape) onClose();
       if (e.key === "Tab" && dialogRef.current) {
-        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (!focusables.length) return;
+        // Re-query on each Tab so async DOM updates (toasts, lazy-mounted
+        // form fields) are included in the trap.
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        if (!focusables.length) {
+          // No focusables → swallow Tab so it can't fall into the background.
+          e.preventDefault();
+          return;
+        }
         const first = focusables[0];
         const last = focusables[focusables.length - 1];
         if (e.shiftKey) {

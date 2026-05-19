@@ -18,7 +18,7 @@ import type {
   ValidationResult,
   NodeStatus,
 } from "@/schema";
-import { runValidation } from "@/schema";
+import { runValidation, validateFrameVersionAgainstFrame } from "@/schema";
 import type { ComputeResult } from "@/runtime";
 import type { ComputeDriver } from "./compute-driver";
 
@@ -361,7 +361,12 @@ export function runFrameAction(input: RunFrameActionInput): FrameActionResult {
     flavor: next_frame.flavor,
   };
 
-  const validation = runValidation(next_version);
+  // §15 F-11: layer cross-Frame results (Conclusion.position_id resolves to a
+  // Position on the *current* Frame) on top of the local FrameVersion rules.
+  const validation = [
+    ...runValidation(next_version),
+    ...validateFrameVersionAgainstFrame(next_frame, next_version),
+  ];
 
   const recomputed = new Map<string, ComputeResult>();
   if (compute_driver && active_sessions) {
@@ -393,6 +398,8 @@ export function runSessionAction(input: RunSessionActionInput): SessionActionRes
   const transform = handler(session, current_version, patch, opts);
 
   const new_version_id = generateId();
+  // §8 #1: capture the frame the session is currently anchored against so
+  // version-history preview renders the historical frame.
   const next_version: ArgumentSessionVersion = {
     ...transform.next_version_raw,
     id: new_version_id,
@@ -401,6 +408,7 @@ export function runSessionAction(input: RunSessionActionInput): SessionActionRes
     parent_version_id: current_version.id,
     created_at: now,
     is_milestone: false,
+    frame_version_snapshot: session.frame_version_snapshot,
   };
 
   const compute_result = compute_driver.runFor(transform.next_session_raw, now);
@@ -425,6 +433,11 @@ export function runSessionAction(input: RunSessionActionInput): SessionActionRes
 export function validateOnly(
   frame_version: FrameVersion,
   _compute_driver?: ComputeDriver,
+  frame?: Frame,
 ): ReadonlyArray<ValidationResult> {
-  return runValidation(frame_version);
+  const local = runValidation(frame_version);
+  if (!frame) return local;
+  // §15 F-11: include the cross-Frame position_id resolution check when the
+  // caller can supply the live Frame alongside the version.
+  return [...local, ...validateFrameVersionAgainstFrame(frame, frame_version)];
 }

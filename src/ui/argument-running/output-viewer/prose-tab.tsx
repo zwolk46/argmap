@@ -4,6 +4,7 @@ import { useAiSuggestion } from "@/ui";
 import { Button } from "../../primitives/button";
 import { EmptyState } from "../../primitives/loading-screen";
 import { AiSparkle } from "../../primitives/ai-sparkle";
+import { AiAttributionChip } from "../../primitives/ai-attribution-chip";
 
 export interface ProseTabProps {
   payload: OutputViewPayload | null;
@@ -145,23 +146,7 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
                 marginBottom: "var(--space-2)",
               }}
             >
-              <div
-                data-testid="ai-attribution-rewritten"
-                title="Rewritten by G6"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  color: "var(--color-ai-accent)",
-                  fontSize: "var(--font-size-xs)",
-                  fontWeight: "var(--font-weight-medium)",
-                  letterSpacing: "var(--letter-spacing-wide)",
-                  textTransform: "uppercase",
-                }}
-              >
-                <AiSparkle style={{ fontSize: "var(--font-size-sm)" }} />
-                AI rewrite
-              </div>
+              <AiAttributionChip hook_id="G6" />
               <Button
                 size="sm"
                 variant="ghost"

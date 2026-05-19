@@ -30,6 +30,19 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
       >
         Advisory notes (G12)
       </header>
+      {/* §9 #36: an inline gloss replaces the bare "Cross-implication advisories"
+          label — a first-time user opening the panel had no way to learn what
+          the feature did without leaving the panel for the help glossary. */}
+      <p
+        style={{
+          fontSize: "var(--font-size-xs)",
+          color: "var(--color-text-secondary)",
+          margin: "0 0 var(--space-1) 0",
+        }}
+      >
+        Surface non-blocking notes when an answer in one sub-question may bear on another (e.g.,
+        findings reused across elements).
+      </p>
       <div
         style={{
           display: "flex",
@@ -53,8 +66,10 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
           marginTop: "var(--space-1)",
         }}
       >
-        Set per-frame in{" "}
-        {/* KEEP RAW: inline text-link inside a paragraph; bespoke micro-control inside body copy. */}
+        Set per-frame in Frame Building.{" "}
+        {/* §9 #28: link copy reads honestly — navigating doesn't auto-open
+            the frame settings drawer; the user opens it themselves from the
+            top bar. */}
         <button
           type="button"
           data-testid="g12-open-frame-settings"
@@ -67,9 +82,9 @@ export function G12AdvisoryToggleSection(props: G12AdvisoryToggleSectionProps): 
             padding: 0,
           }}
         >
-          frame settings
-        </button>
-        .
+          Go to Frame Building
+        </button>{" "}
+        and open the settings panel there to configure.
       </p>
     </section>
   );

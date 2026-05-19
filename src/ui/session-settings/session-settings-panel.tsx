@@ -19,6 +19,7 @@ export function SessionSettingsPanel(props: SessionSettingsPanelProps): ReactEle
     <Drawer
       open={props.open}
       onClose={props.on_close}
+      show_backdrop
       width="min(420px, 100vw)"
       aria_label="Session settings"
     >

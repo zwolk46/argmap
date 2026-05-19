@@ -15,18 +15,28 @@ export interface ValidationDrawerProps {
 
 export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
   const { open, on_close, on_jump_to_node } = props;
-  const snapshot = useFrameStore((s) => s);
-  const frame_id = snapshot.frame?.id;
-  const app_state_store = useAppStateStore((s) => s);
+  // Subscribe via narrow selectors — `useFrameStore((s) => s)` /
+  // `useAppStateStore((s) => s)` re-render on every patch (drag, edit)
+  // including ones that don't touch validation, which is the anti-pattern
+  // frame-building-page explicitly avoids.
+  const frame_version = useFrameStore((s) => s.frame_version);
+  const validation = useFrameStore((s) => s.validation);
+  const frame_id = useFrameStore((s) => s.frame?.id);
+  const dismissed_warnings = useAppStateStore((s) => s.app_state.dismissed_warnings);
   const { app_state_store: app_store } = useRepository();
 
-  const entries = selectValidationDrawer(snapshot);
+  const entries = React.useMemo(
+    () =>
+      selectValidationDrawer({
+        frame_version,
+        validation,
+      } as Parameters<typeof selectValidationDrawer>[0]),
+    [frame_version, validation],
+  );
   const errors = entries.filter((e) => e.severity === "error");
   const warnings = entries.filter((e) => e.severity === "warning");
 
-  const dismissed_keys = new Set<string>(
-    Object.keys(app_state_store.app_state.dismissed_warnings ?? {}),
-  );
+  const dismissed_keys = new Set<string>(Object.keys(dismissed_warnings ?? {}));
 
   const as_results = warnings.map((e) => ({
     rule_id: e.rule_id,
@@ -124,56 +134,62 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
 
           {/* Errors */}
           {errors.length > 0 && (
-            <div>
+            <div role="region" aria-label="Error messages">
               <h3
                 className="argmap-section-heading"
                 style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
               >
                 Errors
               </h3>
-              {errors.map((e, i) => (
-                <ValidationRow
-                  key={`${e.rule_id}-${i}`}
-                  result={{
-                    rule_id: e.rule_id,
-                    severity: "error",
-                    message: e.message,
-                    node_id: e.node_id,
-                    edge_id: e.edge_id,
-                  }}
-                  is_dismissed={false}
-                  on_jump_to_node={on_jump_to_node}
-                  on_dismiss={() => {}}
-                  on_restore={() => {}}
-                  frame_version={snapshot.frame_version}
-                />
-              ))}
+              {/* §13 #17: row[role="listitem"] needs an enclosing role="list"
+                  parent for valid ARIA semantics. */}
+              <div role="list">
+                {errors.map((e, i) => (
+                  <ValidationRow
+                    key={`${e.rule_id}-${i}`}
+                    result={{
+                      rule_id: e.rule_id,
+                      severity: "error",
+                      message: e.message,
+                      node_id: e.node_id,
+                      edge_id: e.edge_id,
+                    }}
+                    is_dismissed={false}
+                    on_jump_to_node={on_jump_to_node}
+                    on_dismiss={() => {}}
+                    on_restore={() => {}}
+                    frame_version={frame_version}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
           {/* Active warnings */}
           {active.length > 0 && (
-            <div>
+            <div role="region" aria-label="Warning messages">
               <h3
                 className="argmap-section-heading"
                 style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
               >
                 Warnings
               </h3>
-              {active.map((r, i) => (
-                <ValidationRow
-                  key={`${r.rule_id}-${i}`}
-                  result={r}
-                  is_dismissed={false}
-                  on_jump_to_node={on_jump_to_node}
-                  on_dismiss={() => {
-                    const key = dismissalKeyFor(r, frame_id ?? "frame");
-                    app_store.getState().dismissWarning(key);
-                  }}
-                  on_restore={() => {}}
-                  frame_version={snapshot.frame_version}
-                />
-              ))}
+              <div role="list">
+                {active.map((r, i) => (
+                  <ValidationRow
+                    key={`${r.rule_id}-${i}`}
+                    result={r}
+                    is_dismissed={false}
+                    on_jump_to_node={on_jump_to_node}
+                    on_dismiss={() => {
+                      const key = dismissalKeyFor(r, frame_id ?? "frame");
+                      app_store.getState().dismissWarning(key);
+                    }}
+                    on_restore={() => {}}
+                    frame_version={frame_version}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -254,7 +270,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
                       const key = dismissalKeyFor(r, frame_id ?? "frame");
                       app_store.getState().undismissWarning(key);
                     }}
-                    frame_version={snapshot.frame_version}
+                    frame_version={frame_version}
                   />
                 ))}
             </div>

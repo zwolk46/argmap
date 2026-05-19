@@ -75,7 +75,8 @@ describe("ProseTab", () => {
     const { getByTestId } = render(<ProseTab payload={payload} />);
     expect(getByTestId("prose-canonical-block")).toBeTruthy();
     expect(getByTestId("prose-rewritten-block").textContent).toContain("Polished text");
-    expect(getByTestId("ai-attribution-rewritten")).toBeTruthy();
+    // §12 F-22: rewrite header now renders the shared AiAttributionChip.
+    expect(getByTestId("ai-attribution-chip")).toBeTruthy();
   });
 
   it("hides the suggest-rewrite button for incomplete shape", () => {

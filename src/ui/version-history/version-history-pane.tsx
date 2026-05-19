@@ -79,6 +79,10 @@ function FrameVariant(props: FrameVariantProps): ReactElement {
       onClose={props.onClose}
       header_title={`Version history${frame_title ? ` · ${frame_title}` : ""}`}
       entity_kind="frame"
+      // §8 #2: pass the frame_id so the restore-confirm dialog can disclose
+      // how many sessions are anchored to this frame before the user
+      // commits to creating a new head.
+      frame_id={props.frame_id}
       summaries={summaries_result.summaries}
       summaries_status={summaries_result.status}
       current_version_id={current_version_id}
@@ -110,13 +114,18 @@ function SessionVariant(props: SessionVariantProps): ReactElement {
 
   const [active_tab, setActiveTab] = React.useState<PaneTabValue>("sessions");
 
+  // §8 #4 + #7: only fetch summaries the active tab is showing. Pass null
+  // when the other tab is active so the hook short-circuits without issuing
+  // a query. Eliminates the bogus "__unused__" frame_id sentinel that was
+  // emitting real queries.
   const session_summaries = useVersionSummaries({
     kind: "session",
-    session_id: props.session_id,
+    session_id: active_tab === "sessions" ? props.session_id : null,
   });
-  const frame_summaries = useVersionSummaries(
-    frame_id ? { kind: "frame", frame_id } : { kind: "frame", frame_id: "__unused__" as FrameId },
-  );
+  const frame_summaries = useVersionSummaries({
+    kind: "frame",
+    frame_id: active_tab === "frames" ? frame_id : null,
+  });
 
   return (
     <PaneShell
@@ -149,6 +158,12 @@ interface PaneShellProps {
   onClose: () => void;
   header_title: string;
   entity_kind: VersionTreeEntityKind;
+  /**
+   * §8 #2: parent frame id for `entity_kind === "frame"` panes. Forwarded to
+   * the RestoreConfirmDialog so it can render the affected-session count.
+   * Omitted for session entities.
+   */
+  frame_id?: FrameId;
   summaries: ReadonlyArray<{
     id: string;
     version_number: number;
@@ -192,6 +207,27 @@ function PaneShell(props: PaneShellProps): ReactElement {
     setCompareState(null);
     setMilestoneFilter("all");
   }, [route_key, props.active_tab]);
+
+  // §8 #11: the pane is just hidden when closed (not unmounted), so
+  // selection/compare/restore state survives close→reopen and the user
+  // jumps back into the previous Compare view unexpectedly. Reset on close.
+  React.useEffect(() => {
+    if (!props.open) {
+      setSelectedVersionId(null);
+      setCompareState(null);
+      setRestoreOpen(false);
+    }
+  }, [props.open]);
+
+  // §8 #12: validate `selected_summary` against the current summary list
+  // each render. If the selected id no longer exists (e.g., a peer-tab save
+  // rebuilt the list while the dialog was open), clear it so Restore can't
+  // fire against a stale id.
+  React.useEffect(() => {
+    if (selected_version_id && !props.summaries.some((s) => s.id === selected_version_id)) {
+      setSelectedVersionId(null);
+    }
+  }, [props.summaries, selected_version_id]);
 
   const selected_summary = props.summaries.find((s) => s.id === selected_version_id) ?? null;
 
@@ -313,6 +349,10 @@ function PaneShell(props: PaneShellProps): ReactElement {
           ancestor_version_id={selected_summary.id as FrameVersionId}
           ancestor_version_number={selected_summary.version_number}
           current_version_number={props.current_version_number}
+          // §8 #2: only forward for frame restores. PaneShell receives
+          // frame_id only when entity_kind="frame" (FrameVariant); session
+          // restores stay frame_id-less and skip the advisory.
+          frame_id={props.entity_kind === "frame" ? props.frame_id : undefined}
           on_restored={() => {
             setRestoreOpen(false);
             props.onClose();

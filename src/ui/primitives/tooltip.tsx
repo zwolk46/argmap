@@ -25,6 +25,10 @@ export function Tooltip({ content, children, disabled }: TooltipProps): ReactEle
   const [pos, setPos] = React.useState({ x: 0, y: 0 });
   const ref = React.useRef<HTMLElement>(null);
   const open_timer_ref = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // §13 #7: unique id per tooltip instance so multiple tooltips on the same
+  // page don't share id="tooltip-content" (invalid HTML; SR may read the
+  // first occurrence regardless of which trigger is focused).
+  const tooltip_id = React.useId();
 
   React.useEffect(() => {
     return () => {
@@ -107,7 +111,7 @@ export function Tooltip({ content, children, disabled }: TooltipProps): ReactEle
     onFocus: compose(handleFocus, child_props.onFocus),
     onBlur: compose(handleBlur, child_props.onBlur),
     onKeyDown: compose(handleKeyDown, child_props.onKeyDown),
-    "aria-describedby": open ? "tooltip-content" : undefined,
+    "aria-describedby": open ? tooltip_id : undefined,
     ref,
   } as React.HTMLAttributes<HTMLElement> & { ref?: React.Ref<HTMLElement> });
 
@@ -116,7 +120,7 @@ export function Tooltip({ content, children, disabled }: TooltipProps): ReactEle
       {childWithProps}
       {open && content && (
         <div
-          id="tooltip-content"
+          id={tooltip_id}
           role="tooltip"
           style={{
             position: "fixed",

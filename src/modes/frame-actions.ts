@@ -237,7 +237,7 @@ export const frameActions: FrameActionDispatchTable = {
   },
 
   architectural_mode_changed(
-    _frame: Frame,
+    frame: Frame,
     fv: FrameVersion,
     patch: Extract<FramePatch, { kind: "architectural_mode_changed" }>,
     _opts: DispatchOpts,
@@ -254,7 +254,14 @@ export const frameActions: FrameActionDispatchTable = {
       frame_partial.flavor = patch.target_flavor;
     }
     if (patch.positions_added && patch.positions_added.length > 0) {
-      frame_partial.positions = patch.positions_added as Position[];
+      // Merge with existing positions instead of overwriting — otherwise a
+      // user re-running the mode change with a fresh staged Position would
+      // silently wipe every position already on the frame, including ones
+      // referenced by current Conclusion direction choices.
+      const existing = frame.positions ?? [];
+      const existing_ids = new Set(existing.map((p) => p.id));
+      const new_unique = patch.positions_added.filter((p) => !existing_ids.has(p.id));
+      frame_partial.positions = [...existing, ...new_unique] as Position[];
     }
 
     return {

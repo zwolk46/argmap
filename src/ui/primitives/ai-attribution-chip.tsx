@@ -23,12 +23,61 @@ export function hookShortName(hook_id: string): string {
   return HOOK_SHORT_NAMES[hook_id] ?? hook_id;
 }
 
+// §12 F-22: the AI rewrite header in `prose-tab.tsx` previously used a
+// bespoke styled div because the session-level G6 rewrite has no
+// `HookInvocationRecord` to feed this chip (see F-09 for the underlying
+// provenance gap). Rather than maintain two AI-attribution looks, this
+// chip now accepts either a full record (rich tooltip with model / prompt
+// version / timestamp) or a bare `hook_id` (chip with no tooltip). The
+// shared chip keeps the visual contract uniform across surfaces.
 export interface AiAttributionChipProps {
-  record: HookInvocationRecord;
+  record?: HookInvocationRecord | null;
+  hook_id?: string;
 }
 
-export function AiAttributionChip({ record }: AiAttributionChipProps): ReactElement {
-  const short = hookShortName(record.hook_id);
+export function AiAttributionChip({
+  record,
+  hook_id,
+}: AiAttributionChipProps): ReactElement | null {
+  const effective_hook_id = record?.hook_id ?? hook_id;
+  if (!effective_hook_id) return null;
+  const short = hookShortName(effective_hook_id);
+
+  const chipSpan = (
+    <span
+      data-testid="ai-attribution-chip"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "3px",
+        padding: "1px var(--space-1)",
+        borderRadius: "var(--radius-pill)",
+        background: "var(--color-ai-accent-bg)",
+        color: "var(--color-ai-accent)",
+        fontSize: "var(--font-size-2xs)",
+        fontWeight: "var(--font-weight-medium)",
+        fontFamily: "var(--font-sans)",
+        letterSpacing: "var(--letter-spacing-wide)",
+        textTransform: "uppercase",
+        lineHeight: 1.4,
+        cursor: record ? "help" : "default",
+        border: "var(--border-thin) solid transparent",
+        transition: "border-color var(--duration-fast) var(--ease-standard)",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-ai-accent-strong)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.borderColor = "transparent";
+      }}
+    >
+      <AiSparkle style={{ fontSize: "var(--font-size-xs)" }} />
+      {short}
+    </span>
+  );
+
+  if (!record) return chipSpan;
+
   const tooltipContent = (
     <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
       <div>
@@ -46,38 +95,5 @@ export function AiAttributionChip({ record }: AiAttributionChipProps): ReactElem
     </div>
   );
 
-  return (
-    <Tooltip content={tooltipContent}>
-      <span
-        data-testid="ai-attribution-chip"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "3px",
-          padding: "1px var(--space-1)",
-          borderRadius: "var(--radius-pill)",
-          background: "var(--color-ai-accent-bg)",
-          color: "var(--color-ai-accent)",
-          fontSize: "var(--font-size-2xs)",
-          fontWeight: "var(--font-weight-medium)",
-          fontFamily: "var(--font-sans)",
-          letterSpacing: "var(--letter-spacing-wide)",
-          textTransform: "uppercase",
-          lineHeight: 1.4,
-          cursor: "help",
-          border: "var(--border-thin) solid transparent",
-          transition: "border-color var(--duration-fast) var(--ease-standard)",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "var(--color-ai-accent-strong)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.borderColor = "transparent";
-        }}
-      >
-        <AiSparkle style={{ fontSize: "var(--font-size-xs)" }} />
-        {short}
-      </span>
-    </Tooltip>
-  );
+  return <Tooltip content={tooltipContent}>{chipSpan}</Tooltip>;
 }

@@ -94,12 +94,43 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
       <InterviewFilter state={filter} on_change={on_filter_change} />
       <InterviewSearch value={search_text} on_change={on_search_change} />
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {items.length === 0 || !frame_version ? (
+        {!frame_version ? (
+          // Missing frame_version is a load/migration failure, NOT the
+          // happy "all resolved" path — surface it as an error so the
+          // user doesn't read "All resolved" as success.
+          <div
+            data-testid="interview-pane-error"
+            role="alert"
+            style={{
+              padding: "var(--space-4)",
+              color: "var(--color-severity-error)",
+              background: "var(--color-severity-error-bg)",
+              borderRadius: "var(--radius-md)",
+              fontSize: "var(--font-size-sm)",
+            }}
+          >
+            Couldn't load the frame snapshot for this session. Reload the page or open the session
+            from Home; if it persists, the snapshot may be corrupted.
+          </div>
+        ) : items.length === 0 ? (
           <InterviewEmptyState
             conclusion_label={summary?.conclusion_label}
             on_save_milestone={on_save_milestone}
             saving_milestone={saving_milestone}
           />
+        ) : filtered.length === 0 && search_text.length > 0 ? (
+          // M16: search active but no matches — distinguish from "no items"
+          // so the user sees their query, not the all-resolved/none-yet copy.
+          <div
+            data-testid="interview-empty-state-no-search-match"
+            style={{
+              padding: "var(--space-4)",
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            No items match &ldquo;{search_text}&rdquo;. Clear the search to see all open items.
+          </div>
         ) : (
           <InterviewList
             jurisdictional_items={jurisdictional_items}

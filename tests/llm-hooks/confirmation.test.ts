@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { runHook, applyDecision, MockLlmProvider } from "@/llm-hooks";
+import { runHook, applyDecision, MockLlmProvider, ParseAssertError } from "@/llm-hooks";
+import { ParseError, ProviderError } from "@/llm-hooks";
 import type { HookContract, HookContext, CommitPlan } from "@/llm-hooks";
 import type { Repository, PromptFileRecord } from "@/persistence";
 
@@ -118,6 +119,124 @@ describe("runHook", () => {
     expect(result.parsed).toEqual({ result: "fallback" });
   });
 
+  it("routes ParseError thrown from parseOutput through the parse-error fallback path (F-11)", async () => {
+    // §12 F-11. A hook whose parseOutput throws a ParseError (e.g., G7/G10/G12's
+    // ParseAssertError for deterministic-fallback paths) must be routed to
+    // hook.fallback as a ParseError — not silently re-wrapped as a ProviderError.
+    const errorsSeen: Array<ParseError | ProviderError> = [];
+    const promptText = "Prompt: test";
+    const responseHash = await MockLlmProvider.keyFor(promptText, "test-model");
+    const provider = new MockLlmProvider({
+      responses: new Map([
+        [responseHash, { raw_text: "ignored", model_id: "test-model", finish_reason: "stop" }],
+      ]),
+    });
+
+    const hook: HookContract<{ value: string }, { result: string }> = {
+      ...makeHook(),
+      parseOutput: () => {
+        throw new ParseAssertError("parser asserted");
+      },
+      fallback: (_input, error) => {
+        errorsSeen.push(error);
+        return { kind: "deterministic_fallback", value: { result: "from-fallback" } };
+      },
+    };
+
+    const result = await runHook(
+      hook,
+      makeCtx(),
+      provider,
+      { prompt_version: "v1" },
+      { now: () => "2026-01-01T00:00:00Z", generateId: () => "id-pe" },
+    );
+
+    expect(result.parse_status).toBe("fallback");
+    expect(result.parsed).toEqual({ result: "from-fallback" });
+    expect(errorsSeen).toHaveLength(1);
+    expect(errorsSeen[0]).toBeInstanceOf(ParseError);
+    expect(errorsSeen[0]).toBeInstanceOf(ParseAssertError);
+    expect(errorsSeen[0]).not.toBeInstanceOf(ProviderError);
+  });
+
+  it("routes to fallback when parseOutput returns ok but the value violates schema_out (F-04)", async () => {
+    const hook = makeHook();
+    const promptText = "Prompt: test";
+    const responseHash = await MockLlmProvider.keyFor(promptText, "test-model");
+    const provider = new MockLlmProvider({
+      responses: new Map([
+        [
+          responseHash,
+          // Top-level shape passes hook.parseOutput's check, but `result` is a
+          // number not a string — schema_out says { result: { type: "string" } }.
+          { raw_text: '{"result":42}', model_id: "test-model", finish_reason: "stop" },
+        ],
+      ]),
+    });
+
+    const recordWithStrictSchema: PromptFileRecord = {
+      hook_name: "test_hook",
+      version: "v1",
+      body_markdown: "Prompt: {{value}}",
+      frontmatter: {
+        hook_name: "test_hook",
+        version: "v1",
+        schema_in: {},
+        schema_out: {
+          type: "object",
+          required: ["result"],
+          properties: { result: { type: "string" } },
+        },
+        model_hint: "test-model",
+      },
+      added_at: "2026-01-01T00:00:00Z",
+    };
+    const ctx: HookContext = {
+      repository: {
+        loadPrompt: vi.fn().mockResolvedValue(recordWithStrictSchema),
+        savePrompt: vi.fn().mockResolvedValue(undefined),
+      } as unknown as Repository,
+      frame_version: {
+        id: "fv1",
+        frame_id: "f1",
+        version_number: 1,
+        created_at: "2026-01-01T00:00:00Z",
+        nodes: [],
+        edges: [],
+        is_milestone: false,
+      },
+    };
+
+    const result = await runHook(
+      hook,
+      ctx,
+      provider,
+      { prompt_version: "v1" },
+      { now: () => "2026-01-01T00:00:00Z", generateId: () => "id-x" },
+    );
+
+    expect(result.parse_status).toBe("fallback");
+    expect((result.parsed as { result: string }).result).toBe("fallback");
+  });
+
+  it("populates prompt_body_hash and rendered_prompt_hash (F-03)", async () => {
+    const hook = makeHook();
+    const promptText = "Prompt: test";
+    const responseHash = await MockLlmProvider.keyFor(promptText, "test-model");
+    const provider = new MockLlmProvider({
+      responses: new Map([
+        [
+          responseHash,
+          { raw_text: '{"result":"r"}', model_id: "test-model", finish_reason: "stop" },
+        ],
+      ]),
+    });
+    const result = await runHook(hook, makeCtx(), provider, { prompt_version: "v1" });
+    expect(result.prompt_body_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.rendered_prompt_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(result.prompt_body_hash).not.toBe(result.rendered_prompt_hash);
+  });
+
   it("records the provider_id in the result", async () => {
     const hook = makeHook();
     const promptText = "Prompt: test";
@@ -147,6 +266,8 @@ describe("applyDecision", () => {
       provider_id: "mock",
       model_id: "m",
       input_hash: "h",
+      prompt_body_hash: "pb",
+      rendered_prompt_hash: "pr",
       raw_response: "r",
       parsed: { result: "x" },
       parse_status: "ok" as const,
@@ -169,6 +290,8 @@ describe("applyDecision", () => {
       provider_id: "mock",
       model_id: "m",
       input_hash: "h",
+      prompt_body_hash: "pb",
+      rendered_prompt_hash: "pr",
       raw_response: "r",
       parsed: { result: "accepted-value" },
       parse_status: "ok" as const,

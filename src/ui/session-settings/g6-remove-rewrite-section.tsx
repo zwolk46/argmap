@@ -43,8 +43,13 @@ export function G6RemoveRewriteSection(): ReactElement {
             color: "var(--color-text-secondary)",
           }}
         >
-          No rewritten prose for this session. Use the 'Rewrite' button in the prose tab of the
-          output viewer to generate one.
+          {/* §9 #34: don't reference specific UI surfaces by name ("prose tab",
+              "output viewer") — describe the feature instead. The rewrite is
+              opt-in and visible only on sessions that have one, so saying
+              there isn't one yet plus what it does is enough orientation. */}
+          No AI-rewritten prose for this session. The G6 rewrite, when used, produces a polished
+          version of the deterministic output and is shown alongside it; the canonical output never
+          changes.
         </p>
       ) : (
         <>

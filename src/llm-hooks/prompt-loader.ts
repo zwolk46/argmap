@@ -57,13 +57,23 @@ export async function loadPrompt(
   const key = `${hook_name}@${version}`;
   const bundled = BUNDLED.get(key);
   if (bundled) {
-    await repository.savePrompt({
-      hook_name,
-      version,
-      body_markdown: bundled.body,
-      frontmatter: extractFrontmatterObject(bundled),
-      added_at: bundled.created_at ?? new Date(0).toISOString(),
-    });
+    // F-07: previously every bundled-prompt hit re-wrote the archived row,
+    // overwriting added_at with epoch zero when the bundle had no created_at.
+    // Skip the write when the archive already has an entry whose body
+    // matches; otherwise add_at gets clobbered on every hook call.
+    const existing = await repository.loadPrompt(hook_name, version);
+    if (!existing || existing.body_markdown !== bundled.body) {
+      await repository.savePrompt({
+        hook_name,
+        version,
+        body_markdown: bundled.body,
+        frontmatter: extractFrontmatterObject(bundled),
+        // If the bundle lacks a created_at, use the current time so we don't
+        // stamp epoch zero — that's a sentinel for "never seen" rather than
+        // a real authorship timestamp.
+        added_at: bundled.created_at ?? existing?.added_at ?? new Date().toISOString(),
+      });
+    }
     return bundled;
   }
   const archived = await repository.loadPrompt(hook_name, version);

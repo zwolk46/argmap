@@ -9,6 +9,8 @@ import type {
   ArgumentSessionVersion,
   Node as SchemaNode,
   Edge as SchemaEdge,
+  Premise,
+  Authority,
 } from "@/schema";
 import {
   diffFrameVersions,
@@ -56,6 +58,28 @@ function nodeType(node: SchemaNode | undefined): string {
 function edgeEndpointsPreview(edge: SchemaEdge | undefined): string {
   if (!edge) return "";
   return `${edge.type}: ${edge.source} → ${edge.target}`;
+}
+
+function premisePreview(p: Premise | undefined): string {
+  if (!p) return "";
+  return p.statement.slice(0, 80);
+}
+
+function authorityPreview(a: Authority | undefined): string {
+  if (!a) return "";
+  return a.citation.slice(0, 80);
+}
+
+// §8 #6 interim: checkpoint and interpretation rows describe entities whose
+// human-readable text (Checkpoint.question, Term.name) lives on the *frame*,
+// not the session version. ArgumentSessionVersion has no
+// frame_version_snapshot today (handoff item 3 / §8 #1 will add one), so the
+// page-level loader only has session versions in scope. Until that lands,
+// label these rows with a type-prefixed truncated id rather than the raw
+// uuid — strictly less hostile than what the row used to render.
+function truncatedIdPreview(prefix: string, id: string): string {
+  const head = id.length > 12 ? `${id.slice(0, 12)}…` : id;
+  return `${prefix} ${head}`;
 }
 
 function buildFrameRows(
@@ -136,7 +160,11 @@ function buildFrameRows(
   };
 }
 
-function buildSessionRows(diff: SessionStructuralDiff): {
+export function buildSessionRows(
+  a: ArgumentSessionVersion,
+  b: ArgumentSessionVersion,
+  diff: SessionStructuralDiff,
+): {
   premises_added: CompareEntryRowDescriptor[];
   premises_removed: CompareEntryRowDescriptor[];
   premises_edited: CompareEntryRowDescriptor[];
@@ -154,100 +182,107 @@ function buildSessionRows(diff: SessionStructuralDiff): {
   interp_edited: CompareEntryRowDescriptor[];
   metadata: CompareEntryRowDescriptor[];
 } {
+  const premises_a = new Map(a.premises.map((p) => [p.id, p]));
+  const premises_b = new Map(b.premises.map((p) => [p.id, p]));
+  const edges_a = new Map(a.argument_edges.map((e) => [e.id, e]));
+  const edges_b = new Map(b.argument_edges.map((e) => [e.id, e]));
+  const auths_a = new Map((a.session_authorities ?? []).map((au) => [au.id, au]));
+  const auths_b = new Map((b.session_authorities ?? []).map((au) => [au.id, au]));
+
   return {
     premises_added: diff.premises.added.map((id) => ({
       kind: "node_added",
       node_id: id,
       node_type: "Premise",
-      statement_preview: id,
+      statement_preview: premisePreview(premises_b.get(id)),
     })),
     premises_removed: diff.premises.removed.map((id) => ({
       kind: "node_removed",
       node_id: id,
       node_type: "Premise",
-      statement_preview: id,
+      statement_preview: premisePreview(premises_a.get(id)),
     })),
     premises_edited: diff.premises.edited.map((e) => ({
       kind: "node_edited",
       node_id: e.id,
       node_type: "Premise",
-      statement_preview: e.id,
+      statement_preview: premisePreview(premises_b.get(e.id) ?? premises_a.get(e.id)),
       fields_changed: e.fields_changed,
     })),
     argument_edges_added: diff.argument_edges.added.map((id) => ({
       kind: "edge_added",
       edge_id: id,
-      edge_type: "",
-      endpoints_preview: id,
+      edge_type: edges_b.get(id)?.type ?? "",
+      endpoints_preview: edgeEndpointsPreview(edges_b.get(id)),
     })),
     argument_edges_removed: diff.argument_edges.removed.map((id) => ({
       kind: "edge_removed",
       edge_id: id,
-      edge_type: "",
-      endpoints_preview: id,
+      edge_type: edges_a.get(id)?.type ?? "",
+      endpoints_preview: edgeEndpointsPreview(edges_a.get(id)),
     })),
     argument_edges_edited: diff.argument_edges.edited.map((e) => ({
       kind: "edge_edited",
       edge_id: e.id,
-      edge_type: "",
-      endpoints_preview: e.id,
+      edge_type: edges_b.get(e.id)?.type ?? edges_a.get(e.id)?.type ?? "",
+      endpoints_preview: edgeEndpointsPreview(edges_b.get(e.id) ?? edges_a.get(e.id)),
       fields_changed: e.fields_changed,
     })),
     checkpoint_added: diff.checkpoint_responses.added.map((id) => ({
       kind: "node_added",
       node_id: id,
       node_type: "Checkpoint",
-      statement_preview: id,
+      statement_preview: truncatedIdPreview("Checkpoint", id),
     })),
     checkpoint_removed: diff.checkpoint_responses.removed.map((id) => ({
       kind: "node_removed",
       node_id: id,
       node_type: "Checkpoint",
-      statement_preview: id,
+      statement_preview: truncatedIdPreview("Checkpoint", id),
     })),
     checkpoint_edited: diff.checkpoint_responses.edited.map((e) => ({
       kind: "node_edited",
       node_id: e.checkpoint_id,
       node_type: "Checkpoint",
-      statement_preview: e.checkpoint_id,
+      statement_preview: truncatedIdPreview("Checkpoint", e.checkpoint_id),
       fields_changed: e.fields_changed,
     })),
     authorities_added: diff.session_authorities.added.map((id) => ({
       kind: "node_added",
       node_id: id,
       node_type: "Authority",
-      statement_preview: id,
+      statement_preview: authorityPreview(auths_b.get(id)),
     })),
     authorities_removed: diff.session_authorities.removed.map((id) => ({
       kind: "node_removed",
       node_id: id,
       node_type: "Authority",
-      statement_preview: id,
+      statement_preview: authorityPreview(auths_a.get(id)),
     })),
     authorities_edited: diff.session_authorities.edited.map((e) => ({
       kind: "node_edited",
       node_id: e.id,
       node_type: "Authority",
-      statement_preview: e.id,
+      statement_preview: authorityPreview(auths_b.get(e.id) ?? auths_a.get(e.id)),
       fields_changed: e.fields_changed,
     })),
     interp_added: diff.interpretation_selections.added.map((id) => ({
       kind: "node_added",
       node_id: id,
       node_type: "Term",
-      statement_preview: id,
+      statement_preview: truncatedIdPreview("Term", id),
     })),
     interp_removed: diff.interpretation_selections.removed.map((id) => ({
       kind: "node_removed",
       node_id: id,
       node_type: "Term",
-      statement_preview: id,
+      statement_preview: truncatedIdPreview("Term", id),
     })),
     interp_edited: diff.interpretation_selections.edited.map((e) => ({
       kind: "node_edited",
       node_id: e.term_id,
       node_type: "Term",
-      statement_preview: e.term_id,
+      statement_preview: truncatedIdPreview("Term", e.term_id),
       fields_changed: e.fields_changed,
     })),
     metadata: diff.metadata.changed_fields.map((m) => ({
@@ -482,7 +517,7 @@ function SessionCompareBody(props: {
   const a_s = state.a as ArgumentSessionVersion;
   const b_s = state.b as ArgumentSessionVersion;
   const diff = React.useMemo(() => diffSessionVersions(a_s, b_s), [a_s, b_s]);
-  const rows = React.useMemo(() => buildSessionRows(diff), [diff]);
+  const rows = React.useMemo(() => buildSessionRows(a_s, b_s, diff), [a_s, b_s, diff]);
   const total =
     rows.premises_added.length +
     rows.premises_removed.length +

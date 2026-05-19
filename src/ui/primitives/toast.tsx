@@ -102,6 +102,13 @@ export function useToast(): ToastContextValue {
   return ctx;
 }
 
+// Variant for primitives that may render in isolated test harnesses without
+// a ToastProvider mounted (e.g., FrameTitle's "title can't be blank" toast).
+// Returns null instead of throwing so the component can fall back silently.
+export function useOptionalToast(): ToastContextValue | null {
+  return React.useContext(ToastContext);
+}
+
 interface ToastStackProps {
   toasts: ReadonlyArray<ToastRecord>;
   onDismiss: (id: string) => void;

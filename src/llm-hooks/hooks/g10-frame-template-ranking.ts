@@ -1,4 +1,5 @@
 import type { HookContract, HookContext, CommitPlan, FallbackResult } from "../types";
+import { ParseAssertError } from "../types";
 import { renderTemplate } from "../prompt-template";
 import type { FrameId } from "@/schema";
 
@@ -34,7 +35,7 @@ export const g10Hook: HookContract<G10Input, G10Output> = {
   },
 
   parseOutput(_raw, _schema) {
-    throw new Error("G10.parseOutput: LLM path not active in v1");
+    throw new ParseAssertError("G10.parseOutput: LLM path not active in v1");
   },
 
   fallback(input): FallbackResult<G10Output> {

@@ -143,3 +143,111 @@ describe("FrameStore.saveFrameMilestone", () => {
     store.getState().dispose();
   });
 });
+
+// §12 F-18: drawer needs a synchronous preview of hook.commit() before
+// the user clicks Accept. State doesn't import @/llm-hooks (boundary), so
+// the preview implementation is injected as a store opt.
+describe("FrameStore.previewCommit (§12 F-18)", () => {
+  it("returns null when no pending suggestion", async () => {
+    const { store } = await makeEnv();
+    expect(store.getState().previewCommit({ kind: "accepted", final: {} })).toBeNull();
+    store.getState().dispose();
+  });
+
+  it("returns an empty plan for a rejected decision without calling preview_commit", async () => {
+    const repo = await freshDb();
+    const { frame } = await repo.createBlankFrame({ title: "x" });
+    const autosave = createAutosaveController({ repo });
+    const crosstab = createCrossTabBus();
+    const compute_driver = createComputeDriver({ now: () => TEST_NOW });
+    const dispatch = makeFrameDispatch({});
+    const preview_commit = vi.fn(() => ({ writes: [{ op: "set", field_path: "x", value: 1 }] }));
+    const store = createFrameStore({
+      repo,
+      autosave,
+      crosstab,
+      dispatch,
+      compute_driver,
+      now: injectedNow(TEST_NOW),
+      generateId: injectedGenerateId(),
+      invoke_hook: vi.fn().mockResolvedValue({ hook_id: "G1", parsed: { x: 1 } }),
+      preview_commit,
+    });
+    await store.getState().loadFrame(frame.id);
+    await flushPromises();
+    // Seed a pending_suggestion by calling invokeHook with a fake result.
+    await store.getState().invokeHook("G1", {});
+    await flushPromises();
+    const plan = store.getState().previewCommit({ kind: "rejected" });
+    expect(plan).toEqual({ writes: [], versioned: false });
+    expect(preview_commit).not.toHaveBeenCalled();
+    store.getState().dispose();
+  });
+
+  it("routes accepted/edited decisions through the injected preview_commit", async () => {
+    const repo = await freshDb();
+    const { frame } = await repo.createBlankFrame({ title: "x" });
+    const autosave = createAutosaveController({ repo });
+    const crosstab = createCrossTabBus();
+    const compute_driver = createComputeDriver({ now: () => TEST_NOW });
+    const dispatch = makeFrameDispatch({});
+    const expected_plan = {
+      writes: [{ op: "create_node", field_path: "nodes", value: { type: "Term" } }],
+      versioned: true,
+    };
+    const preview_commit = vi.fn(() => expected_plan);
+    const store = createFrameStore({
+      repo,
+      autosave,
+      crosstab,
+      dispatch,
+      compute_driver,
+      now: injectedNow(TEST_NOW),
+      generateId: injectedGenerateId(),
+      invoke_hook: vi.fn().mockResolvedValue({ hook_id: "G2", parsed: { interp: "A" } }),
+      preview_commit,
+    });
+    await store.getState().loadFrame(frame.id);
+    await flushPromises();
+    await store.getState().invokeHook("G2", {});
+    await flushPromises();
+
+    const decision = { kind: "accepted", final: { interp: "A" } };
+    const plan = store.getState().previewCommit(decision);
+    expect(plan).toBe(expected_plan);
+    expect(preview_commit).toHaveBeenCalledWith(
+      "G2",
+      expect.objectContaining({ hook_id: "G2" }),
+      decision,
+    );
+    store.getState().dispose();
+  });
+
+  it("returns null when preview_commit throws", async () => {
+    const repo = await freshDb();
+    const { frame } = await repo.createBlankFrame({ title: "x" });
+    const autosave = createAutosaveController({ repo });
+    const crosstab = createCrossTabBus();
+    const compute_driver = createComputeDriver({ now: () => TEST_NOW });
+    const preview_commit = vi.fn(() => {
+      throw new Error("commit blew up");
+    });
+    const store = createFrameStore({
+      repo,
+      autosave,
+      crosstab,
+      dispatch: makeFrameDispatch({}),
+      compute_driver,
+      now: injectedNow(TEST_NOW),
+      generateId: injectedGenerateId(),
+      invoke_hook: vi.fn().mockResolvedValue({ hook_id: "G2", parsed: {} }),
+      preview_commit,
+    });
+    await store.getState().loadFrame(frame.id);
+    await flushPromises();
+    await store.getState().invokeHook("G2", {});
+    await flushPromises();
+    expect(store.getState().previewCommit({ kind: "accepted", final: {} })).toBeNull();
+    store.getState().dispose();
+  });
+});

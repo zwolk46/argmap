@@ -1,5 +1,5 @@
 import type { NodeRef, EdgeRef } from "./identifiers";
-import type { FrameVersion } from "./frame";
+import type { Frame, FrameVersion } from "./frame";
 import type { ArgumentSession, NodeStatus } from "./session";
 import type {
   Node,
@@ -12,7 +12,7 @@ import type {
 } from "./nodes";
 import type { Edge, EdgeType } from "./edges";
 import { VALID_EDGE_PAIRS } from "./edges";
-import { PREMISE_KIND_VOCABULARIES, type PremiseKindVocabularyKey } from "./frame";
+import { PREMISE_KIND_VOCABULARIES, toModeFlavor, type PremiseKindVocabularyKey } from "./frame";
 
 // ============================================================================
 // Public shapes
@@ -44,6 +44,41 @@ export function runValidation(
   const sorted = [...rules].sort((a, b) => a.id.localeCompare(b.id));
   const out: ValidationResult[] = [];
   for (const r of sorted) out.push(...r.evaluate(frame, session));
+  return out;
+}
+
+/**
+ * §15 F-11: cross-Frame extension to V-FR-10. Validation rules operate on
+ * FrameVersion only; positions live on Frame. This helper runs at the
+ * Frame+FrameVersion load boundary (frame-store load/restore, runFrameAction
+ * post-transform) and reports general-mode Conclusions whose non-empty
+ * position_id doesn't resolve to any Position on the Frame. Returns sorted
+ * by node_id for determinism (Article II § 2).
+ */
+export function validateFrameVersionAgainstFrame(
+  frame: Frame,
+  version: FrameVersion,
+): ValidationResult[] {
+  if (frame.mode !== "general") return [];
+  const known = new Set((frame.positions ?? []).map((p) => p.id));
+  const out: ValidationResult[] = [];
+  for (const n of [...version.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+    if (n.type !== "Conclusion") continue;
+    const c = n as Conclusion;
+    if (c.direction.kind !== "general") continue;
+    const pid = c.direction.position_id;
+    // Empty position_id is caught by V-FR-10's local check; only emit here
+    // when the id is non-empty but absent from Frame.positions.
+    if (!pid || pid.trim() === "") continue;
+    if (!known.has(pid)) {
+      out.push({
+        rule_id: "V-FR-10",
+        severity: "error",
+        node_id: n.id,
+        message: `Conclusion ${n.id} references unknown position_id "${pid}" (not in Frame.positions).`,
+      });
+    }
+  }
   return out;
 }
 
@@ -299,15 +334,16 @@ const V_FR_7: ValidationRule = {
   severity: "warning",
   description: "Legal-mode frame has at least one SubQuestion with is_jurisdictional: true.",
   evaluate(frame) {
-    // Only applicable in legal mode. We infer legal mode from presence of any
-    // legal-only signal: a SubQuestion's is_jurisdictional has been deliberately
-    // set, a Conclusion has a legal direction, etc. Since FrameVersion does not
-    // itself carry mode, we apply the rule only when at least one SubQuestion
-    // exists and the parent frame's legal-mode marker (a Conclusion with kind
-    // "legal") is present. Tests pin this contract.
-    const isLegal = frame.nodes.some(
-      (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
-    );
+    // F-028: FrameVersion now snapshots `mode` directly. Prefer that signal
+    // — otherwise we'd false-trigger mid-construction (legal-mode frame with
+    // no Conclusions yet looks "general" by the old inference and the rule
+    // silently doesn't apply, hiding the missing-jurisdictional warning).
+    const isLegal =
+      frame.mode === "legal" ||
+      (frame.mode === undefined &&
+        frame.nodes.some(
+          (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
+        ));
     if (!isLegal) return [];
     const hasJurisdictional = frame.nodes.some(
       (n) =>
@@ -1009,6 +1045,54 @@ const V_EDGE_4: ValidationRule = {
   },
 };
 
+// §15 F-10. V-EDGE-3/4 check storage location but not the .layer field itself.
+// A DECOMPOSES_INTO with layer="argument" (or an ANSWERS with layer="frame") passes
+// those rules clean; consumers that branch on e.layer silently misclassify it.
+const FRAME_LAYER_EDGE_TYPES = new Set<EdgeType>([
+  "DECOMPOSES_INTO",
+  "TURNS_ON",
+  "INTERPRETED_AS",
+  "LEADS_TO",
+  "FORECLOSES",
+  "GATES",
+  "CITES",
+  "BINDING_IN",
+  "DISTINGUISHED_BY",
+]);
+const ARGUMENT_LAYER_EDGE_TYPES = new Set<EdgeType>(["ANSWERS", "SUPPORTS", "CONTRADICTS"]);
+
+const V_EDGE_5: ValidationRule = {
+  id: "V-EDGE-5",
+  severity: "error",
+  description:
+    "Every edge's .layer field matches the layer declared by its type: frame-layer types need layer='frame'; argument-layer types need layer='argument'.",
+  evaluate(frame, session) {
+    const out: ValidationResult[] = [];
+    const checkEdge = (e: Edge): void => {
+      const expected = FRAME_LAYER_EDGE_TYPES.has(e.type)
+        ? "frame"
+        : ARGUMENT_LAYER_EDGE_TYPES.has(e.type)
+          ? "argument"
+          : null;
+      if (expected !== null && e.layer !== expected) {
+        out.push({
+          rule_id: "V-EDGE-5",
+          severity: "error",
+          edge_id: e.id,
+          message: `Edge ${e.id} (type ${e.type}) must have layer="${expected}" but has "${e.layer}".`,
+        });
+      }
+    };
+    for (const e of [...frame.edges].sort((a, b) => a.id.localeCompare(b.id))) checkEdge(e);
+    if (session) {
+      for (const e of [...session.argument_edges].sort((a, b) => a.id.localeCompare(b.id))) {
+        checkEdge(e);
+      }
+    }
+    return out;
+  },
+};
+
 // ============================================================================
 // V-GATE-1..6
 // ============================================================================
@@ -1249,13 +1333,24 @@ const V_ARG_3: ValidationRule = {
     "Every Premise has a kind drawn from the vocabulary corresponding to the frame's mode/flavor.",
   evaluate(_frame, session) {
     if (!session) return [];
-    // Infer mode/flavor from frame_version_snapshot: a Conclusion with kind
-    // "legal" forces legal; otherwise general (flavor defaults to academic
-    // when undetectable — flavor only changes vocabulary within general).
-    const isLegal = session.frame_version_snapshot.nodes.some(
-      (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
-    );
-    const vocab = vocabularyFor(isLegal ? "legal" : "general");
+    // F-028: prefer the explicit mode/flavor from frame_version_snapshot.
+    // The Conclusion-walking inference (kept as a fallback for unsnapped
+    // legacy versions) reads false during mid-construction — e.g. a legal
+    // frame without Conclusions yet looks "general", letting through
+    // legal-only premise kinds without warning.
+    const snap = session.frame_version_snapshot;
+    let vocab: PremiseKindVocabularyKey;
+    if (snap.mode) {
+      vocab = toModeFlavor(snap.mode, snap.flavor) as PremiseKindVocabularyKey;
+    } else {
+      const isLegal = snap.nodes.some(
+        (n) => n.type === "Conclusion" && (n as Conclusion).direction.kind === "legal",
+      );
+      // F-12: pass flavor through. Defaulting flavor to academic silently
+      // mis-validates premises on personal-flavor legacy frames whose
+      // FrameVersion was minted before the F-028 snapshot fields existed.
+      vocab = vocabularyFor(isLegal ? "legal" : "general", snap.flavor);
+    }
     const allowed = new Set<string>(PREMISE_KIND_VOCABULARIES[vocab] as readonly string[]);
     const out: ValidationResult[] = [];
     for (const p of [...session.premises].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -1434,6 +1529,207 @@ const V_ARG_8: ValidationRule = {
   },
 };
 
+// F-5: cross-check selected_option_id against the Checkpoint's options list.
+// Without this, deleting an option the user previously selected leaves a
+// dangling reference and the runtime silently produces no target.
+const V_ARG_9: ValidationRule = {
+  id: "V-ARG-9",
+  severity: "error",
+  description:
+    "Every CheckpointResponse.selected_option_id and AnswersEdge.selected_option_id references a real CheckpointOption on the target Checkpoint.",
+  evaluate(_frame, session) {
+    if (!session) return [];
+    const cpById = new Map<string, Checkpoint>();
+    for (const n of session.frame_version_snapshot.nodes) {
+      if (n.type === "Checkpoint") cpById.set(n.id, n as Checkpoint);
+    }
+    const out: ValidationResult[] = [];
+    for (const r of [...session.checkpoint_responses].sort((a, b) =>
+      a.checkpoint_id.localeCompare(b.checkpoint_id),
+    )) {
+      // selected_option_id is optional on CheckpointResponse; only validate
+      // when it's set.
+      const sel = (r as { selected_option_id?: string }).selected_option_id;
+      if (sel === undefined) continue;
+      const cp = cpById.get(r.checkpoint_id);
+      if (!cp) continue; // V-ARG-1 already flagged the missing Checkpoint.
+      if (!cp.options.some((o) => o.id === sel)) {
+        out.push({
+          rule_id: "V-ARG-9",
+          severity: "error",
+          node_id: r.checkpoint_id,
+          message: `CheckpointResponse for ${r.checkpoint_id} references option "${sel}" which no longer exists.`,
+        });
+      }
+    }
+    // ANSWERS edges may also carry selected_option_id (per AnswersEdge).
+    for (const e of [...session.frame_version_snapshot.edges].sort((a, b) =>
+      a.id.localeCompare(b.id),
+    )) {
+      if (e.type !== "ANSWERS") continue;
+      const sel = (e as { selected_option_id?: string }).selected_option_id;
+      if (sel === undefined) continue;
+      const cp = cpById.get(e.target);
+      if (!cp) continue;
+      if (!cp.options.some((o) => o.id === sel)) {
+        out.push({
+          rule_id: "V-ARG-9",
+          severity: "error",
+          node_id: e.target,
+          message: `ANSWERS edge ${e.id} references option "${sel}" which no longer exists on Checkpoint ${e.target}.`,
+        });
+      }
+    }
+    return out;
+  },
+};
+
+// F-14: every Checkpoint has at least one option and every option carries a
+// non-empty id + label. V-NODE-5/6/7 covered specific answer_type counts; this
+// rule covers the universal "must have an option" floor.
+const V_NODE_10: ValidationRule = {
+  id: "V-NODE-10",
+  severity: "error",
+  description:
+    "Every Checkpoint has at least one option, and every option has a non-empty id and label.",
+  evaluate(frame) {
+    const out: ValidationResult[] = [];
+    for (const n of [...frame.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (n.type !== "Checkpoint") continue;
+      const c = n as Checkpoint;
+      if (c.options.length === 0) {
+        out.push({
+          rule_id: "V-NODE-10",
+          severity: "error",
+          node_id: n.id,
+          message: `Checkpoint ${n.id} has no options; users have nothing to pick.`,
+        });
+        continue;
+      }
+      for (const opt of [...c.options].sort((a, b) => a.id.localeCompare(b.id))) {
+        if (!opt.id || opt.id.trim().length === 0) {
+          out.push({
+            rule_id: "V-NODE-10",
+            severity: "error",
+            node_id: n.id,
+            message: `Checkpoint ${n.id} has an option with an empty id.`,
+          });
+        }
+        if (!opt.label || opt.label.trim().length === 0) {
+          out.push({
+            rule_id: "V-NODE-10",
+            severity: "error",
+            node_id: n.id,
+            message: `Checkpoint ${n.id} option "${opt.id}" has an empty label.`,
+          });
+        }
+      }
+    }
+    return out;
+  },
+};
+
+// §15 F-9. Authority is the only node type whose `layer` is multi-valued
+// ("frame" | "argument"). Without this rule a programmatic edit or buggy
+// migration can land an Authority with layer="argument" inside frame.nodes
+// (or layer="frame" inside session.session_authorities), and any downstream
+// consumer that filters by layer silently drops it (e.g., frame-canvas's
+// `.filter(n => n.layer === "frame")`).
+const V_NODE_11: ValidationRule = {
+  id: "V-NODE-11",
+  severity: "error",
+  description:
+    "Authority nodes carry a layer that matches their container: frame-layer for frame.nodes Authorities, argument-layer for session.session_authorities.",
+  evaluate(frame, session) {
+    const out: ValidationResult[] = [];
+    for (const n of [...frame.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (n.type !== "Authority") continue;
+      const a = n as Authority;
+      if (a.layer !== "frame") {
+        out.push({
+          rule_id: "V-NODE-11",
+          severity: "error",
+          node_id: n.id,
+          message: `Authority ${n.id} is stored in frame.nodes but has layer="${a.layer}"; expected "frame".`,
+        });
+      }
+    }
+    if (session) {
+      for (const a of [...(session.session_authorities ?? [])].sort((x, y) =>
+        x.id.localeCompare(y.id),
+      )) {
+        if (a.layer !== "argument") {
+          out.push({
+            rule_id: "V-NODE-11",
+            severity: "error",
+            node_id: a.id,
+            message: `Authority ${a.id} is stored in session.session_authorities but has layer="${a.layer}"; expected "argument".`,
+          });
+        }
+      }
+    }
+    return out;
+  },
+};
+
+// §15 F-10 (node side). Every non-Authority node's .layer must match the layer
+// declared by its type. RootQuestion/SubQuestion/Term/Interpretation/Checkpoint/
+// LogicalGate/Conclusion are always frame-layer; Premise is always argument-layer.
+// Authority is multi-valued and handled by V-NODE-11 (container-based check).
+const FRAME_ONLY_NODE_TYPES = new Set<NodeType>([
+  "RootQuestion",
+  "SubQuestion",
+  "Term",
+  "Interpretation",
+  "Checkpoint",
+  "LogicalGate",
+  "Conclusion",
+]);
+
+const V_NODE_12: ValidationRule = {
+  id: "V-NODE-12",
+  severity: "error",
+  description:
+    "Every non-Authority node's .layer field matches the layer declared by its type: frame-only types need layer='frame'; Premise needs layer='argument'. (Authority handled by V-NODE-11.)",
+  evaluate(frame, session) {
+    const out: ValidationResult[] = [];
+    for (const n of [...frame.nodes].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (n.type === "Authority") continue;
+      if (FRAME_ONLY_NODE_TYPES.has(n.type) && n.layer !== "frame") {
+        out.push({
+          rule_id: "V-NODE-12",
+          severity: "error",
+          node_id: n.id,
+          message: `Node ${n.id} (type ${n.type}) must have layer="frame" but has "${n.layer}".`,
+        });
+      }
+      if (n.type === "Premise" && (n.layer as string) !== "argument") {
+        out.push({
+          rule_id: "V-NODE-12",
+          severity: "error",
+          node_id: n.id,
+          message: `Premise ${n.id} must have layer="argument" but has "${n.layer as string}".`,
+        });
+      }
+    }
+    if (session) {
+      for (const p of [...session.premises].sort((a, b) => a.id.localeCompare(b.id))) {
+        // Cast: TS knows layer:"argument" is the literal type, but database data
+        // may deliver a different string at runtime — this rule exists for that case.
+        if ((p.layer as string) !== "argument") {
+          out.push({
+            rule_id: "V-NODE-12",
+            severity: "error",
+            node_id: p.id,
+            message: `Premise ${p.id} in session.premises must have layer="argument" but has "${p.layer as string}".`,
+          });
+        }
+      }
+    }
+    return out;
+  },
+};
+
 // ============================================================================
 // Full registry
 // ============================================================================
@@ -1460,10 +1756,14 @@ export const VALIDATION_RULES: ReadonlyArray<ValidationRule> = [
   V_NODE_7,
   V_NODE_8,
   V_NODE_9,
+  V_NODE_10,
+  V_NODE_11,
+  V_NODE_12,
   V_EDGE_1,
   V_EDGE_2,
   V_EDGE_3,
   V_EDGE_4,
+  V_EDGE_5,
   V_GATE_1,
   V_GATE_2,
   V_GATE_3,
@@ -1478,6 +1778,7 @@ export const VALIDATION_RULES: ReadonlyArray<ValidationRule> = [
   V_ARG_6,
   V_ARG_7,
   V_ARG_8,
+  V_ARG_9,
 ];
 
 // Priority map: rule_id → index, for canonical ordering of ValidationResults.

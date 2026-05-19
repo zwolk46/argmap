@@ -152,6 +152,19 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
               </button>
             ))}
           </div>
+          {edit_mode === "frame_default" && (
+            <div
+              data-testid="frame-default-edit-notice"
+              role="note"
+              style={{
+                fontSize: "var(--font-size-xs)",
+                color: "var(--color-text-secondary)",
+                padding: "2px var(--space-1)",
+              }}
+            >
+              Editing will create a frame-level override from the library default.
+            </div>
+          )}
           <ConditionList
             policy={active_policy}
             on_change={handlePolicyChange}

@@ -29,8 +29,18 @@ export function migrate(
   envelope: { schema_version: number } & Record<string, unknown>,
   registry: MigrationRegistry = MIGRATION_REGISTRY,
 ): unknown {
+  // Reject envelopes with a non-integer or unknown schema_version up-front.
+  // Otherwise an undefined / NaN / string version would skip both the
+  // equality check AND the migration loop, silently stamping the envelope
+  // as current and treating arbitrary on-disk shapes as valid.
+  if (!Number.isInteger(envelope.schema_version)) {
+    throw new UnknownSchemaVersionError(envelope.schema_version as number);
+  }
   if (envelope.schema_version === registry.current_schema_version) return envelope;
   if (envelope.schema_version > registry.current_schema_version) {
+    throw new UnknownSchemaVersionError(envelope.schema_version);
+  }
+  if (envelope.schema_version < 1) {
     throw new UnknownSchemaVersionError(envelope.schema_version);
   }
   let current: unknown = envelope;

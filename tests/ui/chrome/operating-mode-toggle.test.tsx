@@ -74,7 +74,7 @@ describe("OperatingModeToggle", () => {
       />,
     );
     fireEvent.click(getByText("Argument"));
-    fireEvent.click(getByText("Continue"));
+    fireEvent.click(getByText("Switch anyway"));
     expect(onSwitchWithWarnings).toHaveBeenCalled();
   });
 

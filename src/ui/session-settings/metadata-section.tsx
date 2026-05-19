@@ -11,14 +11,53 @@ export function MetadataSection(): ReactElement {
 
   const [draft_title, setDraftTitle] = React.useState(title);
   const [draft_description, setDraftDescription] = React.useState(description);
-  React.useEffect(() => setDraftTitle(title), [title]);
-  React.useEffect(() => setDraftDescription(description), [description]);
+  // §9 #39: only resync the draft from the store when the user has no
+  // uncommitted edits. Otherwise a cross-tab update via Supabase realtime
+  // silently overwrote whatever the user was typing. Compare against the
+  // committed value (which is the previous store snapshot) — drift means
+  // the user has unsaved input we shouldn't trample.
+  const last_synced_title = React.useRef(title);
+  const last_synced_description = React.useRef(description);
+  React.useEffect(() => {
+    if (draft_title === last_synced_title.current) {
+      setDraftTitle(title);
+    }
+    last_synced_title.current = title;
+  }, [title, draft_title]);
+  React.useEffect(() => {
+    if (draft_description === last_synced_description.current) {
+      setDraftDescription(description);
+    }
+    last_synced_description.current = description;
+  }, [description, draft_description]);
+
+  // §13 #18: surface the pending silent-revert state through aria-invalid.
+  const title_blank = draft_title.trim().length === 0;
+
+  // §9 #40: bound both inputs and surface a counter only when nearing the
+  // cap. 200 char title matches FrameTitle and the wizard; the description
+  // gets a more generous cap since users use it for context notes.
+  const title_counter_id = React.useId();
+  const description_counter_id = React.useId();
+  const title_max = 200;
+  const description_max = 2000;
+  const show_title_counter = draft_title.length > title_max * 0.8;
+  const show_description_counter = draft_description.length > description_max * 0.8;
 
   function commitTitle(): void {
-    if (draft_title !== title) {
+    // §9 #27: empty / whitespace-only titles silently persisted as "" — the
+    // session list later rendered an unnamed row. Require a non-empty trimmed
+    // value; otherwise revert to the live title (the next render resets the
+    // input via the title-effect above).
+    const trimmed = draft_title.trim();
+    if (trimmed.length === 0) {
+      setDraftTitle(title);
+      return;
+    }
+    if (trimmed !== title) {
       session_store
         .getState()
-        .applyPatch({ kind: "session_metadata_edited", partial: { title: draft_title } });
+        .applyPatch({ kind: "session_metadata_edited", partial: { title: trimmed } });
     }
   }
   function commitDescription(): void {
@@ -80,6 +119,11 @@ export function MetadataSection(): ReactElement {
           data-testid="metadata-title-input"
           type="text"
           value={draft_title}
+          required
+          aria-required="true"
+          aria-invalid={title_blank ? true : undefined}
+          aria-describedby={show_title_counter ? title_counter_id : undefined}
+          maxLength={title_max}
           onChange={(e) => setDraftTitle(e.target.value)}
           onBlur={commitTitle}
           onKeyDown={(e) => {
@@ -91,6 +135,19 @@ export function MetadataSection(): ReactElement {
           }}
           className="argmap-input"
         />
+        {show_title_counter ? (
+          <p
+            id={title_counter_id}
+            data-testid="metadata-title-counter"
+            style={{
+              margin: "var(--space-1) 0 0",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {draft_title.length} / {title_max}
+          </p>
+        ) : null}
       </label>
       <label style={{ display: "block" }}>
         <span
@@ -104,6 +161,8 @@ export function MetadataSection(): ReactElement {
         <textarea
           data-testid="metadata-description-input"
           value={draft_description}
+          maxLength={description_max}
+          aria-describedby={show_description_counter ? description_counter_id : undefined}
           onChange={(e) => setDraftDescription(e.target.value)}
           onBlur={commitDescription}
           onKeyDown={(e) => {
@@ -119,6 +178,19 @@ export function MetadataSection(): ReactElement {
           rows={3}
           className="argmap-input"
         />
+        {show_description_counter ? (
+          <p
+            id={description_counter_id}
+            data-testid="metadata-description-counter"
+            style={{
+              margin: "var(--space-1) 0 0",
+              fontSize: "var(--font-size-xs)",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {draft_description.length} / {description_max}
+          </p>
+        ) : null}
       </label>
     </section>
   );

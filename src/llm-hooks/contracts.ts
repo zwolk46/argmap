@@ -21,4 +21,4 @@ export type {
   LlmHooksDeps,
 } from "./types";
 
-export { ParseError, ProviderError } from "./types";
+export { ParseError, ParseAssertError, ProviderError } from "./types";

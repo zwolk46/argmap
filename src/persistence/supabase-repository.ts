@@ -115,13 +115,19 @@ export class SupabaseRepository implements Repository {
   }
 
   async saveFrame(frame: Frame): Promise<void> {
+    // H-11: keep payload.updated_at in lockstep with the column. Previously
+    // the column got `this.now()` but the payload kept whatever stale value
+    // was on the in-memory Frame, so loadFrame returned a wall-clock that
+    // disagreed with listFrames.
+    const now = this.now();
+    const stamped: Frame = { ...frame, updated_at: now };
     const { error } = await this.client.from("frames").upsert({
-      id: frame.id,
+      id: stamped.id,
       user_id: this.user_id,
-      payload: frame,
-      title: frame.title,
-      archived: frame.archived ?? false,
-      updated_at: this.now(),
+      payload: stamped,
+      title: stamped.title,
+      archived: stamped.archived ?? false,
+      updated_at: now,
     });
     if (error) throw new RepositoryError("saveFrame", error.message);
   }
@@ -240,8 +246,15 @@ export class SupabaseRepository implements Repository {
     });
     if (fv_upsert.error) throw new RepositoryError("saveFrameVersion", fv_upsert.error.message);
 
-    // Point the frame at the new current_version_id.
-    const next_frame: Frame = { ...frame, current_version_id: to_write.id };
+    // H-12: bump the parent Frame's payload.updated_at when its
+    // current_version_id changes. saveFrame restamps below, but doing so
+    // here too keeps the in-memory Frame consistent for any caller that
+    // reads `frame.updated_at` between this line and the next saveFrame.
+    const next_frame: Frame = {
+      ...frame,
+      current_version_id: to_write.id,
+      updated_at: this.now(),
+    };
     await this.saveFrame(next_frame);
 
     // Update the per-frame search index with text harvested from nodes.
@@ -256,6 +269,7 @@ export class SupabaseRepository implements Repository {
       .select("id, payload, title, updated_at, archived")
       .eq("user_id", this.user_id)
       .eq("frame_id", frame_id)
+      .eq("archived", false)
       .order("updated_at", { ascending: false });
     if (error) throw new RepositoryError("listSessionsForFrame", error.message);
     return (data ?? []).map((row): ArgumentSessionSummary => {
@@ -369,11 +383,19 @@ export class SupabaseRepository implements Repository {
     }
     const session = session_row.data.payload as ArgumentSession;
 
+    // §8 #1: backfill the frame snapshot from the parent session if the
+    // caller didn't supply one (legacy persistence-test paths, raw writes).
+    // Action-runner, migrate, restore, and initial-creation paths all set
+    // it directly; this is the safety net for everything else.
+    const with_snapshot: ArgumentSessionVersion = version.frame_version_snapshot
+      ? version
+      : { ...version, frame_version_snapshot: session.frame_version_snapshot };
+
     let to_write: ArgumentSessionVersion;
     if (existing.data) {
       to_write = {
-        ...version,
-        parent_version_id: existing.data.parent_version_id ?? version.parent_version_id,
+        ...with_snapshot,
+        parent_version_id: existing.data.parent_version_id ?? with_snapshot.parent_version_id,
         version_number: existing.data.version_number,
       };
     } else {
@@ -393,7 +415,7 @@ export class SupabaseRepository implements Repository {
         }
       }
       to_write = {
-        ...version,
+        ...with_snapshot,
         parent_version_id: prior_real_id,
         version_number: prior_real_id ? prior_version_number + 1 : 1,
       };
@@ -578,6 +600,8 @@ export class SupabaseRepository implements Repository {
       argument_edges: new_arg_edges,
       checkpoint_responses: new_checkpoint_responses,
       session_authorities: new_session_authorities,
+      // §8 #1: the new version is authored against the target frame.
+      frame_version_snapshot: target,
     };
     // Point session at the new frame_version_id + snapshot.
     const next_session: ArgumentSession = {
@@ -621,6 +645,7 @@ export class SupabaseRepository implements Repository {
     change_summary?: string,
   ): Promise<ArgumentSessionVersion> {
     const ancestor = await this.loadSessionVersion(ancestor_version_id);
+    const session = await this.loadSession(session_id);
     const existing = await this.listSessionVersionSummaries(session_id);
     const max_version = existing.reduce((m, v) => Math.max(m, v.version_number), 0);
     const ts = this.now();
@@ -633,6 +658,10 @@ export class SupabaseRepository implements Repository {
       created_at: ts,
       is_milestone: true,
       change_summary: change_summary ?? `Restored from version ${ancestor.version_number}`,
+      // §8 #1: restore replays the ancestor's premises into a new head that
+      // lives in the *current* frame context — the live session's
+      // frame_version_id is unchanged by restore. Snapshot today's frame.
+      frame_version_snapshot: session.frame_version_snapshot,
     };
     await this.saveSessionVersion(new_version);
     return new_version;
@@ -646,8 +675,14 @@ export class SupabaseRepository implements Repository {
       .select("payload")
       .eq("user_id", this.user_id)
       .maybeSingle();
-    if (error) throw new RepositoryError("loadAppState", error.message);
-    if (!data) throw new RepositoryError("loadAppState", "AppState singleton missing");
+    if (error) throw new RepositoryError("loadAppState", error.message, "network");
+    // H-16: callers used to string-match the "AppState singleton missing"
+    // message to decide whether to seed defaults. Branch on the typed code
+    // instead so future message text edits don't silently break the
+    // first-launch path.
+    if (!data) {
+      throw new RepositoryError("loadAppState", "AppState singleton missing", "app_state_missing");
+    }
     return data.payload as AppState;
   }
 
@@ -679,10 +714,13 @@ export class SupabaseRepository implements Repository {
       .textSearch("tsv", ts_query, { type: "websearch" })
       .limit(50);
     if (error) {
-      // Surface as empty rather than a hard error; search misses degrade
-      // gracefully. Log for telemetry.
-      console.warn("[SupabaseRepository.searchFrames]", error.message);
-      return [];
+      // H-14: previously swallowed as console.warn + empty array — a search
+      // outage was indistinguishable from "zero hits" for the user. Throw
+      // so the caller can surface "search unavailable" instead of "no
+      // matches". Search is wired through repositories that already
+      // tolerate exceptions in the existing UI; legacy callers that
+      // intentionally want graceful degradation can wrap in try/catch.
+      throw new RepositoryError("searchFrames", error.message, "network");
     }
     return (data ?? []).map((row): FrameSearchHit => {
       const p = row.payload as { title?: string; snippet?: string };

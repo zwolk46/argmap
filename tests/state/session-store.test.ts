@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createSessionStore } from "@/state";
 import { createComputeDriver } from "@/state";
 import { createAutosaveController, createCrossTabBus } from "@/persistence";
@@ -169,6 +169,78 @@ describe("SessionStore.previewMigration", () => {
     const { store, frame_version } = await makeEnv();
     const orphans = await store.getState().previewMigration(frame_version.id);
     expect(orphans).toHaveLength(0);
+    store.getState().dispose();
+  });
+});
+
+// §12 F-18: session-store mirrors frame-store's previewCommit so the
+// suggestion drawer can render a CommitPlan preview for output-time /
+// runtime hooks (G4 gap, G6 prose, G12 advisories, …) before Accept.
+describe("SessionStore.previewCommit (§12 F-18)", () => {
+  it("returns null when no pending suggestion", async () => {
+    const { store } = await makeEnv();
+    expect(store.getState().previewCommit({ kind: "accepted", final: {} })).toBeNull();
+    store.getState().dispose();
+  });
+
+  it("routes accepted decisions through the injected preview_commit", async () => {
+    const repo = await freshDb();
+    const { frame, version: frame_version } = await repo.createBlankFrame({ title: "x" });
+    const session_id = "sess-pc-1";
+    const version_id = "sess-pc-v-1";
+    const ts = TEST_NOW;
+    await repo.saveSession({
+      id: session_id,
+      frame_id: frame.id,
+      frame_version_id: frame_version.id,
+      frame_version_snapshot: frame_version,
+      title: "S",
+      premises: [],
+      argument_edges: [],
+      checkpoint_responses: [],
+      interpretation_selections: [],
+      status_map: {},
+      created_at: ts,
+      updated_at: ts,
+      current_version_id: version_id,
+    });
+    await repo.saveSessionVersion({
+      id: version_id,
+      session_id,
+      version_number: 1,
+      created_at: ts,
+      is_milestone: true,
+      premises: [] as Premise[],
+      argument_edges: [],
+      checkpoint_responses: [],
+      interpretation_selections: [],
+    });
+
+    const expected_plan = { writes: [], versioned: false };
+    const preview_commit = vi.fn(() => expected_plan);
+    const store = createSessionStore({
+      repo,
+      autosave: createAutosaveController({ repo }),
+      crosstab: createCrossTabBus(),
+      dispatch: makeSessionDispatch(),
+      compute_driver: createComputeDriver({ now: () => TEST_NOW }),
+      now: injectedNow(TEST_NOW),
+      generateId: injectedGenerateId(),
+      invoke_hook: vi.fn().mockResolvedValue({ hook_id: "G4", parsed: { gaps: [] } }),
+      preview_commit,
+    });
+    await store.getState().loadSession(session_id);
+    await flushPromises();
+    await store.getState().invokeHook("G4", {});
+    await flushPromises();
+
+    const plan = store.getState().previewCommit({ kind: "accepted", final: { gaps: [] } });
+    expect(plan).toBe(expected_plan);
+    expect(preview_commit).toHaveBeenCalledWith(
+      "G4",
+      expect.objectContaining({ hook_id: "G4" }),
+      expect.objectContaining({ kind: "accepted" }),
+    );
     store.getState().dispose();
   });
 });

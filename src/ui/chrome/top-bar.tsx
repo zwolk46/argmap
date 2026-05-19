@@ -19,6 +19,7 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
   return (
     <header
       data-mode={mode}
+      className="argmap-topbar"
       style={{
         height: "48px",
         display: "flex",
@@ -46,7 +47,11 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
     >
       {slots.home && <div style={{ flexShrink: 0 }}>{slots.home}</div>}
       {slots.modeToggle && <div style={{ flexShrink: 0 }}>{slots.modeToggle}</div>}
-      {slots.title && <div style={{ flex: 1, minWidth: 0 }}>{slots.title}</div>}
+      {slots.title && (
+        <div className="argmap-topbar-title" style={{ flex: 1, minWidth: 0 }}>
+          {slots.title}
+        </div>
+      )}
       {/* Secondary slots: chips → indicators → buttons. On narrow viewports
           the title can compress to 0 before these spill horizontally, so
           we hide the chips first (they're status decorations the user can

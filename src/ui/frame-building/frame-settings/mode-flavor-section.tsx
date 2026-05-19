@@ -24,7 +24,9 @@ export function ModeFlavorSection({
     frame.mode === "legal" ? "—" : frame.flavor === "academic" ? "Academic" : "Personal";
 
   const can_change = on_open_mode_change_dialog !== undefined;
-  const disabled_title = "Coming in I.9d";
+  // M9: drop the internal milestone reference. "Coming in I.9d" doesn't
+  // mean anything to the user.
+  const disabled_title = "Mode change coming soon";
   // P1: in legal mode, flavor doesn't apply (the flavor-change dialog
   // returns null for legal frames). Disabling the button explicitly here
   // — rather than letting the user click and see a flicker — communicates

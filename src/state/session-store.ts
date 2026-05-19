@@ -46,7 +46,15 @@ interface SessionStoreActions {
     resolutions: OrphanResolution[],
   ): Promise<void>;
   invokeHook(hook_id: string, args: unknown): Promise<void>;
+  /** F-05: set by useAiSuggestion when the per-frame gate denies a hook. */
+  rejectSuggestion(reason: string): void;
   resolveSuggestion(decision: unknown): Promise<void>;
+  /**
+   * §12 F-18: synchronous preview of the CommitPlan that resolveSuggestion(decision)
+   * would produce. Returns null when there is no pending suggestion or no preview_commit
+   * is wired. UI casts the unknown return to a CommitPlan via @/llm-hooks type imports.
+   */
+  previewCommit(decision: unknown): unknown;
   clearPendingSuggestion(): void;
   dispose(): void;
 }
@@ -63,6 +71,14 @@ export interface CreateSessionStoreOpts {
   generateId: () => string;
   invoke_hook?: (hook_id: string, args: unknown) => Promise<unknown>;
   apply_decision?: (hook_id: string, suggestion: unknown, decision: unknown) => Promise<void>;
+  /**
+   * §12 F-18: synchronous CommitPlan preview. Called by the SuggestionDrawer
+   * before Accept so the user sees the writes that resolveSuggestion would
+   * produce. Implementation lives outside the store (it routes to hook.commit
+   * in @/llm-hooks, which state may not import). Returns null when no plan
+   * can be computed (e.g., rejected, or hook produced an error fallback).
+   */
+  preview_commit?: (hook_id: string, suggestion: unknown, decision: unknown) => unknown;
 }
 
 export function createSessionStore(opts: CreateSessionStoreOpts) {
@@ -186,6 +202,11 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
     },
 
     async invokeHook(hook_id: string, args: unknown): Promise<void> {
+      // F-05 (session half): the LlmSettings gate lives on Frame, not Session,
+      // and session-store deliberately does not import frame-store. The gate
+      // is applied one layer up in useAiSuggestion, where both stores are in
+      // scope. By the time we get here, the caller has already decided the
+      // hook is allowed.
       set({ suggestion_status: "invoking" });
       try {
         const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
@@ -196,6 +217,10 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
         const message = e instanceof Error ? e.message : "AI suggestion failed";
         set({ suggestion_status: "idle", error: message });
       }
+    },
+    /** F-05: set by useAiSuggestion when the per-frame gate denies a hook. */
+    rejectSuggestion(reason: string): void {
+      set({ error: reason, suggestion_status: "idle" });
     },
 
     async resolveSuggestion(decision: unknown): Promise<void> {
@@ -208,6 +233,23 @@ export function createSessionStore(opts: CreateSessionStoreOpts) {
         }
       } finally {
         set({ pending_suggestion: null, suggestion_status: "idle" });
+      }
+    },
+
+    previewCommit(decision: unknown): unknown {
+      const { pending_suggestion } = get();
+      if (!pending_suggestion) return null;
+      // §12 F-18: a rejected decision always yields an empty plan; we don't
+      // need a wired preview_commit to know that.
+      if ((decision as { kind?: string } | null)?.kind === "rejected") {
+        return { writes: [], versioned: false };
+      }
+      if (!opts.preview_commit) return null;
+      const hook_id = (pending_suggestion as { hook_id?: string }).hook_id ?? "";
+      try {
+        return opts.preview_commit(hook_id, pending_suggestion, decision);
+      } catch {
+        return null;
       }
     },
 

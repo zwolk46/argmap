@@ -14,6 +14,7 @@ import { SessionSettingsPanel } from "../session-settings";
 import { TutorialTour } from "../tutorial";
 import { useNavigate } from "../routing";
 import { ArgumentRunningTopBar } from "./top-bar-slots";
+import { useToast } from "../primitives";
 import { TwoPaneLayout } from "./two-pane-layout";
 import {
   InterviewPane,
@@ -32,7 +33,7 @@ export interface ArgumentRunningPageProps {
 
 export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactElement {
   const { session_id } = props;
-  const { session_store, frame_store, app_state_store } = useRepository();
+  const { session_store, frame_store, app_state_store, autosave } = useRepository();
   // Discrete-field subscriptions instead of useSessionStore((s) => s).
   // Previously every premise edit / recompute re-rendered the whole page
   // tree (canvas mount, viewer, interview pane). Now each field has its
@@ -57,6 +58,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
   const [recompute_counter, setRecomputeCounter] = React.useState(0);
   const [saving_milestone, setSavingMilestone] = React.useState(false);
   const navigate = useNavigate();
+  const toast = useToast();
 
   const canvas_ref = React.useRef<FrameCanvasHandle | null>(null);
   const is_legal = useFrameStore((s) => s.frame?.mode === "legal");
@@ -100,12 +102,28 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
     if (frame_current_version_id) setMigrationDialogOpen(true);
   }
 
-  function on_switch_to_frame(): void {
-    if (frame_id) navigate({ kind: "frame_building", frame_id });
+  async function on_switch_to_frame(): Promise<void> {
+    if (!frame_id) return;
+    // §9 #3: switching out of Argument Running while autosave is mid-debounce
+    // can lose the in-flight edit (the per-user repository unmounts when the
+    // route changes). Flush before navigating so the session round-trips.
+    try {
+      await autosave.flushAll();
+    } catch {
+      // Flush failures already surface via the save-failure toast bridge; do
+      // not block navigation on persistence transients.
+    }
+    navigate({ kind: "frame_building", frame_id });
   }
 
-  function bumpRecompute(): void {
-    setRecomputeCounter((v) => v + 1);
+  async function on_go_home(): Promise<void> {
+    // §9 #11: same flush-before-route-change as on_switch_to_frame above.
+    try {
+      await autosave.flushAll();
+    } catch {
+      // Toast bridge surfaces failures; don't block navigation.
+    }
+    navigate({ kind: "home" });
   }
 
   if (snapshot.is_loading) {
@@ -137,7 +155,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
             on_open_session_settings: () => setSessionSettingsOpen(true),
             on_toggle_version_history: props.on_toggle_version_history,
             on_toggle_help: () => setHelpPaneOpen((v) => !v),
-            on_go_home: () => navigate({ kind: "home" }),
+            on_go_home: () => void on_go_home(),
             version_history_open: props.version_history_open,
             help_pane_open,
             title: session.title,
@@ -193,8 +211,11 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
                       selected_item_id={selected_item_id}
                       on_close={() => setSelectedItemId(null)}
                       on_saved={() => {
+                        // The compute_result identity change above is the
+                        // single source of truth for the recompute pulse —
+                        // calling bumpRecompute here too would double-count
+                        // and cancel the animation mid-keyframe.
                         setSelectedItemId(null);
-                        bumpRecompute();
                       }}
                     />
                   </div>
@@ -238,11 +259,19 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
           if (frame_id) navigate({ kind: "frame_building", frame_id });
         }}
         on_delete_session={async () => {
-          setSessionSettingsOpen(false);
-          if (session) {
+          if (!session) return;
+          // §9 #32: surface delete success/failure as a toast — the prior
+          // path navigated away with no feedback at all, leaving the user
+          // unsure whether the delete actually happened.
+          try {
             await app_state_store.getState().deleteSession(session.id);
+            setSessionSettingsOpen(false);
+            toast.push({ kind: "success", message: "Session deleted." });
             if (frame_id) navigate({ kind: "frame_building", frame_id });
             else navigate({ kind: "home" });
+          } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Couldn't delete the session.";
+            toast.push({ kind: "error", message: `Delete failed: ${message}` });
           }
         }}
       />

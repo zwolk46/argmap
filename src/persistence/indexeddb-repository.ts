@@ -235,7 +235,12 @@ export class IndexedDbRepository implements Repository {
   async listSessionsForFrame(frame_id: FrameId): Promise<ArgumentSessionSummary[]> {
     const sessions = await this.db.argument_sessions.where("frame_id").equals(frame_id).toArray();
     const frame = await this.db.frames.get(frame_id);
-    return sessions.map((s) => this.toSessionSummary(s, frame));
+    // Filter archived sessions so the caller (Home / FrameBuilding "Run
+    // argument") never silently navigates into an archived session. Mirrors
+    // listFrames' archived filter.
+    return sessions
+      .filter((s) => !((s as { archived?: boolean }).archived ?? false))
+      .map((s) => this.toSessionSummary(s, frame));
   }
 
   async loadSession(session_id: SessionId): Promise<ArgumentSession> {
@@ -311,12 +316,19 @@ export class IndexedDbRepository implements Repository {
             `Parent ArgumentSession missing: ${version.session_id}`,
           );
         }
+        // §8 #1: backfill the frame snapshot from the parent session if the
+        // caller didn't supply one (legacy persistence-test paths, raw writes).
+        // Action-runner, migrate, restore, and initial-creation paths all set
+        // it directly; this is the safety net for everything else.
+        const with_snapshot: ArgumentSessionVersion = version.frame_version_snapshot
+          ? version
+          : { ...version, frame_version_snapshot: session.frame_version_snapshot };
         // P0-4: same parent_version_id chain repair as saveFrameVersion above.
         const existing = await this.db.argument_session_versions.get(version.id);
         let to_write: ArgumentSessionVersion;
         if (existing) {
           to_write = {
-            ...version,
+            ...with_snapshot,
             parent_version_id: existing.parent_version_id,
             version_number: existing.version_number,
           };
@@ -327,12 +339,12 @@ export class IndexedDbRepository implements Repository {
             : undefined;
           if (prior && prior.id !== version.id) {
             to_write = {
-              ...version,
+              ...with_snapshot,
               parent_version_id: prior.id,
               version_number: prior.version_number + 1,
             };
           } else {
-            to_write = { ...version, parent_version_id: undefined, version_number: 1 };
+            to_write = { ...with_snapshot, parent_version_id: undefined, version_number: 1 };
           }
         }
         await this.db.argument_session_versions.put(to_write);
@@ -630,6 +642,8 @@ export class IndexedDbRepository implements Repository {
           checkpoint_responses: new_checkpoint_responses,
           session_authorities: new_session_authorities,
           interpretation_selections: new_interpretation_selections,
+          // §8 #1: the new version is authored against the target frame.
+          frame_version_snapshot: JSON.parse(JSON.stringify(target_version)) as FrameVersion,
         };
 
         session.current_version_id = new_version_id;
@@ -736,6 +750,10 @@ export class IndexedDbRepository implements Repository {
           created_at: ts,
           is_milestone: true,
           change_summary: change_summary ?? `Restored from version ${ancestor.version_number}`,
+          // §8 #1: restore replays the ancestor's premises into a new head
+          // that lives in the *current* frame context — the live session's
+          // frame_version_id is unchanged by restore. Snapshot today's frame.
+          frame_version_snapshot: session.frame_version_snapshot,
         };
 
         session.current_version_id = new_version_id;

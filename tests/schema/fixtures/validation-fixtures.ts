@@ -587,6 +587,29 @@ export function satisfyingOptionMissingTarget(): Bundle {
   });
 }
 
+export function authorityLayerMismatchInFrame(): Bundle {
+  return withMutFrame(({ frame }) => {
+    const a = frame.nodes.find((n) => n.id === "n-auth") as Authority;
+    a.layer = "argument";
+  });
+}
+
+export function authorityLayerMismatchInSession(): Bundle {
+  return withMutFrame(({ session }) => {
+    if (!session) return;
+    session.session_authorities = [
+      {
+        id: "n-auth-session",
+        type: "Authority",
+        layer: "frame",
+        citation: "Misplaced v. Authority, 2 U.S. 2 (2027).",
+        created_at: T,
+        updated_at: T,
+      },
+    ];
+  });
+}
+
 export function duplicateOptionIds(): Bundle {
   return withMutFrame(({ frame }) => {
     const cp = frame.nodes.find((n) => n.id === "n-cp") as Checkpoint;
@@ -656,6 +679,24 @@ export function frameEdgeInArgLayer(): Bundle {
       created_at: T,
       updated_at: T,
     });
+  });
+}
+
+export function edgeLayerFieldMismatch(): Bundle {
+  // §15 F-10: flip the .layer field on a DECOMPOSES_INTO edge to "argument".
+  // V-EDGE-3/4 won't fire (they check container, not the field).
+  return withMutFrame(({ frame }) => {
+    const edge = frame.edges.find((e) => e.id === "e-decomp-duty")!;
+    (edge as { layer: string }).layer = "argument";
+  });
+}
+
+export function nodeLayerFieldMismatch(): Bundle {
+  // §15 F-10: flip the .layer field on a Term node to "argument".
+  // Only V-NODE-12 should fire.
+  return withMutFrame(({ frame }) => {
+    const term = frame.nodes.find((n) => n.id === "n-term")!;
+    (term as { layer: string }).layer = "argument";
   });
 }
 

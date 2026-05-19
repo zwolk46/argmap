@@ -44,7 +44,14 @@ export function getSupabaseClient(): SupabaseClient {
       // Multi-tab: Supabase Auth listens to localStorage events; combined
       // with our CrossTabBus from Wave D this gives us coherent cross-tab
       // state.
-      detectSessionInUrl: true,
+      //
+      // detectSessionInUrl is OFF because we use hash-based routing
+      // (`#/frame/...`). Supabase parsing an OAuth/magic-link hash like
+      // `#access_token=...` races our RouterProvider initializer and can
+      // mis-route the first paint. There is no OAuth or magic-link UI
+      // wired today (sign-in is password-only); re-enable this when
+      // adding those flows AND route them through a non-hash redirect.
+      detectSessionInUrl: false,
     },
   });
   return _client;

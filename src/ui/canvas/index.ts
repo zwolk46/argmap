@@ -13,9 +13,6 @@ export type { LayoutConsumerStatus } from "./layout-consumer";
 export { StatusBadgeOverlay } from "./status-badge-overlay";
 export type { StatusBadgeOverlayProps } from "./status-badge-overlay";
 
-export { ConnectorHandle } from "./connector-handle";
-export type { ConnectorHandleProps, EdgeDragEvent } from "./connector-handle";
-
 export { EdgeCreationPopup } from "./edge-creation-popup";
 export type { EdgeCreationPopupProps } from "./edge-creation-popup";
 

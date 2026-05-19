@@ -154,6 +154,12 @@ export function ArchitecturalModeChangeDialog(
           current_flavor={current_flavor}
           target_mode={target_mode}
           target_flavor={target_flavor}
+          onTargetModeChanged={(m) => {
+            setTargetMode(m);
+            // If switching to general, ensure a default flavor; switching
+            // to legal clears the flavor field (legal has none).
+            setTargetFlavor(m === "general" ? (target_flavor ?? "personal") : undefined);
+          }}
           onTargetFlavorChanged={(f) => setTargetFlavor(f)}
         />
         {need_positions ? (
@@ -191,7 +197,25 @@ export function ArchitecturalModeChangeDialog(
         ) : null}
       </DialogBody>
       <DialogFooter>
-        <Button variant="secondary" data-testid="mode-change-cancel" onClick={onClose}>
+        <Button
+          variant="secondary"
+          data-testid="mode-change-cancel"
+          onClick={() => {
+            // Confirm before discarding non-trivial in-dialog work
+            // (typed positions or chosen conclusion directions).
+            const has_staged = staged_positions.length > 0 || direction_resolutions.size > 0;
+            if (
+              has_staged &&
+              typeof window !== "undefined" &&
+              !window.confirm(
+                "Discard your staged positions and direction choices? They won't be saved.",
+              )
+            ) {
+              return;
+            }
+            onClose();
+          }}
+        >
           Cancel
         </Button>
         <Button

@@ -1,4 +1,4 @@
-import type { ReactElement, KeyboardEvent } from "react";
+import type { ReactElement } from "react";
 import type { FrameId } from "@/schema";
 import { ModeFlavorChip } from "../chrome";
 import { Button, IconButton, Spinner, relativeTime } from "../primitives";
@@ -48,38 +48,26 @@ export { relativeTime };
 export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
   const { summary, is_pinned, onOpen, onTogglePin, onRunArgument, run_argument_pending } = props;
 
-  function handleKey(e: KeyboardEvent<HTMLElement>) {
-    // Only the card itself should open the frame on Enter/Space; nested
-    // buttons (pin, run-argument) must keep their native key activation.
-    // Without this gate, pressing Enter on the focused pin button would
-    // fire the row's onOpen and silently navigate away.
-    if (e.target !== e.currentTarget) return;
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onOpen(summary.id);
-    }
-  }
-
+  const display_title = summary.title || "Untitled frame";
   return (
     <article
       data-testid="frame-summary-card"
       data-frame-id={summary.id}
       className="frame-card argmap-card"
-      role="button"
-      tabIndex={0}
+      aria-label={display_title}
       onClick={(e) => {
-        // Ignore clicks on either nested action button.
+        // Card is clickable for mouse users (large click target). Keyboard
+        // users tab to the title-button, pin, and run-argument controls
+        // directly — the card no longer carries role="button" / tabIndex
+        // because WAI-ARIA forbids interactive descendants of a button.
         const target = e.target as HTMLElement;
-        if (target.closest('[data-testid="frame-card-pin"]')) return;
-        if (target.closest('[data-testid="frame-card-run-argument"]')) return;
+        if (target.closest("button")) return;
         onOpen(summary.id);
       }}
-      onKeyDown={handleKey}
-      style={{ minWidth: 220, position: "relative" }}
+      style={{ minWidth: 220, position: "relative", cursor: "pointer" }}
     >
       <header className="frame-card-head" style={{ minHeight: "44px" }}>
         <h3
-          data-testid="frame-card-open"
           className="frame-card-title"
           style={{
             flex: 1,
@@ -88,17 +76,38 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
+            // Modern overflow-wrap so a single very long word (e.g., a
+            // pasted URL used as a frame title) breaks instead of pushing
+            // the card layout off-screen.
+            overflowWrap: "anywhere",
             wordBreak: "break-word",
           }}
         >
-          {summary.title || "Untitled frame"}
+          <button
+            type="button"
+            data-testid="frame-card-open"
+            className="frame-card-title-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(summary.id);
+            }}
+            style={{
+              all: "unset",
+              cursor: "pointer",
+              display: "inline",
+              font: "inherit",
+              color: "inherit",
+              textAlign: "left",
+            }}
+          >
+            {display_title}
+          </button>
         </h3>
         <IconButton
           data-testid="frame-card-pin"
           active={is_pinned}
           aria-label={is_pinned ? "Unpin frame" : "Pin frame"}
           onClick={() => onTogglePin(summary.id, !is_pinned)}
-          title={is_pinned ? "Unpin" : "Pin"}
           size="sm"
         >
           {is_pinned ? (
@@ -106,9 +115,9 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
           ) : (
             <UIcon name="star" size={14} style={{ opacity: 0.35 }} />
           )}
-          <span className="argmap-sr-only" aria-hidden="true">
-            {is_pinned ? "★" : "☆"}
-          </span>
+          {/* §13 #16: aria-pressed on IconButton already carries the state;
+              the literal-glyph sr-only span double-announced "★" and was
+              aria-hidden anyway. Removed — keep one carrier (aria-pressed). */}
         </IconButton>
       </header>
       <footer className="frame-card-foot">
@@ -127,7 +136,7 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
               }}
               aria-label="Open an argument session for this frame"
               aria-busy={run_argument_pending ? "true" : undefined}
-              leading={run_argument_pending ? <Spinner size={12} /> : undefined}
+              leading={run_argument_pending ? <Spinner size={12} decorative /> : undefined}
               trailing={run_argument_pending ? undefined : <UIcon name="arrow-right" size={12} />}
             >
               {run_argument_pending ? "Opening…" : "Run argument"}

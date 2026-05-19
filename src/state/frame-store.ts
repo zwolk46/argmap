@@ -24,6 +24,12 @@ interface FrameStoreActions {
   restoreVersion(ancestor_version_id: FrameVersionId, change_summary?: string): Promise<void>;
   invokeHook(hook_id: string, args: unknown): Promise<void>;
   resolveSuggestion(decision: unknown): Promise<void>;
+  /**
+   * §12 F-18: synchronous preview of the CommitPlan that resolveSuggestion(decision)
+   * would produce. Returns null when there is no pending suggestion or no preview_commit
+   * is wired. UI casts the unknown return to a CommitPlan via @/llm-hooks type imports.
+   */
+  previewCommit(decision: unknown): unknown;
   clearPendingSuggestion(): void;
   dispose(): void;
 }
@@ -40,6 +46,14 @@ export interface CreateFrameStoreOpts {
   generateId: () => string;
   invoke_hook?: (hook_id: string, args: unknown) => Promise<unknown>;
   apply_decision?: (hook_id: string, suggestion: unknown, decision: unknown) => Promise<void>;
+  /**
+   * §12 F-18: synchronous CommitPlan preview. Called by the SuggestionDrawer
+   * before Accept so the user sees the writes that resolveSuggestion would
+   * produce. Implementation lives outside the store (it routes to hook.commit
+   * in @/llm-hooks, which state may not import). Returns null when no plan
+   * can be computed (e.g., rejected, or hook produced an error fallback).
+   */
+  preview_commit?: (hook_id: string, suggestion: unknown, decision: unknown) => unknown;
 }
 
 export function createFrameStore(opts: CreateFrameStoreOpts) {
@@ -59,7 +73,9 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
       try {
         const frame = await repo.loadFrame(frame_id);
         const frame_version = await repo.loadFrameVersion(frame.current_version_id);
-        const validation = validateOnly(frame_version, compute_driver);
+        // §15 F-11: pass `frame` so V-FR-10 picks up Conclusions whose
+        // position_id no longer resolves on the current Frame.
+        const validation = validateOnly(frame_version, compute_driver, frame);
         set({ frame, frame_version, validation, is_loading: false });
       } catch (e) {
         set({ error: (e as Error).message, is_loading: false });
@@ -118,11 +134,32 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
         change_summary && change_summary.length > 0 ? change_summary : undefined,
       );
       const next_frame: Frame = { ...frame, current_version_id: new_version.id };
-      const validation = validateOnly(new_version, compute_driver);
+      // §15 F-11: pair the restored version with the live Frame so an older
+      // version referencing a Position the user has since deleted surfaces.
+      const validation = validateOnly(new_version, compute_driver, next_frame);
       set({ frame: next_frame, frame_version: new_version, validation });
     },
 
     async invokeHook(hook_id: string, args: unknown): Promise<void> {
+      // F-05: respect the per-frame LlmSettings gates. build-time / runtime
+      // / output-time hook groups, plus the per-hook enable map, are written
+      // to disk; without this gate the toggles existed but were inert.
+      const llm = get().frame?.llm_settings;
+      if (llm) {
+        const per_hook = llm.per_hook_enabled?.[hook_id];
+        if (per_hook === false) {
+          set({ error: `${hook_id} is disabled in Frame Settings.`, suggestion_status: "idle" });
+          return;
+        }
+        // Frame-store hooks run at build time on the frame.
+        if (per_hook !== true && llm.build_time_hooks_enabled === false) {
+          set({
+            error: "Build-time AI hooks are disabled in Frame Settings.",
+            suggestion_status: "idle",
+          });
+          return;
+        }
+      }
       set({ suggestion_status: "invoking" });
       try {
         const result = opts.invoke_hook ? await opts.invoke_hook(hook_id, args) : null;
@@ -147,6 +184,25 @@ export function createFrameStore(opts: CreateFrameStoreOpts) {
         }
       } finally {
         set({ pending_suggestion: null, suggestion_status: "idle" });
+      }
+    },
+
+    previewCommit(decision: unknown): unknown {
+      const { pending_suggestion } = get();
+      if (!pending_suggestion) return null;
+      // §12 F-18: a rejected decision always yields an empty plan; we don't
+      // need a wired preview_commit to know that.
+      if ((decision as { kind?: string } | null)?.kind === "rejected") {
+        return { writes: [], versioned: false };
+      }
+      if (!opts.preview_commit) return null;
+      const hook_id = (pending_suggestion as { hook_id?: string }).hook_id ?? "";
+      try {
+        return opts.preview_commit(hook_id, pending_suggestion, decision);
+      } catch {
+        // hook.commit throwing during preview should not crash the drawer.
+        // Caller renders "preview unavailable" when this returns null.
+        return null;
       }
     },
 

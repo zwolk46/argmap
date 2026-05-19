@@ -209,7 +209,14 @@ body,
    chip decorations hide (the user can re-derive them from the page
    body); below 560px the indicators (recompute counter, drift, etc.)
    also hide. Home button, mode toggle, frame title, primary chrome
-   buttons stay visible at all widths. */
+   buttons stay visible at all widths.
+
+   §9 #15: below 480px the title slot collapses (frame title moves to a
+   one-line truncated form on the page body, not duplicated in chrome)
+   so the remaining chrome — home, mode toggle, primary buttons — fits
+   in a 320px viewport without horizontal page scroll. The chrome bar
+   itself gets overflow-x:auto so any leftover horizontal slop scrolls
+   inside the header instead of the page. */
 @media (max-width: 720px) {
   .argmap-topbar-chips {
     display: none !important;
@@ -218,6 +225,16 @@ body,
 @media (max-width: 560px) {
   .argmap-topbar-indicators {
     display: none !important;
+  }
+}
+@media (max-width: 480px) {
+  .argmap-topbar-title {
+    display: none !important;
+  }
+  .argmap-topbar {
+    overflow-x: auto;
+    gap: var(--space-1) !important;
+    padding: 0 var(--space-2) !important;
   }
 }
 
@@ -337,7 +354,14 @@ input[type="checkbox"]:disabled:not(.argmap-skip-restyle) {
 .argmap-output-tab:focus-visible,
 .argmap-row-hover:focus-visible,
 .argmap-segmented-tab:focus-visible,
-.argmap-outline-row[data-focused="true"] {
+.argmap-outline-row[data-focused="true"],
+/* §14 #33: extend halo to interactive chrome chips and indicators that
+   previously fell back to the platform's generic outline (or nothing). */
+[data-testid="mode-flavor-chip"]:focus-visible,
+[data-testid="validation-indicator"]:focus-visible,
+[data-testid="frame-version-drift-indicator"]:focus-visible,
+[data-testid="recompute-indicator"]:focus-visible,
+.argmap-pill:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 3px var(--color-mode-current-accent-bg),
@@ -1097,26 +1121,6 @@ select.argmap-input {
   background: var(--color-ai-accent-bg);
   color: var(--color-ai-accent);
   border-color: transparent;
-}
-
-.argmap-pill[data-tone="binding"] {
-  background: var(--color-subflag-binding-bg);
-  color: var(--color-subflag-binding);
-  border-color: transparent;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: var(--font-size-2xs);
-}
-
-.argmap-pill[data-tone="persuasive"] {
-  background: var(--color-subflag-persuasive-bg);
-  color: var(--color-subflag-persuasive);
-  border-color: transparent;
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: var(--font-size-2xs);
 }
 
 .argmap-pill[data-tone="milestone"] {

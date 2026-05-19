@@ -56,11 +56,16 @@ export function OperatingModeToggle({
         onChange={handleChange}
         aria_label="Operating mode"
       />
+      {/* §9 #14: the warning copy describes a real consequence (partial
+          results), so the confirm action shouldn't read as a default
+          primary "Continue" — promote it to a destructive variant with
+          unambiguous "Switch anyway" copy. */}
       <ConfirmDialog
         open={show_warning_dialog}
         title="Validation warnings"
-        confirm_label="Continue"
-        cancel_label="Cancel"
+        confirm_label="Switch anyway"
+        confirm_variant="danger"
+        cancel_label="Keep editing"
         onCancel={() => setShowWarningDialog(false)}
         onConfirm={() => {
           setShowWarningDialog(false);
