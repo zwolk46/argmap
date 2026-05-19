@@ -73,12 +73,26 @@ export async function runHook<TIn, TOut>(
       ({ parsed, parse_status } = projectFallback(fallback, "fallback"));
     }
   } catch (err) {
-    const provider_err =
-      err instanceof ProviderError
-        ? err
-        : new ProviderError(`unknown provider error: ${(err as Error).message}`, provider.id, err);
-    const fallback = hook.fallback(input, provider_err);
-    ({ parsed, parse_status } = projectFallback(fallback, "error"));
+    // §12 F-11. parseOutput may throw a ParseError / ParseAssertError (G7/G10/G12
+    // throw when the LLM path is inactive; any future assertion in a parser is
+    // the same shape). Route those through the parse-error fallback flow rather
+    // than wrapping them as ProviderError; otherwise hook.fallback receives the
+    // wrong error type and HookInvocationRecord mis-labels the failure.
+    if (err instanceof ParseError) {
+      const fallback = hook.fallback(input, err);
+      ({ parsed, parse_status } = projectFallback(fallback, "fallback"));
+    } else {
+      const provider_err =
+        err instanceof ProviderError
+          ? err
+          : new ProviderError(
+              `unknown provider error: ${(err as Error).message}`,
+              provider.id,
+              err,
+            );
+      const fallback = hook.fallback(input, provider_err);
+      ({ parsed, parse_status } = projectFallback(fallback, "error"));
+    }
   }
 
   return {

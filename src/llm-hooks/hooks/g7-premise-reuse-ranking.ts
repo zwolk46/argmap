@@ -1,4 +1,5 @@
 import type { HookContract, HookContext, CommitPlan, FallbackResult } from "../types";
+import { ParseAssertError } from "../types";
 import { renderTemplate } from "../prompt-template";
 import type { NodeRef } from "@/schema";
 
@@ -46,7 +47,7 @@ export const g7Hook: HookContract<G7Input, G7Output> = {
   },
 
   parseOutput(_raw, _schema) {
-    throw new Error("G7.parseOutput: LLM path not active in v1");
+    throw new ParseAssertError("G7.parseOutput: LLM path not active in v1");
   },
 
   fallback(input): FallbackResult<G7Output> {

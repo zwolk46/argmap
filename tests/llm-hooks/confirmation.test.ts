@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { runHook, applyDecision, MockLlmProvider } from "@/llm-hooks";
+import { runHook, applyDecision, MockLlmProvider, ParseAssertError } from "@/llm-hooks";
+import { ParseError, ProviderError } from "@/llm-hooks";
 import type { HookContract, HookContext, CommitPlan } from "@/llm-hooks";
 import type { Repository, PromptFileRecord } from "@/persistence";
 
@@ -116,6 +117,46 @@ describe("runHook", () => {
     // deterministic_fallback always yields parse_status "fallback" regardless of error source
     expect(result.parse_status).toBe("fallback");
     expect(result.parsed).toEqual({ result: "fallback" });
+  });
+
+  it("routes ParseError thrown from parseOutput through the parse-error fallback path (F-11)", async () => {
+    // §12 F-11. A hook whose parseOutput throws a ParseError (e.g., G7/G10/G12's
+    // ParseAssertError for deterministic-fallback paths) must be routed to
+    // hook.fallback as a ParseError — not silently re-wrapped as a ProviderError.
+    const errorsSeen: Array<ParseError | ProviderError> = [];
+    const promptText = "Prompt: test";
+    const responseHash = await MockLlmProvider.keyFor(promptText, "test-model");
+    const provider = new MockLlmProvider({
+      responses: new Map([
+        [responseHash, { raw_text: "ignored", model_id: "test-model", finish_reason: "stop" }],
+      ]),
+    });
+
+    const hook: HookContract<{ value: string }, { result: string }> = {
+      ...makeHook(),
+      parseOutput: () => {
+        throw new ParseAssertError("parser asserted");
+      },
+      fallback: (_input, error) => {
+        errorsSeen.push(error);
+        return { kind: "deterministic_fallback", value: { result: "from-fallback" } };
+      },
+    };
+
+    const result = await runHook(
+      hook,
+      makeCtx(),
+      provider,
+      { prompt_version: "v1" },
+      { now: () => "2026-01-01T00:00:00Z", generateId: () => "id-pe" },
+    );
+
+    expect(result.parse_status).toBe("fallback");
+    expect(result.parsed).toEqual({ result: "from-fallback" });
+    expect(errorsSeen).toHaveLength(1);
+    expect(errorsSeen[0]).toBeInstanceOf(ParseError);
+    expect(errorsSeen[0]).toBeInstanceOf(ParseAssertError);
+    expect(errorsSeen[0]).not.toBeInstanceOf(ProviderError);
   });
 
   it("routes to fallback when parseOutput returns ok but the value violates schema_out (F-04)", async () => {

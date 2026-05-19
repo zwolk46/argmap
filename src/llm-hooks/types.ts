@@ -58,6 +58,21 @@ export class ParseError extends Error {
     this.name = "ParseError";
   }
 }
+
+// §12 F-11. A hook may throw from parseOutput when its LLM path is inactive
+// (G7/G10/G12 do this) or when an assertion in the parser fires. Without a
+// distinct class these throws are caught in runHook and silently wrapped as
+// ProviderError, mis-labelling the failure in HookInvocationRecord and routing
+// the wrong error type into hook.fallback. ParseAssertError extends ParseError
+// so the existing fallback(error: ParseError | ProviderError) signature still
+// accepts it.
+export class ParseAssertError extends ParseError {
+  constructor(message: string, raw?: string) {
+    super(message, raw);
+    this.name = "ParseAssertError";
+  }
+}
+
 export class ProviderError extends Error {
   readonly kind = "provider_error" as const;
   constructor(
