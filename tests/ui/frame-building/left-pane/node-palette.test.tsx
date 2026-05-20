@@ -194,4 +194,31 @@ describe("NodePalette component", () => {
     expect(typeof call.node.presentation?.x).toBe("number");
     expect(typeof call.node.presentation?.y).toBe("number");
   });
+
+  it("§13 #5: clicking a palette item fires on_node_created with the new node id after applyPatch", () => {
+    const on_node_created = vi.fn();
+    const { container } = render(
+      <NodePalette visible_types_override={["RootQuestion"]} on_node_created={on_node_created} />,
+    );
+    const button = container.querySelector(
+      '[aria-label="Node palette"] button',
+    ) as HTMLButtonElement;
+    fireEvent.click(button);
+    expect(on_node_created).toHaveBeenCalledOnce();
+    expect(on_node_created).toHaveBeenCalledWith("node-1");
+    // Order matters: applyPatch must fire before on_node_created so the
+    // parent can focus the node knowing it's already in frame_version.
+    const apply_order = mockApplyPatch.mock.invocationCallOrder[0]!;
+    const created_order = on_node_created.mock.invocationCallOrder[0]!;
+    expect(apply_order).toBeLessThan(created_order);
+  });
+
+  it("§13 #5: not providing on_node_created leaves applyPatch behavior unchanged", () => {
+    const { container } = render(<NodePalette visible_types_override={["RootQuestion"]} />);
+    const button = container.querySelector(
+      '[aria-label="Node palette"] button',
+    ) as HTMLButtonElement;
+    fireEvent.click(button);
+    expect(mockApplyPatch).toHaveBeenCalledOnce();
+  });
 });

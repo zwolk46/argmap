@@ -95,6 +95,15 @@ export function buildNodeDefaults(
 
 export interface NodePaletteProps {
   visible_types_override?: ReadonlyArray<NodeType>;
+  /**
+   * §13 #5 — fired immediately after the palette places a new node into the
+   * frame. The parent can use the node id to update its selection state and
+   * focus the new node on the canvas so keyboard users can immediately move
+   * it with React Flow's built-in arrow-key positioning. Without this hook,
+   * a palette-click drops the new node at a staggered grid position with no
+   * selection and no focus indicator — invisible to keyboard users.
+   */
+  on_node_created?: (node_id: string) => void;
 }
 
 const ALL_FRAME_NODE_TYPES: NodeType[] = [
@@ -132,7 +141,7 @@ export function visibleNodeTypesForPalette(
 }
 
 export function NodePalette(props: NodePaletteProps): ReactElement {
-  const { visible_types_override } = props;
+  const { visible_types_override, on_node_created } = props;
   const frame = useFrameStore((s) => s.frame);
   const frame_version = useFrameStore((s) => s.frame_version);
   const { frame_store, generateId, now } = useRepository();
@@ -167,6 +176,7 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
       },
     } as Node;
     frame_store.getState().applyPatch({ kind: "node_added", node: positioned });
+    on_node_created?.(positioned.id);
   }
 
   function handleDragStart(node_type: NodeType) {
