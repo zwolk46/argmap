@@ -345,7 +345,20 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
           <ThreePaneLayout
             left={
               <React.Fragment>
-                <NodePalette />
+                <NodePalette
+                  on_node_created={(node_id) => {
+                    // §13 #5: select the new node and move keyboard focus to
+                    // its RF wrapper so the user can immediately reposition
+                    // with arrow keys (RF's built-in selected-node movement).
+                    // requestAnimationFrame defers focus until after RF has
+                    // rendered the new node's DOM.
+                    setSelection({ kind: "node", node_id: node_id as NodeRef });
+                    requestAnimationFrame(() => {
+                      const el = document.querySelector<HTMLElement>(`[data-id="${node_id}"]`);
+                      el?.focus();
+                    });
+                  }}
+                />
                 <OutlineTree selection={selection} on_selection_change={setSelection} />
               </React.Fragment>
             }
@@ -383,6 +396,17 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                         },
                       } as Node;
                       frame_store.getState().applyPatch({ kind: "node_added", node: positioned });
+                      // §13 #5 mirror of palette-click path: select + focus
+                      // the dropped node so keyboard users (or anyone using a
+                      // drag-and-keyboard mix) lands with the node ready for
+                      // arrow-key repositioning.
+                      setSelection({ kind: "node", node_id: positioned.id as NodeRef });
+                      requestAnimationFrame(() => {
+                        const el = document.querySelector<HTMLElement>(
+                          `[data-id="${positioned.id}"]`,
+                        );
+                        el?.focus();
+                      });
                     }}
                     on_node_delete_requested={(node_id) => cascade_confirmation.request(node_id)}
                     on_edge_delete_requested={(edge_id) =>

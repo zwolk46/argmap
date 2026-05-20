@@ -1002,6 +1002,38 @@ select.argmap-input {
   transition: transform var(--duration-fast) var(--ease-standard);
 }
 
+/* §13 #4 — focus ring on the React Flow node wrapper. The global
+   :focus-visible rule already paints an outline on most elements, but RF
+   wraps each node in a transform-translated div whose own outline can be
+   clipped by overflow on the .canvas-node child. Pinning the outline at
+   the wrapper level with a generous offset makes sure keyboard users
+   actually see which node is focused. */
+.react-flow__node:focus,
+.react-flow__node:focus-visible {
+  outline: none;
+}
+.react-flow__node:focus-visible > .canvas-node,
+.react-flow__node:focus-visible > div > .canvas-node {
+  box-shadow:
+    0 0 0 var(--border-medium) var(--color-mode-current-accent),
+    var(--shadow-md);
+}
+
+/* §13 #6 — edge-creation candidate ring. While the user is in keyboard
+   edge mode, the source node is outlined in the accent color and the
+   active candidate target gets a dashed accent ring so the destination
+   reads as "pending." Decoupled from focus styles because the candidate
+   doesn't always carry focus (RF still owns selection arrow-keys). */
+[data-edge-source="true"] > .canvas-node,
+[data-edge-source="true"] > div > .canvas-node {
+  box-shadow: 0 0 0 var(--border-medium) var(--color-mode-current-accent);
+}
+[data-edge-candidate="true"] > .canvas-node,
+[data-edge-candidate="true"] > div > .canvas-node {
+  outline: var(--border-medium) dashed var(--color-mode-current-accent);
+  outline-offset: 4px;
+}
+
 /* Joyride tooltip polish — fade-and-rise to match dialogs. react-joyride's
    default tooltip just snaps. */
 .react-joyride__tooltip {

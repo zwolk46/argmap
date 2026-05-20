@@ -26,6 +26,7 @@ import type { FrameCanvasEdgeData, ForeclosureVisibility } from "./edges";
 import { CanvasToolbar } from "./canvas-toolbar";
 import { CanvasMinimap } from "./minimap";
 import { EdgeMarkerDefs, markerEndFor } from "./edge-markers";
+import { humanizeNodeType } from "../primitives";
 
 // Background dot pitch. Mirrors --canvas-grid-gap in tokens.css. React
 // Flow's <Background gap> prop takes a number, so we hold the value in
@@ -217,10 +218,19 @@ function buildRFNodes(
           : "persuasive"
         : undefined;
 
+    // §13 #4: per-node aria-label so screen readers announce node identity
+    // (kind + primary text) on Tab focus, instead of the generic "node"
+    // aria-roledescription react-flow sets by default. Truncated to 120
+    // chars so a long statement doesn't dominate the announcement.
+    const aria_label_text =
+      primary_text.length > 120 ? `${primary_text.slice(0, 117)}…` : primary_text;
+    const aria_label = `${humanizeNodeType(node.type)}: ${aria_label_text || "(empty)"}`;
+
     out.push({
       id: node.id,
       type: node.type,
       position: pos ? { x: pos.x, y: pos.y } : { x: 0, y: 0 },
+      ariaLabel: aria_label,
       data: {
         node_id: node.id as NodeRef,
         primary_text,
@@ -795,14 +805,233 @@ function FrameCanvasInner(props: FrameCanvasProps): ReactElement {
     }
   }, []);
 
+  // §13 #4: describe the canvas region + keyboard model for AT users. The
+  // wrapper div carries the role="application" + aria-label so the canvas
+  // appears as a single named landmark; the inner ReactFlow has its own
+  // role="application" but no descriptive label.
+  const keyboard_help_id = React.useId();
+  const edge_mode_status_id = React.useId();
+
+  // §13 #6: keyboard edge-creation mode. Source is the focused node when
+  // the user presses "E"; candidate_index points into the ordered candidate
+  // list (all non-source nodes, in DOM order). Arrow keys cycle the
+  // candidate, Enter commits, Escape cancels.
+  const [edge_mode, setEdgeMode] = React.useState<{
+    source: NodeRef;
+    candidate_index: number;
+  } | null>(null);
+
+  // Build candidate id list from rf_nodes minus the source. We use rf_nodes
+  // (the live render state) so candidates reflect the user's current view
+  // — collapsed sub-questions stay out, the source itself is excluded.
+  const edge_candidates = React.useMemo<ReadonlyArray<NodeRef>>(() => {
+    if (!edge_mode) return [];
+    return rf_nodes.filter((n) => n.id !== edge_mode.source).map((n) => n.id as NodeRef);
+  }, [edge_mode, rf_nodes]);
+
+  const current_candidate: NodeRef | null =
+    edge_mode && edge_candidates.length > 0
+      ? (edge_candidates[edge_mode.candidate_index % edge_candidates.length] ?? null)
+      : null;
+
+  const wrapper_ref = React.useRef<HTMLDivElement | null>(null);
+  const focus_before_edge_mode = React.useRef<HTMLElement | null>(null);
+
+  // Effect: paint data-edge-source / data-edge-candidate on the
+  // corresponding RF node wrappers so the CSS rings light up. We do this
+  // via DOM mutation rather than RFNode.domAttributes to avoid re-deriving
+  // rf_nodes on every arrow keypress (which would also re-run RF's heavy
+  // node-reconciliation). The dataset writes are idempotent and trivially
+  // cheap.
+  React.useEffect(() => {
+    const root = wrapper_ref.current;
+    if (!root) return;
+    const all = root.querySelectorAll<HTMLElement>("[data-id]");
+    for (const el of all) {
+      const nid = el.dataset.id;
+      if (!nid) continue;
+      const want_source = edge_mode?.source === nid;
+      const want_candidate = current_candidate === nid;
+      if (want_source) el.setAttribute("data-edge-source", "true");
+      else el.removeAttribute("data-edge-source");
+      if (want_candidate) el.setAttribute("data-edge-candidate", "true");
+      else el.removeAttribute("data-edge-candidate");
+    }
+    return () => {
+      // On unmount or before next pass, sweep our attrs off so a stale
+      // ring doesn't linger when edge_mode clears.
+      if (!root.isConnected) return;
+      for (const el of root.querySelectorAll<HTMLElement>(
+        "[data-edge-source],[data-edge-candidate]",
+      )) {
+        el.removeAttribute("data-edge-source");
+        el.removeAttribute("data-edge-candidate");
+      }
+    };
+  }, [edge_mode?.source, current_candidate]);
+
+  // Effect: move keyboard focus to the current candidate so RF's
+  // auto-pan-on-node-focus brings it into view AND screen readers announce
+  // it. Skipped when edge_mode is null or there is no candidate.
+  React.useEffect(() => {
+    if (!current_candidate) return;
+    const el = document.querySelector<HTMLElement>(`[data-id="${current_candidate}"]`);
+    el?.focus();
+  }, [current_candidate]);
+
+  // Stable refs so the capture-phase keydown handler (installed once) can
+  // read the latest edge mode and candidate list without being torn down
+  // on every state change.
+  const edge_mode_ref = React.useRef<{
+    edge_mode: typeof edge_mode;
+    edge_candidates: ReadonlyArray<NodeRef>;
+    current_candidate: NodeRef | null;
+    read_only: boolean;
+  }>({ edge_mode, edge_candidates, current_candidate, read_only });
+  edge_mode_ref.current = { edge_mode, edge_candidates, current_candidate, read_only };
+
+  // §13 #6: capture-phase keydown listener on the wrapper. We install it
+  // natively (not via React's onKeyDown) so we receive the event BEFORE it
+  // reaches the inner React Flow node wrapper, which would otherwise
+  // consume arrow keys to move the focused node — incompatible with our
+  // arrow-key-cycle-candidate behavior. stopPropagation also prevents RF's
+  // built-in arrow handler from running.
+  React.useEffect(() => {
+    const el = wrapper_ref.current;
+    if (!el) return;
+    const handler = (event: KeyboardEvent) => {
+      const ctx = edge_mode_ref.current;
+      if (ctx.read_only) return;
+
+      // Ignore key events from form controls (text inputs in the toolbar
+      // search box, etc.) so typing doesn't trigger edge mode.
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+
+      if (!ctx.edge_mode) {
+        // Enter edge mode: focused node becomes source.
+        if (event.key === "e" || event.key === "E") {
+          if (event.metaKey || event.ctrlKey || event.altKey) return;
+          const node_el =
+            (document.activeElement as HTMLElement | null)?.closest<HTMLElement>("[data-id]") ??
+            null;
+          const source_id = node_el?.dataset.id;
+          if (!source_id) return;
+          event.preventDefault();
+          event.stopPropagation();
+          focus_before_edge_mode.current = node_el;
+          setEdgeMode({ source: source_id as NodeRef, candidate_index: 0 });
+        }
+        return;
+      }
+
+      // In edge mode.
+      const cb = callbacks_ref.current;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setEdgeMode(null);
+        // Restore focus to the source so the user can keep working without
+        // losing their place in the canvas.
+        const restore = focus_before_edge_mode.current;
+        focus_before_edge_mode.current = null;
+        if (restore && restore.isConnected) {
+          requestAnimationFrame(() => restore.focus());
+        }
+        return;
+      }
+      if (event.key === "Enter") {
+        if (!ctx.current_candidate) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const src = ctx.edge_mode.source;
+        const tgt = ctx.current_candidate;
+        setEdgeMode(null);
+        focus_before_edge_mode.current = null;
+        cb.on_edge_created?.(src, tgt);
+        return;
+      }
+      const forward =
+        event.key === "ArrowRight" ||
+        event.key === "ArrowDown" ||
+        (event.key === "Tab" && !event.shiftKey);
+      const backward =
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowUp" ||
+        (event.key === "Tab" && event.shiftKey);
+      if (forward || backward) {
+        if (ctx.edge_candidates.length === 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const delta = forward ? 1 : -1;
+        setEdgeMode((m) =>
+          m
+            ? {
+                ...m,
+                candidate_index:
+                  (m.candidate_index + delta + ctx.edge_candidates.length) %
+                  ctx.edge_candidates.length,
+              }
+            : null,
+        );
+      }
+    };
+    el.addEventListener("keydown", handler, true);
+    return () => el.removeEventListener("keydown", handler, true);
+  }, []);
+
   return (
     <div
+      ref={wrapper_ref}
       data-testid="frame-canvas"
       data-read-only={read_only}
+      data-edge-mode={edge_mode ? "true" : undefined}
       style={{ width: "100%", height: "100%", position: "relative" }}
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
+      aria-label={
+        read_only
+          ? "Frame canvas (read-only). Use Tab to move focus between nodes."
+          : "Frame canvas. Use Tab to focus a node, Enter to select, arrow keys to move the selected node, Shift+arrow for larger steps, Delete to remove, E to start an edge from the focused node, and Escape to deselect."
+      }
+      aria-describedby={keyboard_help_id}
     >
+      <span id={keyboard_help_id} className="argmap-sr-only">
+        Frame canvas.{" "}
+        {read_only
+          ? "Read-only."
+          : "Press E with a focused node to start an edge to another node; arrow keys then cycle candidate targets; Enter commits, Escape cancels."}
+      </span>
+      {edge_mode && (
+        <div
+          data-testid="edge-mode-banner"
+          id={edge_mode_status_id}
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            top: "var(--space-3)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "var(--space-2) var(--space-3)",
+            background: "var(--color-mode-current-accent-bg)",
+            color: "var(--color-text-primary)",
+            border: "var(--border-medium) solid var(--color-mode-current-accent)",
+            borderRadius: "var(--radius-md)",
+            fontSize: "var(--font-size-sm)",
+            zIndex: "var(--z-banner, 80)" as unknown as number,
+            boxShadow: "var(--shadow-md)",
+            pointerEvents: "none",
+          }}
+        >
+          {edge_candidates.length === 0
+            ? "Edge mode — no candidate nodes. Press Escape to cancel."
+            : `Edge mode — arrow keys cycle target, Enter to connect, Escape to cancel. Candidate ${
+                (edge_mode.candidate_index % edge_candidates.length) + 1
+              } of ${edge_candidates.length}.`}
+        </div>
+      )}
       <ReactFlow
         nodes={rf_nodes}
         edges={rf_edges}
