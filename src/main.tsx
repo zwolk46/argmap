@@ -10,10 +10,10 @@ import { AppErrorBoundary } from "./ui/error-boundary";
 import { LoadingScreen } from "./ui/primitives/loading-screen";
 // Load tokens here (not inside ui/App.tsx) so design-system variables are
 // available to AppErrorBoundary, BootError, AuthGate, and SignInScreen — every
-// pre-App surface that may render before <App> mounts.
-import "./ui/styles/tokens.css";
-import "./ui/styles/global.css";
-import "./ui/styles/react-flow.css";
+// pre-App surface that may render before <App> mounts. index.css is the new
+// foundation entry: Tailwind, shadcn theme bridge, preset OKLCH base palette,
+// plus the existing argmap tokens/global/react-flow CSS layered in.
+import "./index.css";
 
 const llm_settings_default: LlmSettings = {
   build_time_hooks_enabled: false,

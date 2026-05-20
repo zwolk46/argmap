@@ -17,6 +17,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "resolveJsonModule": true,
+    "resolvePackageJsonImports": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "verbatimModuleSyntax": false,
