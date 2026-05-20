@@ -39,7 +39,7 @@ export function InspectorValidationBlock(
           r.severity === "error"
             ? "border-l-4 border-destructive bg-destructive/10 text-foreground"
             : r.severity === "warning"
-              ? "border-l-4 border-amber-500 bg-amber-50 text-foreground dark:bg-amber-950/30"
+              ? "border-l-4 border-[var(--color-severity-warning)] bg-[var(--color-severity-warning-bg)] text-foreground"
               : "border-l-4 border-border bg-muted text-foreground";
         return (
           <div
