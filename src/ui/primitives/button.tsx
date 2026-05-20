@@ -1,4 +1,7 @@
+import * as React from "react";
 import type { ButtonHTMLAttributes, ReactElement, ReactNode } from "react";
+import { Button as ShButton } from "#components/ui/button";
+import { cn } from "#lib/utils";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive" | "destructive-solid";
 
@@ -14,6 +17,26 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   className?: string;
 }
 
+const VARIANT_MAP: Record<
+  ButtonVariant,
+  React.ComponentProps<typeof ShButton>["variant"]
+> = {
+  primary: "default",
+  secondary: "outline",
+  ghost: "ghost",
+  destructive: "destructive",
+  // shadcn's destructive uses a subtle bg + accent text. argmap's
+  // destructive-solid wants a saturated, eye-catching CTA — render via
+  // additional Tailwind classes layered on the destructive variant.
+  "destructive-solid": "destructive",
+};
+
+const SIZE_MAP: Record<ButtonSize, React.ComponentProps<typeof ShButton>["size"]> = {
+  sm: "sm",
+  md: "default",
+  lg: "lg",
+};
+
 export function Button({
   variant = "secondary",
   size = "md",
@@ -25,19 +48,23 @@ export function Button({
   type,
   ...rest
 }: ButtonProps): ReactElement {
-  const cls = ["argmap-btn", className].filter(Boolean).join(" ");
+  const solid =
+    variant === "destructive-solid"
+      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 dark:bg-destructive/80"
+      : undefined;
   return (
-    <button
+    <ShButton
       type={type ?? "button"}
-      data-variant={variant}
-      data-size={size}
-      className={cls}
-      style={full_width ? { width: "100%" } : undefined}
+      variant={VARIANT_MAP[variant]}
+      size={SIZE_MAP[size]}
+      data-argmap-variant={variant}
+      data-argmap-size={size}
+      className={cn(full_width && "w-full", solid, className)}
       {...rest}
     >
       {leading}
       {children}
       {trailing}
-    </button>
+    </ShButton>
   );
 }

@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import { Z } from "../primitives";
+import { cn } from "#lib/utils";
 
 export interface TopBarSlots {
   home?: ReactNode;
@@ -19,38 +20,23 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
   return (
     <header
       data-mode={mode}
-      className="argmap-topbar"
+      className={cn(
+        "argmap-topbar sticky top-0 flex h-12 items-center gap-3 px-4",
+        "bg-background/95 supports-[backdrop-filter]:backdrop-blur-sm border-b",
+        "shrink-0",
+      )}
       style={{
-        height: "48px",
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-3)",
-        padding: "0 var(--space-4)",
-        background: "var(--color-surface-elevated)",
-        // Neutral hairline instead of mode-accent. The mode is communicated
-        // by the ModeFlavorChip and the toggle — repeating it as the page
-        // top border felt over-emphasized and broke the chrome's neutrality
-        // (Linear / Notion / Vercel all use a single neutral hairline).
-        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        flexShrink: 0,
-        // Anchored to the viewport top so scroll-context inside the page
-        // body doesn't lose the chrome.
-        position: "sticky",
-        top: 0,
         zIndex: Z.topbar,
-        backdropFilter: "saturate(120%) blur(2px)",
-        // Safari (all versions) still requires the -webkit- prefix and
-        // silently drops the unprefixed property. Without this the top
-        // bar reads opaque on Mac and iOS.
+        // Webkit-prefixed backdrop-filter for Safari, which still requires it
+        // on some versions even when the unprefixed property is set via the
+        // Tailwind class.
         WebkitBackdropFilter: "saturate(120%) blur(2px)",
       }}
     >
-      {slots.home && <div style={{ flexShrink: 0 }}>{slots.home}</div>}
-      {slots.modeToggle && <div style={{ flexShrink: 0 }}>{slots.modeToggle}</div>}
+      {slots.home && <div className="shrink-0">{slots.home}</div>}
+      {slots.modeToggle && <div className="shrink-0">{slots.modeToggle}</div>}
       {slots.title && (
-        <div className="argmap-topbar-title" style={{ flex: 1, minWidth: 0 }}>
-          {slots.title}
-        </div>
+        <div className="argmap-topbar-title flex-1 min-w-0">{slots.title}</div>
       )}
       {/* Secondary slots: chips → indicators → buttons. On narrow viewports
           the title can compress to 0 before these spill horizontally, so
@@ -59,24 +45,14 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
           mode toggle, and primary chrome buttons stay reachable at all
           widths via .argmap-topbar-* breakpoints in global.css. */}
       {slots.chips && (
-        <div
-          className="argmap-topbar-chips"
-          style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}
-        >
-          {slots.chips}
-        </div>
+        <div className="argmap-topbar-chips flex gap-1 shrink-0">{slots.chips}</div>
       )}
       {slots.indicators && (
-        <div
-          className="argmap-topbar-indicators"
-          style={{ display: "flex", gap: "var(--space-2)", flexShrink: 0 }}
-        >
+        <div className="argmap-topbar-indicators flex gap-2 shrink-0">
           {slots.indicators}
         </div>
       )}
-      {slots.buttons && (
-        <div style={{ display: "flex", gap: "var(--space-1)", flexShrink: 0 }}>{slots.buttons}</div>
-      )}
+      {slots.buttons && <div className="flex gap-1 shrink-0">{slots.buttons}</div>}
     </header>
   );
 }

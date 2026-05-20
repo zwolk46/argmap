@@ -1,4 +1,5 @@
-import type { ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
+import { cn } from "#lib/utils";
 
 export type PillVariant =
   | "neutral"
@@ -32,6 +33,10 @@ export interface PillProps {
   "data-testid"?: string;
 }
 
+// Token-driven palette: each variant maps to a coordinated (fg, bg [, border])
+// triple drawn from argmap's domain tokens.css. Kept as a lookup table — not
+// cva variants — so the runtime can reach the CSS custom properties at the
+// :root level instead of forcing them through Tailwind arbitrary-value classes.
 const VARIANTS: Record<PillVariant, { color: string; bg: string; border?: string }> = {
   neutral: {
     color: "var(--color-text-secondary)",
@@ -51,10 +56,6 @@ const VARIANTS: Record<PillVariant, { color: string; bg: string; border?: string
     bg: "var(--color-status-contested-bg)",
   },
   status_foreclosed: {
-    // §14 #6: align the Pill variant with .argmap-pill[data-tone="foreclosed"]
-    // — both now use the accent red color. Previously the JS Pill rendered
-    // neutral gray while the CSS sibling rendered red, and the same status
-    // label looked like two different things on the same screen.
     color: "var(--color-status-foreclosed-accent)",
     bg: "var(--color-status-foreclosed-bg)",
   },
@@ -107,29 +108,21 @@ export function Pill({
   const fg = color ?? v.color;
   const bgColor = bg ?? v.bg;
   const borderColor = outline ? (v.border ?? fg) : null;
+  const style: CSSProperties = {
+    background: bgColor,
+    color: fg,
+    border: borderColor ? `1px solid ${borderColor}` : "1px solid transparent",
+  };
   return (
     <span
       title={title}
       data-testid={rest["data-testid"]}
       data-variant={variant}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "var(--space-1)",
-        padding: size === "xs" ? "1px var(--space-1)" : "2px var(--space-2)",
-        borderRadius: "var(--radius-pill)",
-        background: bgColor,
-        color: fg,
-        border: borderColor
-          ? `var(--border-thin) solid ${borderColor}`
-          : "var(--border-thin) solid transparent",
-        fontSize: size === "xs" ? "var(--font-size-2xs)" : "var(--font-size-xs)",
-        fontWeight: "var(--font-weight-medium)",
-        fontFamily: "var(--font-sans)",
-        lineHeight: 1.3,
-        letterSpacing: "var(--letter-spacing-normal)",
-        whiteSpace: "nowrap",
-      }}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full font-medium whitespace-nowrap leading-[1.3]",
+        size === "xs" ? "px-1 py-px text-[10px]" : "px-2 py-0.5 text-xs",
+      )}
+      style={style}
     >
       {children}
     </span>

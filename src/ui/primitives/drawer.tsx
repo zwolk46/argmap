@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
-import { Z } from "./z-index";
+import { Dialog as DialogPrimitive } from "radix-ui";
+import { cn } from "#lib/utils";
 
 export type DrawerSide = "right" | "left" | "bottom";
 
@@ -9,10 +10,13 @@ export interface DrawerProps {
   onClose?: () => void;
   dismiss_on_escape?: boolean;
   // §9 #25: opt-in semi-transparent backdrop + click-outside-to-dismiss.
-  // Off by default so async drawers (e.g. SuggestionDrawer) can't lose
-  // user work via accidental scrim click; the two side panels that share
-  // the same Z.drawer band — HelpGlossaryPane and SessionSettingsPanel —
-  // turn it on to get a global "dismiss" affordance and visual layering.
+  // The legacy drawer rendered NO scrim by default — only opt-in side panels
+  // (HelpGlossaryPane, SessionSettingsPanel) dimmed the background. We
+  // preserve that here: when show_backdrop=false, the overlay is fully
+  // transparent and pointer-pass-through; the Radix focus-guard role still
+  // applies (so Tab won't escape into the canvas), but the page beneath
+  // stays visually live. When show_backdrop=true, the overlay renders the
+  // standard dim scrim AND dismisses on pointer-outside.
   show_backdrop?: boolean;
   width?: string;
   height?: string;
@@ -23,36 +27,21 @@ export interface DrawerProps {
 
 export function DrawerHeader({ children }: { children: ReactNode }): ReactElement {
   return (
-    <div
-      style={{
-        padding: "var(--space-4) var(--space-5)",
-        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        // §14 #11: align with DialogHeader (--font-size-lg) so drawer titles
-        // and dialog titles read as the same priority level. Previously
-        // drawer was --font-size-md (15px) while dialog was --font-size-lg
-        // (17px); the size mismatch made drawers feel quieter than dialogs.
-        fontSize: "var(--font-size-lg)",
-        fontWeight: "var(--font-weight-semibold)",
-        color: "var(--color-text-primary)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
+    // Radix Dialog requires a Title for SR labelling. The argmap drawer
+    // ships its own visible title row; wrap it as the Radix Title so the
+    // accessible name surfaces without a separate VisuallyHidden block.
+    <DialogPrimitive.Title
+      data-slot="argmap-drawer-header"
+      className="px-5 py-4 border-b text-lg font-semibold text-[var(--color-text-primary)] flex items-center justify-between m-0"
     >
       {children}
-    </div>
+    </DialogPrimitive.Title>
   );
 }
 
 export function DrawerBody({ children }: { children: ReactNode }): ReactElement {
   return (
-    <div
-      style={{
-        padding: "var(--space-4) var(--space-5)",
-        overflowY: "auto",
-        flex: 1,
-      }}
-    >
+    <div data-slot="argmap-drawer-body" className="px-5 py-4 overflow-y-auto flex-1">
       {children}
     </div>
   );
@@ -61,193 +50,90 @@ export function DrawerBody({ children }: { children: ReactNode }): ReactElement 
 export function DrawerFooter({ children }: { children: ReactNode }): ReactElement {
   return (
     <div
-      style={{
-        padding: "var(--space-3) var(--space-5)",
-        borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-        display: "flex",
-        gap: "var(--space-2)",
-        justifyContent: "flex-end",
-      }}
+      data-slot="argmap-drawer-footer"
+      className="px-5 py-3 border-t flex gap-2 justify-end"
     >
       {children}
     </div>
   );
 }
 
+const SIDE_STATIC: Record<DrawerSide, string> = {
+  right:
+    "top-0 right-0 bottom-0 h-full border-l data-open:animate-in data-closed:animate-out data-open:slide-in-from-right data-closed:slide-out-to-right",
+  left:
+    "top-0 left-0 bottom-0 h-full border-r data-open:animate-in data-closed:animate-out data-open:slide-in-from-left data-closed:slide-out-to-left",
+  bottom:
+    "left-0 right-0 bottom-0 w-full border-t data-open:animate-in data-closed:animate-out data-open:slide-in-from-bottom data-closed:slide-out-to-bottom",
+};
+
 export function Drawer({
   open,
   onClose,
   dismiss_on_escape = true,
   show_backdrop = false,
-  width = "360px",
-  height = "260px",
+  width,
+  height,
   side = "right",
   aria_label,
   children,
-}: DrawerProps): ReactElement | null {
-  const root_ref = React.useRef<HTMLDivElement>(null);
-  const last_focus_before_open_ref = React.useRef<HTMLElement | null>(null);
-
-  React.useEffect(() => {
-    if (!open || !dismiss_on_escape) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose?.();
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, dismiss_on_escape, onClose]);
-
-  // P1: autofocus the first focusable on open and restore focus on close.
-  // Without this, opening the drawer left focus on the toggle button —
-  // keyboard users had to Tab their way into the panel before they could
-  // act. We also do a soft Tab/Shift-Tab cycle (focus trap) so Tab from
-  // the last focusable wraps back to the first instead of falling out of
-  // the drawer.
-  React.useEffect(() => {
-    if (!open) return;
-    last_focus_before_open_ref.current = document.activeElement as HTMLElement | null;
-    const root = root_ref.current;
-    if (!root) return;
-    // Pick the first focusable child to autofocus on open. We pass a
-    // bare selector list so the focus order matches DOM order.
-    const focusables = root.querySelectorAll<HTMLElement>(
-      'a, button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    );
-    const enabled_on_open = Array.from(focusables).filter((el) => !el.hasAttribute("disabled"));
-    // §9 #24: skip the close X if it's first in tab order — autofocusing it
-    // means Tab from open lands the user on "close" and away from the drawer
-    // body. Prefer the first non-close focusable; fall back to close if it's
-    // the only thing in the drawer.
-    const first_non_close = enabled_on_open.find(
-      (el) => !/^(close)/i.test(el.getAttribute("aria-label") ?? ""),
-    );
-    const first = first_non_close ?? enabled_on_open[0];
-    first?.focus();
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Tab") return;
-      const all = root!.querySelectorAll<HTMLElement>(
-        'a, button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      const enabled = Array.from(all).filter((el) => !el.hasAttribute("disabled"));
-      if (enabled.length === 0) return;
-      const first_el = enabled[0]!;
-      const last_el = enabled[enabled.length - 1]!;
-      if (e.shiftKey && document.activeElement === first_el) {
-        e.preventDefault();
-        last_el.focus();
-      } else if (!e.shiftKey && document.activeElement === last_el) {
-        e.preventDefault();
-        first_el.focus();
-      }
-    }
-    root.addEventListener("keydown", handleKeyDown);
-    return () => {
-      root.removeEventListener("keydown", handleKeyDown);
-      // Restore focus to wherever it came from when the drawer closes.
-      // §13 #11: confirm the stored ref is still attached to the document
-      // before focusing; if the triggering element unmounted while the
-      // drawer was open, focus() throws no-op into the void and the user
-      // lands on document.body. Fall back to body explicitly.
-      const restore_to = last_focus_before_open_ref.current;
-      if (
-        restore_to &&
-        typeof restore_to.focus === "function" &&
-        document.body.contains(restore_to)
-      ) {
-        restore_to.focus();
-      } else {
-        document.body.focus();
-      }
-    };
-  }, [open]);
-
-  const baseStyle: React.CSSProperties = {
-    position: "fixed",
-    background: "var(--color-surface-elevated)",
-    boxShadow: "var(--shadow-lg)",
-    display: "flex",
-    flexDirection: "column",
-    transition: "transform var(--duration-medium) var(--ease-emphasized)",
-    // Above the sticky top bar (50) so the drawer overlay reads as on top
-    // of chrome. Below dialogs (1000) so confirmation modals can stack
-    // above an open drawer.
-    zIndex: Z.drawer,
-  };
-
-  let positionalStyle: React.CSSProperties;
-  if (side === "right") {
-    positionalStyle = {
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width,
-      borderLeft: "var(--border-hairline) solid var(--color-border-subtle)",
-      transform: open ? "translateX(0)" : "translateX(100%)",
-    };
-  } else if (side === "left") {
-    positionalStyle = {
-      top: 0,
-      left: 0,
-      bottom: 0,
-      width,
-      borderRight: "var(--border-hairline) solid var(--color-border-subtle)",
-      transform: open ? "translateX(0)" : "translateX(-100%)",
-    };
-  } else {
-    positionalStyle = {
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height,
-      borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-      transform: open ? "translateY(0)" : "translateY(100%)",
-    };
+}: DrawerProps): ReactElement {
+  const sizeStyle: React.CSSProperties = {};
+  if (side === "left" || side === "right") {
+    if (width) sizeStyle.width = width;
+    else sizeStyle.width = "360px";
+  } else if (side === "bottom") {
+    if (height) sizeStyle.height = height;
+    else sizeStyle.height = "260px";
   }
 
-  // P0-24: when closed, the drawer slides off-screen via transform but its
-  // children remain in DOM (so the slide-out animation works). `aria-hidden`
-  // alone hides them from screen readers but NOT from the keyboard tab
-  // order — sighted keyboard users would Tab into the void and lose focus.
-  // The `inert` attribute removes the subtree from both tab order and
-  // pointer events while keeping it in the DOM for the transition.
   return (
-    <>
-      {show_backdrop ? (
-        <div
-          data-testid="drawer-backdrop"
-          data-open={open}
-          aria-hidden="true"
-          onClick={open ? onClose : undefined}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "var(--color-surface-overlay)",
-            // One band below the drawer so the panel renders above the
-            // scrim. The scrim still sits above topbar (50) so chrome
-            // dims along with canvas content while the drawer is open.
-            zIndex: Z.drawer - 1,
-            opacity: open ? 1 : 0,
-            pointerEvents: open ? "auto" : "none",
-            transition: "opacity var(--duration-medium) var(--ease-emphasized)",
-          }}
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose?.();
+      }}
+    >
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          data-slot="drawer-overlay"
+          data-backdrop={show_backdrop ? "true" : "false"}
+          className={cn(
+            "fixed inset-0 z-50 duration-100",
+            // When show_backdrop is on, render the standard dim scrim.
+            // When off, keep the element in the tree (Radix needs it for
+            // the portal layer) but make it fully transparent and let
+            // pointer events fall through so the page underneath stays
+            // live — matching the legacy "no scrim" default.
+            show_backdrop
+              ? "bg-black/40 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+              : "bg-transparent pointer-events-none",
+          )}
         />
-      ) : null}
-      <div
-        data-testid="drawer"
-        data-open={open}
-        data-side={side}
-        role="dialog"
-        aria-label={aria_label}
-        aria-hidden={!open}
-        // React passes `inert` straight through to the DOM element since
-        // React 19 / TS lib.dom; for older typings we coerce.
-        {...(!open ? ({ inert: "" } as { inert: string }) : {})}
-        ref={root_ref}
-        style={{ ...baseStyle, ...positionalStyle }}
-      >
-        {children}
-      </div>
-    </>
+        <DialogPrimitive.Content
+          data-slot="drawer-content"
+          data-testid="drawer"
+          data-open={open ? "true" : "false"}
+          data-side={side}
+          aria-label={aria_label}
+          style={sizeStyle}
+          onEscapeKeyDown={(e) => {
+            if (!dismiss_on_escape) e.preventDefault();
+          }}
+          onPointerDownOutside={(e) => {
+            if (!show_backdrop) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if (!show_backdrop) e.preventDefault();
+          }}
+          className={cn(
+            "fixed z-50 flex flex-col bg-popover text-popover-foreground shadow-lg outline-none",
+            SIDE_STATIC[side],
+          )}
+        >
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

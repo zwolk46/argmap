@@ -1,5 +1,6 @@
-import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { Button as ShButton } from "#components/ui/button";
+import { cn } from "#lib/utils";
 
 export interface IconButtonProps {
   "aria-label": string;
@@ -13,45 +14,26 @@ export interface IconButtonProps {
   "data-testid"?: string;
 }
 
+const SIZE_MAP = {
+  sm: "icon-sm",
+  md: "icon",
+  lg: "icon-lg",
+} as const;
+
+const VARIANT_MAP = {
+  ghost: "ghost",
+  subtle: "outline",
+  accent: "default",
+} as const;
+
 /**
- * IconButton renders a two-layer outline/solid stack so hover crossfades
- * from the regular-rounded UICONS outline to the solid-rounded variant
- * with elastic motion. The cross-fade is CSS-driven via .argmap-icon-btn
- * in global.css; this component's job is to project a solid sibling when
- * the child icon is a <UIcon name="..." iconStyle="rr" /> we can detect.
- *
- * Children that aren't a single detectable UIcon (raw SVG, multi-element
- * trees, plain text) fall through with a scale-only hover treatment.
- *
- * Names where the regular-rounded slug differs from the solid-rounded one
- * are mapped here so the hover swap doesn't render a blank glyph. Audit:
- * I.e., `times` exists in fi-rr but not in fi-sr — the solid variant is
- * `cross`. Verified against UICONS 2.6.0 against every UIcon name in the
- * codebase. If a name has no solid sibling at all (none currently do
- * after this map), omit it from the SOLID_PAIRED set and the swap layer
- * will not render for that icon.
+ * IconButton — single-icon affordance for chrome and toolbar surfaces.
+ * Wraps shadcn `Button` size="icon" so the new design system's tap target,
+ * focus ring, and hover treatment apply uniformly. The previous two-layer
+ * UICONS outline/solid hover crossfade is dropped in favor of Phosphor's
+ * native weight variants; the `active` state is signalled via aria-pressed
+ * and a muted background (group/button data-attribute) instead.
  */
-const SOLID_ALIAS: Record<string, string> = {
-  times: "cross",
-};
-
-function findUIconName(
-  children: ReactNode,
-): { name: string; solidName: string; size: number } | null {
-  const list = React.Children.toArray(children);
-  if (list.length !== 1) return null;
-  const only = list[0];
-  if (!React.isValidElement(only)) return null;
-  const props = only.props as { name?: unknown; size?: unknown; iconStyle?: unknown };
-  // We only swap when the inner UIcon is in the "rr" family (or unspecified, which defaults to rr).
-  const iconStyle = props.iconStyle;
-  if (iconStyle !== undefined && iconStyle !== "rr") return null;
-  if (typeof props.name !== "string") return null;
-  const size = typeof props.size === "number" ? props.size : 16;
-  const solidName = SOLID_ALIAS[props.name] ?? props.name;
-  return { name: props.name, solidName, size };
-}
-
 export function IconButton({
   "aria-label": ariaLabel,
   onClick,
@@ -63,44 +45,23 @@ export function IconButton({
   title,
   "data-testid": dataTestId,
 }: IconButtonProps): ReactElement {
-  const detected = findUIconName(children);
-
-  const inner = detected ? (
-    <span className="argmap-icon-btn-stack" data-has-solid="true">
-      <span className="argmap-icon-btn-layer" data-layer="outline">
-        {children}
-      </span>
-      <span className="argmap-icon-btn-layer" data-layer="solid" aria-hidden="true">
-        <i
-          className={`fi fi-sr-${detected.solidName}`}
-          aria-hidden="true"
-          style={{
-            fontSize: detected.size,
-            lineHeight: 1,
-            display: "inline-block",
-          }}
-        />
-      </span>
-    </span>
-  ) : (
-    <span className="argmap-icon-btn-stack">{children}</span>
-  );
-
   return (
-    <button
+    <ShButton
       type="button"
+      variant={VARIANT_MAP[variant]}
+      size={SIZE_MAP[size]}
       aria-label={ariaLabel}
       aria-pressed={active}
       title={title ?? ariaLabel}
       onClick={onClick}
       disabled={disabled}
       data-testid={dataTestId}
-      className="argmap-icon-btn"
       data-active={active ? "true" : undefined}
-      data-size={size === "md" ? undefined : size}
-      data-variant={variant === "ghost" ? undefined : variant}
+      data-argmap-variant={variant}
+      data-argmap-size={size}
+      className={cn(active && "bg-muted text-foreground")}
     >
-      {inner}
-    </button>
+      {children}
+    </ShButton>
   );
 }

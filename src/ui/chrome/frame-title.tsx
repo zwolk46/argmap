@@ -94,17 +94,9 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
           if (e.key === "Escape") cancel();
         }}
         onBlur={commit}
+        className="text-lg font-semibold font-sans text-foreground bg-transparent border-0 outline-none w-full p-0"
         style={{
-          fontSize: "var(--font-size-lg)",
-          fontWeight: "var(--font-weight-semibold)",
-          fontFamily: "var(--font-sans)",
-          color: "var(--color-text-primary)",
-          background: "transparent",
-          border: "none",
-          borderBottom: "var(--border-medium) solid var(--color-mode-current-accent)",
-          outline: "none",
-          padding: "0",
-          width: "100%",
+          borderBottom: "2px solid var(--color-mode-current-accent)",
         }}
       />
     );
@@ -119,57 +111,21 @@ export function FrameTitle({ read_only }: FrameTitleProps): ReactElement {
     return (
       <h1
         data-testid="frame-title"
-        style={{
-          fontSize: "var(--font-size-lg)",
-          fontWeight: "var(--font-weight-semibold)",
-          fontFamily: "var(--font-sans)",
-          color: "var(--color-text-primary)",
-          letterSpacing: "var(--letter-spacing-tight)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          margin: 0,
-          display: "inline-block",
-          lineHeight: "var(--line-height-tight)",
-        }}
+        className="text-lg font-semibold font-sans text-foreground tracking-tight m-0 inline-block leading-tight truncate"
       >
         {display_title}
       </h1>
     );
   }
   return (
-    <h1
-      style={{
-        margin: 0,
-        display: "inline-block",
-        lineHeight: "var(--line-height-tight)",
-      }}
-    >
+    <h1 className="m-0 inline-block leading-tight">
       <button
         type="button"
         data-testid="frame-title"
         onClick={startEdit}
         title="Click to rename"
         aria-label={`Rename frame: ${display_title}`}
-        className="argmap-row-hover"
-        style={{
-          all: "unset",
-          cursor: "text",
-          fontSize: "var(--font-size-lg)",
-          fontWeight: "var(--font-weight-semibold)",
-          fontFamily: "var(--font-sans)",
-          color: "var(--color-text-primary)",
-          letterSpacing: "var(--letter-spacing-tight)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          padding: "2px 6px",
-          margin: "0 -6px",
-          borderRadius: "var(--radius-sm)",
-          transition: "background var(--duration-fast) var(--ease-standard)",
-          display: "inline-block",
-          lineHeight: "var(--line-height-tight)",
-        }}
+        className="argmap-row-hover cursor-text text-lg font-semibold font-sans text-foreground tracking-tight truncate px-1.5 -mx-1.5 rounded-sm transition-colors inline-block leading-tight bg-transparent border-0 outline-none hover:bg-muted/40"
       >
         {display_title}
       </button>

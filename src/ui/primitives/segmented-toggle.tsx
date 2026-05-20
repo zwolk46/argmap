@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { cn } from "#lib/utils";
 
 export interface SegmentOption<T extends string = string> {
   value: T;
@@ -15,6 +16,14 @@ export interface SegmentedToggleProps<T extends string = string> {
   aria_label?: string;
 }
 
+/**
+ * SegmentedToggle — radio-group keyboard pattern. Re-skinned with Tailwind on
+ * top of the new neutral palette but keeps the existing semantic contract:
+ * clicking the active option still fires onChange(value), matching the
+ * operating-mode-toggle expectation. Radix ToggleGroup type="single"
+ * returns "" on re-click, which would break the consumer, so we keep the
+ * hand-rolled radiogroup here.
+ */
 export function SegmentedToggle<T extends string>({
   options,
   value,
@@ -56,22 +65,14 @@ export function SegmentedToggle<T extends string>({
     }
   }
 
-  const padY = size === "sm" ? "2px" : "var(--space-1)";
-  const padX = size === "sm" ? "var(--space-2)" : "var(--space-3)";
-  const fontSize = size === "sm" ? "var(--font-size-xs)" : "var(--font-size-sm)";
-
   return (
     <div
       role="group"
       aria-label={aria_label}
-      style={{
-        display: "inline-flex",
-        borderRadius: "var(--radius-pill)",
-        background: "var(--color-surface-pane)",
-        border: "var(--border-hairline) solid var(--color-border-subtle)",
-        padding: "2px",
-        gap: "2px",
-      }}
+      data-slot="segmented-toggle"
+      className={cn(
+        "inline-flex rounded-full border bg-muted/40 p-0.5 gap-0.5",
+      )}
     >
       {options.map((opt, idx) => {
         const is_active = opt.value === value;
@@ -91,24 +92,16 @@ export function SegmentedToggle<T extends string>({
             onFocus={() => setFocusedIdx(idx)}
             onBlur={() => setFocusedIdx(-1)}
             data-focused={focused_idx === idx ? "true" : "false"}
-            className="argmap-segmented-tab"
-            style={{
-              padding: `${padY} ${padX}`,
-              borderRadius: "var(--radius-pill)",
-              border: "none",
-              background: is_active ? "var(--color-mode-current-accent-bg)" : "transparent",
-              color: is_active ? "var(--color-mode-current-accent)" : "var(--color-text-secondary)",
-              fontSize,
-              fontWeight: is_active ? "var(--font-weight-semibold)" : "var(--font-weight-medium)",
-              fontFamily: "var(--font-sans)",
-              cursor: disabled ? "default" : "pointer",
-              // §14 #27: was 350ms (--duration-slow); too slow vs the rest
-              // of the app (100–150ms). Drop to --duration-base so the
-              // toggle commits visually in step with content swaps.
-              transition:
-                "background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard)",
-              boxShadow: is_active ? "var(--shadow-sm)" : "none",
-            }}
+            data-active={is_active ? "true" : undefined}
+            className={cn(
+              "rounded-full font-medium font-sans transition-colors outline-none whitespace-nowrap",
+              "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm",
+              disabled && "cursor-default",
+              is_active
+                ? "bg-background text-foreground shadow-sm font-semibold"
+                : "text-muted-foreground hover:text-foreground",
+            )}
           >
             {opt.label}
           </button>

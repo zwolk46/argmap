@@ -39,25 +39,14 @@ export function ModeFlavorChip({
   const label = secondary ? `${primary} · ${secondary}` : primary;
   const content = (
     <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "var(--space-1)",
-        textTransform: "uppercase",
-        letterSpacing: "var(--letter-spacing-wide)",
-        fontWeight: "var(--font-weight-medium)",
-      }}
+      data-mode={mode}
+      data-flavor={flavor}
+      className="inline-flex items-center gap-1 uppercase tracking-wider font-medium"
     >
       <span>{primary}</span>
       {secondary ? (
         <>
-          <span
-            aria-hidden
-            style={{
-              opacity: 0.55,
-              marginInline: "1px",
-            }}
-          >
+          <span aria-hidden className="opacity-55 mx-px">
             ·
           </span>
           <span>{secondary}</span>
@@ -81,12 +70,9 @@ export function ModeFlavorChip({
       onClick={onOpenSettings}
       title="Open frame settings"
       aria-label={`Frame mode: ${label}. Open frame settings.`}
-      style={{
-        all: "unset",
-        cursor: "pointer",
-        display: "inline-block",
-        borderRadius: "var(--radius-pill)",
-      }}
+      data-mode={mode}
+      data-flavor={flavor}
+      className="cursor-pointer rounded-full bg-transparent border-0 p-0 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
       <Pill variant="neutral" size="xs">
         {content}

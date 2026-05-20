@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
+import { SignOut } from "@phosphor-icons/react";
 import { IconButton } from "../primitives/icon-button";
-import { UIcon } from "../primitives/uicon";
 import { useAuth } from "../auth/auth-context";
 import { useRepository } from "@/state";
 import { useToast } from "../primitives/toast";
@@ -45,7 +45,7 @@ export function SignOutButton(): ReactElement | null {
         void signOut();
       }}
     >
-      <UIcon name="sign-out-alt" size={18} />
+      <SignOut size={18} weight="regular" />
     </IconButton>
   );
 }

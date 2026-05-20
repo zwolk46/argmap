@@ -1,8 +1,16 @@
-import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
-import { Dialog, DialogHeader, DialogBody, DialogFooter } from "./dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#components/ui/alert-dialog";
+import { cn } from "#lib/utils";
 import type { DialogSize } from "./dialog";
-import { Button } from "./button";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -19,6 +27,15 @@ export interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
+// Map argmap dialog sizes to shadcn AlertDialogContent's two-tier size axis.
+// argmap's `lg` doesn't have a direct shadcn equivalent here so we widen via
+// a className override.
+const SIZE_CLASS: Record<DialogSize, string> = {
+  sm: "",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-lg",
+};
+
 export function ConfirmDialog({
   open,
   title,
@@ -32,27 +49,38 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps): ReactElement | null {
-  const title_id = React.useId();
   if (!open) return null;
-  const variant = destructive || confirm_variant === "danger" ? "destructive-solid" : "primary";
+  const danger = destructive || confirm_variant === "danger";
   return (
-    <Dialog
+    <AlertDialog
       open={open}
-      onClose={onCancel}
-      aria_labelledby={title_id}
-      aria_label={title}
-      size={size}
+      onOpenChange={(next) => {
+        if (!next) onCancel();
+      }}
     >
-      <DialogHeader id={title_id}>{title}</DialogHeader>
-      <DialogBody>{children}</DialogBody>
-      <DialogFooter>
-        <Button variant="secondary" onClick={onCancel}>
-          {cancel_label}
-        </Button>
-        <Button variant={variant} onClick={onConfirm} disabled={confirm_disabled}>
-          {confirm_label}
-        </Button>
-      </DialogFooter>
-    </Dialog>
+      <AlertDialogContent className={cn(SIZE_CLASS[size])}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div>{children}</div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onCancel}>{cancel_label}</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={confirm_disabled}
+            variant={danger ? "destructive" : "default"}
+            className={
+              danger
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : undefined
+            }
+          >
+            {confirm_label}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

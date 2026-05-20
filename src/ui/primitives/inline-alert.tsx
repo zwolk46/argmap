@@ -1,4 +1,6 @@
-import type { ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
+import { Alert } from "#components/ui/alert";
+import { cn } from "#lib/utils";
 
 export type InlineAlertKind = "error" | "warning" | "success" | "info";
 
@@ -42,23 +44,26 @@ const KIND_STYLES: Record<InlineAlertKind, { fg: string; bg: string }> = {
 export function InlineAlert({ kind, children, testId, role, id }: InlineAlertProps): ReactElement {
   const styles = KIND_STYLES[kind];
   const resolvedRole = role ?? (kind === "error" ? "alert" : "status");
+  const style: CSSProperties = {
+    background: styles.bg,
+    color: styles.fg,
+    borderLeft: `3px solid ${styles.fg}`,
+  };
   return (
-    <div
+    <Alert
       id={id}
       data-testid={testId}
+      data-kind={kind}
       role={resolvedRole}
       aria-live={kind === "error" ? "assertive" : "polite"}
-      style={{
-        padding: "var(--space-2) var(--space-3)",
-        fontSize: "var(--font-size-sm)",
-        lineHeight: "var(--line-height-normal)",
-        background: styles.bg,
-        color: styles.fg,
-        borderLeft: `var(--border-medium) solid ${styles.fg}`,
-        borderRadius: "var(--radius-sm)",
-      }}
+      style={style}
+      className={cn(
+        // override shadcn's default Alert padding so the banner reads as a
+        // compact inline note rather than a full card.
+        "px-3 py-2 text-sm leading-normal rounded-sm border-0",
+      )}
     >
       {children}
-    </div>
+    </Alert>
   );
 }

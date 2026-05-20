@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { cn } from "#lib/utils";
 
 export interface LoadingScreenProps {
   label?: string;
@@ -9,40 +10,13 @@ export function LoadingScreen({ label = "Loading…" }: LoadingScreenProps): Rea
     <div
       role="status"
       aria-live="polite"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        gap: "var(--space-4)",
-        background: "var(--color-surface-canvas)",
-      }}
+      className="flex flex-col items-center justify-center h-screen gap-4 bg-background"
     >
-      {/* Brand wordmark on first paint so the app reads as itself even
-          while data loads. Linear, Vercel, Notion all do this. */}
-      <span
-        style={{
-          fontSize: "var(--font-size-xl)",
-          fontWeight: "var(--font-weight-semibold)",
-          letterSpacing: "var(--letter-spacing-tight)",
-          color: "var(--color-text-primary)",
-        }}
-      >
-        argmap
-      </span>
+      {/* Brand wordmark on first paint so the app reads as itself even while
+          data loads. Linear, Vercel, Notion all do this. */}
+      <span className="text-xl font-semibold tracking-tight text-foreground">argmap</span>
       <Spinner size={20} decorative />
-      <p
-        style={{
-          color: "var(--color-text-secondary)",
-          fontSize: "var(--font-size-sm)",
-          fontFamily: "var(--font-sans)",
-          letterSpacing: "var(--letter-spacing-normal)",
-          margin: 0,
-        }}
-      >
-        {label}
-      </p>
+      <p className="text-sm text-muted-foreground m-0 font-sans">{label}</p>
     </div>
   );
 }
@@ -57,26 +31,26 @@ export interface SpinnerProps {
    * loading state. Default false to preserve the bare-spinner contract.
    */
   decorative?: boolean;
+  className?: string;
 }
 
-export function Spinner({ size = 22, decorative = false }: SpinnerProps): ReactElement {
-  // The animation duration becomes ~0.01ms under prefers-reduced-motion
-  // (see tokens.css), which would freeze the rotation mid-frame. Switch
-  // to a non-spinning pulse instead so the affordance still communicates
-  // "something is happening" without motion.
+export function Spinner({ size = 22, decorative = false, className }: SpinnerProps): ReactElement {
+  // tw-animate-css ships the `animate-spin` keyframe; tokens.css reduces it
+  // to a near-static pulse under prefers-reduced-motion via .argmap-spinner.
+  // Keeping the class name so the existing reduced-motion override applies.
   const a11y = decorative
     ? ({ "aria-hidden": true } as const)
     : ({ role: "status", "aria-label": "Loading" } as const);
   return (
     <span
       {...a11y}
-      className="argmap-spinner"
+      className={cn(
+        "argmap-spinner inline-block rounded-full border-2 border-border animate-spin",
+        className,
+      )}
       style={{
-        display: "inline-block",
         width: size,
         height: size,
-        borderRadius: "50%",
-        border: "var(--border-medium) solid var(--color-border-subtle)",
         borderTopColor: "var(--color-mode-current-accent)",
       }}
     />
@@ -98,53 +72,18 @@ export function EmptyState({ label, description, icon, action }: EmptyStateProps
   return (
     <div
       data-testid="empty-state"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "var(--space-3)",
-        textAlign: "center",
-        padding: "var(--space-8) var(--space-5)",
-        color: "var(--color-text-secondary)",
-        height: "100%",
-      }}
+      className="flex flex-col items-center justify-center gap-3 text-center px-5 py-8 text-muted-foreground h-full"
     >
       {icon ? (
-        <div
-          aria-hidden="true"
-          style={{
-            color: "var(--color-text-tertiary)",
-            opacity: 0.7,
-          }}
-        >
+        <div aria-hidden="true" className="opacity-70 text-muted-foreground">
           {icon}
         </div>
       ) : null}
-      <p
-        style={{
-          margin: 0,
-          fontSize: "var(--font-size-base)",
-          fontWeight: "var(--font-weight-medium)",
-          color: "var(--color-text-primary)",
-        }}
-      >
-        {label}
-      </p>
+      <p className="m-0 text-base font-medium text-foreground">{label}</p>
       {description ? (
-        <p
-          style={{
-            margin: 0,
-            maxWidth: "320px",
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
-            lineHeight: "var(--line-height-normal)",
-          }}
-        >
-          {description}
-        </p>
+        <p className="m-0 max-w-xs text-sm text-muted-foreground leading-normal">{description}</p>
       ) : null}
-      {action ? <div style={{ marginTop: "var(--space-2)" }}>{action}</div> : null}
+      {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );
 }
@@ -168,16 +107,13 @@ export function InlineEmpty({
   testId,
   density = "comfortable",
 }: InlineEmptyProps): ReactElement {
-  const pad = density === "compact" ? "var(--space-3)" : "var(--space-4)";
   return (
     <div
       data-testid={testId}
-      style={{
-        padding: pad,
-        color: "var(--color-text-tertiary)",
-        fontSize: "var(--font-size-sm)",
-        lineHeight: "var(--line-height-relaxed)",
-      }}
+      className={cn(
+        "text-sm text-muted-foreground leading-relaxed",
+        density === "compact" ? "p-3" : "p-4",
+      )}
     >
       {children}
     </div>
@@ -200,14 +136,7 @@ export function InlineLoading({ label = "Loading…", testId }: InlineLoadingPro
       data-testid={testId}
       role="status"
       aria-live="polite"
-      style={{
-        padding: "var(--space-4)",
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        color: "var(--color-text-secondary)",
-        fontSize: "var(--font-size-sm)",
-      }}
+      className="p-4 flex items-center gap-2 text-sm text-muted-foreground"
     >
       <Spinner size={14} decorative />
       <span>{label}</span>

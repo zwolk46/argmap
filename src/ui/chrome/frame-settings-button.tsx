@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
+import { Gear } from "@phosphor-icons/react";
 import { IconButton } from "../primitives/icon-button";
-import { UIcon } from "../primitives/uicon";
 
 export interface FrameSettingsButtonProps {
   onOpen?: () => void;
@@ -22,7 +22,7 @@ export function FrameSettingsButton({
 }: FrameSettingsButtonProps): ReactElement {
   return (
     <IconButton aria-label={aria_label} title={title} onClick={onOpen} disabled={disabled}>
-      <UIcon name="settings" size={18} />
+      <Gear size={18} weight="regular" />
     </IconButton>
   );
 }

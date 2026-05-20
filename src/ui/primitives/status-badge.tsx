@@ -1,9 +1,16 @@
-import * as React from "react";
 import type { ReactElement } from "react";
+import {
+  type Icon,
+  Check,
+  Circle,
+  Warning,
+  X,
+  Minus,
+  Scales,
+} from "@phosphor-icons/react";
 import type { NodeStatus } from "@/schema";
 import { Pill } from "./pill";
 import { Tooltip } from "./tooltip";
-import { UIcon } from "./uicon";
 
 export const FAILED_CONDITION_MESSAGES: Record<string, string> = {
   no_premise: "No premise has been provided.",
@@ -33,6 +40,14 @@ const STATUS_LABELS: Record<string, string> = {
   not_applicable: "—",
 };
 
+const STATUS_GLYPHS: Record<string, Icon> = {
+  satisfied: Check,
+  open: Circle,
+  contested: Warning,
+  foreclosed: X,
+  not_applicable: Minus,
+};
+
 const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
   satisfied: {
     color: "var(--color-status-satisfied)",
@@ -56,60 +71,6 @@ const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
   },
 };
 
-function StatusGlyph({ status, px }: { status: string; px: number }): React.ReactElement {
-  const stroke = 1.6;
-  const common = {
-    width: px,
-    height: px,
-    viewBox: "0 0 16 16",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: stroke,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-  if (status === "satisfied") {
-    return (
-      <svg {...common}>
-        <circle cx="8" cy="8" r="6.25" />
-        <path d="m5.2 8.3 1.9 1.9 3.6-3.7" />
-      </svg>
-    );
-  }
-  if (status === "open") {
-    return (
-      <svg {...common}>
-        <circle cx="8" cy="8" r="6.25" />
-      </svg>
-    );
-  }
-  if (status === "contested") {
-    return (
-      <svg {...common}>
-        <path d="M3.5 11 8 3l4.5 8z" />
-        <path d="M8 6.5v3" />
-        <circle cx="8" cy="11" r="0.55" fill="currentColor" />
-      </svg>
-    );
-  }
-  if (status === "foreclosed") {
-    return (
-      <svg {...common}>
-        <circle cx="8" cy="8" r="6.25" />
-        <path d="M5.3 5.3 10.7 10.7M10.7 5.3 5.3 10.7" />
-      </svg>
-    );
-  }
-  // not_applicable — dimmed dash inside circle
-  return (
-    <svg {...common}>
-      <circle cx="8" cy="8" r="6.25" opacity={0.6} />
-      <path d="M5 8h6" opacity={0.7} />
-    </svg>
-  );
-}
-
 export interface StatusBadgeProps {
   status: NodeStatus;
   legal_mode?: boolean;
@@ -120,31 +81,28 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
   const { status: s, via, failed_conditions } = status;
   const colors = STATUS_COLORS[s] ?? STATUS_COLORS.open;
   const label = STATUS_LABELS[s] ?? "?";
+  const Glyph = STATUS_GLYPHS[s] ?? Circle;
   const dimensionPx = size === "sm" ? 18 : 22;
   const glyphPx = size === "sm" ? 12 : 14;
 
   const badge = (
     <span
       data-testid={`status-badge-${s}`}
-      className="argmap-status-badge"
+      data-status={s}
+      className="argmap-status-badge inline-flex items-center justify-center rounded-full"
       key={s}
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
         width: dimensionPx,
         height: dimensionPx,
-        borderRadius: "var(--radius-pill)",
         background: colors.bg,
         color: colors.color,
-        fontFamily: "var(--font-sans)",
         cursor: failed_conditions?.length ? "help" : "default",
         flexShrink: 0,
         position: "relative",
       }}
       aria-label={`Status: ${s}`}
     >
-      <StatusGlyph status={s} px={glyphPx} />
+      <Glyph size={glyphPx} weight={s === "satisfied" || s === "foreclosed" ? "bold" : "regular"} />
       <span
         aria-hidden="true"
         style={{
@@ -173,9 +131,9 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
 
   const tooltipContent =
     failed_conditions && failed_conditions.length > 0 ? (
-      <ul style={{ margin: 0, padding: "0 0 0 var(--space-3)", listStyle: "disc" }}>
+      <ul className="m-0 list-disc pl-3">
         {failed_conditions.map((c) => (
-          <li key={c} style={{ marginBottom: "var(--space-1)" }}>
+          <li key={c} className="mb-1">
             {failedConditionMessage(c)}
           </li>
         ))}
@@ -187,14 +145,14 @@ export function StatusBadge({ status, legal_mode, size = "md" }: StatusBadgeProp
   if (!showSubflag) return wrappedBadge;
 
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
+    <span className="inline-flex items-center gap-1">
       {wrappedBadge}
       <Pill
         size="xs"
         variant={isBinding ? "subflag_binding" : "subflag_persuasive"}
         data-testid={isBinding ? "subflag-binding" : "subflag-persuasive"}
       >
-        <UIcon name="balance-scale-right" size={11} />
+        <Scales size={11} weight="regular" />
         {isBinding ? "B" : "P"}
       </Pill>
     </span>
