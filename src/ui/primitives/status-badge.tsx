@@ -1,13 +1,5 @@
 import type { ReactElement } from "react";
-import {
-  type Icon,
-  Check,
-  Circle,
-  Warning,
-  X,
-  Minus,
-  Scales,
-} from "@phosphor-icons/react";
+import { type Icon, Check, Circle, Warning, X, Minus, Scales } from "@phosphor-icons/react";
 import type { NodeStatus } from "@/schema";
 import { Pill } from "./pill";
 import { Tooltip } from "./tooltip";

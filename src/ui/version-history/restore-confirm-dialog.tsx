@@ -1,8 +1,19 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { ArrowCounterClockwise } from "@phosphor-icons/react";
 import type { FrameId, FrameVersionId, SessionVersionId } from "@/schema";
-import { ConfirmDialog, useOptionalToast } from "../primitives";
 import { useRepository } from "@/state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#components/ui/alert-dialog";
+import { useOptionalToast } from "../primitives";
 
 export interface RestoreConfirmDialogProps {
   open: boolean;
@@ -77,7 +88,10 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
     };
   }, [open, entity_kind, frame_id, repository]);
 
-  async function handleConfirm(): Promise<void> {
+  async function handleConfirm(e: React.MouseEvent<HTMLButtonElement>): Promise<void> {
+    // Prevent the AlertDialogAction's default close-on-click so we can run
+    // the async restore first and close manually on success.
+    e.preventDefault();
     setPending(true);
     setError(null);
     try {
@@ -96,60 +110,73 @@ export function RestoreConfirmDialog(props: RestoreConfirmDialogProps): ReactEle
       });
       on_restored();
       onClose();
-    } catch (e: unknown) {
+    } catch (err: unknown) {
       setPending(false);
-      setError(e instanceof Error ? e.message : String(e));
+      setError(err instanceof Error ? err.message : String(err));
     }
   }
 
+  if (!open) return null;
+
   return (
-    <ConfirmDialog
+    <AlertDialog
       open={open}
-      title={`Restore version ${ancestor_version_number}?`}
-      confirm_label={pending ? "Restoring…" : "Restore"}
-      cancel_label="Cancel"
-      // §8 #9: restore is a state-changing action; use the destructive
-      // confirm variant so its visual weight matches its consequence.
-      confirm_variant="danger"
-      confirm_disabled={pending}
-      onConfirm={handleConfirm}
-      onCancel={onClose}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
     >
-      <div data-testid="restore-confirm-body" style={{ fontSize: "var(--font-size-sm)" }}>
-        Restoring version {ancestor_version_number} will create a new version (v
-        {current_version_number + 1}) that branches from version {ancestor_version_number}. The
-        current version (v{current_version_number}) and any later versions remain on their own
-        branch — they aren't overwritten or deleted.
-        {entity_kind === "frame" && affected_sessions !== null && affected_sessions > 0 ? (
-          <div
-            data-testid="restore-confirm-sessions-advisory"
-            style={{
-              marginTop: "var(--space-2)",
-              color: "var(--color-text-secondary)",
-            }}
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="inline-flex items-center gap-2">
+            <ArrowCounterClockwise aria-hidden="true" />
+            Restore version {ancestor_version_number}?
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div data-testid="restore-confirm-body" className="text-sm">
+              Restoring version {ancestor_version_number} will create a new version (v
+              {current_version_number + 1}) that branches from version {ancestor_version_number}.
+              The current version (v{current_version_number}) and any later versions remain on their
+              own branch — they aren&apos;t overwritten or deleted.
+              {entity_kind === "frame" && affected_sessions !== null && affected_sessions > 0 ? (
+                <div
+                  data-testid="restore-confirm-sessions-advisory"
+                  className="mt-2 text-muted-foreground"
+                >
+                  {affected_sessions === 1
+                    ? "1 argument session"
+                    : `${affected_sessions} argument sessions`}{" "}
+                  currently reference{affected_sessions === 1 ? "s" : ""} this frame. After
+                  restoring, {affected_sessions === 1 ? "it stays" : "they stay"} anchored to{" "}
+                  {affected_sessions === 1 ? "its" : "their"} existing frame version, which becomes
+                  a side branch from the new head. You can migrate each session to the new head from
+                  its Version history later.
+                </div>
+              ) : null}
+              {error ? (
+                <div
+                  data-testid="restore-confirm-error"
+                  className="mt-2"
+                  style={{ color: "var(--color-severity-error)" }}
+                >
+                  {error}
+                </div>
+              ) : null}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={pending}
+            // §8 #9: restore is a state-changing action; use the destructive
+            // tone so the button's visual weight matches its consequence.
+            variant="destructive"
           >
-            {affected_sessions === 1
-              ? "1 argument session"
-              : `${affected_sessions} argument sessions`}{" "}
-            currently reference{affected_sessions === 1 ? "s" : ""} this frame. After restoring,{" "}
-            {affected_sessions === 1 ? "it stays" : "they stay"} anchored to{" "}
-            {affected_sessions === 1 ? "its" : "their"} existing frame version, which becomes a side
-            branch from the new head. You can migrate each session to the new head from its Version
-            history later.
-          </div>
-        ) : null}
-        {error ? (
-          <div
-            data-testid="restore-confirm-error"
-            style={{
-              marginTop: "var(--space-2)",
-              color: "var(--color-severity-error)",
-            }}
-          >
-            {error}
-          </div>
-        ) : null}
-      </div>
-    </ConfirmDialog>
+            {pending ? "Restoring…" : "Restore"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

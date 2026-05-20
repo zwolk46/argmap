@@ -1,27 +1,17 @@
-import * as React from "react";
 import type { ReactElement } from "react";
+import { Plus } from "@phosphor-icons/react";
 import type { Authority, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button } from "../../../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Label } from "#components/ui/label";
+import { Checkbox } from "#components/ui/checkbox";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface AuthorityEditorProps {
   node: Authority;
   on_pick_binding_in_jurisdiction: () => void;
 }
-
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
-
-const CHIP_STYLE: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "var(--space-1)",
-  padding: "2px var(--space-2)",
-  background: "var(--color-primary-subtle)",
-  color: "var(--color-primary)",
-  borderRadius: "var(--radius-full)",
-  fontSize: "var(--font-size-sm)",
-};
 
 export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
   const { node, on_pick_binding_in_jurisdiction } = props;
@@ -45,44 +35,30 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
   const isLegal = mode === "legal";
 
   return (
-    <div>
-      <div style={SECTION_STYLE}>
-        <FieldAttributionDecoration node_id={node.id} field_path="short_label" label={sourceLabel}>
-          <input
-            type="text"
-            className="argmap-input"
-            defaultValue={node.short_label ?? ""}
-            onBlur={(e) => patch({ short_label: e.currentTarget.value || undefined })}
-          />
-        </FieldAttributionDecoration>
-      </div>
+    <div className="flex flex-col gap-3">
+      <FieldAttributionDecoration node_id={node.id} field_path="short_label" label={sourceLabel}>
+        <Input
+          type="text"
+          defaultValue={node.short_label ?? ""}
+          onBlur={(e) => patch({ short_label: e.currentTarget.value || undefined })}
+        />
+      </FieldAttributionDecoration>
 
-      <div style={SECTION_STYLE}>
-        <FieldAttributionDecoration node_id={node.id} field_path="citation" label="Citation">
-          <input
-            type="text"
-            className="argmap-input"
-            defaultValue={node.citation}
-            onBlur={(e) => patch({ citation: e.currentTarget.value })}
-          />
-        </FieldAttributionDecoration>
-      </div>
+      <FieldAttributionDecoration node_id={node.id} field_path="citation" label="Citation">
+        <Input
+          type="text"
+          defaultValue={node.citation}
+          onBlur={(e) => patch({ citation: e.currentTarget.value })}
+        />
+      </FieldAttributionDecoration>
 
       {isLegal && (
         <>
-          <div style={SECTION_STYLE}>
-            <label className="argmap-section-heading">Jurisdiction</label>
-            <div
-              style={{
-                marginTop: "var(--space-1)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              <input
+          <div className="flex flex-col gap-1">
+            <Label>Jurisdiction</Label>
+            <div className="flex flex-col gap-1">
+              <Input
                 type="text"
-                className="argmap-input"
                 placeholder="Level (e.g. federal, state)"
                 defaultValue={node.jurisdiction?.level ?? ""}
                 onBlur={(e) => {
@@ -96,9 +72,8 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
                   }
                 }}
               />
-              <input
+              <Input
                 type="text"
-                className="argmap-input"
                 placeholder="Region / Circuit"
                 defaultValue={node.jurisdiction?.region ?? ""}
                 onBlur={(e) => {
@@ -110,9 +85,8 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
                   });
                 }}
               />
-              <input
+              <Input
                 type="text"
-                className="argmap-input"
                 placeholder="Court"
                 defaultValue={node.jurisdiction?.court ?? ""}
                 onBlur={(e) => {
@@ -127,91 +101,66 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
             </div>
           </div>
 
-          <div style={SECTION_STYLE}>
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                defaultChecked={node.is_binding ?? false}
-                onChange={(e) => patch({ is_binding: e.currentTarget.checked })}
-              />
-              <span className="argmap-section-heading">Is Binding</span>
-            </label>
-          </div>
+          <Label className="flex cursor-pointer items-center gap-2">
+            <Checkbox
+              defaultChecked={node.is_binding ?? false}
+              onCheckedChange={(checked) => patch({ is_binding: checked === true })}
+            />
+            <span>Is Binding</span>
+          </Label>
 
-          <div style={SECTION_STYLE}>
-            <label className="argmap-section-heading">Binding In</label>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "var(--space-1)",
-                marginTop: "var(--space-1)",
-                marginBottom: "var(--space-1)",
-              }}
-            >
+          <div className="flex flex-col gap-1">
+            <Label>Binding In</Label>
+            <div className="mb-1 flex flex-wrap gap-1">
               {(node.binding_in ?? []).map((j, i) => (
-                <span key={i} style={CHIP_STYLE}>
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary"
+                >
                   {j.level}
                   {j.region ? ` / ${j.region}` : ""}
                 </span>
               ))}
             </div>
-            <Button variant="ghost" size="sm" onClick={on_pick_binding_in_jurisdiction}>
-              + Add jurisdiction
-            </Button>
+            <div>
+              <Button variant="ghost" size="sm" onClick={on_pick_binding_in_jurisdiction}>
+                <Plus size={12} />
+                Add jurisdiction
+              </Button>
+            </div>
           </div>
         </>
       )}
 
       {isAcademic && (
         <>
-          <div style={SECTION_STYLE}>
-            <FieldAttributionDecoration node_id={node.id} field_path="author" label="Author">
-              <input
-                type="text"
-                className="argmap-input"
-                defaultValue={node.author ?? ""}
-                onBlur={(e) => patch({ author: e.currentTarget.value || undefined })}
-              />
-            </FieldAttributionDecoration>
-          </div>
+          <FieldAttributionDecoration node_id={node.id} field_path="author" label="Author">
+            <Input
+              type="text"
+              defaultValue={node.author ?? ""}
+              onBlur={(e) => patch({ author: e.currentTarget.value || undefined })}
+            />
+          </FieldAttributionDecoration>
 
-          <div style={SECTION_STYLE}>
-            <FieldAttributionDecoration
-              node_id={node.id}
-              field_path="venue"
-              label="Venue / Journal"
-            >
-              <input
-                type="text"
-                className="argmap-input"
-                defaultValue={node.venue ?? ""}
-                onBlur={(e) => patch({ venue: e.currentTarget.value || undefined })}
-              />
-            </FieldAttributionDecoration>
-          </div>
+          <FieldAttributionDecoration node_id={node.id} field_path="venue" label="Venue / Journal">
+            <Input
+              type="text"
+              defaultValue={node.venue ?? ""}
+              onBlur={(e) => patch({ venue: e.currentTarget.value || undefined })}
+            />
+          </FieldAttributionDecoration>
 
-          <div style={SECTION_STYLE}>
-            <FieldAttributionDecoration
-              node_id={node.id}
-              field_path="position"
-              label="Position / Argument"
-            >
-              <input
-                type="text"
-                className="argmap-input"
-                defaultValue={node.position ?? ""}
-                onBlur={(e) => patch({ position: e.currentTarget.value || undefined })}
-              />
-            </FieldAttributionDecoration>
-          </div>
+          <FieldAttributionDecoration
+            node_id={node.id}
+            field_path="position"
+            label="Position / Argument"
+          >
+            <Input
+              type="text"
+              defaultValue={node.position ?? ""}
+              onBlur={(e) => patch({ position: e.currentTarget.value || undefined })}
+            />
+          </FieldAttributionDecoration>
         </>
       )}
     </div>

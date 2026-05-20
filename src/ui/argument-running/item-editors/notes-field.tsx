@@ -1,4 +1,6 @@
 import type { ReactElement } from "react";
+import { Label } from "#components/ui/label";
+import { Textarea } from "#components/ui/textarea";
 
 export interface NotesFieldProps {
   value: string;
@@ -11,29 +13,16 @@ export interface NotesFieldProps {
 export function NotesField(props: NotesFieldProps): ReactElement {
   const { value, on_change, placeholder, min_height = "60px", max_height = "180px" } = props;
   return (
-    <label
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-        fontSize: "var(--font-size-xs)",
-        color: "var(--color-text-secondary)",
-      }}
-    >
-      <span>Notes (optional)</span>
-      <textarea
+    <div className="flex flex-col gap-1">
+      <Label className="text-xs text-muted-foreground">Notes (optional)</Label>
+      <Textarea
         data-testid="notes-field"
         value={value}
         placeholder={placeholder ?? "Anything to record about this item…"}
         onChange={(e) => on_change(e.target.value)}
-        className="argmap-input"
-        style={{
-          minHeight: min_height,
-          maxHeight: max_height,
-          fontSize: "var(--font-size-xs)",
-          resize: "vertical",
-        }}
+        className="resize-y text-xs"
+        style={{ minHeight: min_height, maxHeight: max_height }}
       />
-    </label>
+    </div>
   );
 }

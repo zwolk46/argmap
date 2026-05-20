@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
 import type { NodeRef, EdgeRef } from "@/schema";
 import { useFrameStore } from "@/state";
-import { Button } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Separator } from "#components/ui/separator";
 
 export interface InspectorMultiProps {
   node_ids: ReadonlyArray<NodeRef>;
@@ -25,54 +26,29 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
     : [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+    <div className="flex flex-col gap-4">
       {/* Header */}
-      <div
-        style={{
-          paddingBottom: "var(--space-3)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-medium)",
-            marginBottom: "4px",
-          }}
-        >
-          Multi-selection
-        </div>
-        <div
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-secondary)",
-          }}
-        >
+      <div className="flex flex-col gap-1 pb-3">
+        <div className="text-sm font-medium">Multi-selection</div>
+        <div className="text-xs text-muted-foreground">
           {node_count > 0 && `${node_count} node${node_count !== 1 ? "s" : ""}`}
           {node_count > 0 && edge_count > 0 && ", "}
           {edge_count > 0 && `${edge_count} edge${edge_count !== 1 ? "s" : ""}`}
           {" selected"}
         </div>
         {node_types.length > 0 && (
-          <div
-            style={{
-              marginTop: "var(--space-1)",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-tertiary)",
-            }}
-          >
-            Types: {node_types.join(", ")}
-          </div>
+          <div className="text-xs text-muted-foreground/80">Types: {node_types.join(", ")}</div>
         )}
       </div>
+      <Separator />
 
       {/* Bulk delete */}
       {node_count > 0 && (
-        <div>
-          <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-2)" }}>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Bulk actions
           </h3>
-          <Button variant="destructive" size="md" onClick={() => on_request_delete_multi(node_ids)}>
+          <Button variant="destructive" onClick={() => on_request_delete_multi(node_ids)}>
             Delete {node_count} node{node_count !== 1 ? "s" : ""}
             {edge_count > 0 ? ` and ${edge_count} edge${edge_count !== 1 ? "s" : ""}` : ""}
           </Button>
@@ -80,12 +56,7 @@ export function InspectorMulti(props: InspectorMultiProps): ReactElement {
       )}
 
       {/* Hint */}
-      <div
-        style={{
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-tertiary)",
-        }}
-      >
+      <div className="text-xs text-muted-foreground/80">
         Select a single item to edit its properties.
       </div>
     </div>

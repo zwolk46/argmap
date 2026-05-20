@@ -24,15 +24,7 @@ export function Inspector(props: InspectorProps): ReactElement {
   const frame_version = useFrameStore((s) => s.frame_version);
 
   return (
-    <div
-      style={{
-        height: "100%",
-        overflow: "auto",
-        background: "var(--color-surface-elevated)",
-        padding: "var(--space-4) var(--space-5)",
-        fontFamily: "var(--font-sans)",
-      }}
-    >
+    <div className="h-full overflow-auto bg-card px-5 py-4">
       {!frame_version || selection.kind === "empty" ? (
         <InspectorEmpty on_open_settings={on_open_settings} />
       ) : selection.kind === "node" ? (

@@ -1,36 +1,14 @@
-import * as React from "react";
 import type { ReactElement } from "react";
+import { Plus } from "@phosphor-icons/react";
 import type { LogicalGate } from "@/schema";
-import { Button, humanizeGateType } from "../../../primitives";
+import { humanizeGateType } from "../../../primitives";
+import { Button } from "#components/ui/button";
+import { Label } from "#components/ui/label";
 
 export interface LogicalGateEditorProps {
   node: LogicalGate;
   on_pick_slot_source: (slot: string, current_value: string | undefined) => void;
 }
-
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
-
-const CHIP_STYLE: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "var(--space-1)",
-  padding: "2px var(--space-2)",
-  background: "var(--color-primary-subtle)",
-  color: "var(--color-primary)",
-  borderRadius: "var(--radius-full)",
-  fontSize: "var(--font-size-sm)",
-};
-
-const GATE_TYPE_BADGE: React.CSSProperties = {
-  display: "inline-block",
-  padding: "2px 10px",
-  background: "var(--color-surface-muted)",
-  border: "var(--border-hairline) solid var(--color-border-subtle)",
-  borderRadius: "var(--radius-sm)",
-  fontSize: "var(--font-size-sm)",
-  fontWeight: "var(--font-weight-semibold)",
-  letterSpacing: "var(--letter-spacing-wide)",
-};
 
 function SlotRow({
   label,
@@ -44,22 +22,18 @@ function SlotRow({
   on_pick: (slot: string, current: string | undefined) => void;
 }): ReactElement {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        marginBottom: "var(--space-2)",
-      }}
-    >
-      <span className="argmap-section-heading" style={{ minWidth: 80 }}>
+    <div className="mb-2 flex items-center gap-2">
+      <span className="min-w-20 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
       {value ? (
-        <span style={CHIP_STYLE}>{value}</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
+          {value}
+        </span>
       ) : (
         <Button variant="ghost" size="sm" onClick={() => on_pick(slot, value)}>
-          + Pick
+          <Plus size={12} />
+          Pick
         </Button>
       )}
       {value && (
@@ -75,19 +49,22 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
   const { node, on_pick_slot_source } = props;
 
   return (
-    <div>
-      <div style={SECTION_STYLE}>
-        <label className="argmap-section-heading">Gate Type</label>
-        <div style={{ marginTop: "var(--space-1)" }}>
-          <span style={GATE_TYPE_BADGE} title={node.gate_type}>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <Label>Gate Type</Label>
+        <div>
+          <span
+            className="inline-block rounded-md border border-border bg-muted px-2.5 py-0.5 text-sm font-semibold tracking-wide"
+            title={node.gate_type}
+          >
             {humanizeGateType(node.gate_type)}
           </span>
         </div>
       </div>
 
-      <div style={SECTION_STYLE}>
-        <label className="argmap-section-heading">Inputs</label>
-        <div style={{ marginTop: "var(--space-1)" }}>
+      <div className="flex flex-col gap-1">
+        <Label>Inputs</Label>
+        <div>
           {(node.gate_type === "AND" || node.gate_type === "OR") && (
             <>
               {node.inputs.map((ref, i) => (
@@ -104,7 +81,8 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
                 size="sm"
                 onClick={() => on_pick_slot_source(`inputs.${node.inputs.length}`, undefined)}
               >
-                + Add input
+                <Plus size={12} />
+                Add input
               </Button>
             </>
           )}

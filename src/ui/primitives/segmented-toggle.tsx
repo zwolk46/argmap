@@ -70,9 +70,7 @@ export function SegmentedToggle<T extends string>({
       role="group"
       aria-label={aria_label}
       data-slot="segmented-toggle"
-      className={cn(
-        "inline-flex rounded-full border bg-muted/40 p-0.5 gap-0.5",
-      )}
+      className={cn("inline-flex rounded-full border bg-muted/40 p-0.5 gap-0.5")}
     >
       {options.map((opt, idx) => {
         const is_active = opt.value === value;

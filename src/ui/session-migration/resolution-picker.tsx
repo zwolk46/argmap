@@ -1,6 +1,13 @@
 import type { ReactElement } from "react";
+import { CaretDown } from "@phosphor-icons/react";
 import type { OrphanResolution } from "@/state";
-import { SegmentedToggle } from "../primitives";
+import { Button } from "#components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#components/ui/dropdown-menu";
 
 export interface ResolutionPickerProps {
   value: OrphanResolution["kind"];
@@ -22,6 +29,10 @@ const ALL_OPTIONS: ReadonlyArray<{ value: OrphanResolution["kind"]; label: strin
   { value: "no_op", label: "Keep" },
 ];
 
+function labelFor(value: OrphanResolution["kind"]): string {
+  return ALL_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
+
 export function ResolutionPicker(props: ResolutionPickerProps): ReactElement {
   const options =
     props.reattach_available === false
@@ -29,7 +40,30 @@ export function ResolutionPicker(props: ResolutionPickerProps): ReactElement {
       : ALL_OPTIONS;
   return (
     <div data-testid="resolution-picker">
-      <SegmentedToggle options={options} value={props.value} onChange={props.onChange} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="resolution-picker-trigger"
+            className="min-w-[110px] justify-between"
+          >
+            {labelFor(props.value)}
+            <CaretDown size={12} data-icon="inline-end" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {options.map((opt) => (
+            <DropdownMenuItem
+              key={opt.value}
+              data-testid={`resolution-option-${opt.value}`}
+              onSelect={() => props.onChange(opt.value)}
+            >
+              {opt.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

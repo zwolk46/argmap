@@ -1,8 +1,15 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useReactFlow } from "@xyflow/react";
+import {
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
+  FrameCorners,
+  SortAscending,
+  Eye,
+  EyeSlash,
+} from "@phosphor-icons/react";
 import { IconButton } from "../primitives/icon-button";
-import { UIcon } from "../primitives/uicon";
 import { Z } from "../primitives/z-index";
 import type { ForeclosureVisibility } from "./edges/types";
 
@@ -15,14 +22,16 @@ export interface CanvasToolbarProps {
   onAutoArrange?: () => void;
 }
 
-const ZoomIn = <UIcon name="zoom-in" size={16} />;
-const ZoomOut = <UIcon name="zoom-out" size={16} />;
-const FitView = <UIcon name="expand" size={16} />;
-const AutoArrangeGlyph = <UIcon name="apps-sort" size={16} />;
-
-const ForecloseVisibleGlyph = <UIcon name="eye" size={16} />;
-const ForecloseDimmedGlyph = <UIcon name="eye" size={16} style={{ opacity: 0.55 }} />;
-const ForecloseHiddenGlyph = <UIcon name="eye-crossed" size={16} />;
+// Direct Phosphor glyphs. Mirrors the picks listed in
+// docs/handoff/ui_overhaul_mapping_v1.md (UICONS → Phosphor map). The
+// IconButton wrapper handles sizing; we just hand it the glyph element.
+const ZoomInGlyph = <MagnifyingGlassPlus size={16} aria-hidden />;
+const ZoomOutGlyph = <MagnifyingGlassMinus size={16} aria-hidden />;
+const FitViewGlyph = <FrameCorners size={16} aria-hidden />;
+const AutoArrangeGlyph = <SortAscending size={16} aria-hidden />;
+const ForecloseVisibleGlyph = <Eye size={16} aria-hidden />;
+const ForecloseDimmedGlyph = <Eye size={16} aria-hidden style={{ opacity: 0.55 }} />;
+const ForecloseHiddenGlyph = <EyeSlash size={16} aria-hidden />;
 
 export function CanvasToolbar({
   foreclosure_visibility,
@@ -55,7 +64,12 @@ export function CanvasToolbar({
   return (
     <div
       data-testid="canvas-toolbar"
+      data-z-band="canvas-toolbar"
       style={{
+        // Floating position is part of the canvas chrome contract; keep the
+        // fixed coordinates and the z-band. Visual chrome (background, border,
+        // radius, shadow, padding) reads from tokens.css which still owns the
+        // pill-shaped surface treatment for floating toolbars.
         position: "absolute",
         top: "var(--space-3)",
         left: "50%",
@@ -73,13 +87,13 @@ export function CanvasToolbar({
       }}
     >
       <IconButton size="sm" aria-label="Zoom in" onClick={() => zoomIn()}>
-        {ZoomIn}
+        {ZoomInGlyph}
       </IconButton>
       <IconButton size="sm" aria-label="Zoom out" onClick={() => zoomOut()}>
-        {ZoomOut}
+        {ZoomOutGlyph}
       </IconButton>
       <IconButton size="sm" aria-label="Fit to screen" onClick={() => fitView()}>
-        {FitView}
+        {FitViewGlyph}
       </IconButton>
       <IconButton size="sm" aria-label="Zoom to 100%" onClick={() => zoomTo(1)}>
         <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-medium)" }}>
@@ -109,6 +123,11 @@ export function CanvasToolbar({
         {foreclosureGlyph}
       </IconButton>
       {onSearch && (
+        // Plain <input> — the capture-phase keydown handler in frame-canvas.tsx
+        // checks `tag === "INPUT"` to skip the edge-creation hotkey. shadcn
+        // Input renders as a real <input> too, but we keep the .argmap-input
+        // class so it shares the form-field token sizing already living in
+        // global.css (which is protected).
         <input
           aria-label="Search nodes"
           value={search_value}

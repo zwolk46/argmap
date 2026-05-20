@@ -2,7 +2,18 @@ import * as React from "react";
 import type { NodeRef, Premise, PremiseKind } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
 import { useAiSuggestion } from "@/ui";
-import { Button, AiSparkle } from "../../primitives";
+import { AiSparkle } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Label } from "#components/ui/label";
+import { Textarea } from "#components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#components/ui/select";
+import { cn } from "#lib/utils";
 import { PremiseReuseSuggestions } from "./premise-reuse-suggestions";
 
 export type PremiseAuthoringResult =
@@ -117,88 +128,73 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
     emit_new(statement, kind);
   }
 
+  const display_statement = reused_id
+    ? (premises.find((p) => p.id === reused_id)?.statement ?? "")
+    : statement;
+  const display_kind = reused_id ? (premises.find((p) => p.id === reused_id)?.kind ?? kind) : kind;
+
   return (
-    <div
-      data-testid="premise-authoring-section"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-2)",
-      }}
-    >
-      <label
-        style={{
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        Premise statement
-        <textarea
+    <div data-testid="premise-authoring-section" className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="premise-statement" className="text-xs text-muted-foreground">
+          Premise statement
+        </Label>
+        <Textarea
+          id="premise-statement"
           data-testid="premise-statement"
-          value={
-            reused_id ? (premises.find((p) => p.id === reused_id)?.statement ?? "") : statement
-          }
+          value={display_statement}
           disabled={!!reused_id}
           placeholder="What does this premise assert?"
           onBlur={() => setTouched(true)}
           onChange={(e) => on_statement_change(e.target.value)}
           aria-invalid={show_required || undefined}
           aria-describedby={show_required ? "premise-statement-required" : undefined}
-          className="argmap-input"
-          style={{
-            minHeight: 56,
-            fontSize: "var(--font-size-xs)",
-            background: reused_id ? "var(--color-surface-pane-secondary)" : undefined,
-            borderColor: show_required ? "var(--color-severity-error)" : undefined,
-          }}
+          className={cn("text-xs", reused_id && "bg-muted", show_required && "border-destructive")}
+          style={{ minHeight: 56 }}
         />
         {show_required && (
           <span
             id="premise-statement-required"
             data-testid="premise-statement-required"
-            style={{
-              display: "block",
-              marginTop: 2,
-              color: "var(--color-severity-error)",
-              fontSize: "var(--font-size-2xs)",
-            }}
+            className="mt-0.5 block text-[10px] text-destructive"
           >
             Required
           </span>
         )}
-      </label>
-      <label
-        style={{
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        Kind
-        <select
-          data-testid="premise-kind"
-          value={reused_id ? (premises.find((p) => p.id === reused_id)?.kind ?? kind) : kind}
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="premise-kind" className="text-xs text-muted-foreground">
+          Kind
+        </Label>
+        <Select
+          value={display_kind}
           disabled={!!reused_id}
-          onChange={(e) => on_kind_change(e.target.value as PremiseKind)}
-          className="argmap-input"
-          style={{
-            fontSize: "var(--font-size-xs)",
-            background: reused_id ? "var(--color-surface-pane-secondary)" : undefined,
-          }}
+          onValueChange={(v) => on_kind_change(v as PremiseKind)}
         >
-          {PREMISE_KIND_OPTIONS.map((k) => (
-            <option key={k} value={k}>
-              {PREMISE_KIND_LABELS[k]}
-            </option>
-          ))}
-        </select>
-      </label>
+          <SelectTrigger
+            id="premise-kind"
+            data-testid="premise-kind"
+            className={cn("w-full text-xs", reused_id && "bg-muted")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PREMISE_KIND_OPTIONS.map((k) => (
+              <SelectItem key={k} value={k}>
+                {PREMISE_KIND_LABELS[k]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       {reused_id ? (
         <Button
-          variant="secondary"
-          size="md"
+          type="button"
+          variant="outline"
+          size="sm"
           data-testid="premise-clear-reuse"
           onClick={on_clear_reuse}
-          style={{ alignSelf: "flex-start" }}
+          className="self-start"
         >
           Create new instead
         </Button>
@@ -212,14 +208,15 @@ export function PremiseAuthoringSection(props: PremiseAuthoringSectionProps): Re
       )}
       {enable_g11 && aiSuggestion.enabled ? (
         <Button
-          variant="primary"
-          size="md"
+          type="button"
+          variant="default"
+          size="sm"
           data-testid="premise-draft-from-fact-pattern"
           onClick={() => aiSuggestion.invoke("G11", { context: reuse_context })}
           disabled={aiSuggestion.status === "invoking"}
-          style={{ alignSelf: "flex-start" }}
-          leading={<AiSparkle />}
+          className="self-start"
         >
+          <AiSparkle />
           Draft from fact pattern
         </Button>
       ) : null}

@@ -1,7 +1,11 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { Check } from "@phosphor-icons/react";
 import type { Mode, Flavor } from "@/schema";
-import { Button } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Textarea } from "#components/ui/textarea";
+import { cn } from "#lib/utils";
 
 export interface NewFrameWizardSubmitArgs {
   title: string;
@@ -13,10 +17,6 @@ export interface NewFrameWizardSubmitArgs {
 export interface NewFrameWizardProps {
   onSubmit: (args: NewFrameWizardSubmitArgs) => void;
   onCancel: () => void;
-  // `start_at_template_step` was declared on this surface for a planned
-  // "New frame from template" entry point. The template flow itself ships
-  // in v1.5 (see Open questions in current_state.html); the prop was never
-  // read by any component. Removed to stop hinting at unbuilt functionality.
 }
 
 interface WizardState {
@@ -62,31 +62,9 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
   }
 
   return (
-    <div
-      data-testid="new-frame-wizard"
-      style={{
-        padding: "var(--space-5) var(--space-6) var(--space-5)",
-        maxWidth: 520,
-      }}
-    >
-      <h2
-        style={{
-          fontSize: "var(--font-size-lg)",
-          fontWeight: "var(--font-weight-semibold)",
-          letterSpacing: "var(--letter-spacing-tight)",
-          margin: 0,
-        }}
-      >
-        Create your first frame
-      </h2>
-      <p
-        style={{
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-secondary)",
-          marginTop: "var(--space-1)",
-          lineHeight: "var(--line-height-normal)",
-        }}
-      >
+    <div data-testid="new-frame-wizard" className="max-w-[520px] p-5 sm:px-6">
+      <h2 className="m-0 text-lg font-semibold tracking-tight">Create your first frame</h2>
+      <p className="mt-1 text-sm leading-normal text-[var(--color-text-secondary)]">
         Frames are reusable argument skeletons. Pick the mode that matches your work.
       </p>
 
@@ -98,12 +76,14 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
               label: "Legal",
               testid: "wizard-mode-legal",
               hint: "Appellate, statutory, trial preparation.",
+              dataMode: "legal",
             },
             {
               value: "general",
               label: "General",
               testid: "wizard-mode-general",
               hint: "Academic argument mapping, structured analytical work.",
+              dataMode: "general",
             },
           ]}
           value={state.mode ?? ""}
@@ -126,12 +106,14 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
                 label: "Personal",
                 testid: "wizard-flavor-personal",
                 hint: "Analytical personal questions warranting fully fleshed-out logical work.",
+                dataFlavor: "personal",
               },
               {
                 value: "academic",
                 label: "Academic",
                 testid: "wizard-flavor-academic",
                 hint: "Philosophy, policy, theory.",
+                dataFlavor: "academic",
               },
             ]}
             value={state.flavor ?? ""}
@@ -141,12 +123,11 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
       ) : null}
 
       <Section title="Title">
-        <input
+        <Input
           data-testid="wizard-title-input"
           type="text"
           value={state.title}
           onChange={(e) => setState((s) => ({ ...s, title: e.target.value }))}
-          className="argmap-input"
           autoFocus
           required
           aria-required="true"
@@ -158,11 +139,7 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
           <p
             id={title_counter_id}
             data-testid="wizard-title-counter"
-            style={{
-              marginTop: "var(--space-1)",
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-tertiary)",
-            }}
+            className="mt-1 text-xs text-[var(--color-text-tertiary)]"
           >
             {state.title.length} / {TITLE_MAX_LENGTH}
           </p>
@@ -170,32 +147,22 @@ export function NewFrameWizard(props: NewFrameWizardProps): ReactElement {
       </Section>
 
       <Section title="Description" optional>
-        <textarea
+        <Textarea
           data-testid="wizard-description-input"
           value={state.description}
           onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
           rows={3}
-          className="argmap-input"
           placeholder="Optional notes about the question this frame answers."
-          style={{ resize: "vertical", lineHeight: "var(--line-height-normal)" }}
+          className="resize-y leading-normal"
         />
       </Section>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "var(--space-2)",
-          marginTop: "var(--space-5)",
-          paddingTop: "var(--space-4)",
-          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
+      <div className="mt-5 flex justify-end gap-2 border-t border-[var(--color-border-subtle)] pt-4">
         <Button variant="ghost" data-testid="wizard-cancel" onClick={props.onCancel}>
           Cancel
         </Button>
         <Button
-          variant="primary"
+          variant="default"
           data-testid="wizard-submit"
           disabled={!canSubmit()}
           onClick={handleSubmit}
@@ -217,27 +184,11 @@ function Section({
   children: React.ReactNode;
 }): ReactElement {
   return (
-    <section style={{ marginTop: "var(--space-4)" }}>
-      <label
-        className="argmap-section-heading"
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: "var(--space-2)",
-          marginBottom: "var(--space-2)",
-        }}
-      >
+    <section className="mt-4">
+      <label className="mb-2 flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
         {title}
         {optional ? (
-          <span
-            style={{
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-tertiary)",
-              fontWeight: "var(--font-weight-regular)",
-              letterSpacing: "var(--letter-spacing-normal)",
-              textTransform: "none",
-            }}
-          >
+          <span className="text-[10px] font-normal normal-case tracking-normal text-[var(--color-text-tertiary)]">
             (optional)
           </span>
         ) : null}
@@ -247,12 +198,21 @@ function Section({
   );
 }
 
+interface ChoiceOption {
+  value: string;
+  label: string;
+  testid?: string;
+  hint?: string;
+  dataMode?: string;
+  dataFlavor?: string;
+}
+
 function Choice({
   options,
   value,
   onChange,
 }: {
-  options: ReadonlyArray<{ value: string; label: string; testid?: string; hint?: string }>;
+  options: ReadonlyArray<ChoiceOption>;
   value: string;
   onChange: (next: string) => void;
 }): ReactElement {
@@ -276,11 +236,7 @@ function Choice({
     onChange(options[next].value);
   }
   return (
-    <div
-      role="radiogroup"
-      onKeyDown={handleKey}
-      style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-2)" }}
-    >
+    <div role="radiogroup" onKeyDown={handleKey} className="grid grid-cols-2 gap-2">
       {options.map((opt) => {
         const active = opt.value === value;
         // Roving tabindex: if nothing is selected yet, the first option is
@@ -294,41 +250,32 @@ function Choice({
             aria-checked={active}
             tabIndex={tab_index}
             data-testid={opt.testid}
-            onClick={() => onChange(opt.value)}
             data-active={active ? "true" : "false"}
-            className="argmap-radio-card"
-            style={{
-              textAlign: "left",
-              padding: "var(--space-3) var(--space-4)",
-              borderRadius: "var(--radius-md)",
-              border: active
-                ? "var(--border-medium) solid var(--color-mode-current-accent)"
-                : "var(--border-thin) solid var(--color-border-default)",
-              background: active
-                ? "var(--color-mode-current-accent-bg)"
-                : "var(--color-surface-elevated)",
-              color: "var(--color-text-primary)",
-              cursor: "pointer",
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-1)",
-              transition:
-                "border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard)",
-            }}
+            data-mode={opt.dataMode}
+            data-flavor={opt.dataFlavor}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              "group relative flex cursor-pointer flex-col gap-1 rounded-2xl bg-card p-4 text-left text-card-foreground ring-1 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              active
+                ? "ring-2 ring-[var(--color-mode-current-accent)] bg-[var(--color-mode-current-accent-bg)]"
+                : "ring-foreground/10 hover:bg-muted/30",
+            )}
           >
-            <span
-              style={{ fontWeight: "var(--font-weight-semibold)", fontSize: "var(--font-size-sm)" }}
-            >
-              {opt.label}
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                {opt.label}
+              </span>
+              {active ? (
+                <span
+                  aria-hidden="true"
+                  className="inline-flex size-5 items-center justify-center rounded-full bg-[var(--color-mode-current-accent)] text-[var(--color-mode-current-accent-fg,white)]"
+                >
+                  <Check size={12} weight="bold" />
+                </span>
+              ) : null}
             </span>
             {opt.hint ? (
-              <span
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-secondary)",
-                  lineHeight: "var(--line-height-snug)",
-                }}
-              >
+              <span className="text-xs leading-snug text-[var(--color-text-secondary)]">
                 {opt.hint}
               </span>
             ) : null}

@@ -1,6 +1,15 @@
 import type { ReactElement } from "react";
 import type { Jurisdiction } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
+import { Input } from "#components/ui/input";
+import { Label } from "#components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#components/ui/select";
 
 const US_STATES = [
   "Alabama",
@@ -73,6 +82,9 @@ const FEDERAL_COURTS = [
   "U.S. District Court",
 ];
 
+const REGION_NONE = "__none__";
+const COURT_NONE = "__none__";
+
 export function JurisdictionSection(): ReactElement | null {
   const frame = useFrameStore((s) => s.frame);
   const { frame_store } = useRepository();
@@ -95,108 +107,91 @@ export function JurisdictionSection(): ReactElement | null {
   const is_federal = jur.level === "federal";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-      <div>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor="jur-level"
-        >
-          Jurisdiction Level
-        </label>
-        <select
-          id="jur-level"
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="jur-level">Jurisdiction Level</Label>
+        <Select
           value={jur.level}
-          className="argmap-input"
-          onChange={(e) =>
+          onValueChange={(value) =>
             patch({
-              level: e.target.value as Jurisdiction["level"],
+              level: value as Jurisdiction["level"],
               region: undefined,
               court: undefined,
             })
           }
         >
-          <option value="federal">Federal</option>
-          <option value="state">State</option>
-          <option value="tribal">Tribal</option>
-          <option value="territory">Territory</option>
-          <option value="international">International</option>
-        </select>
+          <SelectTrigger id="jur-level" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="federal">Federal</SelectItem>
+            <SelectItem value="state">State</SelectItem>
+            <SelectItem value="tribal">Tribal</SelectItem>
+            <SelectItem value="territory">Territory</SelectItem>
+            <SelectItem value="international">International</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {jur.level === "state" && (
-        <div>
-          <label
-            className="argmap-section-heading"
-            style={{ display: "block", marginBottom: "var(--space-1)" }}
-            htmlFor="jur-region"
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="jur-region">State</Label>
+          <Select
+            value={jur.region ?? REGION_NONE}
+            onValueChange={(value) => patch({ region: value === REGION_NONE ? undefined : value })}
           >
-            State
-          </label>
-          <select
-            id="jur-region"
-            value={jur.region ?? ""}
-            className="argmap-input"
-            onChange={(e) => patch({ region: e.target.value || undefined })}
-          >
-            <option value="">— Select state —</option>
-            {US_STATES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="jur-region" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={REGION_NONE}>— Select state —</SelectItem>
+              {US_STATES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
       {(jur.level === "tribal" || jur.level === "territory" || jur.level === "international") && (
-        <div>
-          <label
-            className="argmap-section-heading"
-            style={{ display: "block", marginBottom: "var(--space-1)" }}
-            htmlFor="jur-region-text"
-          >
-            Region / Name
-          </label>
-          <input
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="jur-region-text">Region / Name</Label>
+          <Input
             id="jur-region-text"
             type="text"
             value={jur.region ?? ""}
-            className="argmap-input"
             placeholder="Enter jurisdiction name"
             onChange={(e) => patch({ region: e.target.value || undefined })}
           />
         </div>
       )}
 
-      <div>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor="jur-court"
-        >
-          Court
-        </label>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="jur-court">Court</Label>
         {is_federal ? (
-          <select
-            id="jur-court"
-            value={jur.court ?? ""}
-            className="argmap-input"
-            onChange={(e) => patch({ court: e.target.value || undefined })}
+          <Select
+            value={jur.court ?? COURT_NONE}
+            onValueChange={(value) => patch({ court: value === COURT_NONE ? undefined : value })}
           >
-            <option value="">— Select court —</option>
-            {FEDERAL_COURTS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="jur-court" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={COURT_NONE}>— Select court —</SelectItem>
+              {FEDERAL_COURTS.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : (
-          <input
+          <Input
             id="jur-court"
             type="text"
             value={jur.court ?? ""}
-            className="argmap-input"
             placeholder="e.g. Supreme Court, Court of Appeals"
             onChange={(e) => patch({ court: e.target.value || undefined })}
           />

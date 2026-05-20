@@ -2,7 +2,9 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, Mode, Flavor, Position, ConclusionDirection } from "@/schema";
 import { useFrameStore, useRepository, type ConclusionDirectionResolution } from "@/state";
-import { Dialog, DialogHeader, DialogBody, DialogFooter, Button } from "../primitives";
+import { Dialog, DialogHeader, DialogBody, DialogFooter } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Alert } from "#components/ui/alert";
 import { TargetModePicker } from "./target-mode-picker";
 import { PositionsInlineEditor } from "./positions-inline-editor";
 import { ScanResultBody } from "./scan-result-body";
@@ -180,20 +182,13 @@ export function ArchitecturalModeChangeDialog(
           available_positions={target_mode === "general" ? available_positions : undefined}
         />
         {commit_error ? (
-          <div
+          <Alert
             data-testid="mode-change-error"
-            style={{
-              marginTop: "var(--space-3)",
-              padding: "var(--space-3) var(--space-4)",
-              color: "var(--color-severity-error)",
-              background: "var(--color-severity-error-bg)",
-              borderLeft: "var(--border-thick) solid var(--color-severity-error)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "var(--font-size-sm)",
-            }}
+            variant="destructive"
+            className="mt-3 px-4 py-3 text-sm"
           >
             Couldn't commit the mode change: {commit_error}
-          </div>
+          </Alert>
         ) : null}
       </DialogBody>
       <DialogFooter>
@@ -218,12 +213,7 @@ export function ArchitecturalModeChangeDialog(
         >
           Cancel
         </Button>
-        <Button
-          variant="primary"
-          data-testid="mode-change-commit"
-          disabled={!can_commit}
-          onClick={handleCommit}
-        >
+        <Button data-testid="mode-change-commit" disabled={!can_commit} onClick={handleCommit}>
           Commit mode change
         </Button>
       </DialogFooter>

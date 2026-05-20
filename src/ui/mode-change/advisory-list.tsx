@@ -49,27 +49,15 @@ export function AdvisoryList(props: AdvisoryListProps): ReactElement {
   return (
     <div data-testid="advisory-list">
       {Array.from(groups.entries()).map(([rule_id, items]) => (
-        <section key={rule_id} data-testid="advisory-group" data-rule-id={rule_id}>
-          <header
-            title={rule_id}
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-secondary)",
-              fontWeight: "var(--font-weight-medium)",
-              marginTop: "var(--space-2)",
-            }}
-          >
+        <section key={rule_id} data-testid="advisory-group" data-rule-id={rule_id} className="mt-2">
+          <header title={rule_id} className="text-xs font-medium text-muted-foreground">
             {humanLabel(rule_id)}
           </header>
           {items.map((v, i) => (
             <div
               key={`${rule_id}-${i}`}
               data-testid="advisory-row"
-              style={{
-                color: "var(--color-text-tertiary)",
-                fontSize: "var(--font-size-sm)",
-                padding: "var(--space-1) 0",
-              }}
+              className="flex items-center gap-2 py-1 text-sm text-muted-foreground"
             >
               <span>{v.message}</span>
               {/* KEEP RAW: pill-shaped node-id chip used to jump to a node; bespoke shape and size. */}
@@ -83,15 +71,7 @@ export function AdvisoryList(props: AdvisoryListProps): ReactElement {
                       : undefined
                   }
                   disabled={!props.onNodeFocusRequested}
-                  style={{
-                    marginLeft: "var(--space-2)",
-                    fontSize: "var(--font-size-2xs)",
-                    background: "transparent",
-                    border: "var(--border-thin) solid var(--color-border-default)",
-                    borderRadius: "var(--radius-pill)",
-                    padding: "0 var(--space-2)",
-                    cursor: props.onNodeFocusRequested ? "pointer" : "default",
-                  }}
+                  className="rounded-full border bg-background px-2 text-[10px] text-muted-foreground hover:bg-muted disabled:cursor-default"
                 >
                   {v.node_id}
                 </button>

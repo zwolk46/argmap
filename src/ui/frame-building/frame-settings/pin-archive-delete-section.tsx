@@ -3,31 +3,19 @@ import type { ReactElement } from "react";
 import type { FrameId } from "@/schema";
 import { useFrameStore, useAppStateStore, useRepository } from "@/state";
 import { useNavigate } from "@/ui";
-import { Button, ConfirmDialog } from "../../primitives";
-
-const ROW_STYLE: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "var(--space-2) 0",
-};
-
-const ROW_LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-sm)",
-  color: "var(--color-text-primary)",
-};
-
-const TOGGLE_BTN_STYLE = (active: boolean): React.CSSProperties => ({
-  padding: "var(--space-1) var(--space-3)",
-  fontSize: "var(--font-size-xs)",
-  border: active
-    ? "1px solid var(--color-mode-current-accent)"
-    : "1px solid var(--color-border-default)",
-  borderRadius: "var(--radius-sm)",
-  cursor: "pointer",
-  background: active ? "var(--color-mode-current-accent)" : "transparent",
-  color: active ? "var(--color-text-on-accent)" : "var(--color-text-secondary)",
-});
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#components/ui/alert-dialog";
+import { cn } from "#lib/utils";
 
 export function PinArchiveDeleteSection(): ReactElement | null {
   const frame = useFrameStore((s) => s.frame);
@@ -66,41 +54,47 @@ export function PinArchiveDeleteSection(): ReactElement | null {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      <h3
-        className="argmap-section-heading"
-        style={{ display: "block", marginBottom: "var(--space-2)" }}
-      >
+    <div className="flex flex-col">
+      <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Frame actions
       </h3>
 
-      <div style={ROW_STYLE}>
-        <span style={ROW_LABEL_STYLE}>Pin frame</span>
+      <div className="flex items-center justify-between py-2">
+        <span className="text-sm text-foreground">Pin frame</span>
         {/* KEEP RAW: pill-toggle with active/inactive visual states, not the standard Button taxonomy. */}
-        <button type="button" style={TOGGLE_BTN_STYLE(is_pinned)} onClick={handlePinToggle}>
+        <button
+          type="button"
+          onClick={handlePinToggle}
+          className={cn(
+            "cursor-pointer rounded-md border px-3 py-1 text-xs",
+            is_pinned
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-transparent text-muted-foreground hover:bg-muted",
+          )}
+        >
           {is_pinned ? "Pinned" : "Pin"}
         </button>
       </div>
 
-      <div style={ROW_STYLE}>
-        <span style={ROW_LABEL_STYLE}>Archive</span>
+      <div className="flex items-center justify-between py-2">
+        <span className="text-sm text-foreground">Archive</span>
         {/* KEEP RAW: pill-toggle with active/inactive visual states, not the standard Button taxonomy. */}
-        <button type="button" style={TOGGLE_BTN_STYLE(is_archived)} onClick={handleArchiveToggle}>
+        <button
+          type="button"
+          onClick={handleArchiveToggle}
+          className={cn(
+            "cursor-pointer rounded-md border px-3 py-1 text-xs",
+            is_archived
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-transparent text-muted-foreground hover:bg-muted",
+          )}
+        >
           {is_archived ? "Archived" : "Archive"}
         </button>
       </div>
 
-      <div
-        style={{
-          ...ROW_STYLE,
-          borderTop: "1px solid var(--color-border-subtle)",
-          marginTop: "var(--space-2)",
-          paddingTop: "var(--space-3)",
-        }}
-      >
-        <span style={{ ...ROW_LABEL_STYLE, color: "var(--color-severity-error)" }}>
-          Delete frame
-        </span>
+      <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
+        <span className="text-sm text-destructive">Delete frame</span>
         <Button
           variant="destructive"
           size="sm"
@@ -113,53 +107,65 @@ export function PinArchiveDeleteSection(): ReactElement | null {
 
       {/* P0-21: replaced native window.confirm() — no type-to-confirm, no
           destructive styling, no consistency with session-delete — with the
-          shared ConfirmDialog primitive plus a type-to-confirm field.
+          shared AlertDialog primitive plus a type-to-confirm field.
           Ride-along P0-23 fix: confirm_disabled gates the action so Delete
           cannot fire on empty input. */}
-      <ConfirmDialog
+      <AlertDialog
         open={delete_open}
-        title={`Delete frame "${frame.title}"?`}
-        confirm_label="Delete"
-        cancel_label="Cancel"
-        confirm_variant="danger"
-        confirm_disabled={confirm_text !== frame.title}
-        onConfirm={() => void handleDelete()}
-        onCancel={() => {
-          setDeleteOpen(false);
-          setConfirmText("");
+        onOpenChange={(next) => {
+          if (!next) {
+            setDeleteOpen(false);
+            setConfirmText("");
+          }
         }}
       >
-        <div data-testid="delete-frame-confirm-body">
-          <p>
-            Deleting this frame, all its versions, and any sessions running against it cannot be
-            undone.
-          </p>
-          <label style={{ display: "block", marginTop: "var(--space-2)" }}>
-            Type the frame title to confirm:
-            <input
-              data-testid="delete-frame-confirm-input"
-              type="text"
-              value={confirm_text}
-              onChange={(e) => setConfirmText(e.target.value)}
-              className="argmap-input"
-              style={{
-                marginTop: "var(--space-1)",
-              }}
-            />
-          </label>
-          {confirm_text.length > 0 && confirm_text !== frame.title ? (
-            <p
-              style={{
-                marginTop: "var(--space-1)",
-                color: "var(--color-severity-warning)",
-                fontSize: "var(--font-size-xs)",
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete frame &quot;{frame.title}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div data-testid="delete-frame-confirm-body">
+                <p>
+                  Deleting this frame, all its versions, and any sessions running against it cannot
+                  be undone.
+                </p>
+                <label className="mt-2 block">
+                  Type the frame title to confirm:
+                  <Input
+                    data-testid="delete-frame-confirm-input"
+                    type="text"
+                    value={confirm_text}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    className="mt-1"
+                  />
+                </label>
+                {confirm_text.length > 0 && confirm_text !== frame.title ? (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                    Type the title exactly to enable Delete.
+                  </p>
+                ) : null}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setDeleteOpen(false);
+                setConfirmText("");
               }}
             >
-              Type the title exactly to enable Delete.
-            </p>
-          ) : null}
-        </div>
-      </ConfirmDialog>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={confirm_text !== frame.title}
+              onClick={() => void handleDelete()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

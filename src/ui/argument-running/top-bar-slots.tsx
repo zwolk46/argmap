@@ -45,24 +45,10 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
       />
     ),
     title: (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: "var(--space-2)",
-          minWidth: 0,
-          overflow: "hidden",
-        }}
-      >
+      <div className="flex min-w-0 items-baseline gap-2 overflow-hidden">
         {has_frame ? <FrameTitle read_only /> : null}
         {has_frame && deps.title ? (
-          <span
-            aria-hidden
-            style={{
-              color: "var(--color-text-tertiary)",
-              fontSize: "var(--font-size-sm)",
-            }}
-          >
+          <span aria-hidden className="text-sm text-muted-foreground/70">
             /
           </span>
         ) : null}
@@ -116,9 +102,7 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
     const next = draft.trim();
     if (!next) {
       // Empty / whitespace-only title silently snaps back to the existing
-      // value. Reset the draft so the next edit starts from the live title,
-      // not the half-deleted state — otherwise the user sees their typing
-      // discarded with no explanation.
+      // value.
       setDraft(title);
       setEditing(false);
       return;
@@ -143,17 +127,10 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
           if (e.key === "Escape") setEditing(false);
         }}
         onBlur={commit}
+        className="w-60 border-0 border-b bg-transparent p-0 text-base font-medium text-foreground outline-none"
         style={{
-          fontSize: "var(--font-size-base)",
-          fontWeight: "var(--font-weight-medium)",
-          fontFamily: "var(--font-sans)",
-          color: "var(--color-text-primary)",
-          background: "transparent",
-          border: "none",
-          borderBottom: "var(--border-medium) solid var(--color-mode-current-accent)",
-          outline: "none",
-          padding: "0",
-          width: "240px",
+          borderBottomColor: "var(--color-mode-current-accent)",
+          borderBottomWidth: "var(--border-medium)",
         }}
       />
     );
@@ -165,18 +142,7 @@ function SessionTitleEditor({ title }: { title: string }): ReactElement {
       onClick={() => setEditing(true)}
       aria-label={`Rename session: ${title}`}
       title="Click to rename"
-      style={{
-        all: "unset",
-        fontSize: "var(--font-size-base)",
-        fontWeight: "var(--font-weight-medium)",
-        color: "var(--color-text-primary)",
-        cursor: "text",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        maxWidth: "320px",
-        display: "inline-block",
-      }}
+      className="inline-block max-w-[320px] cursor-text overflow-hidden text-ellipsis whitespace-nowrap border-0 bg-transparent p-0 text-base font-medium text-foreground"
     >
       {title}
     </button>

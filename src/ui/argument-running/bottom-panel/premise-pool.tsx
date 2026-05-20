@@ -1,7 +1,9 @@
 import * as React from "react";
 import type { Premise } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
-import { Button, InlineEmpty } from "../../primitives";
+import { InlineEmpty } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Plus } from "@phosphor-icons/react";
 import { PremiseRow } from "./premise-row";
 
 export interface PremisePoolProps {
@@ -37,30 +39,17 @@ export function PremisePool(props: PremisePoolProps): React.ReactElement {
   }
 
   return (
-    <div
-      data-testid="premise-pool"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        overflow: "hidden",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "var(--space-2)",
-          borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
-        }}
-      >
-        <span className="argmap-section-heading">Premises ({sorted.length})</span>
-        <Button variant="ghost" size="sm" data-testid="premise-add" onClick={on_add}>
-          + Add Premise
+    <div data-testid="premise-pool" className="flex h-full flex-col overflow-hidden">
+      <header className="flex items-center justify-between border-b p-2">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Premises ({sorted.length})
+        </span>
+        <Button type="button" variant="ghost" size="xs" data-testid="premise-add" onClick={on_add}>
+          <Plus size={12} />
+          Add Premise
         </Button>
       </header>
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div className="flex-1 overflow-y-auto">
         {sorted.length === 0 ? (
           <InlineEmpty testId="premise-pool-empty" density="compact">
             No premises yet — premises represent the factual or contextual claims your argument

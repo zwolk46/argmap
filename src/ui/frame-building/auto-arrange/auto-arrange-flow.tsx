@@ -1,6 +1,15 @@
 import type { ReactElement } from "react";
 import { useRepository } from "@/state";
-import { ConfirmDialog } from "../../primitives";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#components/ui/alert-dialog";
 
 export interface AutoArrangeFlowProps {
   open: boolean;
@@ -16,23 +25,25 @@ export function AutoArrangeFlow({ open, on_close }: AutoArrangeFlowProps): React
   }
 
   return (
-    <ConfirmDialog
+    <AlertDialog
       open={open}
-      title="Auto-arrange nodes?"
-      confirm_label="Auto-arrange"
-      onConfirm={handleConfirm}
-      onCancel={on_close}
+      onOpenChange={(next) => {
+        if (!next) on_close();
+      }}
     >
-      <p
-        style={{
-          margin: 0,
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        All manual node positions in the current frame version will be cleared so the canvas can
-        re-layout.
-      </p>
-    </ConfirmDialog>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Auto-arrange nodes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            All manual node positions in the current frame version will be cleared so the canvas can
+            re-layout.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={on_close}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirm}>Auto-arrange</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

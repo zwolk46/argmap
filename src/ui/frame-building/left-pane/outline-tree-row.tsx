@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import * as React from "react";
 import type { ReactElement } from "react";
-import { TypeIcon, UIcon } from "@/ui/primitives";
+import { CaretRight } from "@phosphor-icons/react";
+import { TypeIcon } from "@/ui/primitives";
+import { cn } from "#lib/utils";
 import type { OutlineNode } from "./outline-tree-shape";
 
 export interface OutlineTreeRowProps {
@@ -34,7 +36,7 @@ function OutlineTreeRowImpl(props: OutlineTreeRowProps): ReactElement {
     on_focus,
   } = props;
 
-  const indent = depth * 16; // --space-3 ≈ 12px; use 16 for clarity
+  const indent = depth * 16; // tree indent step
 
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation();
@@ -66,12 +68,12 @@ function OutlineTreeRowImpl(props: OutlineTreeRowProps): ReactElement {
       data-focused={focused ? "true" : undefined}
       data-selected={selected ? "true" : undefined}
       data-expanded={has_children ? (expanded ? "true" : "false") : undefined}
-      className="tree-row argmap-outline-row"
-      style={{
-        paddingLeft: `${indent + 8}px`,
-        minHeight: "28px",
-        userSelect: "none",
-      }}
+      className={cn(
+        "flex min-h-7 select-none items-center gap-2 pr-2",
+        "hover:bg-muted focus:outline-none",
+        selected && "bg-accent text-accent-foreground",
+      )}
+      style={{ paddingLeft: `${indent + 8}px` }}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onFocus={on_focus}
@@ -83,39 +85,24 @@ function OutlineTreeRowImpl(props: OutlineTreeRowProps): ReactElement {
           tab into nested controls just to expand a row. `aria-hidden` keeps
           AT from announcing it as a separate control. */}
       <span
-        style={{
-          width: "16px",
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transform: has_children ? (expanded ? "rotate(90deg)" : "rotate(0deg)") : "none",
-          opacity: has_children ? 1 : 0,
-          transition: "transform var(--duration-fast) var(--ease-standard)",
-          cursor: has_children ? "pointer" : "default",
-        }}
+        className={cn(
+          "flex w-4 shrink-0 items-center justify-center transition-transform",
+          has_children ? (expanded ? "rotate-90" : "rotate-0") : "opacity-0",
+          has_children ? "cursor-pointer" : "cursor-default",
+        )}
         onClick={has_children ? handleChevronClick : undefined}
         aria-hidden="true"
       >
-        {has_children ? <UIcon name="angle-small-right" size={12} /> : null}
+        {has_children ? <CaretRight size={12} /> : null}
       </span>
 
       {/* Type icon */}
-      <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+      <span className="flex shrink-0 items-center">
         <TypeIcon node_type={outline_node.node_type} />
       </span>
 
       {/* Statement preview */}
-      <span
-        style={{
-          flex: 1,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          color: "var(--color-text-primary)",
-        }}
-        title={outline_node.primary_text}
-      >
+      <span className="flex-1 truncate text-foreground" title={outline_node.primary_text}>
         {outline_node.primary_text}
       </span>
     </div>

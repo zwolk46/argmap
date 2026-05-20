@@ -17,10 +17,7 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   className?: string;
 }
 
-const VARIANT_MAP: Record<
-  ButtonVariant,
-  React.ComponentProps<typeof ShButton>["variant"]
-> = {
+const VARIANT_MAP: Record<ButtonVariant, React.ComponentProps<typeof ShButton>["variant"]> = {
   primary: "default",
   secondary: "outline",
   ghost: "ghost",

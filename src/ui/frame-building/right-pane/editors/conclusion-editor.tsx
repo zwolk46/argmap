@@ -1,31 +1,24 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { X } from "@phosphor-icons/react";
 import type { Conclusion, ConclusionDirection, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button } from "../../../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Textarea } from "#components/ui/textarea";
+import { Label } from "#components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#components/ui/select";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
-import { UIcon } from "../../../primitives/uicon";
 
 export interface ConclusionEditorProps {
   node: Conclusion;
 }
-
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
-
-const INPUT_STYLE: React.CSSProperties = {
-  resize: "vertical",
-};
-
-const PILL_STYLE: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "var(--space-1)",
-  padding: "2px var(--space-2)",
-  background: "var(--color-surface-muted)",
-  border: "var(--border-hairline) solid var(--color-border-subtle)",
-  borderRadius: "var(--radius-full)",
-  fontSize: "var(--font-size-sm)",
-};
 
 const LEGAL_DIRECTION_VALUES = [
   "affirm",
@@ -36,6 +29,8 @@ const LEGAL_DIRECTION_VALUES = [
   "favors_defendant",
   "custom",
 ] as const;
+
+const POSITION_NONE = "__none__";
 
 export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
   const { node } = props;
@@ -62,7 +57,7 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
     } else {
       const dir: ConclusionDirection = {
         kind: "general",
-        position_id: value,
+        position_id: value === POSITION_NONE ? "" : value,
       };
       patch({ direction: dir });
     }
@@ -82,109 +77,83 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
   }
 
   const currentDirectionValue =
-    node.direction.kind === "legal" ? node.direction.value : node.direction.position_id;
+    node.direction.kind === "legal"
+      ? node.direction.value
+      : node.direction.position_id || POSITION_NONE;
 
   return (
-    <div>
-      <div style={SECTION_STYLE}>
-        <FieldAttributionDecoration node_id={node.id} field_path="statement" label="Statement">
-          <textarea
-            rows={3}
-            className="argmap-input"
-            style={INPUT_STYLE}
-            defaultValue={node.statement}
-            onBlur={(e) => patch({ statement: e.currentTarget.value })}
-          />
-        </FieldAttributionDecoration>
-      </div>
+    <div className="flex flex-col gap-3">
+      <FieldAttributionDecoration node_id={node.id} field_path="statement" label="Statement">
+        <Textarea
+          rows={3}
+          defaultValue={node.statement}
+          onBlur={(e) => patch({ statement: e.currentTarget.value })}
+        />
+      </FieldAttributionDecoration>
 
-      <div style={SECTION_STYLE}>
-        <label className="argmap-section-heading">Direction</label>
-        <select
-          className="argmap-input"
-          style={{ marginTop: "var(--space-1)" }}
-          value={currentDirectionValue}
-          onChange={(e) => handleDirectionChange(e.currentTarget.value)}
-        >
-          {mode === "legal" ? (
-            <>
-              {LEGAL_DIRECTION_VALUES.map((v) => (
-                <option key={v} value={v}>
+      <div className="flex flex-col gap-1">
+        <Label>Direction</Label>
+        <Select value={currentDirectionValue} onValueChange={handleDirectionChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {mode === "legal" ? (
+              LEGAL_DIRECTION_VALUES.map((v) => (
+                <SelectItem key={v} value={v}>
                   {v.replace(/_/g, " ")}
-                </option>
-              ))}
-            </>
-          ) : (
-            <>
-              <option value="">— Select position —</option>
-              {(positions ?? []).map((pos) => (
-                <option key={pos.id} value={pos.id}>
-                  {pos.label}
-                </option>
-              ))}
-            </>
-          )}
-        </select>
+                </SelectItem>
+              ))
+            ) : (
+              <>
+                <SelectItem value={POSITION_NONE}>— Select position —</SelectItem>
+                {(positions ?? []).map((pos) => (
+                  <SelectItem key={pos.id} value={pos.id}>
+                    {pos.label}
+                  </SelectItem>
+                ))}
+              </>
+            )}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div style={SECTION_STYLE}>
-        <FieldAttributionDecoration
-          node_id={node.id}
-          field_path="reasoning_summary"
-          label="Reasoning Summary"
-        >
-          <textarea
-            rows={2}
-            className="argmap-input"
-            style={INPUT_STYLE}
-            defaultValue={node.reasoning_summary ?? ""}
-            onBlur={(e) => patch({ reasoning_summary: e.currentTarget.value || undefined })}
-          />
-        </FieldAttributionDecoration>
-      </div>
+      <FieldAttributionDecoration
+        node_id={node.id}
+        field_path="reasoning_summary"
+        label="Reasoning Summary"
+      >
+        <Textarea
+          rows={2}
+          defaultValue={node.reasoning_summary ?? ""}
+          onBlur={(e) => patch({ reasoning_summary: e.currentTarget.value || undefined })}
+        />
+      </FieldAttributionDecoration>
 
-      <div style={SECTION_STYLE}>
-        <label className="argmap-section-heading">Tags</label>
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "var(--space-1)",
-            marginTop: "var(--space-1)",
-            marginBottom: "var(--space-1)",
-          }}
-        >
+      <div className="flex flex-col gap-1">
+        <Label>Tags</Label>
+        <div className="mb-1 flex flex-wrap gap-1">
           {(node.tags ?? []).map((tag) => (
-            <span key={tag} style={PILL_STYLE}>
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-sm"
+            >
               {tag}
               <button
                 type="button"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "var(--space-1)",
-                  margin: "calc(var(--space-1) * -1)",
-                  lineHeight: 1,
-                  color: "inherit",
-                  borderRadius: "var(--radius-sm)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                className="inline-flex items-center justify-center rounded-md p-0.5 hover:bg-accent"
                 onClick={() => removeTag(tag)}
                 aria-label={`Remove tag ${tag}`}
               >
-                <UIcon name="times" size={12} />
+                <X size={12} />
               </button>
             </span>
           ))}
         </div>
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <input
+        <div className="flex gap-2">
+          <Input
             type="text"
-            className="argmap-input"
-            style={{ flex: 1 }}
+            className="flex-1"
             value={tag_input}
             placeholder="Add tag…"
             onChange={(e) => setTagInput(e.currentTarget.value)}
@@ -195,23 +164,20 @@ export function ConclusionEditor(props: ConclusionEditorProps): ReactElement {
               }
             }}
           />
-          <Button variant="secondary" size="sm" onClick={() => addTag(tag_input)}>
+          <Button variant="outline" size="sm" onClick={() => addTag(tag_input)}>
             Add
           </Button>
         </div>
       </div>
 
       {mode === "legal" && (
-        <div style={SECTION_STYLE}>
-          <FieldAttributionDecoration node_id={node.id} field_path="remedy" label="Remedy">
-            <input
-              type="text"
-              className="argmap-input"
-              defaultValue={node.remedy ?? ""}
-              onBlur={(e) => patch({ remedy: e.currentTarget.value || undefined })}
-            />
-          </FieldAttributionDecoration>
-        </div>
+        <FieldAttributionDecoration node_id={node.id} field_path="remedy" label="Remedy">
+          <Input
+            type="text"
+            defaultValue={node.remedy ?? ""}
+            onBlur={(e) => patch({ remedy: e.currentTarget.value || undefined })}
+          />
+        </FieldAttributionDecoration>
       )}
     </div>
   );

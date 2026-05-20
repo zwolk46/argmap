@@ -43,10 +43,7 @@ export function ItemEditorHost(props: ItemEditorHostProps): React.ReactElement |
     return <InterpretationItemEditor node={node} on_close={on_close} on_saved={on_saved} />;
   }
   return (
-    <div
-      data-testid="item-editor-unsupported"
-      style={{ padding: "var(--space-3)", fontSize: "var(--font-size-xs)" }}
-    >
+    <div data-testid="item-editor-unsupported" className="p-3 text-xs">
       No editor for node type: {node.type}
     </div>
   );

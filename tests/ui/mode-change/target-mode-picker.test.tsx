@@ -43,7 +43,10 @@ describe("TargetModePicker", () => {
         onTargetFlavorChanged={onChange}
       />,
     );
-    fireEvent.click(getByTestId("target-flavor-academic").querySelector("input")!);
+    // shadcn RadioGroupItem is rendered as a button inside a Label radio
+    // card. Clicking the Label dispatches a click to the button via the
+    // htmlFor association, which is the user-facing interaction.
+    fireEvent.click(getByTestId("target-flavor-academic"));
     expect(onChange).toHaveBeenCalledWith("academic");
   });
 });

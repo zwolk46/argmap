@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { ConclusionDirection, Position } from "@/schema";
 import type { ConclusionDirectionEditor } from "@/state";
+import { cn } from "#lib/utils";
 
 export interface ConclusionDirectionEditorRowProps {
   editor: ConclusionDirectionEditor;
@@ -53,43 +54,21 @@ export function ConclusionDirectionEditorRow(
       data-testid="conclusion-direction-editor-row"
       data-node-id={editor.node_id}
       data-resolved={resolved ? "true" : "false"}
+      className={cn("mb-2 flex items-center gap-2 rounded-r-md border-l-[3px] px-3 py-2")}
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        padding: "var(--space-2) var(--space-3)",
-        borderLeft: resolved
-          ? "var(--border-thick) solid var(--color-status-satisfied)"
-          : "var(--border-thick) solid var(--color-severity-error)",
+        borderLeftColor: resolved ? "var(--color-status-satisfied)" : "var(--color-severity-error)",
         background: resolved
           ? "var(--color-status-satisfied-bg)"
           : "var(--color-severity-error-bg)",
-        borderRadius: "0 var(--radius-md) var(--radius-md) 0",
-        marginBottom: "var(--space-2)",
       }}
     >
-      <span
-        style={{
-          flex: 1,
-          fontSize: "var(--font-size-sm)",
-          fontWeight: "var(--font-weight-medium)",
-          color: "var(--color-text-primary)",
-        }}
-      >
-        {conclusion_title}
-      </span>
+      <span className="flex-1 text-sm font-medium text-foreground">{conclusion_title}</span>
       <span
         data-testid="current-kind-chip"
+        className="whitespace-nowrap rounded-full px-2 text-[10px] font-medium uppercase tracking-wide"
         style={{
-          fontSize: "var(--font-size-2xs)",
           color: "var(--color-mode-current-accent)",
           background: "var(--color-mode-current-accent-bg)",
-          padding: "1px var(--space-2)",
-          borderRadius: "var(--radius-pill)",
-          fontWeight: "var(--font-weight-medium)",
-          letterSpacing: "var(--letter-spacing-wide)",
-          textTransform: "uppercase",
-          whiteSpace: "nowrap",
         }}
       >
         {editor.current_direction_kind} → {editor.required_direction_kind}
@@ -98,13 +77,7 @@ export function ConclusionDirectionEditorRow(
         data-testid="direction-select"
         value={selected}
         onChange={handleChange}
-        className="argmap-input"
-        style={{
-          fontSize: "var(--font-size-sm)",
-          width: "auto",
-          minWidth: "180px",
-          padding: "var(--space-1) var(--space-2)",
-        }}
+        className="h-8 w-auto min-w-[180px] rounded-md border border-input bg-input/30 px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         <option value="">Pick {editor.required_direction_kind} direction</option>
         {editor.options.map((opt) => (

@@ -1,8 +1,10 @@
 import * as React from "react";
 import type { Premise, Edge } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
-import { Button, IconButton, Pill } from "../../primitives";
-import { UIcon } from "../../primitives/uicon";
+import { Pill } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Textarea } from "#components/ui/textarea";
+import { Crosshair, PencilSimple, Trash } from "@phosphor-icons/react";
 
 export interface PremiseRowProps {
   premise_id: string;
@@ -76,19 +78,10 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
   }
 
   return (
-    <div
-      data-testid={`premise-row-${premise.id}`}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-        padding: "var(--space-2)",
-        borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
-      }}
-    >
+    <div data-testid={`premise-row-${premise.id}`} className="flex flex-col gap-1 border-b p-2">
       {editing ? (
         <>
-          <textarea
+          <Textarea
             data-testid={`premise-edit-statement-${premise.id}`}
             value={draft_statement}
             onChange={(e) => setDraftStatement(e.target.value)}
@@ -101,49 +94,30 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
                 setEditing(false);
               }
             }}
-            className="argmap-input"
-            style={{
-              minHeight: 48,
-              fontSize: "var(--font-size-xs)",
-            }}
+            className="text-xs"
+            style={{ minHeight: 48 }}
           />
-          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+          <div className="flex gap-1">
             <Button
-              variant="primary"
-              size="md"
+              type="button"
+              variant="default"
+              size="sm"
               data-testid={`premise-edit-save-${premise.id}`}
               onClick={on_save_edit}
             >
               Save
             </Button>
-            <Button variant="secondary" size="md" onClick={() => setEditing(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)}>
               Cancel
             </Button>
           </div>
         </>
       ) : (
         <>
-          <span
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-primary)",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
+          <span className="line-clamp-2 text-xs text-foreground">
             {premise.statement || <em>(empty)</em>}
           </span>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-tertiary)",
-            }}
-          >
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
             <span data-testid={`premise-kind-${premise.id}`}>{premise.kind}</span>
             <span>·</span>
             <span data-testid={`premise-edges-${premise.id}`}>
@@ -167,10 +141,12 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
                 orphan
               </Pill>
             ) : null}
-            <span style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1)" }}>
-              <IconButton
+            <span className="ml-auto flex gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label="Highlight on canvas"
-                size="sm"
                 data-testid={`premise-highlight-${premise.id}`}
                 onClick={() => {
                   const targets = argument_edges
@@ -180,57 +156,60 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
                 }}
                 title="Highlight on canvas"
               >
-                <UIcon name="target" size={14} />
-              </IconButton>
-              <IconButton
+                <Crosshair size={14} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label="Edit"
-                size="sm"
                 data-testid={`premise-edit-${premise.id}`}
                 onClick={() => setEditing(true)}
                 title="Edit"
               >
-                <UIcon name="pencil" size={14} />
-              </IconButton>
-              <IconButton
+                <PencilSimple size={14} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label="Delete"
-                size="sm"
                 data-testid={`premise-delete-${premise.id}`}
                 onClick={() =>
                   counts.total > 0 ? setConfirmingDelete(true) : on_delete_confirmed()
                 }
                 title="Delete"
               >
-                <UIcon name="trash" size={14} />
-              </IconButton>
+                <Trash size={14} />
+              </Button>
             </span>
           </div>
           {confirming_delete ? (
             <div
               data-testid={`premise-delete-confirm-${premise.id}`}
-              style={{
-                background: "var(--color-background-warning)",
-                padding: "var(--space-2)",
-                borderRadius: "var(--border-radius-md)",
-                fontSize: "var(--font-size-xs)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
+              className="flex flex-col gap-1 rounded-md p-2 text-xs"
+              style={{ background: "var(--color-background-warning)" }}
             >
               <span>
                 {counts.total} argument edge(s) reference this premise. Deleting the premise will
                 also delete those edges. Continue?
               </span>
-              <div style={{ display: "flex", gap: "var(--space-1)" }}>
+              <div className="flex gap-1">
                 <Button
+                  type="button"
                   variant="destructive"
-                  size="md"
+                  size="sm"
                   data-testid={`premise-delete-confirm-yes-${premise.id}`}
                   onClick={on_delete_confirmed}
                 >
                   Delete
                 </Button>
-                <Button variant="secondary" size="md" onClick={() => setConfirmingDelete(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmingDelete(false)}
+                >
                   Cancel
                 </Button>
               </div>

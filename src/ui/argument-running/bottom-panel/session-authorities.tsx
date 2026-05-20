@@ -1,7 +1,9 @@
 import * as React from "react";
 import type { Authority } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
-import { Button, InlineEmpty } from "../../primitives";
+import { InlineEmpty } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Plus } from "@phosphor-icons/react";
 import { SessionAuthorityRow } from "./session-authority-row";
 
 export interface SessionAuthoritiesProps {
@@ -37,30 +39,23 @@ export function SessionAuthorities(props: SessionAuthoritiesProps): React.ReactE
   }
 
   return (
-    <div
-      data-testid="session-authorities"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        overflow: "hidden",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "var(--space-2)",
-          borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
-        }}
-      >
-        <span className="argmap-section-heading">Session authorities ({sorted.length})</span>
-        <Button variant="ghost" size="sm" data-testid="session-authority-add" onClick={on_add}>
-          + Add Authority
+    <div data-testid="session-authorities" className="flex h-full flex-col overflow-hidden">
+      <header className="flex items-center justify-between border-b p-2">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Session authorities ({sorted.length})
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          data-testid="session-authority-add"
+          onClick={on_add}
+        >
+          <Plus size={12} />
+          Add Authority
         </Button>
       </header>
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div className="flex-1 overflow-y-auto">
         {sorted.length === 0 ? (
           <InlineEmpty testId="session-authorities-empty" density="compact">
             No session-scoped authorities yet. Use this list for case-specific citations you

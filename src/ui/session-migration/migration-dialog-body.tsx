@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { OrphanCandidate, OrphanResolution } from "@/state";
-import { Button, InlineEmpty, InlineLoading } from "../primitives";
+import { Button } from "#components/ui/button";
+import { InlineEmpty, InlineLoading } from "../primitives";
 import { OrphanCandidateGroup } from "./orphan-candidate-group";
 
 const CARRIER_KIND_ORDER: OrphanCandidate["carrier_kind"][] = [
@@ -57,22 +58,14 @@ export function MigrationDialogBody(props: MigrationDialogBodyProps): ReactEleme
 
   if (phase.kind === "failed") {
     return (
-      <div data-testid="migration-failed" style={{ padding: "var(--space-4)" }}>
-        <div
-          style={{
-            color: "var(--color-severity-error)",
-            fontSize: "var(--font-size-sm)",
-          }}
-        >
-          {phase.error.message}
-        </div>
+      <div data-testid="migration-failed" className="p-4">
+        <div className="text-sm text-[var(--color-severity-error)]">{phase.error.message}</div>
         {props.onRetry ? (
           <Button
             variant="secondary"
-            size="md"
             data-testid="migration-retry"
             onClick={props.onRetry}
-            style={{ marginTop: "var(--space-2)" }}
+            className="mt-2"
           >
             Retry
           </Button>

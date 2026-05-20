@@ -27,7 +27,16 @@ import { SuggestionDrawer } from "../ai-suggestion";
 import { useCascadeConfirmation } from "../hooks";
 import { useNavigate } from "../routing";
 import { ArchitecturalModeChangeDialog, FlavorChangeDialog } from "../mode-change";
-import { ConfirmDialog } from "../primitives";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#components/ui/alert-dialog";
 import { ThreePaneLayout } from "./three-pane-layout";
 import { NodePalette, OutlineTree, buildNodeDefaults } from "./left-pane";
 import { Inspector } from "./right-pane";
@@ -339,9 +348,9 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
 
   return (
     <React.Fragment>
-      <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div className="flex h-screen flex-col">
         <TopBar slots={top_bar_slots} mode="frame-building" />
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div className="flex-1 overflow-hidden">
           <ThreePaneLayout
             left={
               <React.Fragment>
@@ -421,39 +430,10 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                   {frame_version.nodes.length === 0 ? (
                     <div
                       data-testid="empty-frame-hint"
-                      style={{
-                        position: "absolute",
-                        inset: "0",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        pointerEvents: "none",
-                      }}
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center"
                     >
-                      <div
-                        style={{
-                          padding: "var(--space-5) var(--space-6)",
-                          background: "var(--color-surface-elevated)",
-                          color: "var(--color-text-secondary)",
-                          borderRadius: "var(--radius-lg)",
-                          boxShadow: "var(--shadow-md)",
-                          fontSize: "var(--font-size-sm)",
-                          lineHeight: "var(--line-height-relaxed)",
-                          pointerEvents: "auto",
-                          maxWidth: "340px",
-                          textAlign: "center",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "var(--space-2)",
-                        }}
-                      >
-                        <strong
-                          style={{
-                            color: "var(--color-text-primary)",
-                            fontWeight: "var(--font-weight-semibold)",
-                            fontSize: "var(--font-size-base)",
-                          }}
-                        >
+                      <div className="pointer-events-auto flex max-w-[340px] flex-col gap-2 rounded-lg bg-card p-6 text-center text-sm leading-relaxed text-muted-foreground shadow-md">
+                        <strong className="text-base font-semibold text-foreground">
                           Start with a Root Question
                         </strong>
                         <span>
@@ -469,19 +449,8 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                   {layout_status.kind === "error" ? (
                     <div
                       data-testid="layout-error-banner"
-                      style={{
-                        position: "absolute",
-                        top: "var(--space-3)",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        padding: "var(--space-2) var(--space-3)",
-                        background: "var(--color-severity-warning-bg)",
-                        color: "var(--color-severity-warning)",
-                        border: "var(--border-thin) solid var(--color-severity-warning)",
-                        borderRadius: "var(--radius-md)",
-                        fontSize: "var(--font-size-xs)",
-                        zIndex: Z.banner,
-                      }}
+                      className="absolute left-1/2 top-3 -translate-x-1/2 rounded-md border border-amber-500 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                      style={{ zIndex: Z.banner }}
                     >
                       Layout pass failed; showing last-known positions.
                     </div>
@@ -563,20 +532,35 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
         onDismiss={() => setEdgePopup({ open: false, position: { x: 0, y: 0 }, candidates: [] })}
       />
 
-      <ConfirmDialog
+      <AlertDialog
         open={switch_to_argument_notice_open}
-        title="Argument-running needs a session"
-        confirm_label="Go to Home"
-        cancel_label="Stay here"
-        onCancel={() => setSwitchToArgumentNoticeOpen(false)}
-        onConfirm={() => {
-          setSwitchToArgumentNoticeOpen(false);
-          navigate({ kind: "home" });
+        onOpenChange={(next) => {
+          if (!next) setSwitchToArgumentNoticeOpen(false);
         }}
       >
-        Running an argument requires an argument session for this frame. Sessions are managed from
-        the Home page. Switch there to open or create one.
-      </ConfirmDialog>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Argument-running needs a session</AlertDialogTitle>
+            <AlertDialogDescription>
+              Running an argument requires an argument session for this frame. Sessions are managed
+              from the Home page. Switch there to open or create one.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSwitchToArgumentNoticeOpen(false)}>
+              Stay here
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setSwitchToArgumentNoticeOpen(false);
+                navigate({ kind: "home" });
+              }}
+            >
+              Go to Home
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <SuggestionDrawer store_kind="frame" />
     </React.Fragment>

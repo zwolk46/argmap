@@ -1,16 +1,10 @@
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { Button } from "../../primitives";
+import { Button } from "#components/ui/button";
 
 export interface ModeFlavorSectionProps {
   on_open_mode_change_dialog?: (target: "mode" | "flavor") => void;
 }
-
-const VALUE_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-sm)",
-  color: "var(--color-text-primary)",
-  fontWeight: "var(--font-weight-medium)",
-};
 
 export function ModeFlavorSection({
   on_open_mode_change_dialog,
@@ -37,18 +31,13 @@ export function ModeFlavorSection({
     : disabled_title;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-      <div>
-        <h3
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-        >
-          Mode
-        </h3>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={VALUE_STYLE}>{mode_label}</span>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mode</h3>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-foreground">{mode_label}</span>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!can_change}
             title={can_change ? undefined : disabled_title}
@@ -59,17 +48,14 @@ export function ModeFlavorSection({
         </div>
       </div>
 
-      <div>
-        <h3
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-        >
+      <div className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Flavor
         </h3>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={VALUE_STYLE}>{flavor_label}</span>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-foreground">{flavor_label}</span>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!can_change || flavor_disabled}
             title={

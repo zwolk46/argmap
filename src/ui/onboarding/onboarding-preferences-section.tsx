@@ -1,7 +1,8 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useRepository } from "@/state";
-import { Button, ConfirmDialog } from "../primitives";
+import { ConfirmDialog } from "../primitives";
+import { Button } from "#components/ui/button";
 
 export function OnboardingPreferencesSection(): ReactElement {
   const { app_state_store } = useRepository();
@@ -17,32 +18,15 @@ export function OnboardingPreferencesSection(): ReactElement {
   return (
     <section
       data-testid="onboarding-preferences-section"
-      style={{
-        padding: "var(--space-3)",
-        borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-      }}
+      className="border-t border-[var(--color-border-subtle)] p-3"
     >
-      <h3
-        style={{
-          fontSize: "var(--font-size-sm)",
-          fontWeight: "var(--font-weight-medium)",
-          margin: 0,
-        }}
-      >
-        Onboarding
-      </h3>
-      <p
-        style={{
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-secondary)",
-          margin: "var(--space-1) 0",
-        }}
-      >
+      <h3 className="m-0 text-sm font-medium">Onboarding</h3>
+      <p className="my-1 text-sm text-[var(--color-text-secondary)]">
         Reset coachmarks and the welcome screen to see them again.
       </p>
       <Button
-        variant="secondary"
-        size="md"
+        variant="outline"
+        size="default"
         data-testid="reset-coachmarks-button"
         onClick={() => setConfirmOpen(true)}
       >

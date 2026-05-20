@@ -1,7 +1,10 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { Pill, Tooltip, relativeTime } from "../primitives";
-import { UIcon } from "../primitives/uicon";
+import { Star } from "@phosphor-icons/react";
+import { Badge } from "#components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "#components/ui/tooltip";
+import { cn } from "#lib/utils";
+import { relativeTime } from "../primitives";
 import type { AnySummary } from "./version-tree-shape";
 
 export interface VersionTreeRowProps {
@@ -30,8 +33,22 @@ function VersionTreeRowImpl(props: VersionTreeRowProps): ReactElement {
   const is_autosave = !change_summary_text;
   const rel = relativeTime(summary.created_at);
 
+  // Inline style for depth padding + selected/current background. Depth is a
+  // runtime value (DFS-derived) that Tailwind cannot express; the other
+  // visual treatments fall through Tailwind classes.
+  const rowStyle: React.CSSProperties = {
+    paddingLeft: `calc(var(--space-3) + ${depth} * var(--space-4))`,
+  };
+  if (is_selected) {
+    rowStyle.background = "var(--color-surface-selected)";
+  } else if (is_current && is_milestone) {
+    rowStyle.background = "var(--color-mode-current-accent-bg)";
+  }
+  if (depth > 0) {
+    rowStyle.borderLeft = "var(--border-hairline) solid var(--color-border-subtle)";
+  }
+
   return (
-    // KEEP RAW: tree-row button with depth-indented padding, multiple inline children, and selected-state styling.
     <button
       type="button"
       data-testid="version-tree-row"
@@ -41,96 +58,56 @@ function VersionTreeRowImpl(props: VersionTreeRowProps): ReactElement {
       data-is-authored-against={is_authored_against}
       aria-pressed={is_selected}
       onClick={() => on_select(summary.id)}
-      className="argmap-row-hover"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        width: "100%",
-        padding: "var(--space-2) var(--space-3)",
-        paddingLeft: `calc(var(--space-3) + ${depth} * var(--space-4))`,
-        background: is_selected
-          ? "var(--color-surface-selected)"
-          : is_current && is_milestone
-            ? "var(--color-mode-current-accent-bg)"
-            : "transparent",
-        border: "none",
-        borderLeft: depth > 0 ? "var(--border-hairline) solid var(--color-border-subtle)" : "none",
-        textAlign: "left",
-        cursor: "pointer",
-        fontSize: "var(--font-size-sm)",
-        color: "var(--color-text-primary)",
-        position: "relative",
-        borderRadius: "var(--radius-sm)",
-      }}
+      className={cn(
+        "relative flex w-full items-center gap-2 rounded-md border-0 px-3 py-2 text-left text-sm text-foreground transition-colors",
+        "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+      )}
+      style={rowStyle}
     >
       <span
         aria-hidden="true"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "14px",
-          height: "14px",
-          color: marker_color,
-          flexShrink: 0,
-        }}
+        className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center"
+        style={{ color: marker_color }}
       >
-        {is_milestone ? <UIcon name="star" size={12} /> : <UIcon name="circle-small" size={12} />}
-        <span
-          style={{
-            position: "absolute",
-            width: 1,
-            height: 1,
-            margin: -1,
-            padding: 0,
-            overflow: "hidden",
-            clip: "rect(0 0 0 0)",
-            whiteSpace: "nowrap",
-            border: 0,
-          }}
-        >
-          {marker_glyph}
-        </span>
+        {is_milestone ? (
+          <Star weight="fill" size={12} />
+        ) : (
+          <span className="inline-block size-1.5 rounded-full bg-current" />
+        )}
+        <span className="sr-only">{marker_glyph}</span>
       </span>
-      <span
-        style={{
-          fontWeight: "var(--font-weight-medium)",
-          fontFamily: "var(--font-mono)",
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-primary)",
-        }}
-      >
+      <span className="font-mono text-xs font-medium text-foreground">
         v{summary.version_number}
       </span>
-      <Tooltip content={summary.created_at}>
-        <span
-          style={{
-            color: "var(--color-text-tertiary)",
-            fontSize: "var(--font-size-xs)",
-            fontVariantNumeric: "tabular-nums",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {rel}
-        </span>
-      </Tooltip>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground/80">
+              {rel}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{summary.created_at}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <span
-        style={{
-          flex: 1,
-          color: is_autosave ? "var(--color-text-tertiary)" : "var(--color-text-secondary)",
-          fontStyle: is_autosave ? "italic" : "normal",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
+        className={cn(
+          "flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
+          is_autosave ? "italic text-muted-foreground/80" : "text-muted-foreground",
+        )}
       >
         {change_summary_text ?? "auto-save"}
       </span>
       {is_authored_against ? (
-        <Pill variant="mode_accent" size="xs">
+        <Badge
+          variant="secondary"
+          className="px-1 py-px text-[10px]"
+          style={{
+            background: "var(--color-mode-current-accent-bg)",
+            color: "var(--color-mode-current-accent)",
+          }}
+        >
           <span data-testid="authored-against-pill">session here</span>
-        </Pill>
+        </Badge>
       ) : null}
     </button>
   );

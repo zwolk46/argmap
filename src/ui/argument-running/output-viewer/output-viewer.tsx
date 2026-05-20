@@ -67,12 +67,9 @@ export function OutputViewer(props: OutputViewerProps): React.ReactElement {
 
   if (!compute_result || !session) {
     return (
-      <div
-        data-testid="output-viewer"
-        style={{ display: "flex", flexDirection: "column", height: "100%" }}
-      >
+      <div data-testid="output-viewer" className="flex h-full flex-col">
         <OutputViewTabs current={current_tab} on_change={on_change_tab} computing={true} />
-        <div style={{ flex: 1, overflow: "auto" }}>
+        <div className="flex-1 overflow-auto">
           <OutputEmptyState />
         </div>
       </div>
@@ -80,12 +77,9 @@ export function OutputViewer(props: OutputViewerProps): React.ReactElement {
   }
 
   return (
-    <div
-      data-testid="output-viewer"
-      style={{ display: "flex", flexDirection: "column", height: "100%" }}
-    >
+    <div data-testid="output-viewer" className="flex h-full flex-col">
       <OutputViewTabs current={current_tab} on_change={on_change_tab} />
-      <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+      <div className="relative flex-1 overflow-hidden">
         {current_tab === "path_overlay" ? (
           <PathOverlayTab
             frame_version={session.frame_version_snapshot}

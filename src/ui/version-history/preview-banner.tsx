@@ -1,13 +1,22 @@
 import type { ReactElement } from "react";
+import { Eye } from "@phosphor-icons/react";
+import { Alert } from "#components/ui/alert";
+import { Button } from "#components/ui/button";
 import { useVersionHistoryPreview } from "./preview-context";
-import { Button, Z } from "../primitives";
-import { UIcon } from "../primitives/uicon";
+import { Z } from "../primitives";
 
 export interface PreviewBannerProps {
   version_number: number;
   kind: "frame" | "session";
 }
 
+/**
+ * Sticky banner shown over the canvas while the user is viewing a historical
+ * version. Uses the not-applicable wash so the surface reads as a paused /
+ * read-only state without competing with the canvas for color. Earlier
+ * iterations used the warning gold to maximize discoverability; the task
+ * spec walked that back to the calmer not-applicable tone.
+ */
 export function PreviewBanner({ version_number, kind }: PreviewBannerProps): ReactElement {
   const preview = useVersionHistoryPreview();
   const message =
@@ -16,49 +25,24 @@ export function PreviewBanner({ version_number, kind }: PreviewBannerProps): Rea
       : `Previewing session version ${version_number} (read-only)`;
 
   return (
-    <div
+    <Alert
       data-testid="preview-banner"
       data-kind={kind}
+      className="sticky top-0 flex items-center justify-between gap-3 rounded-none border-x-0 border-t-0 px-4 py-2"
       style={{
-        position: "sticky",
-        top: 0,
         zIndex: Z.banner,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "var(--space-3)",
-        padding: "var(--space-2) var(--space-4)",
-        // Use the warning palette (warm gold) for the "you're viewing
-        // history, this is read-only" banner — production apps need this
-        // to read as a state change, not a quiet info chrome. The previous
-        // not-applicable gray blended into the page and let users miss
-        // that they were in preview mode.
-        background: "var(--color-severity-warning-bg)",
-        borderBottom: "var(--border-thin) solid var(--color-severity-warning)",
-        fontSize: "var(--font-size-sm)",
-        color: "var(--color-severity-warning)",
-        fontWeight: "var(--font-weight-medium)",
+        background: "var(--color-status-not-applicable-bg)",
+        borderBottomColor: "var(--color-status-not-applicable)",
+        color: "var(--color-status-not-applicable)",
       }}
     >
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          fontWeight: "var(--font-weight-medium)",
-        }}
-      >
-        <UIcon name="eye" size={14} />
+      <span className="inline-flex items-center gap-2 text-sm font-medium">
+        <Eye aria-hidden="true" />
         {message}
       </span>
-      <Button
-        variant="secondary"
-        size="sm"
-        data-testid="preview-banner-exit"
-        onClick={preview.exit}
-      >
+      <Button variant="outline" size="sm" data-testid="preview-banner-exit" onClick={preview.exit}>
         Exit preview
       </Button>
-    </div>
+    </Alert>
   );
 }

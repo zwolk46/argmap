@@ -1,7 +1,8 @@
-import * as React from "react";
 import type { ReactElement } from "react";
 import { useFrameStore } from "@/state";
-import { Button, humanizeNodeType, InlineEmpty, Pill } from "../../primitives";
+import { humanizeNodeType, InlineEmpty, Pill } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Card, CardContent } from "#components/ui/card";
 
 export interface InspectorEmptyProps {
   on_open_settings: () => void;
@@ -16,64 +17,47 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-      <section
-        style={{
-          padding: "var(--space-3)",
-          background: "var(--color-surface-pane)",
-          border: "var(--border-hairline) solid var(--color-border-subtle)",
-          borderRadius: "var(--radius-md)",
-          color: "var(--color-text-secondary)",
-          fontSize: "var(--font-size-sm)",
-          lineHeight: "var(--line-height-snug)",
-        }}
-        aria-label="Inspector hint"
-      >
-        Select a node on the canvas to edit it here. With nothing selected, this panel shows the
-        frame's overall settings.
-      </section>
+    <div className="flex flex-col gap-4">
+      <Card size="sm" aria-label="Inspector hint">
+        <CardContent>
+          <p className="m-0 text-sm leading-snug text-muted-foreground">
+            Select a node on the canvas to edit it here. With nothing selected, this panel shows the
+            frame&apos;s overall settings.
+          </p>
+        </CardContent>
+      </Card>
 
-      <section>
-        <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
-          Title
-        </h3>
-        <div style={VALUE_STYLE}>{frame.title || "Untitled frame"}</div>
+      <section className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Title</h3>
+        <div className="text-sm leading-snug text-foreground">
+          {frame.title || "Untitled frame"}
+        </div>
         {frame.description && (
           <>
-            <h3
-              className="argmap-section-heading"
-              style={{ marginTop: "var(--space-2)", marginBottom: "var(--space-1)" }}
-            >
+            <h3 className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Description
             </h3>
-            <div style={VALUE_STYLE}>{frame.description}</div>
+            <div className="text-sm leading-snug text-foreground">{frame.description}</div>
           </>
         )}
       </section>
 
-      <section>
-        <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
+      <section className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Mode &amp; Flavor
         </h3>
-        <div style={VALUE_STYLE}>
+        <div className="text-sm leading-snug text-foreground">
           {frame.mode === "legal" ? "Legal" : "General"}
           {frame.flavor ? ` / ${frame.flavor}` : ""}
         </div>
       </section>
 
       {frame.tags && frame.tags.length > 0 && (
-        <section>
-          <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
+        <section className="flex flex-col gap-1">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Tags
           </h3>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "var(--space-1)",
-              marginTop: "var(--space-1)",
-            }}
-          >
+          <div className="flex flex-wrap gap-1">
             {frame.tags.map((tag) => (
               <Pill key={tag} variant="neutral" size="xs">
                 {tag}
@@ -83,22 +67,13 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
         </section>
       )}
 
-      <section>
-        <h3 className="argmap-section-heading" style={{ marginBottom: "var(--space-1)" }}>
+      <section className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Default Satisfaction Policies
         </h3>
-        <div
-          style={{
-            marginTop: "var(--space-1)",
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
-          }}
-        >
+        <div className="text-sm text-muted-foreground">
           {Object.entries(frame.default_satisfaction_policies ?? {}).map(([type, policy]) => (
-            <div
-              key={type}
-              style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}
-            >
+            <div key={type} className="flex justify-between py-0.5">
               <span>{humanizeNodeType(type)}</span>
               <span>
                 {policy
@@ -107,12 +82,7 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
               </span>
             </div>
           ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={on_open_settings}
-            style={{ marginTop: "var(--space-2)" }}
-          >
+          <Button variant="ghost" size="sm" onClick={on_open_settings} className="mt-2">
             Edit in settings
           </Button>
         </div>
@@ -120,9 +90,3 @@ export function InspectorEmpty(props: InspectorEmptyProps): ReactElement {
     </div>
   );
 }
-
-const VALUE_STYLE: React.CSSProperties = {
-  fontSize: "var(--font-size-sm)",
-  color: "var(--color-text-primary)",
-  lineHeight: "var(--line-height-snug)",
-};

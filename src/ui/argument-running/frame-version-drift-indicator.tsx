@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useFrameStore, useSessionStore, selectFrameVersionDrift } from "@/state";
 import { SeverityIcon } from "../primitives";
+import { cn } from "#lib/utils";
 
 export interface FrameVersionDriftIndicatorProps {
   on_open_migration_dialog: () => void;
@@ -16,8 +17,10 @@ export function FrameVersionDriftIndicator(
   if (!drift) return null;
 
   const { has_drift, session_version_number, current_version_number } = drift;
+
+  // KEEP RAW: pill-shaped status indicator with severity-driven styling driven
+  // by domain warning tokens; not expressible via shadcn Button variants.
   return (
-    // KEEP RAW: pill-shaped status indicator with severity-driven styling; not expressible via Button variants.
     <button
       type="button"
       onClick={has_drift ? props.on_open_migration_dialog : undefined}
@@ -29,24 +32,14 @@ export function FrameVersionDriftIndicator(
           ? `Frame has advanced — open migration dialog (v${current_version_number} available)`
           : `Session authored against frame v${session_version_number}`
       }
+      className={cn(
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums transition-colors",
+        has_drift ? "cursor-pointer" : "cursor-default",
+      )}
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "var(--space-1)",
-        padding: "2px var(--space-2)",
-        borderRadius: "var(--radius-pill)",
         background: has_drift ? "var(--color-severity-warning-bg)" : "var(--color-surface-pane)",
         color: has_drift ? "var(--color-severity-warning)" : "var(--color-text-secondary)",
-        border: has_drift
-          ? "var(--border-thin) solid var(--color-severity-warning)"
-          : "var(--border-thin) solid var(--color-border-subtle)",
-        cursor: has_drift ? "pointer" : "default",
-        fontSize: "var(--font-size-xs)",
-        fontWeight: "var(--font-weight-medium)",
-        fontFamily: "var(--font-sans)",
-        whiteSpace: "nowrap",
-        fontVariantNumeric: "tabular-nums",
-        transition: "background-color var(--duration-fast) var(--ease-standard)",
+        borderColor: has_drift ? "var(--color-severity-warning)" : "var(--color-border-subtle)",
       }}
     >
       {has_drift ? <SeverityIcon severity="warning" size={11} /> : null}

@@ -1,11 +1,12 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { Plus, FileText } from "@phosphor-icons/react";
 import type { FrameId } from "@/schema";
 import { useAppStateStore, useRepository, PinnedCapReached } from "@/state";
 import { useAuth } from "../auth";
 import { useNavigate } from "../routing";
-import { Dialog, Button, EmptyState, Spinner, useToast } from "../primitives";
-import { UIcon } from "../primitives/uicon";
+import { Dialog, EmptyState, Spinner, useToast } from "../primitives";
+import { Button } from "#components/ui/button";
 import { NewFrameWizard, type NewFrameWizardSubmitArgs } from "../onboarding";
 import { FrameSummaryCard, type FrameSummary } from "./frame-summary-card";
 import { createTutorial } from "@/tutorial";
@@ -32,16 +33,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
   const toast = useToast();
   const [wizard_open, setWizardOpen] = React.useState(false);
   const [tutorial_loading, setTutorialLoading] = React.useState(false);
-  // Track whether listFrames has completed at least once so we can show a
-  // loading affordance on first paint instead of flashing the empty state
-  // before the fetch settles.
   const [frames_loaded_once, setFramesLoadedOnce] = React.useState(false);
-  // P3: per-frame pending state so the Run argument button can disable while
-  // Supabase round-trips. A bare bool would race when the user clicks two
-  // cards in quick succession; keying by frame_id keeps the indicators
-  // independent. The ref mirrors the state value so the synchronous guard
-  // in onRunArgument doesn't race with React's state-commit boundary on
-  // double-clicks.
   const [run_argument_pending, setRunArgumentPending] = React.useState<FrameId | null>(null);
   const run_argument_in_flight = React.useRef<Set<FrameId>>(new Set());
 
@@ -68,9 +60,6 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
       recents.push(f);
     }
   }
-  // Distinguish "user has no frames" from "user has frames but none are
-  // pinned or recent". The empty-state CTA is honest only in the first
-  // case; in the second we'd be telling the user their frames are gone.
   const is_empty = frames.length === 0 && pinned.length === 0 && recents.length === 0;
   const non_empty_no_recents = frames.length > 0 && pinned.length === 0 && recents.length === 0;
 
@@ -80,13 +69,6 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
   }
 
   async function onRunArgument(frame_id: FrameId): Promise<void> {
-    // Mirrors `switchToArgumentRunning` in frame-building-page.tsx:
-    // open the most-recent session on this frame, or create a blank one
-    // and open that. Surfaces an error toast on failure instead of
-    // navigating into a broken argument-running view.
-    // Synchronous ref guard — React's setState batches across the two
-    // clicks of a double-click so the state-based `run_argument_pending`
-    // check would let the second click through.
     if (run_argument_in_flight.current.has(frame_id)) return;
     run_argument_in_flight.current.add(frame_id);
     setRunArgumentPending(frame_id);
@@ -147,9 +129,6 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
         toast.push({ kind: "warning", message: err.message });
         return;
       }
-      // Surface the failure as a toast instead of letting an unexpected
-      // error in a single pin click crash the whole Home page into the
-      // nearest error boundary.
       const msg = err instanceof Error ? err.message : String(err);
       toast.push({ kind: "error", message: `Couldn't update the pin: ${msg}` });
     }
@@ -169,11 +148,8 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
         generateId,
         user_id: user.id,
       });
-      // Re-list frames so the tutorial frame appears on the Home page.
       await app_state_store.getState().loadFrames();
       app_state_store.getState().setRecent(result.frame_id);
-      // Arm the tour to start once argument-running mounts. Short tour first;
-      // the user can opt into the long tour at the end of the short one.
       setTutorialPhase("short");
       navigate({ kind: "argument_running", session_id: result.session_id });
     } catch (err) {
@@ -189,17 +165,10 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
       const result = await app_state_store
         .getState()
         .createFrame({ title: args.title, mode: args.mode, flavor: args.flavor });
-      // P0-13: record the new frame as Most Recent so it appears on the Home
-      // page when the user navigates back. Before this fix, createFrame +
-      // navigate left the new frame reachable only via the URL hash; the Home
-      // page rebuilt Recents from app_state.recents only and the new frame
-      // never landed there.
       app_state_store.getState().setRecent(result.frame.id);
       setWizardOpen(false);
       navigate({ kind: "frame_building", frame_id: result.frame.id });
     } catch (err) {
-      // Without this catch, a failed createBlankFrame leaves the wizard
-      // open with no feedback and surfaces as an unhandled rejection.
       const msg = err instanceof Error ? err.message : String(err);
       toast.push({ kind: "error", message: `Couldn't create the frame: ${msg}` });
     }
@@ -211,58 +180,33 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
     // avoids nested <main> elements (invalid per HTML5 spec).
     <div
       data-testid="home-page"
-      style={{
-        padding: "var(--space-6) var(--space-6) var(--space-8)",
-        minHeight: "100vh",
-        maxWidth: "1200px",
-        margin: "0 auto",
-        background: "var(--color-surface-canvas)",
-      }}
+      className="mx-auto min-h-screen max-w-[1200px] bg-[var(--color-surface-canvas)] px-6 pb-8 pt-6"
     >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "var(--space-6)",
-          paddingBottom: "var(--space-4)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "baseline", gap: "var(--space-2)" }}>
-          <h1
-            style={{
-              fontSize: "var(--font-size-xl)",
-              fontWeight: "var(--font-weight-semibold)",
-              letterSpacing: "var(--letter-spacing-tight)",
-              margin: 0,
-              color: "var(--color-text-primary)",
-            }}
-          >
+      <header className="mb-6 flex items-center justify-between gap-3 border-b border-[var(--color-border-subtle)] pb-4">
+        <div className="flex items-baseline gap-2">
+          <h1 className="m-0 text-xl font-semibold tracking-tight text-[var(--color-text-primary)]">
             argmap
           </h1>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+        <div className="flex items-center gap-3">
           {/* Demote the tutorial entry to a quiet text link so the primary
-              CTA (New frame) reads as the singular intent. Production UIs
-              follow this pattern: one primary action per surface, ancillary
-              actions as links to the left of it. */}
+              CTA (New frame) reads as the singular intent. */}
           <Button
             variant="ghost"
             size="sm"
             data-testid="home-start-tutorial"
             onClick={onStartTutorial}
             disabled={tutorial_loading}
-            leading={tutorial_loading ? <Spinner size={12} decorative /> : undefined}
           >
+            {tutorial_loading ? <Spinner size={12} decorative /> : null}
             {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
           </Button>
           <Button
-            variant="primary"
+            variant="default"
             data-testid="home-new-frame"
             onClick={() => setWizardOpen(true)}
-            leading={<UIcon name="plus" size={16} />}
           >
+            <Plus size={16} data-icon="inline-start" />
             New frame
           </Button>
         </div>
@@ -273,53 +217,31 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
           data-testid="home-loading"
           role="status"
           aria-live="polite"
-          style={{
-            marginTop: "var(--space-8)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "var(--space-8)",
-            gap: "var(--space-2)",
-            color: "var(--color-text-secondary)",
-          }}
+          className="mt-8 flex items-center justify-center gap-2 p-8 text-[var(--color-text-secondary)]"
         >
           <Spinner size={16} decorative />
           <span>Loading your frames…</span>
         </div>
       ) : is_empty ? (
-        <div data-testid="home-empty-state" style={{ marginTop: "var(--space-8)" }}>
+        <div data-testid="home-empty-state" className="mt-8">
           <EmptyState
             label={EMPTY_COPY.title}
             description={EMPTY_COPY.body}
-            icon={<UIcon name="document" size={48} />}
+            icon={<FileText size={48} />}
             action={
-              // Same hierarchy as the page header: one primary action,
-              // tutorial as a quiet text link. Use the SAME copy as the
-              // header ("Try the tutorial") and the SAME primary label
-              // ("New frame") so there are not two phrasings for one action.
-              <div
-                style={{
-                  display: "flex",
-                  gap: "var(--space-3)",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
+              <div className="flex items-center justify-center gap-3">
                 <Button
                   variant="ghost"
                   size="sm"
                   data-testid="home-empty-start-tutorial"
                   onClick={onStartTutorial}
                   disabled={tutorial_loading}
-                  leading={tutorial_loading ? <Spinner size={12} decorative /> : undefined}
                 >
+                  {tutorial_loading ? <Spinner size={12} decorative /> : null}
                   {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
                 </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => setWizardOpen(true)}
-                  leading={<UIcon name="plus" size={16} />}
-                >
+                <Button variant="default" onClick={() => setWizardOpen(true)}>
+                  <Plus size={16} data-icon="inline-start" />
                   New frame
                 </Button>
               </div>
@@ -329,15 +251,9 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
       ) : (
         <>
           {pinned.length > 0 ? (
-            <section data-testid="pinned-section" style={{ marginBottom: "var(--space-6)" }}>
+            <section data-testid="pinned-section" className="mb-6">
               <SectionHeading>Pinned</SectionHeading>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                  gap: "var(--space-3)",
-                }}
-              >
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
                 {pinned.map((f) => (
                   <FrameSummaryCard
                     key={f.id}
@@ -355,13 +271,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
           {recents.length > 0 ? (
             <section data-testid="recents-section">
               <SectionHeading>Recent</SectionHeading>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                  gap: "var(--space-3)",
-                }}
-              >
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
                 {recents.slice(0, 20).map((f) => (
                   <FrameSummaryCard
                     key={f.id}
@@ -379,13 +289,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
           {non_empty_no_recents ? (
             <section data-testid="all-frames-section">
               <SectionHeading>All frames</SectionHeading>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                  gap: "var(--space-3)",
-                }}
-              >
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
                 {frames.slice(0, 20).map((f) => (
                   <FrameSummaryCard
                     key={f.id}
@@ -410,10 +314,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
         size="md"
       >
         {/* P1: key by `wizard_open` so the wizard remounts each time it
-            opens, clearing any prior in-progress title/mode/flavor input.
-            Without this key, the wizard's internal useState survived the
-            Dialog's open/close cycle and the user saw stale form state on
-            the next open. */}
+            opens, clearing any prior in-progress title/mode/flavor input. */}
         <NewFrameWizard
           key={String(wizard_open)}
           onSubmit={onSubmitWizard}
@@ -426,12 +327,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
 
 function SectionHeading({ children }: { children: React.ReactNode }): ReactElement {
   return (
-    <h2
-      className="argmap-section-heading"
-      style={{
-        marginBottom: "var(--space-3)",
-      }}
-    >
+    <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
       {children}
     </h2>
   );

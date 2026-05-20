@@ -144,10 +144,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
 
   return (
     <React.Fragment>
-      <div
-        data-testid="argument-running-page"
-        style={{ display: "flex", flexDirection: "column", height: "100vh" }}
-      >
+      <div data-testid="argument-running-page" className="flex h-screen flex-col">
         <ArgumentRunningTopBar
           deps={{
             on_switch_to_frame,
@@ -161,7 +158,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
             title: session.title,
           }}
         />
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div className="flex-1 overflow-hidden">
           <TwoPaneLayout
             left={
               <InterviewPane
@@ -184,8 +181,8 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
               />
             }
             right={
-              <div style={{ display: "flex", height: "100%" }}>
-                <div style={{ flex: selected_item_id ? 2 : 1, minWidth: 0 }}>
+              <div className="flex h-full">
+                <div className="min-w-0" style={{ flex: selected_item_id ? 2 : 1 }}>
                   <OutputViewer
                     frame_id={frame_id}
                     selected_item_id={selected_item_id}
@@ -197,15 +194,8 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
                 {selected_item_id !== null ? (
                   <div
                     data-testid="item-editor-region"
-                    style={{
-                      flex: 1,
-                      minWidth: 340,
-                      maxWidth: 460,
-                      overflowY: "auto",
-                      borderLeft: "var(--border-hairline) solid var(--color-border-subtle)",
-                      background: "var(--color-surface-pane)",
-                      boxShadow: "var(--shadow-sm)",
-                    }}
+                    className="flex-1 overflow-y-auto border-l bg-background shadow-sm"
+                    style={{ minWidth: 340, maxWidth: 460 }}
                   >
                     <ItemEditorHost
                       selected_item_id={selected_item_id}

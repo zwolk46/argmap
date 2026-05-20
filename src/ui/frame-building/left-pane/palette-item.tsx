@@ -2,6 +2,7 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeType } from "@/schema";
 import { TypeIcon } from "@/ui/primitives";
+import { cn } from "#lib/utils";
 
 export interface PaletteItemProps {
   node_type: NodeType;
@@ -36,23 +37,11 @@ export function PaletteItem(props: PaletteItemProps): ReactElement {
       draggable={!disabled}
       onDragStart={disabled ? undefined : on_drag_start}
       onClick={disabled ? undefined : on_click}
-      className="argmap-row-hover"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        width: "100%",
-        height: "var(--space-7)",
-        padding: "0 var(--space-3)",
-        background: "transparent",
-        border: "none",
-        borderRadius: "var(--radius-sm)",
-        cursor: disabled ? "not-allowed" : "grab",
-        opacity: disabled ? 0.4 : 1,
-        fontSize: "var(--font-size-sm)",
-        color: "var(--color-text-primary)",
-        textAlign: "left",
-      }}
+      className={cn(
+        "flex h-8 w-full items-center gap-2 rounded-md border-0 bg-transparent px-3 text-left text-sm text-foreground transition-colors",
+        "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        disabled ? "cursor-not-allowed opacity-40" : "cursor-grab",
+      )}
     >
       <TypeIcon node_type={node_type} />
       <span>{PALETTE_NODE_TYPE_LABELS[node_type]}</span>

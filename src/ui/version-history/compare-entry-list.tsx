@@ -1,7 +1,8 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, EdgeRef } from "@/schema";
-import { Button } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Separator } from "#components/ui/separator";
 import { CompareEntryRow, type CompareEntryRowDescriptor } from "./compare-entry-row";
 
 export type CompareEntryListKind = "added" | "removed" | "edited" | "layout_only" | "metadata";
@@ -37,22 +38,12 @@ export function CompareEntryList(props: CompareEntryListProps): ReactElement | n
   const color = colorForKind(kind);
 
   return (
-    <section
-      data-testid="compare-entry-list"
-      data-kind={kind}
-      style={{ borderTop: "var(--border-hairline) solid var(--color-border-subtle)" }}
-    >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          padding: "var(--space-2) var(--space-3)",
-        }}
-      >
+    <section data-testid="compare-entry-list" data-kind={kind}>
+      <Separator />
+      <header className="flex items-center gap-2 px-3 py-2">
         <span
           data-testid="compare-entry-list-title"
-          className="argmap-section-heading"
+          className="text-xs font-semibold uppercase tracking-wide"
           style={{ color }}
         >
           {title} ({entries.length})
@@ -64,7 +55,7 @@ export function CompareEntryList(props: CompareEntryListProps): ReactElement | n
             data-testid="compare-entry-list-expand"
             aria-expanded={expanded}
             onClick={() => setExpanded((v) => !v)}
-            style={{ marginLeft: "auto" }}
+            className="ml-auto"
           >
             {expanded ? "Collapse" : "Expand"}
           </Button>

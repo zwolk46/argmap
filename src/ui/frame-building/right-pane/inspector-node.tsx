@@ -2,7 +2,11 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button, TypeIcon, humanizeNodeType } from "../../primitives";
+import { TypeIcon, humanizeNodeType } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Textarea } from "#components/ui/textarea";
+import { Label } from "#components/ui/label";
+import { Separator } from "#components/ui/separator";
 import { InspectorValidationBlock } from "./inspector-validation-block";
 import { NODE_TYPE_EDITORS } from "./editors";
 import { OptionsBoxEditor } from "./options-box-editor";
@@ -27,16 +31,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
   const [edit_mode, set_edit_mode] = useEditMode(node);
 
   if (!node) {
-    return (
-      <div
-        style={{
-          color: "var(--color-text-secondary)",
-          fontSize: "var(--font-size-sm)",
-        }}
-      >
-        Node not found.
-      </div>
-    );
+    return <div className="text-sm text-muted-foreground">Node not found.</div>;
   }
 
   const EditorComponent = NODE_TYPE_EDITORS[node.type] as React.ComponentType<
@@ -44,23 +39,13 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
   >;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          paddingBottom: "var(--space-3)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+      <div className="flex items-center gap-2 pb-3">
         <TypeIcon node_type={node.type} />
-        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-          {humanizeNodeType(node.type)}
-        </span>
+        <span className="text-sm font-medium">{humanizeNodeType(node.type)}</span>
       </div>
+      <Separator />
 
       {/* Per-node-type editor */}
       <EditorComponent
@@ -74,15 +59,9 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
       />
 
       {/* Notes */}
-      <div style={{ marginTop: "var(--space-3)" }}>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor={`notes-${node_id}`}
-        >
-          Notes
-        </label>
-        <textarea
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={`notes-${node_id}`}>Notes</Label>
+        <Textarea
           id={`notes-${node_id}`}
           rows={2}
           defaultValue={(node as { notes?: string }).notes ?? ""}
@@ -110,32 +89,22 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
               ta.blur();
             }
           }}
-          className="argmap-input"
-          style={TEXTAREA_STYLE}
         />
       </div>
 
       {/* Options box (A3: per-instance allowed types only) */}
       {PER_INSTANCE_ALLOWED.has(node.type) && (
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <OptionsBoxEditor node={node} edit_mode={edit_mode} on_change_edit_mode={set_edit_mode} />
-        </div>
+        <OptionsBoxEditor node={node} edit_mode={edit_mode} on_change_edit_mode={set_edit_mode} />
       )}
 
       {/* Validation block */}
       <InspectorValidationBlock node_id={node_id} />
 
       {/* Footer */}
-      <div
-        style={{
-          marginTop: "var(--space-4)",
-          paddingTop: "var(--space-3)",
-          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
+      <Separator className="mt-1" />
+      <div>
         <Button
           variant="destructive"
-          size="md"
           disabled={node.type === "RootQuestion"}
           title={
             node.type === "RootQuestion"
@@ -171,7 +140,3 @@ function useEditMode(
   }, [node?.id, has_instance]);
   return [mode, setMode];
 }
-
-const TEXTAREA_STYLE: React.CSSProperties = {
-  resize: "vertical",
-};

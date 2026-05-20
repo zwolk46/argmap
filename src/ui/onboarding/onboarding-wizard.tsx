@@ -29,8 +29,7 @@ export function OnboardingWizard(props: OnboardingWizardProps): ReactElement | n
     //
     // Route `open` through the Dialog (instead of hard-coding `open={true}`
     // and bailing with `return null`) so the Dialog runs its exit-phase
-    // animation when dismissed. Returning null bypassed that animation
-    // and the screen snapped out instead of fading.
+    // animation when dismissed.
     <Dialog
       open={props.open}
       onClose={props.onSkip}

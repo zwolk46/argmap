@@ -49,10 +49,7 @@ export function DrawerBody({ children }: { children: ReactNode }): ReactElement 
 
 export function DrawerFooter({ children }: { children: ReactNode }): ReactElement {
   return (
-    <div
-      data-slot="argmap-drawer-footer"
-      className="px-5 py-3 border-t flex gap-2 justify-end"
-    >
+    <div data-slot="argmap-drawer-footer" className="px-5 py-3 border-t flex gap-2 justify-end">
       {children}
     </div>
   );
@@ -61,8 +58,7 @@ export function DrawerFooter({ children }: { children: ReactNode }): ReactElemen
 const SIDE_STATIC: Record<DrawerSide, string> = {
   right:
     "top-0 right-0 bottom-0 h-full border-l data-open:animate-in data-closed:animate-out data-open:slide-in-from-right data-closed:slide-out-to-right",
-  left:
-    "top-0 left-0 bottom-0 h-full border-r data-open:animate-in data-closed:animate-out data-open:slide-in-from-left data-closed:slide-out-to-left",
+  left: "top-0 left-0 bottom-0 h-full border-r data-open:animate-in data-closed:animate-out data-open:slide-in-from-left data-closed:slide-out-to-left",
   bottom:
     "left-0 right-0 bottom-0 w-full border-t data-open:animate-in data-closed:animate-out data-open:slide-in-from-bottom data-closed:slide-out-to-bottom",
 };

@@ -32,12 +32,7 @@ function PremisePlaceholder(): React.ReactElement {
   return React.createElement(
     "div",
     {
-      style: {
-        padding: "var(--space-3)",
-        color: "var(--color-text-secondary)",
-        fontSize: "var(--font-size-sm)",
-        fontStyle: "italic",
-      },
+      className: "p-3 text-sm italic text-muted-foreground",
     },
     "Premises are managed in Argument Running.",
   );

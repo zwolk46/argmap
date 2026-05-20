@@ -1,8 +1,11 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { Plus } from "@phosphor-icons/react";
 import type { ConditionKind, ModeFlavor } from "@/schema";
 import { OFFERED_CONDITIONS_BY_MODE_FLAVOR, CONDITION_KIND_PRIORITY } from "@/schema";
-import { Button, Z } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "#components/ui/popover";
+import { cn } from "#lib/utils";
 
 export interface ConditionPickerProps {
   mode_flavor: ModeFlavor;
@@ -53,141 +56,58 @@ export function ConditionPicker(props: ConditionPickerProps): ReactElement {
     on_pick(kind);
   }
 
-  // Escape closes the menu and returns focus to the trigger; click-outside
-  // captured via a document-level pointerdown listener.
-  const trigger_ref = React.useRef<HTMLButtonElement | null>(null);
-  const menu_ref = React.useRef<HTMLDivElement | null>(null);
-  React.useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        set_open(false);
-        trigger_ref.current?.focus();
-      }
-    }
-    function onPointerDown(e: PointerEvent) {
-      const t = e.target as Node | null;
-      if (t && menu_ref.current?.contains(t)) return;
-      if (t && trigger_ref.current?.contains(t)) return;
-      set_open(false);
-    }
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [open]);
-
   return (
-    <div style={{ position: "relative", display: "inline-block" }}>
-      <span
-        ref={(el) => {
-          trigger_ref.current = el?.querySelector("button") ?? null;
-        }}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => set_open((v) => !v)}
-          aria-expanded={open}
-          aria-haspopup="menu"
-        >
-          + Add condition
+    <Popover open={open} onOpenChange={set_open}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" aria-haspopup="menu">
+          <Plus size={12} />
+          Add condition
         </Button>
-      </span>
-      {open && (
-        <div
-          ref={menu_ref}
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            zIndex: Z.popover,
-            background: "var(--color-surface-elevated)",
-            border: "var(--border-thin) solid var(--color-border-subtle)",
-            borderRadius: "var(--radius-md)",
-            boxShadow: "var(--shadow-lg)",
-            minWidth: "220px",
-            padding: "var(--space-1) 0",
-          }}
-          role="menu"
-        >
-          {/* KEEP RAW: condition-picker dropdown menu rows (role="menuitem"), not the standard Button taxonomy. */}
-          {available.map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              role="menuitem"
-              onClick={() => handlePick(kind)}
-              style={MENU_ITEM_STYLE}
-              title={CONDITION_DESCRIPTIONS[kind]}
-            >
-              <div style={{ fontWeight: "var(--font-weight-medium)" }}>
-                {CONDITION_LABELS[kind]}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[260px] p-1" role="menu">
+        {/* KEEP RAW: condition-picker dropdown menu rows (role="menuitem"), not the standard Button taxonomy. */}
+        {available.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            role="menuitem"
+            onClick={() => handlePick(kind)}
+            title={CONDITION_DESCRIPTIONS[kind]}
+            className={cn(
+              "block w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm text-foreground",
+              "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+          >
+            <div className="font-medium">{CONDITION_LABELS[kind]}</div>
+            {CONDITION_DESCRIPTIONS[kind] && (
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {CONDITION_DESCRIPTIONS[kind]}
               </div>
-              {CONDITION_DESCRIPTIONS[kind] && (
-                <div
-                  style={{
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-tertiary)",
-                    marginTop: "1px",
-                  }}
-                >
-                  {CONDITION_DESCRIPTIONS[kind]}
-                </div>
-              )}
-            </button>
-          ))}
-          {show_any_of && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handlePick("any_of")}
-              style={{
-                ...MENU_ITEM_STYLE,
-                borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-                marginTop: "var(--space-1)",
-              }}
-            >
-              <div style={{ fontWeight: "var(--font-weight-medium)" }}>+ Add "any of" group</div>
-              <div
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-tertiary)",
-                  marginTop: "1px",
-                }}
-              >
-                Adds a disjunctive group (at most one per policy).
-              </div>
-            </button>
-          )}
-          {available.length === 0 && !show_any_of && (
-            <div
-              style={{
-                padding: "var(--space-2) var(--space-3)",
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-tertiary)",
-              }}
-            >
-              All conditions already added.
+            )}
+          </button>
+        ))}
+        {show_any_of && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handlePick("any_of")}
+            className={cn(
+              "mt-1 block w-full cursor-pointer rounded-md border-0 border-t border-border bg-transparent px-3 py-2 text-left text-sm text-foreground",
+              "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+          >
+            <div className="font-medium">+ Add &quot;any of&quot; group</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Adds a disjunctive group (at most one per policy).
             </div>
-          )}
-        </div>
-      )}
-    </div>
+          </button>
+        )}
+        {available.length === 0 && !show_any_of && (
+          <div className="px-3 py-2 text-xs text-muted-foreground">
+            All conditions already added.
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
-
-const MENU_ITEM_STYLE: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "var(--space-2) var(--space-3)",
-  background: "transparent",
-  border: "none",
-  textAlign: "left",
-  cursor: "pointer",
-  fontSize: "var(--font-size-sm)",
-  color: "var(--color-text-primary)",
-};

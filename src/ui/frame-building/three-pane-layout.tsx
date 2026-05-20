@@ -23,25 +23,13 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
 
   return (
     <div
+      className="grid h-full overflow-hidden bg-background"
       style={{
-        display: "grid",
         gridTemplateColumns: `${left_width} 1fr ${right_width}`,
         gridTemplateRows: bottom ? `1fr ${bottom_height}` : "1fr",
-        height: "100%",
-        overflow: "hidden",
-        background: "var(--color-surface-canvas)",
       }}
     >
-      <aside
-        style={{
-          gridRow: "1",
-          gridColumn: "1",
-          background: "var(--color-surface-pane)",
-          borderRight: "var(--border-hairline) solid var(--color-border-subtle)",
-          overflow: "auto",
-          minHeight: 0,
-        }}
-      >
+      <aside className="col-start-1 row-start-1 min-h-0 overflow-auto border-r border-border bg-card">
         {left}
       </aside>
       {/* P5: outer <main id="main"> lives in app-routes.tsx so the skip-link
@@ -50,41 +38,14 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
           semantically the most accurate but a plain <div> matches the
           previous layout exactly and the parent <main> already announces
           this region as primary content. */}
-      <div
-        style={{
-          gridRow: "1",
-          gridColumn: "2",
-          overflow: "hidden",
-          position: "relative",
-          background: "var(--color-surface-canvas)",
-          minHeight: 0,
-        }}
-      >
+      <div className="relative col-start-2 row-start-1 min-h-0 overflow-hidden bg-background">
         {center}
       </div>
-      <aside
-        style={{
-          gridRow: "1",
-          gridColumn: "3",
-          overflow: "auto",
-          background: "var(--color-surface-pane)",
-          borderLeft: "var(--border-hairline) solid var(--color-border-subtle)",
-          minHeight: 0,
-        }}
-      >
+      <aside className="col-start-3 row-start-1 min-h-0 overflow-auto border-l border-border bg-card">
         {right}
       </aside>
       {bottom ? (
-        <div
-          style={{
-            gridRow: "2",
-            gridColumn: "1 / -1",
-            overflow: "hidden",
-            background: "var(--color-surface-pane)",
-            borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-            boxShadow: "var(--shadow-sm)",
-          }}
-        >
+        <div className="col-span-3 col-start-1 row-start-2 overflow-hidden border-t border-border bg-card shadow-sm">
           {bottom}
         </div>
       ) : null}

@@ -67,13 +67,7 @@ export function DecisionTreeTab(props: DecisionTreeTabProps): ReactElement {
     return (
       <div
         data-testid="decision-tree-empty"
-        style={{
-          padding: "var(--space-4) var(--space-5)",
-          color: "var(--color-text-secondary)",
-          fontSize: "var(--font-size-sm)",
-          lineHeight: "var(--line-height-relaxed)",
-          maxWidth: 480,
-        }}
+        className="max-w-[480px] px-5 py-4 text-sm leading-relaxed text-muted-foreground"
       >
         {explanation}
       </div>
@@ -85,14 +79,7 @@ export function DecisionTreeTab(props: DecisionTreeTabProps): ReactElement {
   const height = last.y + last.h + DEFAULT_V_GAP;
 
   return (
-    <div
-      data-testid="decision-tree-tab"
-      style={{
-        padding: "var(--space-4)",
-        overflow: "auto",
-        height: "100%",
-      }}
-    >
+    <div data-testid="decision-tree-tab" className="h-full overflow-auto p-4">
       <svg data-testid="decision-tree-svg" width="100%" height={height} style={{ minHeight: 120 }}>
         {branches.map((b, i) => {
           const box = boxes[i]!;

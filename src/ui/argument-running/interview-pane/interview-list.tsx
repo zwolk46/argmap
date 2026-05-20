@@ -23,7 +23,7 @@ export function InterviewList(props: InterviewListProps): ReactElement {
   } = props;
 
   return (
-    <div data-testid="interview-list" style={{ display: "flex", flexDirection: "column" }}>
+    <div data-testid="interview-list" className="flex flex-col">
       {jurisdictional_items.length > 0 ? (
         <>
           <SectionHeader label="Jurisdictional questions" />
@@ -60,13 +60,7 @@ export function InterviewList(props: InterviewListProps): ReactElement {
 
 function SectionHeader({ label }: { label: string }): ReactElement {
   return (
-    <h3
-      className="argmap-section-heading"
-      style={{
-        padding: "var(--space-1) var(--space-2)",
-        background: "var(--color-surface-pane-secondary)",
-      }}
-    >
+    <h3 className="bg-muted/40 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
       {label}
     </h3>
   );

@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import type { NodeRef, FrameVersion, Node } from "@/schema";
 import type { InterviewItem } from "@/state";
 import { TypeIcon } from "@/ui";
+import { cn } from "#lib/utils";
 
 const STRUCTURAL_PARENT_EDGES: ReadonlyArray<string> = [
   "DECOMPOSES_INTO",
@@ -63,8 +64,9 @@ function InterviewRowImpl(props: InterviewRowProps): ReactElement {
   const statement = node ? statementPreviewFor(node) : item.node_id;
   const breadcrumb = buildBreadcrumb(frame_version, item.node_id);
 
+  // KEEP RAW: interview list row — full-width clickable row with custom
+  // selected/recommended states driven by domain mode-current-accent token.
   return (
-    // KEEP RAW: interview list row — full-width clickable row with custom selected/recommended states.
     <button
       type="button"
       data-testid={`interview-row-${item.node_id}`}
@@ -72,78 +74,44 @@ function InterviewRowImpl(props: InterviewRowProps): ReactElement {
       data-recommended={recommended_next ? "true" : "false"}
       data-reason={item.reason}
       onClick={on_click}
-      className={selected || recommended_next ? undefined : "argmap-row-hover"}
+      className={cn(
+        "flex w-full cursor-pointer flex-col gap-1 border-0 border-b px-4 py-2 text-left transition-colors",
+        !selected && !recommended_next && "hover:bg-muted/50",
+      )}
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-        padding: "var(--space-2) var(--space-4)",
-        width: "100%",
-        textAlign: "left",
-        border: "none",
         background: selected
           ? "var(--color-surface-selected)"
           : recommended_next
             ? "var(--color-mode-current-accent-bg)"
             : "transparent",
-        cursor: "pointer",
-        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
         borderLeft:
           selected || recommended_next
             ? "var(--border-medium) solid var(--color-mode-current-accent)"
             : "var(--border-medium) solid transparent",
-        transition:
-          "background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
       }}
     >
       {recommended_next ? (
         <span
           data-testid="recommended-next-pill"
-          style={{
-            fontSize: "var(--font-size-2xs)",
-            color: "var(--color-mode-current-accent)",
-            fontWeight: "var(--font-weight-semibold)",
-            letterSpacing: "var(--letter-spacing-wide)",
-            textTransform: "uppercase",
-          }}
+          className="text-[10px] font-semibold uppercase tracking-wide"
+          style={{ color: "var(--color-mode-current-accent)" }}
         >
           Recommended next
         </span>
       ) : null}
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-primary)",
-          fontWeight: recommended_next
-            ? "var(--font-weight-semibold)"
-            : "var(--font-weight-regular)",
-        }}
+        className={cn(
+          "flex items-center gap-2 text-sm text-foreground",
+          recommended_next ? "font-semibold" : "font-normal",
+        )}
       >
         {node ? <TypeIcon node_type={node.type} size={12} /> : null}
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            flex: 1,
-          }}
-        >
-          {statement}
-        </span>
+        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{statement}</span>
       </div>
       {breadcrumb ? (
         <span
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-tertiary)",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            paddingLeft: "calc(12px + var(--space-2))",
-          }}
+          className="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground/80"
+          style={{ paddingLeft: "calc(12px + var(--space-2))" }}
         >
           {breadcrumb}
         </span>

@@ -67,33 +67,16 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
   const merits_items = filtered.filter((it) => !it.is_jurisdictional);
 
   return (
-    <div
-      data-testid="interview-pane"
-      style={{ display: "flex", flexDirection: "column", height: "100%" }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          padding: "var(--space-3) var(--space-4)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-          background: "var(--color-surface-pane)",
-        }}
-      >
+    <div data-testid="interview-pane" className="flex h-full flex-col">
+      <div className="flex items-center gap-2 border-b bg-background px-4 py-3">
         <RecomputeIndicator counter={recompute_counter} />
-        <span
-          className="argmap-section-heading"
-          style={{
-            color: "var(--color-text-secondary)",
-          }}
-        >
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           Open items
         </span>
       </div>
       <InterviewFilter state={filter} on_change={on_filter_change} />
       <InterviewSearch value={search_text} on_change={on_search_change} />
-      <div style={{ flex: 1, overflowY: "auto" }}>
+      <div className="flex-1 overflow-y-auto">
         {!frame_version ? (
           // Missing frame_version is a load/migration failure, NOT the
           // happy "all resolved" path — surface it as an error so the
@@ -101,12 +84,10 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
           <div
             data-testid="interview-pane-error"
             role="alert"
+            className="rounded-md p-4 text-sm"
             style={{
-              padding: "var(--space-4)",
               color: "var(--color-severity-error)",
               background: "var(--color-severity-error-bg)",
-              borderRadius: "var(--radius-md)",
-              fontSize: "var(--font-size-sm)",
             }}
           >
             Couldn't load the frame snapshot for this session. Reload the page or open the session
@@ -123,11 +104,7 @@ export function InterviewPane(props: InterviewPaneProps): React.ReactElement {
           // so the user sees their query, not the all-resolved/none-yet copy.
           <div
             data-testid="interview-empty-state-no-search-match"
-            style={{
-              padding: "var(--space-4)",
-              fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-secondary)",
-            }}
+            className="p-4 text-sm text-muted-foreground"
           >
             No items match &ldquo;{search_text}&rdquo;. Clear the search to see all open items.
           </div>

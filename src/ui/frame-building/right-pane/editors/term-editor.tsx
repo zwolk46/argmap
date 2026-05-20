@@ -1,27 +1,17 @@
-import * as React from "react";
 import type { ReactElement } from "react";
+import { Plus, X } from "@phosphor-icons/react";
 import type { Term, Node } from "@/schema";
 import { useRepository } from "@/state";
-import { Button } from "../../../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Label } from "#components/ui/label";
+import { Checkbox } from "#components/ui/checkbox";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface TermEditorProps {
   node: Term;
   on_pick_linked_to: () => void;
 }
-
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
-
-const CHIP_STYLE: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "var(--space-1)",
-  padding: "2px var(--space-2)",
-  background: "var(--color-primary-subtle)",
-  color: "var(--color-primary)",
-  borderRadius: "var(--radius-full)",
-  fontSize: "var(--font-size-sm)",
-};
 
 export function TermEditor(props: TermEditorProps): ReactElement {
   const { node, on_pick_linked_to } = props;
@@ -32,24 +22,19 @@ export function TermEditor(props: TermEditorProps): ReactElement {
   }
 
   return (
-    <div>
-      <div style={SECTION_STYLE}>
-        <FieldAttributionDecoration node_id={node.id} field_path="name" label="Name">
-          <input
-            type="text"
-            className="argmap-input"
-            defaultValue={node.name}
-            onBlur={(e) => patch({ name: e.currentTarget.value })}
-          />
-        </FieldAttributionDecoration>
-      </div>
+    <div className="flex flex-col gap-3">
+      <FieldAttributionDecoration node_id={node.id} field_path="name" label="Name">
+        <Input
+          type="text"
+          defaultValue={node.name}
+          onBlur={(e) => patch({ name: e.currentTarget.value })}
+        />
+      </FieldAttributionDecoration>
 
-      <div style={SECTION_STYLE}>
-        <label className="argmap-section-heading">Order</label>
-        <input
+      <div className="flex flex-col gap-1">
+        <Label>Order</Label>
+        <Input
           type="number"
-          className="argmap-input"
-          style={{ marginTop: "var(--space-1)" }}
           defaultValue={node.order}
           min={0}
           onBlur={(e) => {
@@ -59,55 +44,33 @@ export function TermEditor(props: TermEditorProps): ReactElement {
         />
       </div>
 
-      <div style={SECTION_STYLE}>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            cursor: "pointer",
-          }}
-        >
-          <input
-            type="checkbox"
-            defaultChecked={node.dispositive}
-            onChange={(e) => patch({ dispositive: e.currentTarget.checked })}
-          />
-          <span className="argmap-section-heading">Dispositive</span>
-        </label>
-      </div>
+      <Label className="flex cursor-pointer items-center gap-2">
+        <Checkbox
+          defaultChecked={node.dispositive}
+          onCheckedChange={(checked) => patch({ dispositive: checked === true })}
+        />
+        <span>Dispositive</span>
+      </Label>
 
-      <div style={SECTION_STYLE}>
-        <label className="argmap-section-heading">Linked To</label>
-        <div style={{ marginTop: "var(--space-1)" }}>
+      <div className="flex flex-col gap-1">
+        <Label>Linked To</Label>
+        <div>
           {node.linked_to ? (
-            <span style={CHIP_STYLE}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
               <span>{node.linked_to}</span>
               <button
                 type="button"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "var(--space-1)",
-                  margin: "calc(var(--space-1) * -1)",
-                  lineHeight: 1,
-                  color: "inherit",
-                  borderRadius: "var(--radius-sm)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "var(--font-size-sm)",
-                }}
+                className="inline-flex items-center justify-center rounded-md p-0.5 hover:bg-primary/20"
                 onClick={() => patch({ linked_to: undefined })}
                 aria-label="Clear link"
               >
-                ×
+                <X size={12} />
               </button>
             </span>
           ) : (
             <Button variant="ghost" size="sm" onClick={on_pick_linked_to}>
-              + Link node
+              <Plus size={12} />
+              Link node
             </Button>
           )}
         </div>

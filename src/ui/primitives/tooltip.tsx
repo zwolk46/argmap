@@ -14,9 +14,7 @@ const TOOLTIP_OPEN_DELAY_MS = 300;
 
 export function TooltipProvider(props: { children: ReactNode }): ReactElement {
   return (
-    <ShTooltipProvider delayDuration={TOOLTIP_OPEN_DELAY_MS}>
-      {props.children}
-    </ShTooltipProvider>
+    <ShTooltipProvider delayDuration={TOOLTIP_OPEN_DELAY_MS}>{props.children}</ShTooltipProvider>
   );
 }
 

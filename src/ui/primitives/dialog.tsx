@@ -1,9 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import {
-  Dialog as ShDialog,
-  DialogContent,
-  DialogTitle,
-} from "#components/ui/dialog";
+import { Dialog as ShDialog, DialogContent, DialogTitle } from "#components/ui/dialog";
 import { cn } from "#lib/utils";
 
 export type DialogSize = "sm" | "md" | "lg";
@@ -69,10 +65,7 @@ export function DialogBody({ children }: { children: ReactNode }): ReactElement 
 
 export function DialogFooter({ children }: { children: ReactNode }): ReactElement {
   return (
-    <div
-      data-slot="argmap-dialog-footer"
-      className="px-5 py-3 border-t flex gap-2 justify-end"
-    >
+    <div data-slot="argmap-dialog-footer" className="px-5 py-3 border-t flex gap-2 justify-end">
       {children}
     </div>
   );

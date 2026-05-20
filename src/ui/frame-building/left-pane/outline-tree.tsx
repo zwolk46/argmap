@@ -154,17 +154,7 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
   }
 
   if (!root) {
-    return (
-      <div
-        style={{
-          padding: "var(--space-4)",
-          color: "var(--color-text-secondary)",
-          fontSize: "var(--font-size-sm)",
-        }}
-      >
-        No frame loaded.
-      </div>
-    );
+    return <div className="p-4 text-sm text-muted-foreground">No frame loaded.</div>;
   }
 
   // Empty-outline state. Without this the OutlineTree silently rendered
@@ -173,12 +163,7 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
     return (
       <div
         data-testid="outline-empty"
-        style={{
-          padding: "var(--space-4) var(--space-3)",
-          color: "var(--color-text-tertiary)",
-          fontSize: "var(--font-size-xs)",
-          lineHeight: "var(--line-height-relaxed)",
-        }}
+        className="px-3 py-4 text-xs leading-relaxed text-muted-foreground/80"
       >
         Outline appears here once nodes exist. Add a Root Question from the palette above.
       </div>
@@ -186,12 +171,7 @@ export function OutlineTree(props: OutlineTreeProps): ReactElement {
   }
 
   return (
-    <div
-      role="tree"
-      aria-label="Frame outline"
-      onKeyDown={handleKeyDown}
-      style={{ outline: "none" }}
-    >
+    <div role="tree" aria-label="Frame outline" onKeyDown={handleKeyDown} className="outline-none">
       {rows.map(({ outline_node, depth }) => (
         <OutlineTreeRow
           key={outline_node.node_id}
