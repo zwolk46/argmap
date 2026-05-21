@@ -29,3 +29,5 @@ export { HelpGlossaryPane } from "./help-glossary-pane";
 export type { HelpGlossaryPaneProps } from "./help-glossary-pane";
 
 export { SignOutButton } from "./sign-out-button";
+
+export { UserMenu } from "./user-menu";

@@ -56,10 +56,15 @@ p {
   margin: 0;
 }
 
+/* font defaults only — color is set by Tailwind utility classes
+   (e.g. text-primary-foreground on shadcn buttons). Setting `color: inherit`
+   here used to win over Tailwind utilities because unlayered rules outrank
+   anything inside @layer utilities (the layer Tailwind v4 puts utilities in),
+   making the dark-bg "default" Button variants render with inherited dark
+   text — invisible. Leave color to the utility classes. */
 button {
   font-family: var(--font-sans);
   font-size: var(--font-size-sm);
-  color: inherit;
 }
 
 input,

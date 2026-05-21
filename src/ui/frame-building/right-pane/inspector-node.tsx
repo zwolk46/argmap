@@ -9,6 +9,7 @@ import { Textarea } from "#components/ui/textarea";
 import { Label } from "#components/ui/label";
 import { Separator } from "#components/ui/separator";
 import { InspectorValidationBlock } from "./inspector-validation-block";
+import { InspectorCollapsibleSection } from "./inspector-collapsible-section";
 import { NODE_TYPE_EDITORS } from "./editors";
 import { OptionsBoxEditor } from "./options-box-editor";
 
@@ -103,8 +104,10 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
       />
 
       {/* Notes */}
-      <div className="flex flex-col gap-1">
-        <Label htmlFor={`notes-${node_id}`}>Notes</Label>
+      <InspectorCollapsibleSection title="Notes">
+        <Label htmlFor={`notes-${node_id}`} className="sr-only">
+          Notes
+        </Label>
         <Textarea
           id={`notes-${node_id}`}
           rows={2}
@@ -134,15 +137,19 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
             }
           }}
         />
-      </div>
+      </InspectorCollapsibleSection>
 
       {/* Options box (A3: per-instance allowed types only) */}
       {PER_INSTANCE_ALLOWED.has(node.type) && (
-        <OptionsBoxEditor node={node} edit_mode={edit_mode} on_change_edit_mode={set_edit_mode} />
+        <InspectorCollapsibleSection title="Satisfaction policy">
+          <OptionsBoxEditor node={node} edit_mode={edit_mode} on_change_edit_mode={set_edit_mode} />
+        </InspectorCollapsibleSection>
       )}
 
       {/* Validation block */}
-      <InspectorValidationBlock node_id={node_id} />
+      <InspectorCollapsibleSection title="Validation">
+        <InspectorValidationBlock node_id={node_id} />
+      </InspectorCollapsibleSection>
 
       {/* Footer */}
       <Separator className="mt-1" />

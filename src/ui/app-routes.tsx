@@ -9,6 +9,7 @@ import {
 import { OnboardingWizard } from "./onboarding";
 import { HomePage } from "./home";
 import { LoadingScreen } from "./primitives";
+import { CommandPalette, useCommandPaletteShortcut } from "./chrome/command-palette";
 import { useAppStateStore, useRepository, selectFirstLaunchDismissed } from "@/state";
 
 // Code-split the heavy pages. Home + sign-in are the routes a first-time
@@ -62,6 +63,7 @@ function RoutedView(): ReactElement {
   const onToggle = React.useCallback(() => setVersionHistoryOpen((v) => !v), []);
   const onClose = React.useCallback(() => setVersionHistoryOpen(false), []);
   const preview = useVersionHistoryPreview();
+  const [palette_open, set_palette_open] = useCommandPaletteShortcut();
 
   // Lift the operating-mode data-attribute onto the document root so the
   // mode-accent cascade (focus rings, primary buttons, every chrome surface)
@@ -145,6 +147,13 @@ function RoutedView(): ReactElement {
       </main>
       <VersionHistoryPane open={version_history_open} onClose={onClose} />
       <AppOnboardingMount />
+      <CommandPalette
+        open={palette_open}
+        onOpenChange={set_palette_open}
+        on_toggle_version_history={
+          route.kind !== "home" && preview.state.kind === "none" ? onToggle : undefined
+        }
+      />
     </>
   );
 }

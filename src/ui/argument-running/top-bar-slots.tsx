@@ -9,7 +9,7 @@ import {
   HomeButton,
   VersionHistoryButton,
   HelpButton,
-  SignOutButton,
+  UserMenu,
   ValidationIndicator,
 } from "@/ui";
 import type { TopBarSlots } from "@/ui";
@@ -84,7 +84,7 @@ export function useArgumentRunningTopBarSlots(deps: ArgumentRunningTopBarDeps): 
           title="Session settings"
         />
         <HelpButton active={deps.help_pane_open} onToggle={deps.on_toggle_help} />
-        <SignOutButton />
+        <UserMenu />
       </>
     ),
   };

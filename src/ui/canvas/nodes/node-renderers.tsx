@@ -2,6 +2,8 @@ import type { ReactElement } from "react";
 import type { NodeProps, Node as RFNode } from "@xyflow/react";
 import type { NodeType } from "@/schema";
 import { NodeFrame } from "./node-frame";
+import { CanvasNodeContextMenu } from "./canvas-node-context-menu";
+import { CanvasNodeHoverCard } from "./canvas-node-hover-card";
 import type { FrameCanvasNodeData } from "./types";
 
 type ND = RFNode<FrameCanvasNodeData>;
@@ -12,17 +14,25 @@ function makeNodeRenderer(
 ) {
   return function NodeRenderer({ data, selected }: NodeProps<ND>): ReactElement {
     return (
-      <NodeFrame
-        node_id={data.node_id}
-        node_type={node_type}
-        status={data.status}
-        attributions={data.attributions}
-        primary_text={data.primary_text}
-        variant={variant}
-        display={{ ...data.display, selected: selected ?? data.display.selected }}
-        enable_connector_handle={data.enable_connector_handle}
-        legal_mode={data.legal_mode}
-      />
+      <CanvasNodeContextMenu node_id={data.node_id} delete_disabled={node_type === "RootQuestion"}>
+        <CanvasNodeHoverCard
+          node_type={node_type}
+          primary_text={data.primary_text}
+          status={data.status}
+        >
+          <NodeFrame
+            node_id={data.node_id}
+            node_type={node_type}
+            status={data.status}
+            attributions={data.attributions}
+            primary_text={data.primary_text}
+            variant={variant}
+            display={{ ...data.display, selected: selected ?? data.display.selected }}
+            enable_connector_handle={data.enable_connector_handle}
+            legal_mode={data.legal_mode}
+          />
+        </CanvasNodeHoverCard>
+      </CanvasNodeContextMenu>
     );
   };
 }
@@ -38,17 +48,19 @@ export function LogicalGateNode({ data, selected }: NodeProps<ND>): ReactElement
   // text label. The new whole-node treatment keeps the gate auto-width and
   // mono-styled via .canvas-node[data-kind="logical_gate"].
   return (
-    <NodeFrame
-      node_id={data.node_id}
-      node_type="LogicalGate"
-      status={data.status}
-      attributions={data.attributions}
-      primary_text={data.gate_glyph ?? data.primary_text ?? "⊕"}
-      variant="logical_gate"
-      display={{ ...data.display, selected: selected ?? data.display.selected }}
-      enable_connector_handle={data.enable_connector_handle}
-      legal_mode={data.legal_mode}
-    />
+    <CanvasNodeContextMenu node_id={data.node_id}>
+      <NodeFrame
+        node_id={data.node_id}
+        node_type="LogicalGate"
+        status={data.status}
+        attributions={data.attributions}
+        primary_text={data.gate_glyph ?? data.primary_text ?? "⊕"}
+        variant="logical_gate"
+        display={{ ...data.display, selected: selected ?? data.display.selected }}
+        enable_connector_handle={data.enable_connector_handle}
+        legal_mode={data.legal_mode}
+      />
+    </CanvasNodeContextMenu>
   );
 }
 
@@ -61,33 +73,37 @@ export function AuthorityNode({ data, selected }: NodeProps<ND>): ReactElement {
   // authority's binding kind is a property of the node itself, not of
   // a status path that resolves through it.
   return (
-    <NodeFrame
-      node_id={data.node_id}
-      node_type="Authority"
-      status={data.status}
-      attributions={data.attributions}
-      primary_text={data.primary_text}
-      variant="authority"
-      display={{ ...data.display, selected: selected ?? data.display.selected }}
-      enable_connector_handle={data.enable_connector_handle}
-      legal_mode={data.legal_mode}
-      subflag={data.legal_mode ? data.authority_binding_kind : undefined}
-    />
+    <CanvasNodeContextMenu node_id={data.node_id}>
+      <NodeFrame
+        node_id={data.node_id}
+        node_type="Authority"
+        status={data.status}
+        attributions={data.attributions}
+        primary_text={data.primary_text}
+        variant="authority"
+        display={{ ...data.display, selected: selected ?? data.display.selected }}
+        enable_connector_handle={data.enable_connector_handle}
+        legal_mode={data.legal_mode}
+        subflag={data.legal_mode ? data.authority_binding_kind : undefined}
+      />
+    </CanvasNodeContextMenu>
   );
 }
 
 export function PremisePill({ data, selected }: NodeProps<ND>): ReactElement {
   return (
-    <NodeFrame
-      node_id={data.node_id}
-      node_type="Premise"
-      status={data.status}
-      attributions={data.attributions}
-      primary_text={data.primary_text}
-      variant="premise_pill"
-      display={{ ...data.display, selected: selected ?? data.display.selected }}
-      enable_connector_handle={false}
-      legal_mode={data.legal_mode}
-    />
+    <CanvasNodeContextMenu node_id={data.node_id}>
+      <NodeFrame
+        node_id={data.node_id}
+        node_type="Premise"
+        status={data.status}
+        attributions={data.attributions}
+        primary_text={data.primary_text}
+        variant="premise_pill"
+        display={{ ...data.display, selected: selected ?? data.display.selected }}
+        enable_connector_handle={false}
+        legal_mode={data.legal_mode}
+      />
+    </CanvasNodeContextMenu>
   );
 }
