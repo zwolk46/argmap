@@ -7,7 +7,7 @@ import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface TermEditorProps {
   node: Term;
-  on_pick_linked_to: () => void;
+  available_terms?: Array<{ id: string; label: string }>;
 }
 
 const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
@@ -24,8 +24,9 @@ const CHIP_STYLE: React.CSSProperties = {
 };
 
 export function TermEditor(props: TermEditorProps): ReactElement {
-  const { node, on_pick_linked_to } = props;
+  const { node, available_terms = [] } = props;
   const { frame_store } = useRepository();
+  const [picking_link, set_picking_link] = React.useState(false);
 
   function patch(partial: Partial<Node>) {
     frame_store.getState().applyPatch({ kind: "node_edited", node_id: node.id, partial });
@@ -80,9 +81,12 @@ export function TermEditor(props: TermEditorProps): ReactElement {
       <div style={SECTION_STYLE}>
         <label className="argmap-section-heading">Linked To</label>
         <div style={{ marginTop: "var(--space-1)" }}>
-          {node.linked_to ? (
-            <span style={CHIP_STYLE}>
-              <span>{node.linked_to}</span>
+          {node.linked_to && !picking_link ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <span style={CHIP_STYLE}>{node.linked_to}</span>
+              <Button variant="ghost" size="sm" onClick={() => set_picking_link(true)}>
+                Change
+              </Button>
               <button
                 type="button"
                 style={{
@@ -105,8 +109,30 @@ export function TermEditor(props: TermEditorProps): ReactElement {
                 ×
               </button>
             </span>
+          ) : picking_link ? (
+            <select
+              className="argmap-input"
+              autoFocus
+              defaultValue=""
+              onChange={(e) => {
+                if (e.currentTarget.value) {
+                  patch({ linked_to: e.currentTarget.value });
+                  set_picking_link(false);
+                }
+              }}
+              onBlur={() => set_picking_link(false)}
+            >
+              <option value="" disabled>
+                Select a Term node…
+              </option>
+              {available_terms.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
           ) : (
-            <Button variant="ghost" size="sm" onClick={on_pick_linked_to}>
+            <Button variant="ghost" size="sm" onClick={() => set_picking_link(true)}>
               + Link node
             </Button>
           )}

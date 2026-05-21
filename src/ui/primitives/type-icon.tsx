@@ -12,7 +12,7 @@ import { UIcon } from "./uicon";
  * Icon choices are semantic (not just "looks ok"):
  *   RootQuestion   — interrogation  : the seeded question that opens the frame
  *   SubQuestion    — list-check     : decomposed sub-claims, a checklist of branches
- *   Term           — text-input     : a named term whose definition is contested
+ *   Term           — hashtag        : a named term whose definition is contested
  *   Interpretation — comment-alt-middle : one reading of a term — a competing voice
  *   Checkpoint     — flag-alt       : the binary/branching decision point
  *   LogicalGate    — circuit        : Boolean composition of inputs
@@ -30,7 +30,7 @@ export interface TypeIconProps {
 const ICON_NAME_FOR: Record<string, string> = {
   RootQuestion: "interrogation",
   SubQuestion: "list-check",
-  Term: "text-input",
+  Term: "hashtag",
   Interpretation: "comment-alt-middle",
   Checkpoint: "flag-alt",
   LogicalGate: "circuit",

@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
 import type { Node, NodeType, SatisfactionPolicy } from "@/schema";
-import { resolveEffectivePolicy, CONDITION_KIND_PRIORITY, toModeFlavor } from "@/schema";
+import { resolveEffectivePolicy, toModeFlavor } from "@/schema";
 import type { SatisfactionPolicyKey } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
+import { humanizeConditionKind } from "../../primitives";
 import { ConditionList } from "./condition-list";
 
 export type OptionsBoxEditMode = "instance" | "frame_default";
@@ -21,13 +22,10 @@ const PER_INSTANCE_ALLOWED_TYPES: ReadonlySet<NodeType> = new Set([
 ]);
 
 function policyToString(policy: SatisfactionPolicy): string {
-  const kinds = (policy.all_of ?? []).map((c) => c.kind);
-  const sorted = [...kinds].sort(
-    (a, b) => CONDITION_KIND_PRIORITY.indexOf(a) - CONDITION_KIND_PRIORITY.indexOf(b),
-  );
-  const label = sorted.join(", ") || "(empty)";
+  const kinds = (policy.all_of ?? []).map((c) => humanizeConditionKind(c.kind));
+  const label = kinds.join(", ") || "(empty)";
   if (policy.any_of && policy.any_of.length > 0) {
-    return `${label} | any-of(${policy.any_of.map((c) => c.kind).join(", ")})`;
+    return `${label} | any-of(${policy.any_of.map((c) => humanizeConditionKind(c.kind)).join(", ")})`;
   }
   return label;
 }
@@ -58,10 +56,10 @@ export function OptionsBoxEditor(props: OptionsBoxEditorProps): ReactElement {
   const effective = resolveEffectivePolicy(node_type, per_instance, frame_default);
 
   const source_label = per_instance
-    ? "per-instance"
+    ? "Per-instance override"
     : frame_default
-      ? "frame-default"
-      : "library-default";
+      ? "Frame default"
+      : "Library default";
 
   const mode_flavor = toModeFlavor(frame.mode, frame.flavor);
 

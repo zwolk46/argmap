@@ -121,8 +121,12 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         </IconButton>
       </header>
       <footer className="frame-card-foot">
-        <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        {/* Chip wrapper: shrinks and truncates when label is long so the
+            right-side cluster (timestamp + run button) never gets pushed off. */}
+        <div className="frame-card-foot-chip">
+          <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}>
           {onRunArgument ? (
             <Button
               size="sm"
