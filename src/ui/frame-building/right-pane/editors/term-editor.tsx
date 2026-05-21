@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ReactElement } from "react";
 import { Plus, X } from "@phosphor-icons/react";
 import type { Term, Node } from "@/schema";
@@ -10,12 +11,13 @@ import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface TermEditorProps {
   node: Term;
-  on_pick_linked_to: () => void;
+  available_terms?: Array<{ id: string; label: string }>;
 }
 
 export function TermEditor(props: TermEditorProps): ReactElement {
-  const { node, on_pick_linked_to } = props;
+  const { node, available_terms = [] } = props;
   const { frame_store } = useRepository();
+  const [picking_link, set_picking_link] = React.useState(false);
 
   function patch(partial: Partial<Node>) {
     frame_store.getState().applyPatch({ kind: "node_edited", node_id: node.id, partial });
@@ -55,9 +57,14 @@ export function TermEditor(props: TermEditorProps): ReactElement {
       <div className="flex flex-col gap-1">
         <Label>Linked To</Label>
         <div>
-          {node.linked_to ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
-              <span>{node.linked_to}</span>
+          {node.linked_to && !picking_link ? (
+            <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
+                {node.linked_to}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => set_picking_link(true)}>
+                Change
+              </Button>
               <button
                 type="button"
                 className="inline-flex items-center justify-center rounded-md p-0.5 hover:bg-primary/20"
@@ -67,8 +74,30 @@ export function TermEditor(props: TermEditorProps): ReactElement {
                 <X size={12} />
               </button>
             </span>
+          ) : picking_link ? (
+            <select
+              className="argmap-input"
+              autoFocus
+              defaultValue=""
+              onChange={(e) => {
+                if (e.currentTarget.value) {
+                  patch({ linked_to: e.currentTarget.value });
+                  set_picking_link(false);
+                }
+              }}
+              onBlur={() => set_picking_link(false)}
+            >
+              <option value="" disabled>
+                Select a Term node…
+              </option>
+              {available_terms.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
           ) : (
-            <Button variant="ghost" size="sm" onClick={on_pick_linked_to}>
+            <Button variant="ghost" size="sm" onClick={() => set_picking_link(true)}>
               <Plus size={12} />
               Link node
             </Button>

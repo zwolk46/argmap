@@ -99,8 +99,12 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         </IconButton>
       </header>
       <footer className="flex items-center justify-between gap-2">
-        <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
-        <div className="flex items-center gap-2">
+        {/* min-w-0 lets a long mode/flavor label shrink and truncate so it
+            doesn't push the timestamp + run-argument cluster off the card. */}
+        <div className="min-w-0 overflow-hidden">
+          <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           {onRunArgument ? (
             <Button
               size="sm"

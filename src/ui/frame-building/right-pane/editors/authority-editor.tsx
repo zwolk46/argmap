@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ReactElement } from "react";
 import { Plus } from "@phosphor-icons/react";
 import type { Authority, Node } from "@/schema";
@@ -10,14 +11,17 @@ import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface AuthorityEditorProps {
   node: Authority;
-  on_pick_binding_in_jurisdiction: () => void;
 }
 
 export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
-  const { node, on_pick_binding_in_jurisdiction } = props;
+  const { node } = props;
   const { frame_store } = useRepository();
   const mode = useFrameStore((s) => s.frame?.mode);
   const flavor = useFrameStore((s) => s.frame?.flavor);
+  const [adding_jurisdiction, set_adding_jurisdiction] = React.useState(false);
+  const [new_juris_level, set_new_juris_level] = React.useState("");
+  const [new_juris_region, set_new_juris_region] = React.useState("");
+  const [new_juris_court, set_new_juris_court] = React.useState("");
 
   function patch(partial: object) {
     frame_store.getState().applyPatch({
@@ -119,15 +123,74 @@ export function AuthorityEditor(props: AuthorityEditorProps): ReactElement {
                 >
                   {j.level}
                   {j.region ? ` / ${j.region}` : ""}
+                  {j.court ? ` (${j.court})` : ""}
                 </span>
               ))}
             </div>
-            <div>
-              <Button variant="ghost" size="sm" onClick={on_pick_binding_in_jurisdiction}>
-                <Plus size={12} />
-                Add jurisdiction
-              </Button>
-            </div>
+            {adding_jurisdiction ? (
+              <div className="flex flex-col gap-1">
+                <Input
+                  type="text"
+                  placeholder="Level (required, e.g. federal, state)"
+                  value={new_juris_level}
+                  onChange={(e) => set_new_juris_level(e.currentTarget.value)}
+                  autoFocus
+                />
+                <Input
+                  type="text"
+                  placeholder="Region / Circuit (optional)"
+                  value={new_juris_region}
+                  onChange={(e) => set_new_juris_region(e.currentTarget.value)}
+                />
+                <Input
+                  type="text"
+                  placeholder="Court (optional)"
+                  value={new_juris_court}
+                  onChange={(e) => set_new_juris_court(e.currentTarget.value)}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    disabled={!new_juris_level.trim()}
+                    onClick={() => {
+                      const j: { level: string; region?: string; court?: string } = {
+                        level: new_juris_level.trim(),
+                      };
+                      if (new_juris_region.trim()) j.region = new_juris_region.trim();
+                      if (new_juris_court.trim()) j.court = new_juris_court.trim();
+                      patch({
+                        binding_in: [...(node.binding_in ?? []), j],
+                      });
+                      set_new_juris_level("");
+                      set_new_juris_region("");
+                      set_new_juris_court("");
+                      set_adding_jurisdiction(false);
+                    }}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      set_new_juris_level("");
+                      set_new_juris_region("");
+                      set_new_juris_court("");
+                      set_adding_jurisdiction(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <Button variant="ghost" size="sm" onClick={() => set_adding_jurisdiction(true)}>
+                  <Plus size={12} />
+                  Add jurisdiction
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}

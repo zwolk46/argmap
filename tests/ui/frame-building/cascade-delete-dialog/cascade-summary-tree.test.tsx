@@ -1,8 +1,23 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
+import type { CascadeReport, FrameStoreSnapshot } from "@/state";
+
+// CascadeSummaryTree reads the frame store to render node labels instead of
+// raw UUIDs. The test harness has no RepositoryProvider, so we stub the hook
+// to return an empty frame_version — the component falls back to the raw
+// node_id (which is what these tests assert against).
+vi.mock("@/state", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/state")>();
+  return {
+    ...actual,
+    useFrameStore: vi.fn((selector: (s: Partial<FrameStoreSnapshot>) => unknown) =>
+      selector({ frame_version: null }),
+    ),
+  };
+});
+
 import { CascadeSummaryTree } from "@/ui/frame-building/cascade-delete-dialog/cascade-summary-tree";
-import type { CascadeReport } from "@/state";
 
 function makeReport(node_count: number, edge_count: number): CascadeReport {
   return {

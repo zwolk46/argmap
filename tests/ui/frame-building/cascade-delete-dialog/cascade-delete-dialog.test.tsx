@@ -1,9 +1,23 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import type { CascadeReport } from "@/state";
-import { CascadeDeleteDialog } from "@/ui/frame-building/cascade-delete-dialog/cascade-delete-dialog";
+import type { CascadeReport, FrameStoreSnapshot } from "@/state";
 import type { CascadeConfirmationState } from "@/ui/hooks/use-cascade-confirmation";
+
+// CascadeSummaryTree (rendered transitively) reads the frame store. Stub it
+// to return null frame_version so the component falls back to raw node_ids
+// (what these tests assert against).
+vi.mock("@/state", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/state")>();
+  return {
+    ...actual,
+    useFrameStore: vi.fn((selector: (s: Partial<FrameStoreSnapshot>) => unknown) =>
+      selector({ frame_version: null }),
+    ),
+  };
+});
+
+import { CascadeDeleteDialog } from "@/ui/frame-building/cascade-delete-dialog/cascade-delete-dialog";
 
 const MOCK_REPORT: CascadeReport = {
   cascade_nodes: [

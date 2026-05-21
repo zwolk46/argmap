@@ -3,7 +3,7 @@ import {
   type Icon,
   Question,
   ListChecks,
-  TextT,
+  Hash,
   ChatCircleDots,
   Flag,
   CirclesThreePlus,
@@ -23,7 +23,7 @@ import type { NodeType } from "@/schema";
  * Icon choices are semantic (not just "looks ok"):
  *   RootQuestion   — Question         : the seeded question that opens the frame
  *   SubQuestion    — ListChecks       : decomposed sub-claims, a checklist of branches
- *   Term           — TextT            : a named term whose definition is contested
+ *   Term           — Hash             : a named term whose definition is contested (hashtag — palette and canvas unified)
  *   Interpretation — ChatCircleDots   : one reading of a term — a competing voice
  *   Checkpoint     — Flag             : the binary/branching decision point
  *   LogicalGate    — CirclesThreePlus : Boolean composition of inputs (Phosphor has no clean "circuit")
@@ -41,7 +41,7 @@ export interface TypeIconProps {
 const ICON_FOR: Record<string, Icon> = {
   RootQuestion: Question,
   SubQuestion: ListChecks,
-  Term: TextT,
+  Term: Hash,
   Interpretation: ChatCircleDots,
   Checkpoint: Flag,
   LogicalGate: CirclesThreePlus,

@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { NodeRef, Node } from "@/schema";
+import { Trash } from "@phosphor-icons/react";
+import type { NodeRef, Node, Edge } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 import { TypeIcon, humanizeNodeType } from "../../primitives";
 import { Button } from "#components/ui/button";
@@ -27,11 +28,54 @@ export interface InspectorNodeProps {
 export function InspectorNode(props: InspectorNodeProps): ReactElement {
   const { node_id, on_request_delete, on_navigate_to_node } = props;
   const node = useFrameStore((s) => s.frame_version?.nodes.find((n) => n.id === node_id));
-  const { frame_store } = useRepository();
+  const all_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
+  const { frame_store, generateId, now } = useRepository();
   const [edit_mode, set_edit_mode] = useEditMode(node);
 
   if (!node) {
     return <div className="text-sm text-muted-foreground">Node not found.</div>;
+  }
+
+  // Available-node lists for the editor pickers (gate inputs / term links /
+  // authority citations). Each list excludes the node itself and is filtered
+  // by the picker's contract.
+  const available_terms = all_nodes
+    .filter((n) => n.type === "Term" && n.id !== node_id)
+    .map((n) => ({ id: n.id, label: (n as { name?: string }).name ?? n.id }));
+
+  const available_authorities = all_nodes
+    .filter((n) => n.type === "Authority")
+    .map((n) => ({
+      id: n.id,
+      label:
+        (n as { short_label?: string; citation?: string }).short_label ??
+        (n as { short_label?: string; citation?: string }).citation ??
+        n.id,
+    }));
+
+  const available_gate_inputs = all_nodes
+    .filter((n) => n.type !== "Premise" && n.type !== "Authority" && n.id !== node_id)
+    .map((n) => ({
+      id: n.id,
+      label:
+        (n as { question?: string }).question ??
+        (n as { statement?: string }).statement ??
+        (n as { name?: string }).name ??
+        humanizeNodeType(n.type),
+    }));
+
+  // Cite-authority writes a CITES edge from the authority to this node.
+  function handle_pick_authority(authority_id: string) {
+    const edge: Edge = {
+      id: generateId(),
+      type: "CITES",
+      layer: "frame",
+      source: authority_id,
+      target: node_id,
+      created_at: now(),
+      updated_at: now(),
+    };
+    frame_store.getState().applyPatch({ kind: "edge_added", edge });
   }
 
   const EditorComponent = NODE_TYPE_EDITORS[node.type] as React.ComponentType<
@@ -51,11 +95,11 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
       <EditorComponent
         node={node}
         on_navigate_to_node={on_navigate_to_node}
-        on_pick_linked_to={() => {}}
-        on_pick_authority={() => {}}
+        on_pick_authority={handle_pick_authority}
+        available_terms={available_terms}
+        available_authorities={available_authorities}
+        available_nodes={available_gate_inputs}
         on_pick_option_target={() => {}}
-        on_pick_slot_source={() => {}}
-        on_pick_binding_in_jurisdiction={() => {}}
       />
 
       {/* Notes */}
@@ -113,6 +157,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
           }
           onClick={on_request_delete}
         >
+          <Trash size={14} />
           Delete node
         </Button>
       </div>

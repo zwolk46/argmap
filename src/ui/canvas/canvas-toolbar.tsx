@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, useStore } from "@xyflow/react";
 import {
   MagnifyingGlassPlus,
   MagnifyingGlassMinus,
@@ -40,6 +40,8 @@ export function CanvasToolbar({
   onAutoArrange,
 }: CanvasToolbarProps): ReactElement {
   const { zoomIn, zoomOut, fitView, zoomTo } = useReactFlow();
+  const zoom = useStore((s) => s.transform[2]);
+  const zoom_pct = Math.round(zoom * 100);
   const [search_value, setSearchValue] = React.useState("");
 
   const foreclosure_labels: Record<ForeclosureVisibility, string> = {
@@ -95,9 +97,13 @@ export function CanvasToolbar({
       <IconButton size="sm" aria-label="Fit to screen" onClick={() => fitView()}>
         {FitViewGlyph}
       </IconButton>
-      <IconButton size="sm" aria-label="Zoom to 100%" onClick={() => zoomTo(1)}>
+      <IconButton
+        size="sm"
+        aria-label={`Zoom to 100% (currently ${zoom_pct}%)`}
+        onClick={() => zoomTo(1)}
+      >
         <span style={{ fontSize: "var(--font-size-2xs)", fontWeight: "var(--font-weight-medium)" }}>
-          100%
+          {zoom_pct}%
         </span>
       </IconButton>
       <span
