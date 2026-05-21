@@ -97,7 +97,10 @@ a:hover {
 :focus-visible {
   outline: var(--border-medium) solid var(--color-mode-current-accent);
   outline-offset: var(--focus-ring-offset);
-  border-radius: var(--radius-sm);
+  /* border-radius intentionally absent: pill-shaped elements set their own
+     radius and a global override here would snap them to --radius-sm on
+     focus. The outline provides the keyboard-focus indicator; shape is
+     the element's own responsibility. */
 }
 
 /* Scrollbars — slim, warm-neutral, hover-darkens. */
@@ -740,6 +743,24 @@ select.argmap-input {
 
 .argmap-dialog--exiting {
   animation: argmap-dialog-pop-out 160ms var(--ease-emphasized) forwards;
+}
+
+/* Slide-in keyframes — utility animations for panels/drawers that mount
+   conditionally (as opposed to the Drawer primitive which stays mounted
+   and animates via transform transition). These are not applied to the
+   four main Drawer-based panels — those already animate via the Drawer
+   component's own transition property. */
+@keyframes argmap-slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes argmap-slide-in-left {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes argmap-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================================
@@ -2051,9 +2072,21 @@ select.argmap-input {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2);
   padding-top: var(--space-3);
   margin-top: auto;
   border-top: var(--border-hairline) solid var(--color-border-subtle);
+  /* Prevent a long mode/flavor chip label from pushing the timestamp row
+     off the right edge. The chip side takes min-width:0 so it can shrink
+     and truncate; the right-side cluster holds its intrinsic size. */
+  min-width: 0;
+}
+
+/* Left side of card footer: the mode/flavor chip. Wrap it so we can apply
+   overflow truncation without losing the pill border-radius on the chip. */
+.frame-card-foot-chip {
+  min-width: 0;
+  overflow: hidden;
 }
 .frame-card-pin {
   color: var(--color-milestone-star);

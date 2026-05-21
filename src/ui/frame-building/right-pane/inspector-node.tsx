@@ -1,8 +1,9 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { NodeRef, Node } from "@/schema";
+import type { NodeRef, Node, Edge } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 import { Button, TypeIcon, humanizeNodeType } from "../../primitives";
+import { UIcon } from "../../primitives/uicon";
 import { InspectorValidationBlock } from "./inspector-validation-block";
 import { NODE_TYPE_EDITORS } from "./editors";
 import { OptionsBoxEditor } from "./options-box-editor";
@@ -23,7 +24,8 @@ export interface InspectorNodeProps {
 export function InspectorNode(props: InspectorNodeProps): ReactElement {
   const { node_id, on_request_delete, on_navigate_to_node } = props;
   const node = useFrameStore((s) => s.frame_version?.nodes.find((n) => n.id === node_id));
-  const { frame_store } = useRepository();
+  const all_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
+  const { frame_store, generateId, now } = useRepository();
   const [edit_mode, set_edit_mode] = useEditMode(node);
 
   if (!node) {
@@ -37,6 +39,46 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
         Node not found.
       </div>
     );
+  }
+
+  // Compute available node lists for editor pickers.
+  const available_terms = all_nodes
+    .filter((n) => n.type === "Term" && n.id !== node_id)
+    .map((n) => ({ id: n.id, label: (n as { name?: string }).name ?? n.id }));
+
+  const available_authorities = all_nodes
+    .filter((n) => n.type === "Authority")
+    .map((n) => ({
+      id: n.id,
+      label:
+        (n as { short_label?: string; citation?: string }).short_label ??
+        (n as { short_label?: string; citation?: string }).citation ??
+        n.id,
+    }));
+
+  const available_gate_inputs = all_nodes
+    .filter((n) => n.type !== "Premise" && n.type !== "Authority" && n.id !== node_id)
+    .map((n) => ({
+      id: n.id,
+      label:
+        (n as { question?: string }).question ??
+        (n as { statement?: string }).statement ??
+        (n as { name?: string }).name ??
+        humanizeNodeType(n.type),
+    }));
+
+  // Handle authority citation: create a CITES edge from the authority to this interpretation node.
+  function handle_pick_authority(authority_id: string) {
+    const edge: Edge = {
+      id: generateId(),
+      type: "CITES",
+      layer: "frame",
+      source: authority_id,
+      target: node_id,
+      created_at: now(),
+      updated_at: now(),
+    };
+    frame_store.getState().applyPatch({ kind: "edge_added", edge });
   }
 
   const EditorComponent = NODE_TYPE_EDITORS[node.type] as React.ComponentType<
@@ -66,11 +108,11 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
       <EditorComponent
         node={node}
         on_navigate_to_node={on_navigate_to_node}
-        on_pick_linked_to={() => {}}
-        on_pick_authority={() => {}}
+        on_pick_authority={handle_pick_authority}
+        available_terms={available_terms}
+        available_authorities={available_authorities}
+        available_nodes={available_gate_inputs}
         on_pick_option_target={() => {}}
-        on_pick_slot_source={() => {}}
-        on_pick_binding_in_jurisdiction={() => {}}
       />
 
       {/* Notes */}
@@ -143,6 +185,7 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
               : "Delete node"
           }
           onClick={on_request_delete}
+          leading={<UIcon name="trash" size={14} />}
         >
           Delete node
         </Button>

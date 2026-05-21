@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
 import type { CascadeReport } from "@/state";
 import type { CascadeReason } from "@/runtime";
-import { UIcon } from "../../primitives";
+import { useFrameStore } from "@/state";
+import { UIcon, humanizeNodeType } from "../../primitives";
 
 function reasonLabel(reason: CascadeReason): string {
   switch (reason.kind) {
@@ -20,6 +21,8 @@ export interface CascadeSummaryTreeProps {
 
 export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactElement {
   const { cascade_nodes, cascade_edges } = report;
+  const all_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
+  const node_map = new Map(all_nodes.map((n) => [n.id, n]));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
@@ -57,14 +60,27 @@ export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactEl
                 style={{
                   fontSize: "var(--font-size-sm)",
                   color: "var(--color-text-primary)",
-                  fontFamily: "var(--font-mono)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
                   flex: 1,
                 }}
               >
-                {node_id}
+                {(() => {
+                  const n = node_map.get(node_id);
+                  if (!n) return node_id;
+                  return (
+                    (n as { name?: string; statement?: string; question?: string; citation?: string })
+                      .name ??
+                    (n as { name?: string; statement?: string; question?: string; citation?: string })
+                      .statement ??
+                    (n as { name?: string; statement?: string; question?: string; citation?: string })
+                      .question ??
+                    (n as { name?: string; statement?: string; question?: string; citation?: string })
+                      .citation ??
+                    humanizeNodeType(n.type)
+                  );
+                })()}
               </span>
               <span
                 style={{

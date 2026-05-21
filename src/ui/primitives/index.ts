@@ -57,8 +57,10 @@ export {
   humanizeGateType,
   humanizeFieldName,
   humanizeValidationMessage,
+  humanizeConditionKind,
   NODE_TYPE_LABELS,
   EDGE_TYPE_LABELS,
+  CONDITION_KIND_LABELS,
 } from "./humanize";
 
 export { ToastProvider, useToast, useOptionalToast } from "./toast";

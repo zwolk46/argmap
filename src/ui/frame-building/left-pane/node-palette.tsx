@@ -160,19 +160,52 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
   function handleClick(node_type: NodeType) {
     if (!frame_version) return;
     const defaults = buildNodeDefaults(node_type, generateId, now());
-    // P0-12: stamp a sensible initial position so multiple palette clicks
-    // don't stack every new node at (0,0). The stagger gives a grid layout
-    // (5 columns × 140px row height); ELK's anchor-honoring post-process
-    // keeps the position once placed. The user can drag from there.
+
+    // Compute the viewport center in flow coordinates so that new nodes spawn
+    // near the center of whatever the user is currently looking at, even after
+    // panning or zooming.
+    //
+    // NodePalette is a sibling of FrameCanvas in ThreePaneLayout, NOT a
+    // descendant of ReactFlowProvider (which lives inside FrameCanvas). That
+    // makes useReactFlow() unavailable here — it would throw. Instead we read
+    // the ".react-flow__viewport" DOM element, which React Flow keeps updated
+    // with a CSS transform of the form "matrix(zoom,0,0,zoom,tx,ty)".
+    // Inverting that matrix gives us the flow-coordinate origin, and we add
+    // half the container's client dimensions to get the center.
+    //
+    // Fall-back: if the element is not in the DOM yet (e.g. first render before
+    // the canvas mounts), we use the old fixed-grid origin (200, 100).
+    let center_x = 200;
+    let center_y = 100;
+    const viewport_el = document.querySelector<HTMLElement>(".react-flow__viewport");
+    const container_el = document.querySelector<HTMLElement>(".react-flow");
+    if (viewport_el && container_el) {
+      const style = window.getComputedStyle(viewport_el);
+      const matrix = new DOMMatrixReadOnly(style.transform);
+      // matrix.a === zoom (scale), matrix.e === tx, matrix.f === ty
+      const zoom = matrix.a || 1;
+      const tx = matrix.e;
+      const ty = matrix.f;
+      const rect = container_el.getBoundingClientRect();
+      // Convert screen center of the container to flow coordinates:
+      // flow_x = (screen_x - tx) / zoom
+      center_x = (rect.width / 2 - tx) / zoom;
+      center_y = (rect.height / 2 - ty) / zoom;
+    }
+
+    // Add small stagger so multiple palette clicks don't pile up on the same
+    // spot. Keep the same 3-column × 40px grid as before, but now offset from
+    // the live viewport center rather than a fixed canvas origin.
     const existing_count = frame_version.nodes.length;
-    const col = existing_count % 5;
-    const row = Math.floor(existing_count / 5);
+    const stagger_x = (existing_count % 3) * 40 - 40;
+    const stagger_y = Math.floor(existing_count / 3) * 40;
+
     const positioned: Node = {
       ...defaults,
       presentation: {
         ...(defaults.presentation ?? {}),
-        x: 200 + col * 240,
-        y: 100 + row * 140,
+        x: center_x + stagger_x,
+        y: center_y + stagger_y,
       },
     } as Node;
     frame_store.getState().applyPatch({ kind: "node_added", node: positioned });

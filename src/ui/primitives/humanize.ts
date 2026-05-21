@@ -17,6 +17,25 @@ export function humanizeNodeType(type: NodeType | string | undefined): string {
   return (NODE_TYPE_LABELS as Record<string, string>)[type] ?? type;
 }
 
+export const CONDITION_KIND_LABELS: Readonly<Record<string, string>> = {
+  premise_attached: "Premise attached",
+  interpretation_selected: "Interpretation selected",
+  all_children_resolved: "All children resolved",
+  path_complete: "Path complete",
+  not_contradicted: "Not contradicted",
+  premise_kind_in: "Premise kind in…",
+  burden_met: "Burden met",
+  authority_required: "Authority required",
+  authority_binding: "Authority binding",
+  not_distinguished: "Not distinguished",
+  standard_of_review_applied: "Standard of review applied",
+  not_foreclosed: "Not foreclosed",
+};
+
+export function humanizeConditionKind(kind: string): string {
+  return CONDITION_KIND_LABELS[kind] ?? kind.replace(/_/g, " ");
+}
+
 const GATE_TYPE_LABELS: Readonly<Record<string, string>> = {
   AndGate: "All-of (AND)",
   OrGate: "Any-of (OR)",
@@ -59,8 +78,12 @@ const FIELD_NAME_LABELS: Readonly<Record<string, string>> = {
 const PHRASE_REPLACEMENTS: ReadonlyArray<[RegExp, string]> = [
   // V-EDGE-3 / V-FR-* — "Argument-layer edge" is internal jargon.
   [/\bArgument-layer edge\b/g, "Argument-running edge"],
+  // V-EDGE-* — bare "Argument edge" (no hyphen variant) → same human label.
+  [/\bArgument edge\b/g, "Argument-running edge"],
   // V-EDGE-3 — "Frame Version.edges" / "FrameVersion.edges" → "the frame's edges".
   [/\bFrame ?Version\.edges\b/g, "the frame's edges"],
+  // V-EDGE-* — bare "FrameVersion" (no dot suffix) → "frame".
+  [/\bFrameVersion\b/g, "frame"],
   // V-NODE-8 — "satisfies but has no target" → "marked satisfying but with no target node".
   [/\bsatisfies\s+but\s+has\s+no\s+target\b/g, "is marked satisfying but has no target node"],
   // V-FR-3 trailing fragment artifact "(s)".
