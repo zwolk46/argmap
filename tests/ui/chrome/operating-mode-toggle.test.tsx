@@ -55,7 +55,8 @@ describe("OperatingModeToggle", () => {
       />,
     );
     fireEvent.click(getByText("Argument"));
-    expect(queryByRole("dialog")).toBeTruthy();
+    // shadcn's AlertDialog (Radix) uses role="alertdialog" for confirm flows.
+    expect(queryByRole("alertdialog")).toBeTruthy();
   });
 
   it("dispatches onSwitchWithWarnings when confirming warning dialog", () => {

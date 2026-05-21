@@ -1,8 +1,9 @@
 import * as React from "react";
 import type { Authority, Edge } from "@/schema";
 import { useSessionStore, useRepository } from "@/state";
-import { Button, IconButton } from "../../primitives";
-import { UIcon } from "../../primitives/uicon";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Crosshair, PencilSimple, Trash } from "@phosphor-icons/react";
 
 export interface SessionAuthorityRowProps {
   authority_id: string;
@@ -64,17 +65,11 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
   return (
     <div
       data-testid={`session-authority-row-${authority.id}`}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-        padding: "var(--space-2)",
-        borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
-      }}
+      className="flex flex-col gap-1 border-b p-2"
     >
       {editing ? (
         <>
-          <input
+          <Input
             data-testid={`session-authority-name-${authority.id}`}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -87,44 +82,29 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
                 setEditing(false);
               }
             }}
-            className="argmap-input"
-            style={{
-              fontSize: "var(--font-size-xs)",
-            }}
+            className="text-xs"
           />
-          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+          <div className="flex gap-1">
             <Button
-              variant="primary"
-              size="md"
+              type="button"
+              variant="default"
+              size="sm"
               data-testid={`session-authority-save-${authority.id}`}
               onClick={on_save_edit}
             >
               Save
             </Button>
-            <Button variant="secondary" size="md" onClick={() => setEditing(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)}>
               Cancel
             </Button>
           </div>
         </>
       ) : (
         <>
-          <span
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-primary)",
-            }}
-          >
+          <span className="text-xs text-foreground">
             {authority.citation || <em>(unnamed)</em>}
           </span>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-2xs)",
-              color: "var(--color-text-tertiary)",
-            }}
-          >
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
             {operating_mode === "legal" && authority.jurisdiction ? (
               <span data-testid={`session-authority-jurisdiction-${authority.id}`}>
                 {(authority.jurisdiction as { value?: string }).value ??
@@ -145,10 +125,12 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
                 ? "no citations yet"
                 : `cited by ${citations_to_this.length}`}
             </span>
-            <span style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1)" }}>
-              <IconButton
+            <span className="ml-auto flex gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label="Highlight on canvas"
-                size="sm"
                 data-testid={`session-authority-highlight-${authority.id}`}
                 onClick={() => {
                   const sources = citations_to_this.map((e) => e.source);
@@ -156,57 +138,60 @@ export function SessionAuthorityRow(props: SessionAuthorityRowProps): React.Reac
                 }}
                 title="Highlight on canvas"
               >
-                <UIcon name="target" size={14} />
-              </IconButton>
-              <IconButton
+                <Crosshair size={14} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label="Edit"
-                size="sm"
                 data-testid={`session-authority-edit-${authority.id}`}
                 onClick={() => setEditing(true)}
                 title="Edit"
               >
-                <UIcon name="pencil" size={14} />
-              </IconButton>
-              <IconButton
+                <PencilSimple size={14} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
                 aria-label="Delete"
-                size="sm"
                 data-testid={`session-authority-delete-${authority.id}`}
                 onClick={() =>
                   citations_to_this.length > 0 ? setConfirmingDelete(true) : on_delete_confirmed()
                 }
                 title="Delete"
               >
-                <UIcon name="trash" size={14} />
-              </IconButton>
+                <Trash size={14} />
+              </Button>
             </span>
           </div>
           {confirming_delete ? (
             <div
               data-testid={`session-authority-delete-confirm-${authority.id}`}
-              style={{
-                background: "var(--color-background-warning)",
-                padding: "var(--space-2)",
-                borderRadius: "var(--border-radius-md)",
-                fontSize: "var(--font-size-xs)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
+              className="flex flex-col gap-1 rounded-md p-2 text-xs"
+              style={{ background: "var(--color-background-warning)" }}
             >
               <span>
                 {citations_to_this.length} CITES edge(s) reference this authority. Deleting will
                 also delete those edges. Continue?
               </span>
-              <div style={{ display: "flex", gap: "var(--space-1)" }}>
+              <div className="flex gap-1">
                 <Button
+                  type="button"
                   variant="destructive"
-                  size="md"
+                  size="sm"
                   onClick={on_delete_confirmed}
                   data-testid={`session-authority-delete-confirm-yes-${authority.id}`}
                 >
                   Delete
                 </Button>
-                <Button variant="secondary" size="md" onClick={() => setConfirmingDelete(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmingDelete(false)}
+                >
                   Cancel
                 </Button>
               </div>

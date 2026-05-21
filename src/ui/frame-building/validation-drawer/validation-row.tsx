@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
+import { ArrowUpRight, ArrowCounterClockwise, X } from "@phosphor-icons/react";
 import type { FrameVersion, ValidationResult } from "@/schema";
 import { VALIDATION_RULE_DESCRIPTIONS } from "@/schema";
 import { SeverityIcon, IconButton, humanizeValidationMessage } from "../../primitives";
-import { UIcon } from "../../primitives/uicon";
+import { cn } from "#lib/utils";
 
 export interface ValidationRowProps {
   result: ValidationResult;
@@ -21,15 +22,11 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
     <div
       role="listitem"
       tabIndex={0}
-      className="argmap-row-hover"
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "var(--space-2)",
-        padding: "var(--space-2) var(--space-3)",
-        opacity: is_dismissed ? 0.5 : 1,
-        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-      }}
+      className={cn(
+        "flex items-start gap-2 border-b border-border px-3 py-2",
+        "hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        is_dismissed && "opacity-50",
+      )}
       onKeyDown={(e) => {
         // Only the row itself should trigger jump-to-node; nested IconButtons
         // (Jump, Dismiss, Restore) keep their native Enter handling.
@@ -42,11 +39,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
       <SeverityIcon severity={result.severity} />
 
       <span
-        style={{
-          flex: 1,
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-primary)",
-        }}
+        className="flex-1 text-sm text-foreground"
         // P2: hover shows the rule's intent instead of the bare rule_id
         // (the rule_id is a meaningless string to the user).
         title={VALIDATION_RULE_DESCRIPTIONS[result.rule_id] ?? result.rule_id}
@@ -61,7 +54,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
           aria-label="Jump to node"
           title="Jump to node"
         >
-          <UIcon name="arrow-up-right" size={14} />
+          <ArrowUpRight size={14} />
         </IconButton>
       )}
 
@@ -74,7 +67,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
             aria-label="Restore warning"
             title="Restore warning"
           >
-            <UIcon name="rotate-left" size={14} />
+            <ArrowCounterClockwise size={14} />
           </IconButton>
         ) : (
           <IconButton
@@ -83,7 +76,7 @@ export function ValidationRow(props: ValidationRowProps): ReactElement {
             aria-label="Dismiss warning"
             title="Dismiss warning"
           >
-            <UIcon name="times" size={14} />
+            <X size={14} />
           </IconButton>
         ))}
     </div>

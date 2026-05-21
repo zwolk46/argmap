@@ -1,10 +1,23 @@
 import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
 import { Handle, Position } from "@xyflow/react";
+import {
+  type Icon,
+  Check,
+  Circle,
+  Warning,
+  X as XGlyph,
+  Minus,
+  Question,
+  Hash,
+  Diamond,
+  TreeStructure,
+  Flag,
+  Scales,
+} from "@phosphor-icons/react";
 import type { NodeRef, NodeType } from "@/schema";
 import type { NodeStatus } from "@/schema";
 import type { HookInvocationRecord } from "@/llm-hooks";
-import { UIcon } from "../../primitives/uicon";
 import { AiAttributionChip } from "../../primitives/ai-attribution-chip";
 import type { NodeFrameVariant, NodeDisplayFlags } from "./types";
 
@@ -33,35 +46,34 @@ export interface NodeFrameProps {
 
 // ────────────────────────────────────────────────────────────────────
 // Status glyph + label mapping for the .cn-status header strip.
-// Bold-rounded glyphs for satisfied/contested/foreclosed/not_applicable
+// Phosphor "bold" weight for satisfied/contested/foreclosed/not_applicable
 // — they read as headline-scale signals at 11px. `open` uses regular
-// rounded because UICONS Bold Rounded doesn't ship a circle glyph and
-// a soft outlined circle reads correctly as "unstarted" anyway.
+// weight because a soft outlined circle reads as "unstarted".
 // ────────────────────────────────────────────────────────────────────
 type StatusKey = NodeStatus["status"];
-const STATUS_GLYPH: Record<StatusKey, { name: string; iconStyle: "rr" | "br"; label: string }> = {
-  satisfied: { name: "check", iconStyle: "br", label: "Satisfied" },
-  open: { name: "circle", iconStyle: "rr", label: "Open" },
-  contested: { name: "exclamation", iconStyle: "br", label: "Contested" },
-  foreclosed: { name: "cross", iconStyle: "br", label: "Foreclosed" },
-  not_applicable: { name: "minus", iconStyle: "br", label: "Not applicable" },
+const STATUS_GLYPH: Record<StatusKey, { Icon: Icon; weight: "regular" | "bold"; label: string }> = {
+  satisfied: { Icon: Check, weight: "bold", label: "Satisfied" },
+  open: { Icon: Circle, weight: "regular", label: "Open" },
+  contested: { Icon: Warning, weight: "bold", label: "Contested" },
+  foreclosed: { Icon: XGlyph, weight: "bold", label: "Foreclosed" },
+  not_applicable: { Icon: Minus, weight: "bold", label: "Not applicable" },
 };
 
 // ────────────────────────────────────────────────────────────────────
-// Per-kind eyebrow label + icon (TypeIcon equivalents). Matches the
-// Argmap Components reference: rootQuestion=interrogation,
-// checkpoint=diamond, term=hashtag, authority=scale, conclusion=flag,
-// logicalGate=rhombus.
+// Per-kind eyebrow label + icon (TypeIcon equivalents). Phosphor picks
+// per docs/handoff/ui_overhaul_mapping_v1.md:
+//   rootQuestion/subQuestion=Question, term=Hash, interpretation=TreeStructure,
+//   checkpoint=Diamond, conclusion=Flag, authority=Scales.
 // ────────────────────────────────────────────────────────────────────
-const KIND_EYEBROW: Record<NodeFrameVariant, { label: string; icon: string } | null> = {
-  root_question: { label: "Root question", icon: "interrogation" },
-  sub_question: { label: "Sub-question", icon: "interrogation" },
-  term: { label: "Term", icon: "hashtag" },
-  interpretation: { label: "Interpretation", icon: "chart-tree" },
-  checkpoint: { label: "Checkpoint", icon: "diamond" },
+const KIND_EYEBROW: Record<NodeFrameVariant, { label: string; Icon: Icon } | null> = {
+  root_question: { label: "Root question", Icon: Question },
+  sub_question: { label: "Sub-question", Icon: Question },
+  term: { label: "Term", Icon: Hash },
+  interpretation: { label: "Interpretation", Icon: TreeStructure },
+  checkpoint: { label: "Checkpoint", Icon: Diamond },
   logical_gate: null, // gate is its own visual — no eyebrow
-  conclusion: { label: "Conclusion", icon: "flag" },
-  authority: { label: "Authority", icon: "scale" },
+  conclusion: { label: "Conclusion", Icon: Flag },
+  authority: { label: "Authority", Icon: Scales },
   premise_pill: null, // pill renders inline — no eyebrow
 };
 
@@ -288,13 +300,13 @@ export function NodeFrame({
       >
         <div className="cn-status">
           <span className="cn-status-left">
-            <UIcon name={statusGlyph.name} iconStyle={statusGlyph.iconStyle} size={11} />
+            <statusGlyph.Icon size={11} weight={statusGlyph.weight} aria-hidden />
             {statusGlyph.label}
           </span>
           <span className="cn-status-right">
             {effectiveSubflag && (
               <span className="cn-subflag" data-flag={effectiveSubflag}>
-                <UIcon name="scale" iconStyle="rr" size={9} />
+                <Scales size={9} weight="regular" aria-hidden />
                 {effectiveSubflag === "binding" ? "B" : "P"}
               </span>
             )}
@@ -303,7 +315,7 @@ export function NodeFrame({
         <div className="cn-body">
           {eyebrow && (
             <span className="cn-eyebrow">
-              <UIcon name={eyebrow.icon} iconStyle="rr" size={10} />
+              <eyebrow.Icon size={10} weight="regular" aria-hidden />
               {eyebrow.label}
             </span>
           )}

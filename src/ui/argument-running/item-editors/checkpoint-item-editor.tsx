@@ -1,7 +1,9 @@
 import * as React from "react";
 import type { Checkpoint, CheckpointOption } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Label } from "#components/ui/label";
+import { RadioGroup, RadioGroupItem } from "#components/ui/radio-group";
 import { PremiseAuthoringSection, type PremiseAuthoringResult } from "./premise-authoring-section";
 import { AuthorityAttachmentSection } from "./authority-attachment-section";
 import { NotesField } from "./notes-field";
@@ -88,67 +90,37 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
           on_close();
         }
       }}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-        padding: "var(--space-3)",
-      }}
+      className="flex flex-col gap-3 p-3"
     >
-      <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "var(--font-size-base)",
-            color: "var(--color-text-primary)",
-          }}
-        >
-          {node.question}
-        </h3>
-        <span className="argmap-section-heading">Checkpoint · {node.answer_type}</span>
+      <header className="flex flex-col gap-1">
+        <h3 className="m-0 text-base text-foreground">{node.question}</h3>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Checkpoint · {node.answer_type}
+        </span>
       </header>
 
-      <fieldset
-        style={{
-          border: "var(--border-thin) solid var(--color-border-tertiary)",
-          borderRadius: "var(--border-radius-md)",
-          padding: "var(--space-2)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-1)",
-        }}
-      >
-        <legend
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-secondary)",
-            padding: "0 var(--space-1)",
-          }}
+      <fieldset className="flex flex-col gap-1 rounded-md border p-2">
+        <legend className="px-1 text-xs text-muted-foreground">Answer</legend>
+        <RadioGroup
+          value={selected_option_id ?? ""}
+          onValueChange={(v) => setSelectedOptionId(v)}
+          className="gap-1"
         >
-          Answer
-        </legend>
-        {node.options.map((opt: CheckpointOption) => (
-          <label
-            key={opt.id}
-            data-testid={`checkpoint-answer-${opt.id}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              fontSize: "var(--font-size-xs)",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="radio"
-              name={`checkpoint-${node.id}`}
-              value={opt.id}
-              checked={selected_option_id === opt.id}
-              onChange={() => setSelectedOptionId(opt.id)}
-            />
-            {opt.label}
-          </label>
-        ))}
+          {node.options.map((opt: CheckpointOption) => {
+            const radio_id = `checkpoint-${node.id}-${opt.id}`;
+            return (
+              <Label
+                key={opt.id}
+                htmlFor={radio_id}
+                data-testid={`checkpoint-answer-${opt.id}`}
+                className="flex cursor-pointer items-center gap-1 text-xs font-normal"
+              >
+                <RadioGroupItem id={radio_id} value={opt.id} />
+                {opt.label}
+              </Label>
+            );
+          })}
+        </RadioGroup>
       </fieldset>
 
       <PremiseAuthoringSection
@@ -168,36 +140,28 @@ export function CheckpointItemEditor(props: CheckpointItemEditorProps): React.Re
       {error ? (
         <div
           data-testid="checkpoint-editor-error"
+          className="rounded-md p-2 text-xs"
           style={{
-            padding: "var(--space-2)",
             background: "var(--color-background-danger)",
             color: "var(--color-text-danger)",
-            borderRadius: "var(--border-radius-md)",
-            fontSize: "var(--font-size-xs)",
           }}
         >
           {error}
         </div>
       ) : null}
 
-      <footer
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "var(--space-1)",
-        }}
-      >
+      <footer className="flex justify-end gap-1">
         <Button
-          variant="secondary"
-          size="md"
+          type="button"
+          variant="outline"
           data-testid="checkpoint-editor-cancel"
           onClick={on_close}
         >
           Cancel
         </Button>
         <Button
-          variant="primary"
-          size="md"
+          type="button"
+          variant="default"
           data-testid="checkpoint-editor-save"
           onClick={on_save}
           disabled={!can_save}

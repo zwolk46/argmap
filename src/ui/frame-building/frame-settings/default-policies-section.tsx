@@ -1,9 +1,10 @@
 import { useState, type ReactElement } from "react";
+import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import type { SatisfactionPolicy } from "@/schema";
 import { DEFAULT_SATISFACTION_POLICIES, resolveEffectivePolicy, toModeFlavor } from "@/schema";
 import type { SatisfactionPolicyKey } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button } from "../../primitives";
+import { Button } from "#components/ui/button";
 import { ConditionList } from "../right-pane/condition-list";
 
 const POLICY_NODE_TYPES: SatisfactionPolicyKey[] = [
@@ -38,48 +39,25 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
   }
 
   return (
-    <div
-      style={{
-        border: "1px solid var(--color-border-subtle)",
-        borderRadius: "var(--radius-sm)",
-        overflow: "hidden",
-      }}
-    >
+    <div className="overflow-hidden rounded-md border border-border">
       {/* KEEP RAW: accordion-header button with bespoke layout (full-width row, two ends), not the standard Button taxonomy. */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        style={{
-          width: "100%",
-          padding: "var(--space-2) var(--space-3)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "var(--color-surface-pane)",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-        }}
+        className="flex w-full cursor-pointer items-center justify-between bg-muted px-3 py-2 text-left hover:bg-muted/80"
       >
-        <span className="argmap-section-heading">{node_type}</span>
-        <span
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-tertiary)",
-          }}
-        >
-          {frame_default ? "custom" : "library default"} {expanded ? "▲" : "▼"}
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {node_type}
+        </span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground/80">
+          {frame_default ? "custom" : "library default"}
+          {expanded ? <CaretDown size={12} /> : <CaretRight size={12} />}
         </span>
       </button>
 
       {expanded && (
-        <div
-          style={{
-            padding: "var(--space-3)",
-            background: "var(--color-surface-elevated)",
-          }}
-        >
+        <div className="bg-card p-3">
           <ConditionList
             policy={frame_default ?? effective}
             on_change={handleChange}
@@ -87,10 +65,10 @@ function NodeTypeDefaultEditor({ node_type }: { node_type: SatisfactionPolicyKey
           />
           {frame_default && (
             <Button
-              variant="secondary"
+              variant="outline"
               size="sm"
               onClick={() => handleChange(DEFAULT_SATISFACTION_POLICIES[node_type])}
-              style={{ marginTop: "var(--space-2)" }}
+              className="mt-2"
             >
               Reset to library default
             </Button>
@@ -107,15 +85,11 @@ export function DefaultPoliciesSection(): ReactElement | null {
   if (!frame) return null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-      <h3 className="argmap-section-heading">Default satisfaction policies</h3>
-      <p
-        style={{
-          margin: 0,
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-tertiary)",
-        }}
-      >
+    <div className="flex flex-col gap-2">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Default satisfaction policies
+      </h3>
+      <p className="m-0 text-xs text-muted-foreground/80">
         These apply to all new nodes of each type in this frame unless overridden per-instance.
       </p>
       {POLICY_NODE_TYPES.map((nt) => (

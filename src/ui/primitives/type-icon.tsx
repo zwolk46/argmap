@@ -1,25 +1,36 @@
 import type { ReactElement } from "react";
+import {
+  type Icon,
+  Question,
+  ListChecks,
+  TextT,
+  ChatCircleDots,
+  Flag,
+  CirclesThreePlus,
+  Trophy,
+  BookOpen,
+  Circle,
+  ArrowRight,
+} from "@phosphor-icons/react";
 import type { NodeType } from "@/schema";
-import { UIcon } from "./uicon";
 
 /**
  * TypeIcon — per-node-type glyph used in the palette, the canvas nodes,
  * the Inspector header, the outline tree, and anywhere a node type is
- * surfaced. We use the same Flaticon UI icon set (`fi fi-rr-*`) as the
- * rest of the app so chrome and content share one visual vocabulary —
- * the previous custom SVGs read as a separate hand on the same screen.
+ * surfaced. Icons are now drawn from Phosphor so chrome and content share
+ * one visual vocabulary with the new shadcn primitives.
  *
  * Icon choices are semantic (not just "looks ok"):
- *   RootQuestion   — interrogation  : the seeded question that opens the frame
- *   SubQuestion    — list-check     : decomposed sub-claims, a checklist of branches
- *   Term           — hashtag        : a named term whose definition is contested
- *   Interpretation — comment-alt-middle : one reading of a term — a competing voice
- *   Checkpoint     — flag-alt       : the binary/branching decision point
- *   LogicalGate    — circuit        : Boolean composition of inputs
- *   Conclusion     — trophy         : the resolved end of the path
- *   Authority      — book-alt       : a cited source
- *   Premise        — circle-small   : an individual fact brought into the session
- *   edge           — arrow-right    : a directional connection
+ *   RootQuestion   — Question         : the seeded question that opens the frame
+ *   SubQuestion    — ListChecks       : decomposed sub-claims, a checklist of branches
+ *   Term           — TextT            : a named term whose definition is contested
+ *   Interpretation — ChatCircleDots   : one reading of a term — a competing voice
+ *   Checkpoint     — Flag             : the binary/branching decision point
+ *   LogicalGate    — CirclesThreePlus : Boolean composition of inputs (Phosphor has no clean "circuit")
+ *   Conclusion     — Trophy           : the resolved end of the path
+ *   Authority      — BookOpen         : a cited source
+ *   Premise        — Circle           : an individual fact brought into the session
+ *   edge           — ArrowRight       : a directional connection
  */
 export interface TypeIconProps {
   node_type: NodeType | "premise_pill" | "edge";
@@ -27,18 +38,18 @@ export interface TypeIconProps {
   color?: string;
 }
 
-const ICON_NAME_FOR: Record<string, string> = {
-  RootQuestion: "interrogation",
-  SubQuestion: "list-check",
-  Term: "hashtag",
-  Interpretation: "comment-alt-middle",
-  Checkpoint: "flag-alt",
-  LogicalGate: "circuit",
-  Conclusion: "trophy",
-  Authority: "book-alt",
-  Premise: "circle-small",
-  premise_pill: "circle-small",
-  edge: "arrow-right",
+const ICON_FOR: Record<string, Icon> = {
+  RootQuestion: Question,
+  SubQuestion: ListChecks,
+  Term: TextT,
+  Interpretation: ChatCircleDots,
+  Checkpoint: Flag,
+  LogicalGate: CirclesThreePlus,
+  Conclusion: Trophy,
+  Authority: BookOpen,
+  Premise: Circle,
+  premise_pill: Circle,
+  edge: ArrowRight,
 };
 
 // Visually-hidden text fallback for the legacy text-glyph testContent contract.
@@ -57,7 +68,7 @@ const TEXT_FALLBACK: Record<string, string> = {
 };
 
 export function TypeIcon({ node_type, size = 14, color }: TypeIconProps): ReactElement {
-  const icon_name = ICON_NAME_FOR[node_type] ?? "circle-small";
+  const Glyph = ICON_FOR[node_type] ?? Circle;
   const fallback = TEXT_FALLBACK[node_type] ?? "?";
   return (
     <span
@@ -75,7 +86,7 @@ export function TypeIcon({ node_type, size = 14, color }: TypeIconProps): ReactE
         position: "relative",
       }}
     >
-      <UIcon name={icon_name} size={size} />
+      <Glyph size={size} weight="regular" />
       <span
         aria-hidden="true"
         style={{

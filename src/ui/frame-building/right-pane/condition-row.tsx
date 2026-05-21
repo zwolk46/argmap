@@ -1,8 +1,15 @@
-import * as React from "react";
 import type { ReactElement } from "react";
+import { X } from "@phosphor-icons/react";
 import type { Condition, ConditionKind, BurdenLevel } from "@/schema";
 import { IconButton } from "../../primitives";
-import { UIcon } from "../../primitives/uicon";
+import { Input } from "#components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#components/ui/select";
 
 export interface ConditionRowProps {
   condition: Condition;
@@ -41,52 +48,33 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
   const { condition, on_change, on_remove } = props;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "var(--space-2)",
-        padding: "var(--space-2)",
-        background: "var(--color-surface-pane)",
-        borderRadius: "var(--radius-sm)",
-        marginBottom: "var(--space-1)",
-      }}
-    >
+    <div className="mb-1 flex items-start gap-2 rounded-md bg-muted p-2">
       {/* Kind pill */}
-      <span
-        style={{
-          padding: "2px var(--space-2)",
-          background: "var(--color-surface-hover)",
-          borderRadius: "var(--radius-pill)",
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-primary)",
-          flexShrink: 0,
-          fontWeight: "var(--font-weight-medium)",
-        }}
-      >
+      <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-foreground">
         {KIND_LABELS[condition.kind] ?? condition.kind}
       </span>
 
       {/* Parameters */}
-      <div style={{ flex: 1 }}>
+      <div className="flex-1">
         {condition.kind === "burden_met" && (
-          <select
+          <Select
             value={condition.level}
-            onChange={(e) =>
-              on_change({ ...condition, level: e.currentTarget.value as BurdenLevel })
-            }
-            className="argmap-input"
-            style={INPUT_STYLE}
+            onValueChange={(value) => on_change({ ...condition, level: value as BurdenLevel })}
           >
-            {BURDEN_LEVELS.map((l) => (
-              <option key={l} value={l}>
-                {l.replace(/_/g, " ")}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-7 w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BURDEN_LEVELS.map((l) => (
+                <SelectItem key={l} value={l}>
+                  {l.replace(/_/g, " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         {condition.kind === "premise_kind_in" && (
-          <input
+          <Input
             type="text"
             value={condition.kinds.join(", ")}
             onChange={(e) =>
@@ -99,24 +87,15 @@ export function ConditionRow(props: ConditionRowProps): ReactElement {
               })
             }
             placeholder="Comma-separated kinds…"
-            className="argmap-input"
-            style={INPUT_STYLE}
+            className="h-7 px-2 text-xs"
           />
         )}
       </div>
 
       {/* Remove button */}
       <IconButton aria-label="Remove condition" onClick={on_remove} size="sm">
-        <UIcon name="times" size={14} />
+        <X size={14} />
       </IconButton>
     </div>
   );
 }
-
-// Compact density override for inline condition-row layout: tighter padding
-// and smaller font than the default .argmap-input, so multiple condition
-// rows fit cleanly in the inspector pane.
-const INPUT_STYLE: React.CSSProperties = {
-  padding: "2px var(--space-1)",
-  fontSize: "var(--font-size-xs)",
-};

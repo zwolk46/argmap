@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { render, fireEvent, screen } from "@testing-library/react";
 import { OrphanCandidateRow } from "@/ui/session-migration/orphan-candidate-row";
 import type { OrphanCandidate } from "@/state";
 
@@ -29,7 +29,7 @@ describe("OrphanCandidateRow", () => {
 
   it("switching to reattach pre-fills target_node_id AND carries source_node_id (P0-6)", () => {
     const cb = vi.fn();
-    const { getByText } = render(
+    const { getByTestId } = render(
       <OrphanCandidateRow
         candidate={candidate({
           reattach_candidates: [
@@ -41,7 +41,10 @@ describe("OrphanCandidateRow", () => {
         onResolutionChanged={cb}
       />,
     );
-    fireEvent.click(getByText("Reattach"));
+    // shadcn DropdownMenu (Radix) opens on pointerdown button=0, not click.
+    // Menu items are portaled to document.body, so use screen.*.
+    fireEvent.pointerDown(getByTestId("resolution-picker-trigger"), { button: 0 });
+    fireEvent.click(screen.getByTestId("resolution-option-reattach"));
     expect(cb).toHaveBeenCalledWith({
       kind: "reattach",
       source_node_id: "n-ghost",
@@ -51,7 +54,7 @@ describe("OrphanCandidateRow", () => {
 
   it("switching from reattach to discard drops target_node_id but preserves source_node_id", () => {
     const cb = vi.fn();
-    const { getByText } = render(
+    const { getByTestId } = render(
       <OrphanCandidateRow
         candidate={candidate({
           reattach_candidates: [{ target_node_id: "t1", label: "T1" }],
@@ -60,7 +63,8 @@ describe("OrphanCandidateRow", () => {
         onResolutionChanged={cb}
       />,
     );
-    fireEvent.click(getByText("Discard"));
+    fireEvent.pointerDown(getByTestId("resolution-picker-trigger"), { button: 0 });
+    fireEvent.click(screen.getByTestId("resolution-option-discard"));
     expect(cb).toHaveBeenCalledWith({ kind: "discard", source_node_id: "n-ghost" });
   });
 

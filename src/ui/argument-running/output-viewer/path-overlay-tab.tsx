@@ -64,7 +64,7 @@ export function PathOverlayTab(props: PathOverlayTabProps): React.ReactElement {
   const overlay = React.useMemo(() => buildArgumentOverlayProjection(session), [session]);
 
   return (
-    <div data-testid="path-overlay-tab" style={{ width: "100%", height: "100%" }}>
+    <div data-testid="path-overlay-tab" className="h-full w-full">
       <FrameCanvas
         frame_version={frame_version}
         layout_result={layout_result}

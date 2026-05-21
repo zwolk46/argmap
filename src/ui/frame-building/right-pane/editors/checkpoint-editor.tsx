@@ -1,5 +1,5 @@
-import * as React from "react";
 import type { ReactElement } from "react";
+import { Plus } from "@phosphor-icons/react";
 import type {
   Checkpoint,
   CheckpointAnswerType,
@@ -8,30 +8,25 @@ import type {
   Node,
 } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button, SegmentedToggle } from "../../../primitives";
+import { SegmentedToggle } from "../../../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Textarea } from "#components/ui/textarea";
+import { Label } from "#components/ui/label";
+import { Checkbox } from "#components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#components/ui/select";
 import { FieldAttributionDecoration } from "../field-attribution-decoration";
 
 export interface CheckpointEditorProps {
   node: Checkpoint;
   on_pick_option_target: (option_id: string) => void;
 }
-
-const SECTION_STYLE: React.CSSProperties = { marginBottom: "var(--space-3)" };
-
-const INPUT_STYLE: React.CSSProperties = {
-  resize: "vertical",
-};
-
-const CHIP_STYLE: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "var(--space-1)",
-  padding: "2px var(--space-2)",
-  background: "var(--color-primary-subtle)",
-  color: "var(--color-primary)",
-  borderRadius: "var(--radius-full)",
-  fontSize: "var(--font-size-sm)",
-};
 
 const ANSWER_TYPE_OPTIONS: { value: CheckpointAnswerType; label: string }[] = [
   { value: "boolean", label: "Yes / No" },
@@ -46,6 +41,8 @@ const BURDEN_LEVELS: { value: BurdenLevel; label: string }[] = [
   { value: "scintilla", label: "Scintilla" },
   { value: "substantial_evidence", label: "Substantial Evidence" },
 ];
+
+const BURDEN_LEVEL_NONE = "__none__";
 
 export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
   const { node, on_pick_option_target } = props;
@@ -66,22 +63,18 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
   }
 
   return (
-    <div>
-      <div style={SECTION_STYLE}>
-        <FieldAttributionDecoration node_id={node.id} field_path="question" label="Question">
-          <textarea
-            rows={3}
-            className="argmap-input"
-            style={INPUT_STYLE}
-            defaultValue={node.question}
-            onBlur={(e) => patch({ question: e.currentTarget.value })}
-          />
-        </FieldAttributionDecoration>
-      </div>
+    <div className="flex flex-col gap-3">
+      <FieldAttributionDecoration node_id={node.id} field_path="question" label="Question">
+        <Textarea
+          rows={3}
+          defaultValue={node.question}
+          onBlur={(e) => patch({ question: e.currentTarget.value })}
+        />
+      </FieldAttributionDecoration>
 
-      <div style={SECTION_STYLE}>
-        <label className="argmap-section-heading">Answer Type</label>
-        <div style={{ marginTop: "var(--space-1)" }}>
+      <div className="flex flex-col gap-1">
+        <Label>Answer Type</Label>
+        <div>
           <SegmentedToggle
             options={ANSWER_TYPE_OPTIONS}
             value={node.answer_type}
@@ -92,31 +85,20 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
       </div>
 
       {(node.answer_type === "multiple_choice" || node.answer_type === "graded") && (
-        <div style={SECTION_STYLE}>
-          <label className="argmap-section-heading">Options</label>
-          <div
-            style={{
-              marginTop: "var(--space-1)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-2)",
-            }}
-          >
+        <div className="flex flex-col gap-1">
+          <Label>Options</Label>
+          <div className="flex flex-col gap-2">
             {node.options.map((opt) => (
-              <div
-                key={opt.id}
-                style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
-              >
-                <input
+              <div key={opt.id} className="flex items-center gap-2">
+                <Input
                   type="text"
-                  className="argmap-input"
-                  style={{ flex: 1 }}
+                  className="flex-1"
                   defaultValue={opt.label}
                   onBlur={(e) => updateOption(opt.id, { label: e.currentTarget.value })}
                   placeholder="Option label"
                 />
                 {opt.target_node_id ? (
-                  <span style={CHIP_STYLE}>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
                     <span>{opt.target_node_id}</span>
                   </span>
                 ) : (
@@ -124,9 +106,10 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
                     variant="ghost"
                     size="sm"
                     onClick={() => on_pick_option_target(opt.id)}
-                    style={{ whiteSpace: "nowrap" }}
+                    className="whitespace-nowrap"
                   >
-                    + Target
+                    <Plus size={12} />
+                    Target
                   </Button>
                 )}
               </div>
@@ -137,43 +120,36 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
 
       {mode === "legal" && (
         <>
-          <div style={SECTION_STYLE}>
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                defaultChecked={node.requires_authority}
-                onChange={(e) => patch({ requires_authority: e.currentTarget.checked })}
-              />
-              <span className="argmap-section-heading">Requires Authority</span>
-            </label>
-          </div>
+          <Label className="flex cursor-pointer items-center gap-2">
+            <Checkbox
+              defaultChecked={node.requires_authority}
+              onCheckedChange={(checked) => patch({ requires_authority: checked === true })}
+            />
+            <span>Requires Authority</span>
+          </Label>
 
-          <div style={SECTION_STYLE}>
-            <label className="argmap-section-heading">Burden Level</label>
-            <select
-              className="argmap-input"
-              style={{ marginTop: "var(--space-1)" }}
-              defaultValue={node.burden_level ?? ""}
-              onChange={(e) =>
+          <div className="flex flex-col gap-1">
+            <Label>Burden Level</Label>
+            <Select
+              defaultValue={node.burden_level ?? BURDEN_LEVEL_NONE}
+              onValueChange={(value) =>
                 patch({
-                  burden_level: (e.currentTarget.value || undefined) as BurdenLevel | undefined,
+                  burden_level: value === BURDEN_LEVEL_NONE ? undefined : (value as BurdenLevel),
                 })
               }
             >
-              <option value="">— None —</option>
-              {BURDEN_LEVELS.map((bl) => (
-                <option key={bl.value} value={bl.value}>
-                  {bl.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={BURDEN_LEVEL_NONE}>— None —</SelectItem>
+                {BURDEN_LEVELS.map((bl) => (
+                  <SelectItem key={bl.value} value={bl.value}>
+                    {bl.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </>
       )}

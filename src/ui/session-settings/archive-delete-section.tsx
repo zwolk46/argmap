@@ -1,7 +1,11 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
-import { Button, ConfirmDialog } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Label } from "#components/ui/label";
+import { Separator } from "#components/ui/separator";
+import { ConfirmDialog } from "../primitives";
 import { useOptionalToast } from "../primitives/toast";
 
 // §9 #30. Auto-generated session titles include the parent frame title, which
@@ -24,6 +28,7 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
   const toast = useOptionalToast();
   const [delete_open, setDeleteOpen] = React.useState(false);
   const [confirm_text, setConfirmText] = React.useState("");
+  const confirm_input_id = React.useId();
 
   function toggleArchive(): void {
     const next_archived = !archived;
@@ -51,41 +56,26 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
   }
 
   return (
-    <section
-      data-testid="archive-delete-section"
-      style={{
-        marginTop: "var(--space-6)",
-        paddingTop: "var(--space-4)",
-        borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-      }}
-    >
-      <header
-        style={{
-          fontSize: "var(--font-size-sm)",
-          fontWeight: "var(--font-weight-medium)",
-          marginBottom: "var(--space-2)",
-        }}
-      >
-        Archive and Delete
-      </header>
-      <Button
-        variant="secondary"
-        size="md"
-        data-testid="archive-toggle"
-        onClick={toggleArchive}
-        title="Archived sessions are hidden from the default open-existing-session list"
-        style={{ marginRight: "var(--space-2)" }}
-      >
-        {archived ? "Unarchive" : "Archive"}
-      </Button>
-      <Button
-        variant="destructive"
-        size="md"
-        data-testid="delete-session-button"
-        onClick={() => setDeleteOpen(true)}
-      >
-        Delete session
-      </Button>
+    <section data-testid="archive-delete-section" className="mt-6 pt-4">
+      <Separator className="mb-4" />
+      <header className="mb-2 text-sm font-medium">Archive and Delete</header>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="secondary"
+          data-testid="archive-toggle"
+          onClick={toggleArchive}
+          title="Archived sessions are hidden from the default open-existing-session list"
+        >
+          {archived ? "Unarchive" : "Archive"}
+        </Button>
+        <Button
+          variant="destructive"
+          data-testid="delete-session-button"
+          onClick={() => setDeleteOpen(true)}
+        >
+          Delete session
+        </Button>
+      </div>
       <ConfirmDialog
         open={delete_open}
         // §9 #30: cap the interpolated title so an auto-generated 200-char
@@ -107,25 +97,21 @@ export function ArchiveDeleteSection(props: ArchiveDeleteSectionProps): ReactEle
       >
         <div data-testid="delete-confirm-body">
           <p>Deleting this session and all its versions cannot be undone.</p>
-          <label style={{ display: "block", marginTop: "var(--space-2)" }}>
-            Type the session title to confirm:
-            <input
+          <div className="mt-2">
+            <Label htmlFor={confirm_input_id} className="text-sm font-normal">
+              Type the session title to confirm:
+            </Label>
+            <Input
+              id={confirm_input_id}
               data-testid="delete-confirm-input"
               type="text"
               value={confirm_text}
               onChange={(e) => setConfirmText(e.target.value)}
-              className="argmap-input"
-              style={{ marginTop: "var(--space-1)" }}
+              className="mt-1"
             />
-          </label>
+          </div>
           {confirm_text.length > 0 && !confirm_matches ? (
-            <p
-              style={{
-                marginTop: "var(--space-1)",
-                color: "var(--color-severity-warning)",
-                fontSize: "var(--font-size-xs)",
-              }}
-            >
+            <p className="mt-1 text-xs text-[var(--color-severity-warning)]">
               Type the title (case- and whitespace-insensitive) to enable Delete.
             </p>
           ) : null}

@@ -1,12 +1,9 @@
 import type { ReactElement } from "react";
+import { Plus } from "@phosphor-icons/react";
 import type { Position } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button } from "../../primitives";
-
-const INPUT_STYLE: React.CSSProperties = {
-  flex: 1,
-  minWidth: 0,
-};
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
 
 export function PositionsSection(): ReactElement | null {
   const frame = useFrameStore((s) => s.frame);
@@ -45,22 +42,13 @@ export function PositionsSection(): ReactElement | null {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-      <h3
-        className="argmap-section-heading"
-        style={{ display: "block", marginBottom: "var(--space-1)" }}
-      >
+    <div className="flex flex-col gap-4">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Positions
       </h3>
 
       {positions.length === 0 && (
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-tertiary)",
-            fontStyle: "italic",
-          }}
-        >
+        <div className="text-sm italic text-muted-foreground/80">
           No positions defined. Add one to assign argument stances.
         </div>
       )}
@@ -68,22 +56,13 @@ export function PositionsSection(): ReactElement | null {
       {positions.map((pos) => (
         <div
           key={pos.id}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-            padding: "var(--space-3)",
-            background: "var(--color-surface-pane)",
-            borderRadius: "var(--radius-sm)",
-            border: "var(--border-hairline) solid var(--color-border-subtle)",
-          }}
+          className="flex flex-col gap-2 rounded-md border border-border bg-muted p-3"
         >
-          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-            <input
+          <div className="flex items-center gap-2">
+            <Input
               type="text"
               value={pos.label}
-              className="argmap-input"
-              style={INPUT_STYLE}
+              className="min-w-0 flex-1"
               placeholder="Position label"
               onChange={(e) => updateLabel(pos.id, e.target.value)}
               onBlur={(e) => updateLabel(pos.id, e.target.value.trim() || "Untitled")}
@@ -93,24 +72,24 @@ export function PositionsSection(): ReactElement | null {
               size="sm"
               onClick={() => removePosition(pos.id)}
               aria-label={`Remove position "${pos.label}"`}
-              style={{ flexShrink: 0 }}
+              className="shrink-0"
             >
               Remove
             </Button>
           </div>
-          <input
+          <Input
             type="text"
             value={pos.description ?? ""}
-            className="argmap-input"
-            style={INPUT_STYLE}
+            className="min-w-0 flex-1"
             placeholder="Description (optional)"
             onChange={(e) => updateDescription(pos.id, e.target.value)}
           />
         </div>
       ))}
 
-      <Button variant="ghost" size="sm" onClick={addPosition} style={{ alignSelf: "flex-start" }}>
-        + Add position
+      <Button variant="ghost" size="sm" onClick={addPosition} className="self-start">
+        <Plus size={12} />
+        Add position
       </Button>
     </div>
   );

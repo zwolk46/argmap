@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, act } from "@testing-library/react";
+import { render, act, screen } from "@testing-library/react";
 import { RestoreConfirmDialog } from "@/ui/version-history/restore-confirm-dialog";
 
 const mockRestoreFrameVersion = vi.fn().mockResolvedValue(undefined);
@@ -37,6 +37,10 @@ async function flush(): Promise<void> {
   });
 }
 
+// Note: AlertDialog (shadcn / Radix) portals its content to document.body, so
+// the container returned by `render()` does not own the dialog DOM. Use the
+// document-scoped `screen` helper for all queries inside the dialog body.
+
 describe("RestoreConfirmDialog", () => {
   beforeEach(() => {
     mockRestoreFrameVersion.mockClear();
@@ -46,7 +50,7 @@ describe("RestoreConfirmDialog", () => {
 
   it("renders the standard branching copy when open", async () => {
     mockListSessionsForFrame.mockResolvedValue([]);
-    const { getByTestId } = render(
+    render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -59,14 +63,14 @@ describe("RestoreConfirmDialog", () => {
       />,
     );
     await flush();
-    const body = getByTestId("restore-confirm-body");
+    const body = screen.getByTestId("restore-confirm-body");
     expect(body.textContent).toContain("Restoring version 3");
     expect(body.textContent).toContain("(v6)");
   });
 
   it("§8 #2: shows the affected-sessions advisory for frame restores when 1+ sessions exist", async () => {
     mockListSessionsForFrame.mockResolvedValue([{ id: "s-1" }, { id: "s-2" }, { id: "s-3" }]);
-    const { getByTestId } = render(
+    render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -79,14 +83,14 @@ describe("RestoreConfirmDialog", () => {
       />,
     );
     await flush();
-    const advisory = getByTestId("restore-confirm-sessions-advisory");
+    const advisory = screen.getByTestId("restore-confirm-sessions-advisory");
     expect(advisory.textContent).toContain("3 argument sessions");
     expect(mockListSessionsForFrame).toHaveBeenCalledWith("f-1");
   });
 
   it("§8 #2: pluralizes correctly for a single affected session", async () => {
     mockListSessionsForFrame.mockResolvedValue([{ id: "s-1" }]);
-    const { getByTestId } = render(
+    render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -99,14 +103,14 @@ describe("RestoreConfirmDialog", () => {
       />,
     );
     await flush();
-    const advisory = getByTestId("restore-confirm-sessions-advisory");
+    const advisory = screen.getByTestId("restore-confirm-sessions-advisory");
     expect(advisory.textContent).toContain("1 argument session");
     expect(advisory.textContent).not.toContain("1 argument sessions");
   });
 
   it("§8 #2: omits the advisory when zero sessions are affected", async () => {
     mockListSessionsForFrame.mockResolvedValue([]);
-    const { queryByTestId } = render(
+    render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -120,11 +124,11 @@ describe("RestoreConfirmDialog", () => {
     );
     await flush();
     expect(mockListSessionsForFrame).toHaveBeenCalledWith("f-1");
-    expect(queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
+    expect(screen.queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
   });
 
   it("§8 #2: does not fetch sessions for a session restore", async () => {
-    const { queryByTestId } = render(
+    render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -137,11 +141,11 @@ describe("RestoreConfirmDialog", () => {
     );
     await flush();
     expect(mockListSessionsForFrame).not.toHaveBeenCalled();
-    expect(queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
+    expect(screen.queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
   });
 
   it("§8 #2: does not fetch sessions when frame_id is missing for a frame restore", async () => {
-    const { queryByTestId } = render(
+    render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -154,12 +158,12 @@ describe("RestoreConfirmDialog", () => {
     );
     await flush();
     expect(mockListSessionsForFrame).not.toHaveBeenCalled();
-    expect(queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
+    expect(screen.queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
   });
 
   it("§8 #2: suppresses the advisory if listSessionsForFrame rejects", async () => {
     mockListSessionsForFrame.mockRejectedValue(new Error("offline"));
-    const { queryByTestId } = render(
+    render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -173,12 +177,12 @@ describe("RestoreConfirmDialog", () => {
     );
     await flush();
     expect(mockListSessionsForFrame).toHaveBeenCalledWith("f-1");
-    expect(queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
+    expect(screen.queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
   });
 
   it("§8 #2: resets the affected-sessions state when the dialog closes", async () => {
     mockListSessionsForFrame.mockResolvedValue([{ id: "s-1" }, { id: "s-2" }]);
-    const { getByTestId, queryByTestId, rerender } = render(
+    const { rerender } = render(
       <RestoreConfirmDialog
         open
         onClose={() => {}}
@@ -191,8 +195,8 @@ describe("RestoreConfirmDialog", () => {
       />,
     );
     await flush();
-    expect(getByTestId("restore-confirm-sessions-advisory")).toBeTruthy();
-    // ConfirmDialog returns null when open=false, so the advisory unmounts.
+    expect(screen.getByTestId("restore-confirm-sessions-advisory")).toBeTruthy();
+    // The dialog returns null when open=false, so the advisory unmounts.
     rerender(
       <RestoreConfirmDialog
         open={false}
@@ -205,6 +209,6 @@ describe("RestoreConfirmDialog", () => {
         on_restored={() => {}}
       />,
     );
-    expect(queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
+    expect(screen.queryByTestId("restore-confirm-sessions-advisory")).toBeNull();
   });
 });

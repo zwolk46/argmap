@@ -47,37 +47,16 @@ export function ValidationIndicator({
   }
 
   return (
-    // KEEP RAW: pill-shaped status indicator with severity-driven tone; not expressible via Button variants.
+    // Pill-shaped status indicator with severity-driven tone; not expressible
+    // via shadcn Button variants (custom color tied to severity tokens).
     <button
       type="button"
       data-testid="validation-indicator"
+      data-severity={severity}
       aria-label={`Validation: ${label}`}
       onClick={() => onOpenDrawer?.(results)}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "var(--space-1)",
-        height: "26px",
-        padding: "0 var(--space-2)",
-        background: "transparent",
-        border: "var(--border-thin) solid transparent",
-        borderRadius: "var(--radius-pill)",
-        cursor: "pointer",
-        fontSize: "var(--font-size-xs)",
-        fontWeight: "var(--font-weight-medium)",
-        color: tone,
-        fontFamily: "var(--font-sans)",
-        transition:
-          "background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard)",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "var(--color-surface-hover)";
-        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-border-subtle)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "transparent";
-        (e.currentTarget as HTMLElement).style.borderColor = "transparent";
-      }}
+      className="inline-flex items-center gap-1 h-[26px] px-2 rounded-full bg-transparent border border-transparent cursor-pointer text-xs font-medium font-sans transition-colors hover:bg-muted/40 hover:border-border focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      style={{ color: tone }}
     >
       <SeverityIcon severity={severity} size={14} />
       <span>{label}</span>

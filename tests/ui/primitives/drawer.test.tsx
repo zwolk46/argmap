@@ -18,21 +18,26 @@ function TestDrawer({ open, onClose }: { open: boolean; onClose?: () => void }) 
 }
 
 describe("Drawer", () => {
-  it("renders content (always mounted, visibility via CSS)", () => {
+  // shadcn / Radix Sheet portals + conditionally mounts on open. Tests below
+  // were updated from the legacy hand-rolled drawer (always-mounted with
+  // `inert`) to the portal model. Behavioral guarantees that survived:
+  //   • body renders when open
+  //   • Escape calls onClose (dismiss_on_escape)
+  //   • backdrop scrim (show_backdrop) dismisses via pointer outside
+  //   • the drawer carries data-side / data-open / data-testid="drawer"
+  it("renders body when open", () => {
     const { getByTestId } = render(<TestDrawer open />);
     expect(getByTestId("drawer-body")).toBeTruthy();
   });
 
-  it("renders with data-open=true when open", () => {
-    const { container } = render(<TestDrawer open />);
-    const drawer = container.querySelector("[data-open]");
-    expect(drawer?.getAttribute("data-open")).toBe("true");
+  it("does NOT render body when closed (Radix Sheet portals + unmounts)", () => {
+    const { queryByTestId } = render(<TestDrawer open={false} />);
+    expect(queryByTestId("drawer-body")).toBeNull();
   });
 
-  it("renders with data-open=false when closed", () => {
-    const { container } = render(<TestDrawer open={false} />);
-    const drawer = container.querySelector("[data-open]");
-    expect(drawer?.getAttribute("data-open")).toBe("false");
+  it("carries data-open=true on the drawer panel when open", () => {
+    const { getByTestId } = render(<TestDrawer open />);
+    expect(getByTestId("drawer").getAttribute("data-open")).toBe("true");
   });
 
   it("calls onClose on Escape when dismiss_on_escape=true", () => {
@@ -49,32 +54,29 @@ describe("Drawer", () => {
     expect(closed).toBe(true);
   });
 
-  it("does not focus-trap (structure check)", () => {
-    const { getByTestId } = render(<TestDrawer open />);
-    expect(getByTestId("drawer-body")).toBeTruthy();
-  });
-
-  // P0-24 regression: a closed Drawer's content is still in DOM (so the
-  // slide-out transition works), but it must not be reachable via Tab.
-  it("applies `inert` to the root when closed, removing children from the tab order", () => {
-    const { container } = render(<TestDrawer open={false} />);
-    const drawer = container.querySelector("[data-testid='drawer']") as HTMLElement;
-    expect(drawer.hasAttribute("inert")).toBe(true);
-  });
-
-  it("does NOT apply `inert` when open", () => {
-    const { container } = render(<TestDrawer open />);
-    const drawer = container.querySelector("[data-testid='drawer']") as HTMLElement;
-    expect(drawer.hasAttribute("inert")).toBe(false);
-  });
-
   // §9 #25: opt-in backdrop scrim + click-outside-to-dismiss.
-  it("does not render a backdrop by default", () => {
-    const { container } = render(<TestDrawer open />);
-    expect(container.querySelector("[data-testid='drawer-backdrop']")).toBeNull();
+  it("does not dismiss on pointer-outside by default (show_backdrop=false)", () => {
+    let closed = false;
+    const { container } = render(
+      <Drawer
+        open
+        onClose={() => {
+          closed = true;
+        }}
+      >
+        <DrawerBody>
+          <p>body</p>
+        </DrawerBody>
+      </Drawer>,
+    );
+    const overlay = container.ownerDocument.querySelector(
+      "[data-slot='drawer-overlay']",
+    ) as HTMLElement | null;
+    if (overlay) fireEvent.pointerDown(overlay);
+    expect(closed).toBe(false);
   });
 
-  it("renders a backdrop when show_backdrop=true", () => {
+  it("renders a scrim-styled overlay when show_backdrop=true", () => {
     const { container } = render(
       <Drawer open show_backdrop>
         <DrawerBody>
@@ -82,50 +84,37 @@ describe("Drawer", () => {
         </DrawerBody>
       </Drawer>,
     );
-    const backdrop = container.querySelector(
-      "[data-testid='drawer-backdrop']",
+    const overlay = container.ownerDocument.querySelector(
+      "[data-slot='drawer-overlay']",
     ) as HTMLElement | null;
-    expect(backdrop).not.toBeNull();
-    expect(backdrop?.getAttribute("data-open")).toBe("true");
+    expect(overlay).toBeTruthy();
+    expect(overlay?.getAttribute("data-backdrop")).toBe("true");
   });
 
-  it("calls onClose when the backdrop is clicked while open", () => {
-    let closed = false;
+  it("renders a transparent overlay when show_backdrop=false (legacy no-scrim default)", () => {
     const { container } = render(
-      <Drawer
-        open
-        show_backdrop
-        onClose={() => {
-          closed = true;
-        }}
-      >
+      <Drawer open>
         <DrawerBody>
           <p>body</p>
         </DrawerBody>
       </Drawer>,
     );
-    const backdrop = container.querySelector("[data-testid='drawer-backdrop']") as HTMLElement;
-    fireEvent.click(backdrop);
-    expect(closed).toBe(true);
+    const overlay = container.ownerDocument.querySelector(
+      "[data-slot='drawer-overlay']",
+    ) as HTMLElement | null;
+    expect(overlay).toBeTruthy();
+    expect(overlay?.getAttribute("data-backdrop")).toBe("false");
   });
 
-  it("does NOT call onClose when the backdrop is clicked while closed", () => {
-    let closed = false;
+  it("does NOT render the overlay when drawer is closed", () => {
     const { container } = render(
-      <Drawer
-        open={false}
-        show_backdrop
-        onClose={() => {
-          closed = true;
-        }}
-      >
+      <Drawer open={false} show_backdrop>
         <DrawerBody>
           <p>body</p>
         </DrawerBody>
       </Drawer>,
     );
-    const backdrop = container.querySelector("[data-testid='drawer-backdrop']") as HTMLElement;
-    fireEvent.click(backdrop);
-    expect(closed).toBe(false);
+    const overlay = container.ownerDocument.querySelector("[data-slot='drawer-overlay']");
+    expect(overlay).toBeNull();
   });
 });

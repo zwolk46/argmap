@@ -12,6 +12,19 @@ export interface EdgeCreationPopupProps {
   onDismiss: () => void;
 }
 
+/**
+ * Edge-creation candidate popup.
+ *
+ * Kept as a hand-positioned floating panel rather than a shadcn `Popover`
+ * because the anchor is a React Flow drop point in screen-space, not a DOM
+ * trigger element. The popup ref is used for outside-click dismissal, and
+ * an Escape keydown listener is installed on the document while open.
+ *
+ * Rows render as plain <button> elements so callers can iterate them
+ * (the existing test queries `popup.querySelectorAll("button")` and
+ * expects one per candidate). The .argmap-row-hover class supplies the
+ * hover/focus treatment from the global stylesheet.
+ */
 export function EdgeCreationPopup({
   open,
   position,
@@ -44,6 +57,7 @@ export function EdgeCreationPopup({
   return (
     <div
       ref={popupRef}
+      role="menu"
       data-testid="edge-creation-popup"
       style={{
         position: "fixed",
@@ -58,10 +72,15 @@ export function EdgeCreationPopup({
         minWidth: "160px",
       }}
     >
-      {/* KEEP RAW: dropdown menu rows in a popup, not the standard Button taxonomy. */}
+      {/* Rows render as plain <button> elements; hover state comes from the
+          .argmap-row-hover class (defined in global.css). The shadcn
+          DropdownMenu pattern would force a trigger-anchored Radix popper
+          here, which doesn't fit a React-Flow-coordinate drop point. */}
       {candidates.map((c, idx) => (
         <button
           key={idx}
+          type="button"
+          role="menuitem"
           onClick={() => {
             onChoose(c);
             onDismiss();

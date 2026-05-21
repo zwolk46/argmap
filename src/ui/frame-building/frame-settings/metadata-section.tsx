@@ -1,5 +1,8 @@
 import { useState, useEffect, type ReactElement } from "react";
 import { useFrameStore, useRepository } from "@/state";
+import { Input } from "#components/ui/input";
+import { Textarea } from "#components/ui/textarea";
+import { Label } from "#components/ui/label";
 
 export function MetadataSection(): ReactElement | null {
   const frame = useFrameStore((s) => s.frame);
@@ -44,35 +47,19 @@ export function MetadataSection(): ReactElement | null {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+    <div className="flex flex-col gap-4">
       {frame.archived && (
-        <div
-          style={{
-            padding: "var(--space-2) var(--space-3)",
-            background: "var(--color-severity-warning-bg)",
-            border: "1px solid var(--color-severity-warning)",
-            borderRadius: "var(--radius-sm)",
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-severity-warning)",
-          }}
-        >
+        <div className="rounded-md border border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
           This frame is archived.
         </div>
       )}
 
-      <div>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor="metadata-title"
-        >
-          Title
-        </label>
-        <input
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="metadata-title">Title</Label>
+        <Input
           id="metadata-title"
           type="text"
           value={title}
-          className="argmap-input"
           onChange={(e) => setTitle(e.target.value)}
           onBlur={commitTitle}
           onKeyDown={(e) => {
@@ -85,20 +72,12 @@ export function MetadataSection(): ReactElement | null {
         />
       </div>
 
-      <div>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor="metadata-description"
-        >
-          Description
-        </label>
-        <textarea
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="metadata-description">Description</Label>
+        <Textarea
           id="metadata-description"
           value={description}
           rows={3}
-          className="argmap-input"
-          style={{ resize: "vertical" }}
           onChange={(e) => setDescription(e.target.value)}
           onBlur={commitDescription}
           onKeyDown={(e) => {
@@ -114,19 +93,12 @@ export function MetadataSection(): ReactElement | null {
         />
       </div>
 
-      <div>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor="metadata-tags"
-        >
-          Tags (comma-separated)
-        </label>
-        <input
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="metadata-tags">Tags (comma-separated)</Label>
+        <Input
           id="metadata-tags"
           type="text"
           value={tags_raw}
-          className="argmap-input"
           onChange={(e) => setTagsRaw(e.target.value)}
           onBlur={commitTags}
           onKeyDown={(e) => {

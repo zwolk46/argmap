@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { ValidationResult } from "@/schema";
+import { CheckCircle, WarningCircle, XCircle } from "@phosphor-icons/react";
 
 export type Severity = "pass" | "warning" | "error";
 
@@ -20,67 +21,9 @@ const LABELS: Record<Severity, string> = {
   error: "✕",
 };
 
-function PassGlyph({ size }: { size: number }): ReactElement {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="8" r="6.25" />
-      <path d="m5.25 8.3 1.9 1.9 3.6-3.7" />
-    </svg>
-  );
-}
-
-function WarningGlyph({ size }: { size: number }): ReactElement {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M8 2.2 14.4 13H1.6Z" />
-      <path d="M8 6.5v3" />
-      <circle cx="8" cy="11.5" r="0.55" fill="currentColor" />
-    </svg>
-  );
-}
-
-function ErrorGlyph({ size }: { size: number }): ReactElement {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="8" r="6.25" />
-      <path d="M5.3 5.3 10.7 10.7M10.7 5.3 5.3 10.7" />
-    </svg>
-  );
-}
-
 export function SeverityIcon({ severity, size = 14 }: SeverityIconProps): ReactElement {
   const Glyph =
-    severity === "pass" ? PassGlyph : severity === "warning" ? WarningGlyph : ErrorGlyph;
+    severity === "pass" ? CheckCircle : severity === "warning" ? WarningCircle : XCircle;
   return (
     <span
       data-testid={`severity-icon-${severity}`}
@@ -94,9 +37,10 @@ export function SeverityIcon({ severity, size = 14 }: SeverityIconProps): ReactE
         color: COLORS[severity],
         flexShrink: 0,
         lineHeight: 1,
+        position: "relative",
       }}
     >
-      <Glyph size={size} />
+      <Glyph size={size} weight="regular" />
       <span
         aria-hidden="true"
         style={{

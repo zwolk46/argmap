@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
+import { Star, ArrowRight } from "@phosphor-icons/react";
 import type { FrameId } from "@/schema";
 import { ModeFlavorChip } from "../chrome";
-import { Button, IconButton, Spinner, relativeTime } from "../primitives";
-import { UIcon } from "../primitives/uicon";
+import { IconButton, Spinner, relativeTime } from "../primitives";
+import { Button } from "#components/ui/button";
 
 export interface FrameSummary {
   id: FrameId;
@@ -29,10 +30,7 @@ export interface FrameSummaryCardProps {
   /**
    * Optional "Run argument" sub-action. When supplied, the card grows a
    * secondary action that opens the most-recent argument session for this
-   * frame (auto-creating one if none exists). Without this, the only path
-   * to a session is via Frame Building's mode toggle, which is two clicks
-   * away — and the previous "Sessions are managed from the Home page"
-   * dialog was a flat lie because Home had no sessions UI at all.
+   * frame (auto-creating one if none exists).
    */
   onRunArgument?: (frame_id: FrameId) => void;
   /**
@@ -53,7 +51,6 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
     <article
       data-testid="frame-summary-card"
       data-frame-id={summary.id}
-      className="frame-card argmap-card"
       aria-label={display_title}
       onClick={(e) => {
         // Card is clickable for mouse users (large click target). Keyboard
@@ -64,29 +61,13 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
         if (target.closest("button")) return;
         onOpen(summary.id);
       }}
-      style={{ minWidth: 220, position: "relative", cursor: "pointer" }}
+      className="relative flex min-w-[220px] cursor-pointer flex-col gap-3 rounded-2xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors hover:bg-muted/30"
     >
-      <header className="frame-card-head" style={{ minHeight: "44px" }}>
-        <h3
-          className="frame-card-title"
-          style={{
-            flex: 1,
-            margin: 0,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-            // Modern overflow-wrap so a single very long word (e.g., a
-            // pasted URL used as a frame title) breaks instead of pushing
-            // the card layout off-screen.
-            overflowWrap: "anywhere",
-            wordBreak: "break-word",
-          }}
-        >
+      <header className="flex min-h-[44px] items-start justify-between gap-2">
+        <h3 className="m-0 line-clamp-2 flex-1 break-words text-sm font-medium leading-snug [overflow-wrap:anywhere]">
           <button
             type="button"
             data-testid="frame-card-open"
-            className="frame-card-title-button"
             onClick={(e) => {
               e.stopPropagation();
               onOpen(summary.id);
@@ -110,23 +91,16 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
           onClick={() => onTogglePin(summary.id, !is_pinned)}
           size="sm"
         >
-          {is_pinned ? (
-            <UIcon name="star" size={14} />
-          ) : (
-            <UIcon name="star" size={14} style={{ opacity: 0.35 }} />
-          )}
-          {/* §13 #16: aria-pressed on IconButton already carries the state;
-              the literal-glyph sr-only span double-announced "★" and was
-              aria-hidden anyway. Removed — keep one carrier (aria-pressed). */}
+          <Star
+            size={14}
+            weight={is_pinned ? "fill" : "regular"}
+            className={is_pinned ? undefined : "opacity-35"}
+          />
         </IconButton>
       </header>
-      <footer className="frame-card-foot">
-        {/* Chip wrapper: shrinks and truncates when label is long so the
-            right-side cluster (timestamp + run button) never gets pushed off. */}
-        <div className="frame-card-foot-chip">
-          <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}>
+      <footer className="flex items-center justify-between gap-2">
+        <ModeFlavorChip mode={summary.mode} flavor={summary.flavor} />
+        <div className="flex items-center gap-2">
           {onRunArgument ? (
             <Button
               size="sm"
@@ -140,19 +114,13 @@ export function FrameSummaryCard(props: FrameSummaryCardProps): ReactElement {
               }}
               aria-label="Open an argument session for this frame"
               aria-busy={run_argument_pending ? "true" : undefined}
-              leading={run_argument_pending ? <Spinner size={12} decorative /> : undefined}
-              trailing={run_argument_pending ? undefined : <UIcon name="arrow-right" size={12} />}
             >
+              {run_argument_pending ? <Spinner size={12} decorative /> : null}
               {run_argument_pending ? "Opening…" : "Run argument"}
+              {run_argument_pending ? null : <ArrowRight size={12} data-icon="inline-end" />}
             </Button>
           ) : null}
-          <span
-            className="argmap-number-meta"
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-tertiary)",
-            }}
-          >
+          <span className="text-xs tabular-nums text-[var(--color-text-tertiary)]">
             {relativeTime(summary.updated_at)}
           </span>
         </div>

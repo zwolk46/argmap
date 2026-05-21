@@ -1,18 +1,16 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { Button, Spinner, InlineAlert } from "../primitives";
+import { Spinner } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Label } from "#components/ui/label";
+import { Alert, AlertDescription } from "#components/ui/alert";
 import { useAuth } from "./auth-context";
 
 /**
  * Single-screen email + password auth. Toggle between sign-in and sign-up
  * via the bottom link. Designed to be the only thing visible when the user
  * isn't authenticated; the App is gated behind `useAuth().user`.
- *
- * Visual: small centered card, design-token-driven typography and spacing
- * so the surface reads as part of the rest of the app rather than a foreign
- * pre-auth screen. Token fallbacks are intentionally omitted — `tokens.css`
- * is imported by `main.tsx` before this component renders, so the variables
- * are defined at first paint.
  *
  * A separate `loading` UI lives in AuthGate (main.tsx) — that LoadingScreen
  * paints while Supabase resolves the existing session, and only then mounts
@@ -38,9 +36,7 @@ export function SignInScreen(): ReactElement {
   // §13 #18: link the password length hint and any inline error back to the
   // inputs that produced them. Supabase's auth errors don't reliably identify
   // which field is at fault, so when an error is shown we mark both inputs
-  // aria-invalid and point both at the error message — a sighted user sees
-  // the same one alert, and SR users get the alert announced from either
-  // field they're standing on.
+  // aria-invalid and point both at the error message.
   const password_describedby =
     [mode === "sign_up" ? password_hint_id : null, error ? error_id : null]
       .filter(Boolean)
@@ -57,9 +53,6 @@ export function SignInScreen(): ReactElement {
       if (err) {
         setError(err);
       } else if (mode === "sign_up") {
-        // Email confirmation is the Supabase default. Most projects also
-        // enable "auto-confirm" for dev, in which case auth-state-change
-        // fires immediately and this screen unmounts.
         setSignupSuccess(true);
       }
     } finally {
@@ -72,68 +65,26 @@ export function SignInScreen(): ReactElement {
   const form_locked = busy || signup_success;
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "var(--color-surface-canvas)",
-        fontFamily: "var(--font-sans)",
-        padding: "var(--space-5)",
-      }}
-    >
+    <main className="flex min-h-screen items-center justify-center bg-[var(--color-surface-canvas)] p-5">
       <form
         onSubmit={onSubmit}
         data-testid="sign-in-form"
-        style={{
-          width: "100%",
-          maxWidth: 400,
-          background: "var(--color-surface-elevated)",
-          padding: "var(--space-6) var(--space-5)",
-          borderRadius: "var(--radius-lg)",
-          boxShadow: "var(--shadow-md)",
-          border: "var(--border-thin) solid var(--color-border-subtle)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-4)",
-        }}
+        className="flex w-full max-w-[400px] flex-col gap-4 rounded-2xl bg-card p-6 text-card-foreground ring-1 ring-foreground/10"
       >
         <header>
-          <h1
-            style={{
-              fontSize: "var(--font-size-xl)",
-              fontWeight: "var(--font-weight-semibold)",
-              margin: 0,
-              marginBottom: "var(--space-1)",
-              color: "var(--color-text-primary)",
-              letterSpacing: "var(--letter-spacing-tight)",
-            }}
-          >
+          <h1 className="m-0 mb-1 text-xl font-semibold tracking-tight text-[var(--color-text-primary)]">
             {mode === "sign_in" ? "Sign in to argmap" : "Create your argmap account"}
           </h1>
-          <p
-            style={{
-              fontSize: "var(--font-size-base)",
-              color: "var(--color-text-secondary)",
-              margin: 0,
-              lineHeight: "var(--line-height-normal)",
-            }}
-          >
+          <p className="m-0 text-sm leading-normal text-[var(--color-text-secondary)]">
             {mode === "sign_in"
               ? "Your frames and sessions are saved to your account."
               : "Frames and sessions you build are saved to your account and reachable from any device."}
           </p>
         </header>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-          <label
-            htmlFor={email_id}
-            style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}
-          >
-            Email
-          </label>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={email_id}>Email</Label>
+          <Input
             id={email_id}
             data-testid="sign-in-email"
             type="email"
@@ -144,19 +95,12 @@ export function SignInScreen(): ReactElement {
             disabled={form_locked}
             aria-invalid={error ? true : undefined}
             aria-describedby={email_describedby}
-            className="argmap-input"
-            style={{ fontSize: "var(--font-size-base)" }}
           />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-          <label
-            htmlFor={password_id}
-            style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}
-          >
-            Password
-          </label>
-          <input
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={password_id}>Password</Label>
+          <Input
             id={password_id}
             data-testid="sign-in-password"
             type="password"
@@ -168,46 +112,39 @@ export function SignInScreen(): ReactElement {
             disabled={form_locked}
             aria-invalid={error ? true : undefined}
             aria-describedby={password_describedby}
-            className="argmap-input"
-            style={{ fontSize: "var(--font-size-base)" }}
           />
           {mode === "sign_up" ? (
-            <span
-              id={password_hint_id}
-              style={{
-                fontSize: "var(--font-size-xs)",
-                color: "var(--color-text-tertiary)",
-              }}
-            >
+            <span id={password_hint_id} className="text-xs text-[var(--color-text-tertiary)]">
               Minimum 8 characters.
             </span>
           ) : null}
           {/* "Forgot password?" intentionally absent: the reset flow isn't
-              wired through auth-context yet, and shipping a dead link
-              ("Coming soon" tooltip on click) reads as cheap. Restore this
-              once client.auth.resetPasswordForEmail() is connected. */}
+              wired through auth-context yet, and shipping a dead link reads
+              as cheap. Restore once resetPasswordForEmail() is connected. */}
         </div>
 
         {error ? (
-          <InlineAlert kind="error" id={error_id} testId="sign-in-error">
-            {error}
-          </InlineAlert>
+          <Alert variant="destructive" id={error_id} data-testid="sign-in-error">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
         {signup_success ? (
-          <InlineAlert kind="success" testId="sign-up-pending">
-            Check your email for a confirmation link. Once confirmed, return here to sign in.
-          </InlineAlert>
+          <Alert data-testid="sign-up-pending">
+            <AlertDescription>
+              Check your email for a confirmation link. Once confirmed, return here to sign in.
+            </AlertDescription>
+          </Alert>
         ) : null}
 
         <Button
           type="submit"
-          variant="primary"
+          variant="default"
           size="lg"
           data-testid="sign-in-submit"
           disabled={form_locked || email.length === 0 || password.length === 0}
-          full_width
-          leading={busy ? <Spinner size={14} decorative /> : undefined}
+          className="w-full"
         >
+          {busy ? <Spinner size={14} decorative /> : null}
           {busy
             ? mode === "sign_in"
               ? "Signing in…"
@@ -217,9 +154,10 @@ export function SignInScreen(): ReactElement {
               : "Create account"}
         </Button>
 
-        <div style={{ textAlign: "center", fontSize: "var(--font-size-base)" }}>
+        <div className="text-center text-sm">
           {mode === "sign_in" ? (
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               disabled={form_locked}
@@ -233,6 +171,7 @@ export function SignInScreen(): ReactElement {
             </Button>
           ) : (
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               disabled={form_locked}

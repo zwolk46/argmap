@@ -15,18 +15,7 @@ export function OutputEmptyState(props: OutputEmptyStateProps): ReactElement {
       data-testid="output-empty-state"
       role="status"
       aria-live="polite"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "var(--space-3)",
-        padding: "var(--space-8) var(--space-5)",
-        height: "100%",
-        textAlign: "center",
-        color: "var(--color-text-secondary)",
-        fontSize: "var(--font-size-sm)",
-      }}
+      className="flex h-full flex-col items-center justify-center gap-3 px-5 py-8 text-center text-sm text-muted-foreground"
     >
       <Spinner size={18} decorative />
       <span>{props.message ?? "Computing…"}</span>

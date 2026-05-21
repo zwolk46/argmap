@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import type { FrameVersionId, SessionVersionId } from "@/schema";
-import { Button } from "../primitives";
+import { Button } from "#components/ui/button";
 
 export interface SelectionFooterProps {
   selected_version_id: FrameVersionId | SessionVersionId | null;
@@ -33,23 +33,10 @@ export function SelectionFooter(props: SelectionFooterProps): ReactElement {
   const compare_disabled = no_selection || same_as_current || current_version_id === null;
 
   return (
-    <div
-      data-testid="selection-footer"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        width: "100%",
-      }}
-    >
+    <div data-testid="selection-footer" className="flex w-full items-center gap-2">
       <span
         data-testid="selection-label"
-        style={{
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-secondary)",
-          marginRight: "auto",
-          fontVariantNumeric: "tabular-nums",
-        }}
+        className="mr-auto text-xs text-muted-foreground tabular-nums"
       >
         {no_selection ? "Select a version" : `Selected: v${selected_version_number ?? "?"}`}
       </span>
@@ -64,7 +51,7 @@ export function SelectionFooter(props: SelectionFooterProps): ReactElement {
         Preview
       </Button>
       <Button
-        variant="secondary"
+        variant="outline"
         size="sm"
         data-testid="footer-restore"
         disabled={restore_disabled}
@@ -80,7 +67,7 @@ export function SelectionFooter(props: SelectionFooterProps): ReactElement {
         Restore
       </Button>
       <Button
-        variant="primary"
+        variant="default"
         size="sm"
         data-testid="footer-compare"
         disabled={compare_disabled}

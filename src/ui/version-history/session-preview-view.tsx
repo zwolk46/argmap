@@ -9,7 +9,8 @@ import type {
 } from "@/schema";
 import { useSessionStore } from "@/state";
 import { FrameCanvas, useLayoutResult } from "../canvas";
-import { Button, Spinner } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Spinner } from "../primitives";
 import type { ArgumentOverlay } from "../canvas";
 import { PreviewBanner } from "./preview-banner";
 import { useVersionFullLoad } from "./use-version-full-load";
@@ -99,25 +100,14 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
         : null;
 
   return (
-    <div
-      data-testid="session-preview-view"
-      style={{ display: "flex", flexDirection: "column", height: "100vh" }}
-    >
+    <div data-testid="session-preview-view" className="flex h-screen flex-col">
       <PreviewBanner version_number={version_number} kind="session" />
       {result.status === "loading" ? (
         <div
           data-testid="session-preview-loading"
           role="status"
           aria-live="polite"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            gap: "var(--space-2)",
-            color: "var(--color-text-secondary)",
-            fontSize: "var(--font-size-sm)",
-          }}
+          className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
           <Spinner size={16} decorative />
           <span>Loading session version {version_number}…</span>
@@ -125,24 +115,17 @@ export function SessionPreviewView(props: SessionPreviewViewProps): ReactElement
       ) : result.status === "error" ? (
         <div
           data-testid="session-preview-error"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            gap: "var(--space-2)",
-          }}
+          className="flex flex-1 flex-col items-center justify-center gap-2"
         >
-          <div style={{ color: "var(--color-severity-error)", fontSize: "var(--font-size-sm)" }}>
+          <div className="text-sm" style={{ color: "var(--color-severity-error)" }}>
             {result.error?.message ?? "Failed to load version"}
           </div>
-          <Button variant="secondary" size="md" onClick={preview.exit}>
+          <Button variant="outline" size="default" onClick={preview.exit}>
             Return to working version
           </Button>
         </div>
       ) : (
-        <div style={{ flex: 1, position: "relative" }}>
+        <div className="relative flex-1">
           <FrameCanvas
             frame_version={frame_for_canvas}
             layout_result={layout_result}

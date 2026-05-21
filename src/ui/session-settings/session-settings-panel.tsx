@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
-import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, IconButton, Button } from "../primitives";
-import { UIcon } from "../primitives/uicon";
+import { X } from "@phosphor-icons/react";
+import { Drawer, DrawerHeader, DrawerBody, DrawerFooter, IconButton } from "../primitives";
+import { Button } from "#components/ui/button";
 import { MetadataSection } from "./metadata-section";
 import { G6RemoveRewriteSection } from "./g6-remove-rewrite-section";
 import { G12AdvisoryToggleSection } from "./g12-advisory-toggle-section";
@@ -31,11 +32,11 @@ export function SessionSettingsPanel(props: SessionSettingsPanelProps): ReactEle
           aria-label="Close session settings"
           onClick={props.on_close}
         >
-          <UIcon name="times" size={14} />
+          <X size={14} />
         </IconButton>
       </DrawerHeader>
       <DrawerBody>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
+        <div className="flex flex-col gap-6">
           <MetadataSection />
           <G6RemoveRewriteSection />
           <G12AdvisoryToggleSection on_open_frame_settings={props.on_open_frame_settings} />

@@ -9,11 +9,19 @@
  * Example of each:
  *   View switcher  → output viewer (Path / Tree / Prose)
  *   Filter         → milestone filter (All / Milestones / Drafts)
+ *
+ * Note: this control uses raw buttons + role="tablist" rather than shadcn
+ * <Tabs>. The Radix Tabs primitive does not consistently fire onValueChange
+ * under happy-dom's pointer-event synthesis, which breaks the click tests.
+ * The visual contract (Tailwind, neutral palette, underline active marker)
+ * matches shadcn's <Tabs variant="line"> exactly; the underlying interaction
+ * is hand-rolled and fully under our control.
  */
 import * as React from "react";
 import type { ReactElement } from "react";
 import type { OutputViewTab } from "@/state";
 import { Spinner } from "../../primitives";
+import { cn } from "#lib/utils";
 
 export type { OutputViewTab };
 
@@ -73,16 +81,8 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
       data-testid="output-view-tabs"
       role="tablist"
       onKeyDown={handleKeyDown}
-      style={{
-        display: "flex",
-        gap: "var(--space-3)",
-        alignItems: "center",
-        padding: "0 var(--space-4)",
-        borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        background: "var(--color-surface-elevated)",
-      }}
+      className="flex items-center gap-3 border-b bg-background px-4"
     >
-      {/* KEEP RAW: role="tab" elements with custom selected-tab styling; not a standard Button. */}
       {OUTPUT_VIEW_TAB_ORDER.map((tab) => {
         const active = !computing && tab === current;
         return (
@@ -95,8 +95,19 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
             disabled={computing}
             data-testid={`output-view-tab-${tab}`}
             data-active={active ? "true" : "false"}
-            onClick={() => on_change(tab)}
-            className="argmap-output-tab"
+            onClick={() => {
+              if (computing) return;
+              if (tab !== current) on_change(tab);
+            }}
+            className={cn(
+              "relative inline-flex items-center justify-center px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors outline-none",
+              "text-foreground/60 hover:text-foreground",
+              "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:rounded-sm",
+              "disabled:opacity-50 disabled:pointer-events-none",
+              "data-[active=true]:text-foreground",
+              "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-foreground after:opacity-0 after:transition-opacity",
+              "data-[active=true]:after:opacity-100",
+            )}
           >
             {TAB_LABELS[tab]}
           </button>
@@ -106,14 +117,7 @@ export function OutputViewTabs(props: OutputViewTabsProps): ReactElement {
         <div
           data-testid="output-view-tabs-computing"
           aria-live="polite"
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            color: "var(--color-text-secondary)",
-            fontSize: "var(--font-size-sm)",
-          }}
+          className="ml-auto flex items-center gap-2 text-sm text-muted-foreground"
         >
           <Spinner size={12} decorative />
           <span>Computing…</span>

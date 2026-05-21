@@ -1,7 +1,18 @@
 import * as React from "react";
 import type { NodeRef, Authority, Node } from "@/schema";
 import { useFrameStore, useSessionStore, useRepository } from "@/state";
-import { Button } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Label } from "#components/ui/label";
+import { Input } from "#components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "#components/ui/select";
 
 // Stable empty-array fallbacks. Zustand selectors must return a reference
 // that is `Object.is`-stable across renders when the underlying value hasn't
@@ -10,6 +21,10 @@ import { Button } from "../../primitives";
 // "Maximum update depth exceeded" loop via useSyncExternalStore.
 const EMPTY_NODES: ReadonlyArray<Node> = [];
 const EMPTY_AUTHORITIES: ReadonlyArray<Authority> = [];
+
+// Sentinel for the "(none)" option. shadcn Select treats empty string as
+// "no value" so we use a non-empty sentinel that round-trips to null.
+const NONE_VALUE = "__none__";
 
 export interface AuthorityAttachmentSectionProps {
   value: NodeRef | null;
@@ -88,64 +103,53 @@ export function AuthorityAttachmentSection(
   const sorted_session = [...session_authorities].sort((a, b) => a.id.localeCompare(b.id));
 
   return (
-    <div
-      data-testid="authority-attachment-section"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-2)",
-      }}
-    >
-      <label
-        style={{
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        {label}
-        <select
-          data-testid="authority-picker"
-          value={value ?? ""}
-          onChange={(e) => on_change(e.target.value || null)}
-          className="argmap-input"
-          style={{
-            fontSize: "var(--font-size-xs)",
-          }}
+    <div data-testid="authority-attachment-section" className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="authority-picker" className="text-xs text-muted-foreground">
+          {label}
+        </Label>
+        <Select
+          value={value ?? NONE_VALUE}
+          onValueChange={(v) => on_change(v === NONE_VALUE ? null : v)}
         >
-          <option value="">(none)</option>
-          {sorted_frame.length > 0 ? (
-            <optgroup label="Frame authorities">
-              {sorted_frame.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.citation}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-          {sorted_session.length > 0 ? (
-            <optgroup label="Session authorities">
-              {sorted_session.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.citation}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-        </select>
-      </label>
+          <SelectTrigger
+            id="authority-picker"
+            data-testid="authority-picker"
+            className="w-full text-xs"
+          >
+            <SelectValue placeholder="(none)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE_VALUE}>(none)</SelectItem>
+            {sorted_frame.length > 0 ? (
+              <SelectGroup>
+                <SelectLabel>Frame authorities</SelectLabel>
+                {sorted_frame.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.citation}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null}
+            {sorted_session.length > 0 ? (
+              <SelectGroup>
+                <SelectLabel>Session authorities</SelectLabel>
+                {sorted_session.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.citation}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null}
+          </SelectContent>
+        </Select>
+      </div>
       {creating_new ? (
         <div
           data-testid="authority-new-form"
-          style={{
-            padding: "var(--space-2)",
-            background: "var(--color-surface-pane-secondary)",
-            borderRadius: "var(--border-radius-md)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-1)",
-          }}
+          className="flex flex-col gap-1 rounded-md bg-muted/50 p-2"
         >
-          <input
+          <Input
             data-testid="authority-new-name"
             value={new_name}
             placeholder="Name"
@@ -159,10 +163,9 @@ export function AuthorityAttachmentSection(
                 setCreatingNew(false);
               }
             }}
-            className="argmap-input"
-            style={{ fontSize: "var(--font-size-xs)" }}
+            className="text-xs"
           />
-          <input
+          <Input
             data-testid="authority-new-citation"
             value={new_citation}
             placeholder="Citation"
@@ -176,30 +179,31 @@ export function AuthorityAttachmentSection(
                 setCreatingNew(false);
               }
             }}
-            className="argmap-input"
-            style={{ fontSize: "var(--font-size-xs)" }}
+            className="text-xs"
           />
-          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+          <div className="flex gap-1">
             <Button
-              variant="primary"
-              size="md"
+              type="button"
+              variant="default"
+              size="sm"
               data-testid="authority-new-save"
               onClick={commit_new}
             >
               Save
             </Button>
-            <Button variant="secondary" size="md" onClick={() => setCreatingNew(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setCreatingNew(false)}>
               Cancel
             </Button>
           </div>
         </div>
       ) : (
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           data-testid="authority-new-toggle"
           onClick={() => setCreatingNew(true)}
-          style={{ alignSelf: "flex-start" }}
+          className="self-start"
         >
           + New session {label.toLowerCase()}
         </Button>

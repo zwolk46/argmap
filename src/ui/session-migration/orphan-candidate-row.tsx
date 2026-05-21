@@ -42,19 +42,10 @@ export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement
     <div
       data-testid="orphan-candidate-row"
       data-carrier-id={candidate.carrier_id}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-        padding: "var(--space-2) var(--space-3)",
-        borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-      }}
+      className="flex flex-col gap-1 border-t px-3 py-2"
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-        <span
-          data-testid="candidate-display-summary"
-          style={{ flex: 1, fontSize: "var(--font-size-sm)" }}
-        >
+      <div className="flex items-center gap-3">
+        <span data-testid="candidate-display-summary" className="flex-1 text-sm">
           {candidate.display_summary}
         </span>
         <ResolutionPicker
@@ -70,8 +61,7 @@ export function OrphanCandidateRow(props: OrphanCandidateRowProps): ReactElement
           data-testid="reattach-target-select"
           value={resolution.target_node_id ?? ""}
           onChange={(e) => handleTargetChange(e.target.value as NodeRef)}
-          className="argmap-input"
-          style={{ alignSelf: "flex-end", width: "auto", fontSize: "var(--font-size-sm)" }}
+          className="self-end h-8 w-auto rounded-md border border-input bg-input/30 px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {candidate.reattach_candidates.map((c) => (
             <option key={c.target_node_id} value={c.target_node_id}>

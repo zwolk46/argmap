@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { InterviewItem } from "@/state";
+import { cn } from "#lib/utils";
 
 type NodeTypeFilter = "Checkpoint" | "Term" | "Interpretation";
 type ReasonFilter = InterviewItem["reason"];
@@ -34,6 +35,11 @@ export interface InterviewFilterProps {
   on_change: (next: InterviewFilterState) => void;
 }
 
+const CHIP_BASE =
+  "inline-flex cursor-pointer items-center rounded-full border-0 px-2 py-0.5 text-[11px] transition-colors";
+const CHIP_INACTIVE = "bg-muted text-muted-foreground hover:bg-muted/80";
+const CHIP_ACTIVE = "bg-primary text-primary-foreground";
+
 export function InterviewFilter(props: InterviewFilterProps): ReactElement {
   const { state, on_change } = props;
 
@@ -57,50 +63,50 @@ export function InterviewFilter(props: InterviewFilterProps): ReactElement {
   }
 
   return (
-    <div
-      data-testid="interview-filter"
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "var(--space-1)",
-        padding: "var(--space-2)",
-        borderBottom: "var(--border-thin) solid var(--color-border-tertiary)",
-      }}
-    >
+    <div data-testid="interview-filter" className="flex flex-wrap gap-1 border-b p-2">
       {/* KEEP RAW: pill-toggle chips with data-active state; not the standard Button taxonomy. */}
-      {INTERVIEW_FILTER_NODE_TYPES.map((t) => (
-        <button
-          key={t}
-          type="button"
-          data-testid={`interview-filter-type-${t}`}
-          data-active={state.node_types.includes(t) ? "true" : "false"}
-          onClick={() => toggle_node_type(t)}
-          style={chipStyle(state.node_types.includes(t))}
-        >
-          {t}
-        </button>
-      ))}
+      {INTERVIEW_FILTER_NODE_TYPES.map((t) => {
+        const active = state.node_types.includes(t);
+        return (
+          <button
+            key={t}
+            type="button"
+            data-testid={`interview-filter-type-${t}`}
+            data-active={active ? "true" : "false"}
+            onClick={() => toggle_node_type(t)}
+            className={cn(CHIP_BASE, active ? CHIP_ACTIVE : CHIP_INACTIVE)}
+          >
+            {t}
+          </button>
+        );
+      })}
       <button
         type="button"
         data-testid="interview-filter-jurisdiction"
         data-active={state.jurisdictional_scope === "jurisdictional_only" ? "true" : "false"}
         onClick={toggle_jurisdiction}
-        style={chipStyle(state.jurisdictional_scope === "jurisdictional_only")}
+        className={cn(
+          CHIP_BASE,
+          state.jurisdictional_scope === "jurisdictional_only" ? CHIP_ACTIVE : CHIP_INACTIVE,
+        )}
       >
         {state.jurisdictional_scope === "jurisdictional_only" ? "Jurisdictional only" : "Show all"}
       </button>
-      {INTERVIEW_FILTER_REASONS.map((r) => (
-        <button
-          key={r}
-          type="button"
-          data-testid={`interview-filter-reason-${r}`}
-          data-active={state.reasons.includes(r) ? "true" : "false"}
-          onClick={() => toggle_reason(r)}
-          style={chipStyle(state.reasons.includes(r))}
-        >
-          {r}
-        </button>
-      ))}
+      {INTERVIEW_FILTER_REASONS.map((r) => {
+        const active = state.reasons.includes(r);
+        return (
+          <button
+            key={r}
+            type="button"
+            data-testid={`interview-filter-reason-${r}`}
+            data-active={active ? "true" : "false"}
+            onClick={() => toggle_reason(r)}
+            className={cn(CHIP_BASE, active ? CHIP_ACTIVE : CHIP_INACTIVE)}
+          >
+            {r}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -132,16 +138,4 @@ export function passesFilter(
     if (!(state.node_types as ReadonlyArray<string>).includes(node_type)) return false;
   }
   return true;
-}
-
-function chipStyle(active: boolean): React.CSSProperties {
-  return {
-    background: active ? "var(--color-background-accent)" : "var(--color-background-secondary)",
-    color: active ? "var(--color-text-accent)" : "var(--color-text-secondary)",
-    border: "none",
-    borderRadius: "var(--radius-pill)",
-    cursor: "pointer",
-    fontSize: "var(--font-size-xs)",
-    padding: "2px var(--space-2)",
-  };
 }

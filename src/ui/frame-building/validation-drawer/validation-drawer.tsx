@@ -1,9 +1,11 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { CaretRight } from "@phosphor-icons/react";
 import { useFrameStore, useAppStateStore, useRepository } from "@/state";
 import { selectValidationDrawer } from "@/state";
-import { Drawer, Pill, IconButton, SeverityIcon } from "../../primitives";
-import { UIcon } from "../../primitives/uicon";
+import { Pill, SeverityIcon } from "../../primitives";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "#components/ui/sheet";
+import { cn } from "#lib/utils";
 import { ValidationRow } from "./validation-row";
 import { dismissalKeyFor, partitionByDismissal } from "./dismissed-warnings";
 
@@ -59,36 +61,20 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
   const [show_dismissed, set_show_dismissed] = React.useState(false);
 
   return (
-    <Drawer
+    <Sheet
       open={open}
-      onClose={on_close}
-      side="bottom"
-      height="min(48vh, 480px)"
-      aria_label="Frame issues"
+      onOpenChange={(next) => {
+        if (!next) on_close();
+      }}
     >
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <SheetContent
+        side="bottom"
+        aria-label="Frame issues"
+        className="flex max-h-[min(48vh,480px)] flex-col p-0"
+      >
         {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-            padding: "var(--space-3) var(--space-4)",
-            borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-            background: "var(--color-surface-elevated)",
-            flexShrink: 0,
-          }}
-        >
-          <span
-            style={{
-              fontWeight: "var(--font-weight-semibold)",
-              fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-primary)",
-              letterSpacing: "var(--letter-spacing-tight)",
-            }}
-          >
-            Frame issues
-          </span>
+        <SheetHeader className="flex flex-row items-center gap-3 border-b border-border bg-card p-3">
+          <SheetTitle className="text-sm font-semibold tracking-tight">Frame issues</SheetTitle>
           {errors.length > 0 && (
             <Pill variant="severity_error">
               <SeverityIcon severity="error" size={12} />
@@ -101,32 +87,13 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
               {warnings.length} warning{warnings.length !== 1 ? "s" : ""}
             </Pill>
           )}
-          <div style={{ marginLeft: "auto" }}>
-            <IconButton size="sm" aria-label="Close validation drawer" onClick={on_close}>
-              <UIcon name="times" size={14} />
-            </IconButton>
-          </div>
-        </div>
+          {/* Sheet provides its own close button (top right) */}
+        </SheetHeader>
 
         {/* Body */}
-        <div style={{ flex: 1, overflow: "auto", background: "var(--color-surface-pane)" }}>
+        <div className="flex-1 overflow-auto bg-muted">
           {entries.length === 0 && (
-            <div
-              style={{
-                padding: "var(--space-6)",
-                textAlign: "center",
-                color: "var(--color-status-satisfied)",
-                background: "var(--color-status-satisfied-bg)",
-                fontSize: "var(--font-size-sm)",
-                fontWeight: "var(--font-weight-medium)",
-                margin: "var(--space-3)",
-                borderRadius: "var(--radius-md)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "var(--space-2)",
-              }}
-            >
+            <div className="m-3 flex items-center justify-center gap-2 rounded-md p-6 text-center text-sm font-medium text-green-700 dark:text-green-400">
               <SeverityIcon severity="pass" size={14} />
               No validation issues
             </div>
@@ -135,10 +102,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           {/* Errors */}
           {errors.length > 0 && (
             <div role="region" aria-label="Error messages">
-              <h3
-                className="argmap-section-heading"
-                style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
-              >
+              <h3 className="px-4 pb-1 pt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Errors
               </h3>
               {/* §13 #17: row[role="listitem"] needs an enclosing role="list"
@@ -168,10 +132,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           {/* Active warnings */}
           {active.length > 0 && (
             <div role="region" aria-label="Warning messages">
-              <h3
-                className="argmap-section-heading"
-                style={{ padding: "var(--space-3) var(--space-4) var(--space-1)" }}
-              >
+              <h3 className="px-4 pb-1 pt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Warnings
               </h3>
               <div role="list">
@@ -197,40 +158,19 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
           {dismissed.length > 0 && (
             <div>
               {/* KEEP RAW: full-width accordion header with rotating chevron; bespoke layout, not the standard Button taxonomy. */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-2)",
-                  padding: "var(--space-2) var(--space-3) var(--space-2) 0",
-                }}
-              >
+              <div className="flex items-center gap-2 py-2 pl-0 pr-3">
                 <button
                   type="button"
                   onClick={() => set_show_dismissed((v) => !v)}
                   aria-expanded={show_dismissed}
-                  style={{
-                    flex: 1,
-                    padding: "var(--space-2) var(--space-3)",
-                    background: "transparent",
-                    border: "none",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    fontSize: "var(--font-size-xs)",
-                    color: "var(--color-text-secondary)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                  }}
+                  className="flex flex-1 cursor-pointer items-center gap-1 border-none bg-transparent px-3 py-2 text-left text-xs text-muted-foreground"
                 >
-                  <UIcon
-                    name="angle-small-right"
+                  <CaretRight
                     size={12}
-                    style={{
-                      transform: show_dismissed ? "rotate(90deg)" : "rotate(0deg)",
-                      transition: "transform var(--duration-fast) var(--ease-standard)",
-                      display: "inline-block",
-                    }}
+                    className={cn(
+                      "transition-transform",
+                      show_dismissed ? "rotate-90" : "rotate-0",
+                    )}
                   />
                   <span>Dismissed ({dismissed.length})</span>
                 </button>
@@ -244,15 +184,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
                         app_store.getState().undismissWarning(key);
                       }
                     }}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "var(--space-1) var(--space-2)",
-                      fontSize: "var(--font-size-xs)",
-                      color: "var(--color-mode-current-accent)",
-                      borderRadius: "var(--radius-sm)",
-                    }}
+                    className="cursor-pointer rounded-md border-none bg-transparent px-2 py-1 text-xs text-primary hover:bg-muted"
                   >
                     Restore all
                   </button>
@@ -276,7 +208,7 @@ export function ValidationDrawer(props: ValidationDrawerProps): ReactElement {
             </div>
           )}
         </div>
-      </div>
-    </Drawer>
+      </SheetContent>
+    </Sheet>
   );
 }

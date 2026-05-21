@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
+import { Clock } from "@phosphor-icons/react";
 import { IconButton } from "../primitives/icon-button";
-import { UIcon } from "../primitives/uicon";
 
 export interface VersionHistoryButtonProps {
   active?: boolean;
@@ -13,7 +13,7 @@ export function VersionHistoryButton({
 }: VersionHistoryButtonProps): ReactElement {
   return (
     <IconButton aria-label="Version history" active={active} onClick={onToggle}>
-      <UIcon name="clock" size={18} />
+      <Clock size={18} weight="regular" />
     </IconButton>
   );
 }

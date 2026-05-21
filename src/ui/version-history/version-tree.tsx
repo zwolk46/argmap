@@ -6,7 +6,6 @@ import { VersionTreeRow } from "./version-tree-row";
 import { buildVersionTreeShape, filterByMilestone } from "./version-tree-shape";
 import type { MilestoneFilterValue } from "./milestone-filter";
 import { useReduceMotion } from "../hooks";
-import { InlineEmpty } from "../primitives";
 
 export type VersionTreeEntityKind = "frame" | "session";
 
@@ -64,15 +63,18 @@ export function VersionTree(props: VersionTreeProps): ReactElement {
       : entity_kind === "session"
         ? "No session milestones yet."
         : "No milestones yet — save one to mark a meaningful waypoint.";
-    return <InlineEmpty testId="version-tree-empty">{empty_msg}</InlineEmpty>;
+    return (
+      <div
+        data-testid="version-tree-empty"
+        className="p-4 text-sm leading-relaxed text-muted-foreground"
+      >
+        {empty_msg}
+      </div>
+    );
   }
 
   return (
-    <div
-      role="list"
-      data-testid="version-tree"
-      style={{ display: "flex", flexDirection: "column" }}
-    >
+    <div role="list" data-testid="version-tree" className="flex flex-col">
       {display_entries.map((entry) => {
         const is_current = entry.summary.id === current_version_id;
         const is_authored_against =

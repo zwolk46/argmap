@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { OutputViewPayload, SessionShape } from "@/state";
 import { useAiSuggestion } from "@/ui";
-import { Button } from "../../primitives/button";
+import { Button } from "#components/ui/button";
 import { EmptyState } from "../../primitives/loading-screen";
 import { AiSparkle } from "../../primitives/ai-sparkle";
 import { AiAttributionChip } from "../../primitives/ai-attribution-chip";
@@ -42,7 +42,7 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
         ? "Add premises and answers in the Interview pane on the left. Once the runtime can produce a conclusion, the prose write-up appears here."
         : "Prose appears once the session resolves. Switch to Path overlay to see the structure on the canvas.";
     return (
-      <div data-testid="prose-tab-empty" style={{ height: "100%" }}>
+      <div data-testid="prose-tab-empty" className="h-full">
         <EmptyState label={label} description={description} />
       </div>
     );
@@ -56,31 +56,10 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
   const invoke_disabled = aiSuggestion.status === "invoking";
 
   return (
-    <div
-      data-testid="prose-tab"
-      style={{
-        padding: "var(--space-6) var(--space-6) var(--space-8)",
-        overflow: "auto",
-        height: "100%",
-        background: "var(--color-surface-canvas)",
-      }}
-    >
-      <article
-        style={{
-          maxWidth: "640px",
-          margin: "0 auto",
-          position: "relative",
-        }}
-      >
+    <div data-testid="prose-tab" className="h-full overflow-auto bg-background px-6 py-6">
+      <article className="relative mx-auto" style={{ maxWidth: "640px" }}>
         {/* Floating action row — top right of column. Canonical surface itself remains unlabeled. */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: "var(--space-1)",
-            marginBottom: "var(--space-3)",
-          }}
-        >
+        <div className="mb-3 flex justify-end gap-1">
           <Button
             size="sm"
             variant="ghost"
@@ -100,10 +79,7 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
           {/* §12 F-10: when a prior rewrite exists, give the user an explicit
               baseline choice — "Refine" iterates on the existing rewrite,
               "Rewrite from canonical" discards it and starts fresh from the
-              deterministic prose. Previously the single "Suggest rewrite"
-              button silently rewrote canonical, dropping the user's prior
-              edit on every re-run. Constitution Art III §4 (Clarity): explicit
-              discrete choices over compressed copy. */}
+              deterministic prose. */}
           {shape !== "incomplete" && aiSuggestion.enabled ? (
             has_rewrite ? (
               <>
@@ -118,8 +94,8 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
                     })
                   }
                   disabled={invoke_disabled}
-                  leading={<AiSparkle />}
                 >
+                  <AiSparkle />
                   Refine rewrite
                 </Button>
                 <Button
@@ -133,8 +109,8 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
                     })
                   }
                   disabled={invoke_disabled}
-                  leading={<AiSparkle />}
                 >
+                  <AiSparkle />
                   Rewrite from canonical
                 </Button>
               </>
@@ -150,8 +126,8 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
                   })
                 }
                 disabled={invoke_disabled}
-                leading={<AiSparkle />}
               >
+                <AiSparkle />
                 Suggest rewrite
               </Button>
             )
@@ -161,14 +137,9 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
         {/* Canonical prose — unlabeled, no chrome (F-002 carry: primary surface). */}
         <div data-testid="prose-canonical-block">
           <p
+            className="m-0 whitespace-pre-wrap text-base leading-relaxed text-foreground"
             style={{
-              margin: 0,
               fontFamily: "var(--font-serif)",
-              fontSize: "var(--font-size-md)",
-              lineHeight: "var(--line-height-relaxed)",
-              color: "var(--color-text-primary)",
-              whiteSpace: "pre-wrap",
-              letterSpacing: "var(--letter-spacing-normal)",
             }}
           >
             {canonical}
@@ -178,29 +149,16 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
         {rewritten ? (
           <section
             data-testid="prose-rewritten-block"
+            className="mt-6 rounded-r-md px-5 py-4"
             style={{
-              marginTop: "var(--space-6)",
               maxWidth: "85%",
               borderLeft: "var(--border-thick) solid var(--color-ai-accent)",
               background: "var(--color-ai-accent-bg)",
-              borderRadius: "0 var(--radius-md) var(--radius-md) 0",
-              padding: "var(--space-4) var(--space-5)",
             }}
           >
-            <header
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "var(--space-2)",
-                marginBottom: "var(--space-2)",
-              }}
-            >
+            <header className="mb-2 flex items-center justify-between gap-2">
               {/* §12 F-09: pass the rewrite invocation record when available
-                  so the chip's tooltip renders model + prompt-version + invoked-at.
-                  Falls back to the hook_id-only chip until the apply_decision
-                  shim is wired (main.tsx) and starts populating
-                  output_overrides.rewrite_invocation. */}
+                  so the chip's tooltip renders model + prompt-version + invoked-at. */}
               <AiAttributionChip record={rewrite_invocation ?? null} hook_id="G6" />
               <Button
                 size="sm"
@@ -212,13 +170,9 @@ export function ProseTab(props: ProseTabProps): React.ReactElement {
               </Button>
             </header>
             <p
+              className="m-0 whitespace-pre-wrap text-sm leading-relaxed text-foreground"
               style={{
-                margin: 0,
                 fontFamily: "var(--font-serif)",
-                fontSize: "var(--font-size-base)",
-                lineHeight: "var(--line-height-relaxed)",
-                color: "var(--color-text-primary)",
-                whiteSpace: "pre-wrap",
               }}
             >
               {rewritten}

@@ -1,9 +1,10 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { X } from "@phosphor-icons/react";
 import { GLOSSARY_DICTIONARY } from "../primitives/glossary-tooltip";
 import { Drawer, DrawerHeader, DrawerBody } from "../primitives/drawer";
 import { IconButton } from "../primitives/icon-button";
-import { UIcon } from "../primitives/uicon";
+import { Input } from "#components/ui/input";
 import { OnboardingPreferencesSection } from "../onboarding/onboarding-preferences-section";
 
 export interface HelpGlossaryPaneProps {
@@ -43,86 +44,40 @@ export function HelpGlossaryPane({ open, onClose }: HelpGlossaryPaneProps): Reac
             rename so users don't land here expecting only glossary entries. */}
         <span>Help & Settings</span>
         <IconButton size="sm" aria-label="Close help" onClick={onClose}>
-          <UIcon name="times" size={14} />
+          <X size={14} weight="regular" />
         </IconButton>
       </DrawerHeader>
       <DrawerBody>
-        <input
+        <Input
           data-testid="help-glossary-search"
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search glossary…"
           aria-label="Search glossary"
-          className="argmap-input"
-          style={{
-            marginBottom: "var(--space-3)",
-            fontSize: "var(--font-size-sm)",
-          }}
+          className="mb-3 text-sm"
         />
         {frame_entries.length === 0 && legal_entries.length === 0 && q.length > 0 ? (
-          <div
-            style={{
-              fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-secondary)",
-              padding: "var(--space-2) 0",
-            }}
-          >
+          <div className="text-sm text-muted-foreground py-2">
             No glossary entries match &ldquo;{query}&rdquo;.
           </div>
         ) : null}
         <section>
-          <h3 className="argmap-section-heading" style={{ margin: "0 0 var(--space-3)" }}>
-            Frame Concepts
-          </h3>
+          <h3 className="argmap-section-heading mt-0 mb-3">Frame Concepts</h3>
           {frame_entries.map(([key, entry]) => (
-            <div key={key} style={{ marginBottom: "var(--space-4)" }}>
-              <div
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  fontWeight: "var(--font-weight-medium)",
-                  color: "var(--color-text-primary)",
-                  marginBottom: "var(--space-1)",
-                }}
-              >
-                {entry.term}
-              </div>
-              <div
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  color: "var(--color-text-secondary)",
-                  lineHeight: "var(--line-height-normal)",
-                }}
-              >
-                {entry.definition}
-              </div>
+            <div key={key} className="mb-4">
+              <div className="text-sm font-medium text-foreground mb-1">{entry.term}</div>
+              <div className="text-sm text-muted-foreground leading-normal">{entry.definition}</div>
             </div>
           ))}
         </section>
         {legal_entries.length > 0 && (
-          <section style={{ marginTop: "var(--space-5)" }}>
-            <h3 className="argmap-section-heading" style={{ margin: "0 0 var(--space-3)" }}>
-              Legal Concepts
-            </h3>
+          <section className="mt-5">
+            <h3 className="argmap-section-heading mt-0 mb-3">Legal Concepts</h3>
             {legal_entries.map(([key, entry]) => (
-              <div key={key} style={{ marginBottom: "var(--space-4)" }}>
-                <div
-                  style={{
-                    fontSize: "var(--font-size-sm)",
-                    fontWeight: "var(--font-weight-medium)",
-                    color: "var(--color-text-primary)",
-                    marginBottom: "var(--space-1)",
-                  }}
-                >
-                  {entry.term}
-                </div>
-                <div
-                  style={{
-                    fontSize: "var(--font-size-sm)",
-                    color: "var(--color-text-secondary)",
-                    lineHeight: "var(--line-height-normal)",
-                  }}
-                >
+              <div key={key} className="mb-4">
+                <div className="text-sm font-medium text-foreground mb-1">{entry.term}</div>
+                <div className="text-sm text-muted-foreground leading-normal">
                   {entry.definition}
                 </div>
               </div>

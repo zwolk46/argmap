@@ -17,7 +17,9 @@ describe("PositionsInlineEditor", () => {
       />,
     );
     const rows = getAllByTestId("staged-position-row");
-    expect(rows.map((r) => r.textContent)).toEqual(["First×", "Second×"]);
+    // The × glyph migrated to a Phosphor X SVG (no textContent). Assert on
+    // the label text instead.
+    expect(rows.map((r) => r.textContent?.trim())).toEqual(["First", "Second"]);
   });
 
   it("disables Add when draft is empty/whitespace", () => {
@@ -50,7 +52,7 @@ describe("PositionsInlineEditor", () => {
     expect(input.value).toBe("");
   });
 
-  it("calls onPositionRemoved with id when × clicked", () => {
+  it("calls onPositionRemoved with id when remove icon clicked", () => {
     const onRemove = vi.fn();
     const { getByTestId } = render(
       <PositionsInlineEditor

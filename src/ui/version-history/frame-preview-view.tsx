@@ -2,7 +2,8 @@ import * as React from "react";
 import type { ReactElement } from "react";
 import type { FrameId, FrameVersion, FrameVersionId, NodeRef } from "@/schema";
 import { FrameCanvas, useLayoutResult } from "../canvas";
-import { Button, Spinner } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Spinner } from "../primitives";
 import { PreviewBanner } from "./preview-banner";
 import { useVersionFullLoad } from "./use-version-full-load";
 import { useVersionHistoryPreview } from "./preview-context";
@@ -42,25 +43,14 @@ export function FramePreviewView(props: FramePreviewViewProps): ReactElement {
         : null;
 
   return (
-    <div
-      data-testid="frame-preview-view"
-      style={{ display: "flex", flexDirection: "column", height: "100vh" }}
-    >
+    <div data-testid="frame-preview-view" className="flex h-screen flex-col">
       <PreviewBanner version_number={version_number} kind="frame" />
       {result.status === "loading" ? (
         <div
           data-testid="frame-preview-loading"
           role="status"
           aria-live="polite"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            gap: "var(--space-2)",
-            color: "var(--color-text-secondary)",
-            fontSize: "var(--font-size-sm)",
-          }}
+          className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
           <Spinner size={16} decorative />
           <span>Loading version {version_number}…</span>
@@ -68,24 +58,17 @@ export function FramePreviewView(props: FramePreviewViewProps): ReactElement {
       ) : result.status === "error" ? (
         <div
           data-testid="frame-preview-error"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: 1,
-            gap: "var(--space-2)",
-          }}
+          className="flex flex-1 flex-col items-center justify-center gap-2"
         >
-          <div style={{ color: "var(--color-severity-error)", fontSize: "var(--font-size-sm)" }}>
+          <div className="text-sm" style={{ color: "var(--color-severity-error)" }}>
             {result.error?.message ?? "Failed to load version"}
           </div>
-          <Button variant="secondary" size="md" onClick={preview.exit}>
+          <Button variant="outline" size="default" onClick={preview.exit}>
             Return to working version
           </Button>
         </div>
       ) : (
-        <div style={{ flex: 1, position: "relative" }}>
+        <div className="relative flex-1">
           <FrameCanvas
             frame_version={loaded_version}
             layout_result={layout_result}

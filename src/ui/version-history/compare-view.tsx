@@ -19,7 +19,9 @@ import {
   type StructuralDiff,
   type SessionStructuralDiff,
 } from "@/state";
-import { Button, IconButton, InlineLoading, UIcon } from "../primitives";
+import { ArrowLeft } from "@phosphor-icons/react";
+import { Button } from "#components/ui/button";
+import { ScrollArea } from "#components/ui/scroll-area";
 import { CompareEntryList } from "./compare-entry-list";
 import type { CompareEntryRowDescriptor } from "./compare-entry-row";
 
@@ -333,55 +335,37 @@ export function CompareView(props: CompareViewProps): ReactElement {
   }, [entity_kind, from_id, to_id, repository]);
 
   return (
-    <div
-      data-testid="compare-view"
-      style={{ display: "flex", flexDirection: "column", height: "100%" }}
-    >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          padding: "var(--space-2) var(--space-3)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-          fontSize: "var(--font-size-sm)",
-        }}
-      >
-        <IconButton aria-label="Back to history" onClick={on_back}>
-          <UIcon name="arrow-left" size={14} />
-        </IconButton>
+    <div data-testid="compare-view" className="flex h-full flex-col">
+      <header className="flex items-center gap-2 border-b px-3 py-2 text-sm">
+        <Button variant="ghost" size="icon-sm" aria-label="Back to history" onClick={on_back}>
+          <ArrowLeft />
+        </Button>
         {/* P2: make the title an h2 so screen readers get a heading
             landmark inside the pane. */}
-        <h2
-          data-testid="compare-view-title"
-          style={{
-            margin: 0,
-            fontSize: "inherit",
-            fontWeight: "var(--font-weight-semibold)",
-            color: "inherit",
-          }}
-        >
+        <h2 data-testid="compare-view-title" className="m-0 text-inherit font-semibold">
           Compare v{from_version_number} to v{to_version_number}
         </h2>
       </header>
       {state.kind === "loading" ? (
-        <InlineLoading testId="compare-view-loading" label="Loading comparison…" />
+        <div
+          data-testid="compare-view-loading"
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 p-4 text-sm text-muted-foreground"
+        >
+          <span
+            className="inline-block size-3.5 animate-spin rounded-full border-2 border-border"
+            style={{ borderTopColor: "var(--color-mode-current-accent)" }}
+            aria-hidden="true"
+          />
+          <span>Loading comparison…</span>
+        </div>
       ) : state.kind === "error" ? (
-        <div data-testid="compare-view-error" style={{ padding: "var(--space-4)" }}>
-          <div
-            style={{
-              color: "var(--color-severity-error)",
-              fontSize: "var(--font-size-base)",
-            }}
-          >
+        <div data-testid="compare-view-error" className="p-4">
+          <div className="text-base" style={{ color: "var(--color-severity-error)" }}>
             {state.error.message}
           </div>
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={on_back}
-            style={{ marginTop: "var(--space-2)" }}
-          >
+          <Button variant="outline" size="default" onClick={on_back} className="mt-2">
             Back to history
           </Button>
         </div>
@@ -439,20 +423,13 @@ function FrameCompareBody(props: {
     rows.layout_only.length;
   if (total === 0) {
     return (
-      <div
-        data-testid="compare-view-empty"
-        style={{
-          padding: "var(--space-4)",
-          color: "var(--color-text-tertiary)",
-          fontStyle: "italic",
-        }}
-      >
+      <div data-testid="compare-view-empty" className="p-4 italic text-muted-foreground/80">
         No differences
       </div>
     );
   }
   return (
-    <div style={{ overflowY: "auto", flex: 1 }}>
+    <ScrollArea className="flex-1">
       <CompareEntryList
         title="Nodes added"
         kind="added"
@@ -501,7 +478,7 @@ function FrameCompareBody(props: {
         entries={rows.layout_only}
         on_navigate_to_entity={on_navigate_to_entity}
       />
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -537,20 +514,13 @@ function SessionCompareBody(props: {
     rows.metadata.length;
   if (total === 0) {
     return (
-      <div
-        data-testid="compare-view-empty"
-        style={{
-          padding: "var(--space-4)",
-          color: "var(--color-text-tertiary)",
-          fontStyle: "italic",
-        }}
-      >
+      <div data-testid="compare-view-empty" className="p-4 italic text-muted-foreground/80">
         No differences
       </div>
     );
   }
   return (
-    <div style={{ overflowY: "auto", flex: 1 }}>
+    <ScrollArea className="flex-1">
       <CompareEntryList
         title="Premises added"
         kind="added"
@@ -647,6 +617,6 @@ function SessionCompareBody(props: {
         entries={rows.metadata}
         on_navigate_to_entity={on_navigate_to_entity}
       />
-    </div>
+    </ScrollArea>
   );
 }

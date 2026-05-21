@@ -1,9 +1,10 @@
 import type { ReactElement } from "react";
 import { useSessionStore } from "@/state";
+import { CaretUp, CaretDown } from "@phosphor-icons/react";
 import { PremisePool } from "./premise-pool";
 import { SessionAuthorities } from "./session-authorities";
-import { IconButton, Pill } from "../../primitives";
-import { UIcon } from "../../primitives/uicon";
+import { Pill } from "../../primitives";
+import { Button } from "#components/ui/button";
 
 export interface BottomPanelProps {
   is_expanded: boolean;
@@ -12,6 +13,18 @@ export interface BottomPanelProps {
   on_highlight_on_canvas?: (node_ids: ReadonlyArray<string>) => void;
 }
 
+// Note on the handoff's "shadcn Accordion for collapsible sections":
+// the Premise Pool + Session Authorities pair in the expanded bottom panel
+// was previously a 3fr/2fr side-by-side grid with a fixed 180px row height
+// (set by `bottom_expanded_height` in two-pane-layout). Stacking the two
+// surfaces inside an Accordion would (a) starve the lists of vertical
+// space, (b) duplicate the "Premises" / "Session authorities" labels
+// (Accordion trigger + inner pool header both render them), and (c) hide
+// one section behind a collapse interaction that practitioners reading
+// both lists at once would have to undo on every page entry. The expand /
+// collapse toggle at the panel level still satisfies the "collapsible"
+// goal. Side-by-side simultaneity is retained; Accordion is intentionally
+// declined here.
 export function BottomPanel(props: BottomPanelProps): ReactElement {
   const { is_expanded, on_toggle_expanded, operating_mode, on_highlight_on_canvas } = props;
   const premise_count = useSessionStore((s) => s.session?.premises.length ?? 0);
@@ -21,28 +34,23 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
     return (
       <div
         data-testid="bottom-panel-collapsed"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-3)",
-          padding: "0 var(--space-4)",
-          height: "var(--height-row-toolbar)",
-          fontSize: "var(--font-size-xs)",
-          color: "var(--color-text-secondary)",
-          background: "var(--color-surface-elevated)",
-          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
+        className="flex items-center gap-3 border-t bg-background px-4 text-xs text-muted-foreground"
+        style={{ height: "var(--height-row-toolbar)" }}
       >
-        <IconButton
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
           aria-label="Expand bottom panel"
           onClick={on_toggle_expanded}
-          size="sm"
           data-testid="bottom-panel-toggle"
           title="Expand premises and authorities"
         >
-          <UIcon name="angle-up" size={16} />
-        </IconButton>
-        <span className="argmap-section-heading">Premises &amp; authorities</span>
+          <CaretUp size={16} />
+        </Button>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Premises &amp; authorities
+        </span>
         <Pill
           variant={premise_count === 0 ? "neutral" : "status_open"}
           data-testid="bottom-panel-premise-count"
@@ -62,49 +70,27 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
   }
 
   return (
-    <div
-      data-testid="bottom-panel-expanded"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-      }}
-    >
+    <div data-testid="bottom-panel-expanded" className="flex h-full flex-col">
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 var(--space-4)",
-          height: "var(--height-row-toolbar)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-          background: "var(--color-surface-elevated)",
-        }}
+        className="flex items-center justify-between border-b bg-background px-4"
+        style={{ height: "var(--height-row-toolbar)" }}
       >
-        <span className="argmap-section-heading">Premises &amp; authorities</span>
-        <IconButton
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Premises &amp; authorities
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
           aria-label="Collapse bottom panel"
           onClick={on_toggle_expanded}
-          size="sm"
           data-testid="bottom-panel-toggle"
         >
-          <UIcon name="angle-down" size={16} />
-        </IconButton>
+          <CaretDown size={16} />
+        </Button>
       </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "3fr 2fr",
-          flex: 1,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            borderRight: "var(--border-hairline) solid var(--color-border-subtle)",
-            overflow: "hidden",
-          }}
-        >
+      <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "3fr 2fr" }}>
+        <div className="overflow-hidden border-r">
           <PremisePool on_highlight_on_canvas={on_highlight_on_canvas} />
         </div>
         <SessionAuthorities

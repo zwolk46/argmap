@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { ReactElement, RefObject } from "react";
-import { Button, Z } from "../primitives";
+import { Z } from "../primitives";
+import { Button } from "#components/ui/button";
 
 export interface CoachmarkProps {
   anchor_ref: RefObject<HTMLElement | null>;
@@ -62,36 +63,12 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
       role="dialog"
       aria-modal="true"
       aria-label={aria_label}
-      style={{
-        position: "fixed",
-        top: pos.top,
-        left: pos.left,
-        zIndex: Z.coachmark,
-        maxWidth: 320,
-        padding: "var(--space-3)",
-        background: "var(--color-surface-elevated)",
-        boxShadow: "var(--shadow-md)",
-        borderRadius: "var(--radius-md)",
-        border: "var(--border-thin) solid var(--color-border-default)",
-      }}
+      // Position is runtime-computed; keep inline style for it.
+      style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: Z.coachmark }}
+      className="max-w-[320px] rounded-2xl bg-popover p-3 text-popover-foreground ring-1 ring-foreground/10 shadow-md"
     >
-      <p
-        style={{
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-primary)",
-          margin: 0,
-        }}
-      >
-        {props.message}
-      </p>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "var(--space-2)",
-          marginTop: "var(--space-2)",
-        }}
-      >
+      <p className="m-0 text-sm text-[var(--color-text-primary)]">{props.message}</p>
+      <div className="mt-2 flex justify-end gap-2">
         {props.on_learn_more ? (
           <Button
             variant="ghost"
@@ -103,7 +80,7 @@ export function Coachmark(props: CoachmarkProps): ReactElement | null {
           </Button>
         ) : null}
         <Button
-          variant="primary"
+          variant="default"
           size="sm"
           data-testid="coachmark-dismiss"
           autoFocus

@@ -1,9 +1,12 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import type { NodeRef, Node, Edge } from "@/schema";
+import type { NodeRef, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button, TypeIcon, humanizeNodeType } from "../../primitives";
-import { UIcon } from "../../primitives/uicon";
+import { TypeIcon, humanizeNodeType } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Textarea } from "#components/ui/textarea";
+import { Label } from "#components/ui/label";
+import { Separator } from "#components/ui/separator";
 import { InspectorValidationBlock } from "./inspector-validation-block";
 import { NODE_TYPE_EDITORS } from "./editors";
 import { OptionsBoxEditor } from "./options-box-editor";
@@ -24,61 +27,11 @@ export interface InspectorNodeProps {
 export function InspectorNode(props: InspectorNodeProps): ReactElement {
   const { node_id, on_request_delete, on_navigate_to_node } = props;
   const node = useFrameStore((s) => s.frame_version?.nodes.find((n) => n.id === node_id));
-  const all_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
-  const { frame_store, generateId, now } = useRepository();
+  const { frame_store } = useRepository();
   const [edit_mode, set_edit_mode] = useEditMode(node);
 
   if (!node) {
-    return (
-      <div
-        style={{
-          color: "var(--color-text-secondary)",
-          fontSize: "var(--font-size-sm)",
-        }}
-      >
-        Node not found.
-      </div>
-    );
-  }
-
-  // Compute available node lists for editor pickers.
-  const available_terms = all_nodes
-    .filter((n) => n.type === "Term" && n.id !== node_id)
-    .map((n) => ({ id: n.id, label: (n as { name?: string }).name ?? n.id }));
-
-  const available_authorities = all_nodes
-    .filter((n) => n.type === "Authority")
-    .map((n) => ({
-      id: n.id,
-      label:
-        (n as { short_label?: string; citation?: string }).short_label ??
-        (n as { short_label?: string; citation?: string }).citation ??
-        n.id,
-    }));
-
-  const available_gate_inputs = all_nodes
-    .filter((n) => n.type !== "Premise" && n.type !== "Authority" && n.id !== node_id)
-    .map((n) => ({
-      id: n.id,
-      label:
-        (n as { question?: string }).question ??
-        (n as { statement?: string }).statement ??
-        (n as { name?: string }).name ??
-        humanizeNodeType(n.type),
-    }));
-
-  // Handle authority citation: create a CITES edge from the authority to this interpretation node.
-  function handle_pick_authority(authority_id: string) {
-    const edge: Edge = {
-      id: generateId(),
-      type: "CITES",
-      layer: "frame",
-      source: authority_id,
-      target: node_id,
-      created_at: now(),
-      updated_at: now(),
-    };
-    frame_store.getState().applyPatch({ kind: "edge_added", edge });
+    return <div className="text-sm text-muted-foreground">Node not found.</div>;
   }
 
   const EditorComponent = NODE_TYPE_EDITORS[node.type] as React.ComponentType<
@@ -86,45 +39,29 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
   >;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          paddingBottom: "var(--space-3)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-          marginBottom: "var(--space-3)",
-        }}
-      >
+      <div className="flex items-center gap-2 pb-3">
         <TypeIcon node_type={node.type} />
-        <span style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-          {humanizeNodeType(node.type)}
-        </span>
+        <span className="text-sm font-medium">{humanizeNodeType(node.type)}</span>
       </div>
+      <Separator />
 
       {/* Per-node-type editor */}
       <EditorComponent
         node={node}
         on_navigate_to_node={on_navigate_to_node}
-        on_pick_authority={handle_pick_authority}
-        available_terms={available_terms}
-        available_authorities={available_authorities}
-        available_nodes={available_gate_inputs}
+        on_pick_linked_to={() => {}}
+        on_pick_authority={() => {}}
         on_pick_option_target={() => {}}
+        on_pick_slot_source={() => {}}
+        on_pick_binding_in_jurisdiction={() => {}}
       />
 
       {/* Notes */}
-      <div style={{ marginTop: "var(--space-3)" }}>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor={`notes-${node_id}`}
-        >
-          Notes
-        </label>
-        <textarea
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={`notes-${node_id}`}>Notes</Label>
+        <Textarea
           id={`notes-${node_id}`}
           rows={2}
           defaultValue={(node as { notes?: string }).notes ?? ""}
@@ -152,32 +89,22 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
               ta.blur();
             }
           }}
-          className="argmap-input"
-          style={TEXTAREA_STYLE}
         />
       </div>
 
       {/* Options box (A3: per-instance allowed types only) */}
       {PER_INSTANCE_ALLOWED.has(node.type) && (
-        <div style={{ marginTop: "var(--space-3)" }}>
-          <OptionsBoxEditor node={node} edit_mode={edit_mode} on_change_edit_mode={set_edit_mode} />
-        </div>
+        <OptionsBoxEditor node={node} edit_mode={edit_mode} on_change_edit_mode={set_edit_mode} />
       )}
 
       {/* Validation block */}
       <InspectorValidationBlock node_id={node_id} />
 
       {/* Footer */}
-      <div
-        style={{
-          marginTop: "var(--space-4)",
-          paddingTop: "var(--space-3)",
-          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
+      <Separator className="mt-1" />
+      <div>
         <Button
           variant="destructive"
-          size="md"
           disabled={node.type === "RootQuestion"}
           title={
             node.type === "RootQuestion"
@@ -185,7 +112,6 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
               : "Delete node"
           }
           onClick={on_request_delete}
-          leading={<UIcon name="trash" size={14} />}
         >
           Delete node
         </Button>
@@ -214,7 +140,3 @@ function useEditMode(
   }, [node?.id, has_instance]);
   return [mode, setMode];
 }
-
-const TEXTAREA_STYLE: React.CSSProperties = {
-  resize: "vertical",
-};

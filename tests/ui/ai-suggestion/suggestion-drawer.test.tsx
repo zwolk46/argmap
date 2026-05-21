@@ -77,13 +77,14 @@ describe("SuggestionDrawer", () => {
     expect(queryByTestId("suggestion-edit-textarea")).toBeTruthy();
   });
 
-  // §12 F-28.
+  // §12 F-28. shadcn Sheet renders into document.body via Radix Portal, so
+  // container.textContent is empty. Query the body instead — the chip is the
+  // only place rendering "checkpoint".
   it("shows the human-readable short name in the header chip, not the bare hook id", () => {
-    const { container } = render(<SuggestionDrawer store_kind="frame" />);
-    // hook_id "G1" -> "checkpoint" via hookShortName. Don't pin to a specific
-    // element selector; the chip is the only place rendering "checkpoint".
-    expect(container.textContent ?? "").toContain("checkpoint");
-    expect(container.textContent ?? "").not.toMatch(/\bG1\b/);
+    render(<SuggestionDrawer store_kind="frame" />);
+    const body_text = document.body.textContent ?? "";
+    expect(body_text).toContain("checkpoint");
+    expect(body_text).not.toMatch(/\bG1\b/);
   });
 });
 

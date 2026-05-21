@@ -10,32 +10,9 @@ export interface InterviewEmptyStateProps {
 export function InterviewEmptyState(props: InterviewEmptyStateProps): ReactElement {
   if (props.conclusion_label) {
     return (
-      <div
-        data-testid="interview-empty-state-complete"
-        style={{
-          padding: "var(--space-4)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-3)",
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            fontSize: "var(--font-size-sm)",
-            fontWeight: "var(--font-weight-medium)",
-            color: "var(--color-text-primary)",
-          }}
-        >
-          All items resolved.
-        </p>
-        <p
-          style={{
-            margin: 0,
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
-          }}
-        >
+      <div data-testid="interview-empty-state-complete" className="flex flex-col gap-3 p-4">
+        <p className="m-0 text-sm font-medium text-foreground">All items resolved.</p>
+        <p className="m-0 text-sm text-muted-foreground">
           Conclusion: <em>{props.conclusion_label}</em>
         </p>
         <Button
@@ -44,7 +21,7 @@ export function InterviewEmptyState(props: InterviewEmptyStateProps): ReactEleme
           onClick={props.on_save_milestone}
           disabled={props.saving_milestone}
           data-testid="save-milestone-button"
-          style={{ alignSelf: "flex-start" }}
+          className="self-start"
           title="Save this resolved session as a permanent checkpoint you can come back to."
           // L8: while saving, the spinner alone carries progress; the button
           // text stays "Save snapshot" so we don't double-signal (text +

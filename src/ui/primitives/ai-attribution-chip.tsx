@@ -46,32 +46,14 @@ export function AiAttributionChip({
   const chipSpan = (
     <span
       data-testid="ai-attribution-chip"
+      className="inline-flex items-center gap-[3px] rounded-full px-1 py-px text-[10px] font-medium uppercase tracking-wider leading-[1.4] border border-transparent hover:border-[var(--color-ai-accent-strong)] transition-colors"
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "3px",
-        padding: "1px var(--space-1)",
-        borderRadius: "var(--radius-pill)",
         background: "var(--color-ai-accent-bg)",
         color: "var(--color-ai-accent)",
-        fontSize: "var(--font-size-2xs)",
-        fontWeight: "var(--font-weight-medium)",
-        fontFamily: "var(--font-sans)",
-        letterSpacing: "var(--letter-spacing-wide)",
-        textTransform: "uppercase",
-        lineHeight: 1.4,
         cursor: record ? "help" : "default",
-        border: "var(--border-thin) solid transparent",
-        transition: "border-color var(--duration-fast) var(--ease-standard)",
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "var(--color-ai-accent-strong)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.borderColor = "transparent";
       }}
     >
-      <AiSparkle style={{ fontSize: "var(--font-size-xs)" }} />
+      <AiSparkle size={11} />
       {short}
     </span>
   );
@@ -79,7 +61,7 @@ export function AiAttributionChip({
   if (!record) return chipSpan;
 
   const tooltipContent = (
-    <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
+    <div className="text-sm text-[var(--color-text-secondary)]">
       <div>
         <strong>Hook:</strong> {record.hook_id}
       </div>

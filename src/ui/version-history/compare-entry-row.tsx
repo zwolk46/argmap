@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
+import { Plus, Minus, PencilSimple } from "@phosphor-icons/react";
 import type { NodeRef, EdgeRef } from "@/schema";
 import { TypeIcon } from "../primitives";
+import { cn } from "#lib/utils";
 
 export type CompareEntryRowDescriptor =
   | { kind: "node_added"; node_id: NodeRef; node_type: string; statement_preview: string }
@@ -58,6 +60,33 @@ function safeNodeType(t: string): Parameters<typeof TypeIcon>[0]["node_type"] {
   >[0]["node_type"];
 }
 
+// Lead icon for added/removed/edited rows — Plus/Minus/PencilSimple — with
+// the change-status semantic color tokens drawn from existing argmap tokens.
+// "metadata_changed" and "layout_only_summary" do not get a status icon
+// because they aren't change-of-entity rows.
+function StatusIcon({ kind }: { kind: CompareEntryRowDescriptor["kind"] }): ReactElement | null {
+  if (kind === "node_added" || kind === "edge_added") {
+    return (
+      <Plus weight="bold" aria-hidden="true" style={{ color: "var(--color-status-satisfied)" }} />
+    );
+  }
+  if (kind === "node_removed" || kind === "edge_removed") {
+    return (
+      <Minus weight="bold" aria-hidden="true" style={{ color: "var(--color-severity-error)" }} />
+    );
+  }
+  if (kind === "node_edited" || kind === "edge_edited") {
+    return (
+      <PencilSimple
+        weight="bold"
+        aria-hidden="true"
+        style={{ color: "var(--color-status-contested)" }}
+      />
+    );
+  }
+  return null;
+}
+
 export function CompareEntryRow({
   descriptor,
   on_navigate_to_entity,
@@ -80,18 +109,18 @@ export function CompareEntryRow({
     }
   }
 
-  let icon: ReactElement | null = null;
+  let typeIcon: ReactElement | null = null;
   let primary: string = "";
   let secondary: string | undefined;
 
   switch (descriptor.kind) {
     case "node_added":
     case "node_removed":
-      icon = <TypeIcon node_type={safeNodeType(descriptor.node_type)} />;
+      typeIcon = <TypeIcon node_type={safeNodeType(descriptor.node_type)} />;
       primary = descriptor.statement_preview || descriptor.node_id;
       break;
     case "node_edited":
-      icon = <TypeIcon node_type={safeNodeType(descriptor.node_type)} />;
+      typeIcon = <TypeIcon node_type={safeNodeType(descriptor.node_type)} />;
       primary = descriptor.statement_preview || descriptor.node_id;
       secondary = `(fields: ${descriptor.fields_changed.join(", ")})`;
       break;
@@ -128,26 +157,17 @@ export function CompareEntryRow({
       }
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
-      className={clickable ? "argmap-row-hover" : undefined}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--space-2)",
-        padding: "var(--space-2) var(--space-3)",
-        fontSize: "var(--font-size-sm)",
-        cursor: clickable ? "pointer" : "default",
-        color: "var(--color-text-primary)",
-      }}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 text-sm text-foreground",
+        clickable
+          ? "cursor-pointer hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          : "cursor-default",
+      )}
     >
-      {icon}
-      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {primary}
-      </span>
-      {secondary ? (
-        <span style={{ color: "var(--color-text-secondary)", fontSize: "var(--font-size-xs)" }}>
-          {secondary}
-        </span>
-      ) : null}
+      <StatusIcon kind={descriptor.kind} />
+      {typeIcon}
+      <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{primary}</span>
+      {secondary ? <span className="text-xs text-muted-foreground">{secondary}</span> : null}
     </div>
   );
 }

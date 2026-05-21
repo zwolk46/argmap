@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { CascadeReport } from "@/state";
 import { CascadeDeleteDialog } from "@/ui/frame-building/cascade-delete-dialog/cascade-delete-dialog";
 import type { CascadeConfirmationState } from "@/ui/hooks/use-cascade-confirmation";
@@ -28,20 +28,25 @@ describe("CascadeDeleteDialog", () => {
   it("renders nothing (null) when phase === 'idle'", () => {
     const { container } = render(<CascadeDeleteDialog cascade={makeCascade("idle")} />);
     expect(container.firstChild).toBeNull();
+    // AlertDialog portals; the dialog title shouldn't appear anywhere either.
+    expect(screen.queryByText("Delete and cascade?")).toBeNull();
   });
 
   it("renders dialog content when phase === 'confirming'", () => {
-    const { getByText } = render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
-    expect(getByText("Delete and cascade?")).toBeTruthy();
+    // AlertDialog portals to document.body — query via screen, not container.
+    render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
+    expect(screen.getByText("Delete and cascade?")).toBeTruthy();
   });
 
   it("shows the node and edge counts in the confirm button label when confirming", () => {
-    const { getByText } = render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
-    expect(getByText(/Delete 2 nodes and 1 edge/)).toBeTruthy();
+    render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
+    expect(screen.getByText(/Delete 2 nodes and 1 edge/)).toBeTruthy();
   });
 
   it("renders CascadeSummaryTree content when confirming", () => {
-    const { getByText } = render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
-    expect(getByText(/The following nodes and edges will be permanently removed/)).toBeTruthy();
+    render(<CascadeDeleteDialog cascade={makeCascade("confirming")} />);
+    expect(
+      screen.getByText(/The following nodes and edges will be permanently removed/),
+    ).toBeTruthy();
   });
 });

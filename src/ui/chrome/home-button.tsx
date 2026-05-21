@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
+import { House } from "@phosphor-icons/react";
 import { IconButton } from "../primitives/icon-button";
-import { UIcon } from "../primitives/uicon";
 
 export interface HomeButtonProps {
   onClick: () => void;
@@ -9,7 +9,7 @@ export interface HomeButtonProps {
 export function HomeButton({ onClick }: HomeButtonProps): ReactElement {
   return (
     <IconButton aria-label="Go to home" title="Home" onClick={onClick}>
-      <UIcon name="home" size={18} />
+      <House size={18} weight="regular" />
     </IconButton>
   );
 }

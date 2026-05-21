@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
+import { X } from "@phosphor-icons/react";
 import type {
   FrameVersionId,
   SessionVersionId,
@@ -9,16 +10,10 @@ import type {
   EdgeRef,
 } from "@/schema";
 import { useFrameStore, useSessionStore } from "@/state";
-import {
-  Drawer,
-  DrawerHeader,
-  DrawerBody,
-  DrawerFooter,
-  IconButton,
-  InlineEmpty,
-  InlineLoading,
-  UIcon,
-} from "../primitives";
+import { Sheet, SheetContent, SheetTitle } from "#components/ui/sheet";
+import { Button } from "#components/ui/button";
+import { ScrollArea } from "#components/ui/scroll-area";
+import { Separator } from "#components/ui/separator";
 import { useRoute } from "../routing";
 import { PaneTabs, type PaneTabValue } from "./pane-tabs";
 import { MilestoneFilter, type MilestoneFilterValue } from "./milestone-filter";
@@ -271,76 +266,109 @@ function PaneShell(props: PaneShellProps): ReactElement {
   }
 
   return (
-    <Drawer
-      open={props.open}
-      onClose={props.onClose}
-      width="min(520px, 100vw)"
-      aria_label="Version history"
-    >
-      <DrawerHeader>
-        <span data-testid="version-history-header-title">{props.header_title}</span>
-        <IconButton
-          size="sm"
-          data-testid="version-history-close"
-          aria-label="Close version history"
-          onClick={props.onClose}
+    <>
+      <Sheet
+        open={props.open}
+        onOpenChange={(next) => {
+          if (!next) props.onClose();
+        }}
+      >
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          aria-label="Version history"
+          className="flex w-[min(520px,100vw)] flex-col gap-0 p-0 sm:max-w-none"
         >
-          <UIcon name="times" size={14} />
-        </IconButton>
-      </DrawerHeader>
-      <DrawerBody>
-        {compare_state ? (
-          <CompareView
-            entity_kind={props.entity_kind}
-            from_id={compare_state.from_id as FrameVersionId}
-            to_id={compare_state.to_id as FrameVersionId}
-            from_version_number={compare_state.from_version_number}
-            to_version_number={compare_state.to_version_number}
-            on_back={() => setCompareState(null)}
-            on_navigate_to_entity={props.on_navigate_to_entity ?? (() => {})}
-          />
-        ) : (
-          <>
-            {props.show_tabs && props.active_tab && props.on_tab_change ? (
-              <PaneTabs value={props.active_tab} onChange={props.on_tab_change} />
-            ) : null}
-            <MilestoneFilter value={milestone_filter} onChange={setMilestoneFilter} />
-            {props.summaries_status === "loading" ? (
-              <InlineLoading testId="version-tree-loading" label="Loading versions…" />
-            ) : props.summaries_status === "error" ? (
-              <InlineEmpty testId="version-tree-error">
-                <span style={{ color: "var(--color-severity-error)" }}>
-                  Failed to load versions
-                </span>
-              </InlineEmpty>
-            ) : (
-              <VersionTree
+          <SheetTitle asChild>
+            <div
+              data-slot="version-history-header"
+              className="flex items-center justify-between px-5 py-4 border-b text-base font-semibold"
+            >
+              <span data-testid="version-history-header-title">{props.header_title}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                data-testid="version-history-close"
+                aria-label="Close version history"
+                onClick={props.onClose}
+              >
+                <X />
+              </Button>
+            </div>
+          </SheetTitle>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {compare_state ? (
+              <CompareView
                 entity_kind={props.entity_kind}
-                summaries={props.summaries as never}
-                current_version_id={props.current_version_id as FrameVersionId | null}
-                selected_version_id={selected_version_id as FrameVersionId | null}
-                on_select={(id) => setSelectedVersionId(id)}
-                milestone_filter={milestone_filter}
-                session_authored_against_version_id={props.session_authored_against ?? undefined}
+                from_id={compare_state.from_id as FrameVersionId}
+                to_id={compare_state.to_id as FrameVersionId}
+                from_version_number={compare_state.from_version_number}
+                to_version_number={compare_state.to_version_number}
+                on_back={() => setCompareState(null)}
+                on_navigate_to_entity={props.on_navigate_to_entity ?? (() => {})}
               />
+            ) : (
+              <ScrollArea className="flex-1 px-5 py-4">
+                {props.show_tabs && props.active_tab && props.on_tab_change ? (
+                  <PaneTabs value={props.active_tab} onChange={props.on_tab_change} />
+                ) : null}
+                <MilestoneFilter value={milestone_filter} onChange={setMilestoneFilter} />
+                {props.summaries_status === "loading" ? (
+                  <div
+                    data-testid="version-tree-loading"
+                    role="status"
+                    aria-live="polite"
+                    className="flex items-center gap-2 p-4 text-sm text-muted-foreground"
+                  >
+                    <span
+                      className="inline-block size-3.5 animate-spin rounded-full border-2 border-border"
+                      style={{ borderTopColor: "var(--color-mode-current-accent)" }}
+                      aria-hidden="true"
+                    />
+                    <span>Loading versions…</span>
+                  </div>
+                ) : props.summaries_status === "error" ? (
+                  <div data-testid="version-tree-error" className="p-4 text-sm">
+                    <span style={{ color: "var(--color-severity-error)" }}>
+                      Failed to load versions
+                    </span>
+                  </div>
+                ) : (
+                  <VersionTree
+                    entity_kind={props.entity_kind}
+                    summaries={props.summaries as never}
+                    current_version_id={props.current_version_id as FrameVersionId | null}
+                    selected_version_id={selected_version_id as FrameVersionId | null}
+                    on_select={(id) => setSelectedVersionId(id)}
+                    milestone_filter={milestone_filter}
+                    session_authored_against_version_id={
+                      props.session_authored_against ?? undefined
+                    }
+                  />
+                )}
+              </ScrollArea>
             )}
-          </>
-        )}
-      </DrawerBody>
-      {compare_state ? null : (
-        <DrawerFooter>
-          <SelectionFooter
-            selected_version_id={selected_version_id as FrameVersionId | null}
-            selected_version_number={selected_summary?.version_number ?? null}
-            current_version_id={props.current_version_id as FrameVersionId | null}
-            current_version_number={props.current_version_number}
-            allow_restore={props.allow_restore}
-            on_preview_clicked={handlePreviewClicked}
-            on_restore_clicked={handleRestoreClicked}
-            on_compare_clicked={handleCompareClicked}
-          />
-        </DrawerFooter>
-      )}
+            {compare_state ? null : (
+              <>
+                <Separator />
+                <div className="flex justify-end gap-2 px-5 py-3">
+                  <SelectionFooter
+                    selected_version_id={selected_version_id as FrameVersionId | null}
+                    selected_version_number={selected_summary?.version_number ?? null}
+                    current_version_id={props.current_version_id as FrameVersionId | null}
+                    current_version_number={props.current_version_number}
+                    allow_restore={props.allow_restore}
+                    on_preview_clicked={handlePreviewClicked}
+                    on_restore_clicked={handleRestoreClicked}
+                    on_compare_clicked={handleCompareClicked}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
       {selected_summary && props.current_version_number !== null ? (
         <RestoreConfirmDialog
           open={restore_open}
@@ -359,6 +387,6 @@ function PaneShell(props: PaneShellProps): ReactElement {
           }}
         />
       ) : null}
-    </Drawer>
+    </>
   );
 }

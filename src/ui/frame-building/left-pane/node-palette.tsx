@@ -223,14 +223,7 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        padding: "var(--space-2) 0",
-      }}
-      aria-label="Node palette"
-    >
+    <div className="flex flex-col py-2" aria-label="Node palette">
       {visible.map((node_type) => {
         const is_root_disabled = node_type === "RootQuestion" && has_root_question;
         return (

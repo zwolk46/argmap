@@ -135,19 +135,10 @@ export function GlossaryTooltip({ entry_key, children }: GlossaryTooltipProps): 
 
   const content = (
     <div>
-      <div
-        style={{
-          fontWeight: "var(--font-weight-semibold)",
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-primary)",
-          marginBottom: "var(--space-1)",
-        }}
-      >
+      <div className="mb-1 font-semibold text-sm text-[var(--color-text-primary)]">
         {entry.term}
       </div>
-      <div style={{ fontSize: "var(--font-size-sm)", color: "var(--color-text-secondary)" }}>
-        {entry.definition}
-      </div>
+      <div className="text-sm text-[var(--color-text-secondary)]">{entry.definition}</div>
     </div>
   );
 

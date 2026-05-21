@@ -1,6 +1,15 @@
 import type { ReactElement } from "react";
 import type { CascadeConfirmationState } from "../../hooks/use-cascade-confirmation";
-import { ConfirmDialog } from "../../primitives";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#components/ui/alert-dialog";
 import { CascadeSummaryTree } from "./cascade-summary-tree";
 
 export interface CascadeDeleteDialogProps {
@@ -25,15 +34,32 @@ export function CascadeDeleteDialog(props: CascadeDeleteDialogProps): ReactEleme
   const confirm_label = `Delete ${n_nodes} node${node_s} and ${n_edges} edge${edge_s}`;
 
   return (
-    <ConfirmDialog
+    <AlertDialog
       open={phase === "confirming"}
-      title="Delete and cascade?"
-      confirm_label={confirm_label}
-      confirm_variant="danger"
-      onConfirm={confirm}
-      onCancel={cancel}
+      onOpenChange={(next) => {
+        if (!next) cancel();
+      }}
     >
-      <CascadeSummaryTree report={summary} />
-    </ConfirmDialog>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete and cascade?</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div>
+              <CascadeSummaryTree report={summary} />
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={cancel}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={confirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {confirm_label}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

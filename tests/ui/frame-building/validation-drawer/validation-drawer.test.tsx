@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { FrameStoreSnapshot } from "@/state";
 import type { ValidationResult } from "@/schema";
 
@@ -92,10 +92,9 @@ describe("ValidationDrawer", () => {
   });
 
   it("renders 'No validation issues' when entries is empty", () => {
-    const { getByText } = render(
-      <ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />,
-    );
-    expect(getByText("No validation issues")).toBeTruthy();
+    // Sheet portals to document.body — query via screen, not container.
+    render(<ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />);
+    expect(screen.getByText("No validation issues")).toBeTruthy();
   });
 
   it("renders errors section when errors are present", () => {
@@ -103,12 +102,10 @@ describe("ValidationDrawer", () => {
       ...MOCK_FRAME_SNAPSHOT,
       validation: [makeError("V-FR-1"), makeError("V-FR-2")],
     };
-    const { getByText } = render(
-      <ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />,
-    );
-    expect(getByText("Errors")).toBeTruthy();
-    expect(getByText("Error: V-FR-1")).toBeTruthy();
-    expect(getByText("Error: V-FR-2")).toBeTruthy();
+    render(<ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />);
+    expect(screen.getByText("Errors")).toBeTruthy();
+    expect(screen.getByText("Error: V-FR-1")).toBeTruthy();
+    expect(screen.getByText("Error: V-FR-2")).toBeTruthy();
   });
 
   it("errors render before warnings in the document", () => {
@@ -116,10 +113,9 @@ describe("ValidationDrawer", () => {
       ...MOCK_FRAME_SNAPSHOT,
       validation: [makeWarning("V-W-1"), makeError("V-E-1")],
     };
-    const { container } = render(
-      <ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />,
-    );
-    const all_messages = container.querySelectorAll('[role="listitem"]');
+    render(<ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />);
+    // Sheet portals — query the whole document for listitems.
+    const all_messages = document.body.querySelectorAll('[role="listitem"]');
     const texts = Array.from(all_messages).map((el) => el.textContent ?? "");
     const error_idx = texts.findIndex((t) => t.includes("V-E-1"));
     const warning_idx = texts.findIndex((t) => t.includes("V-W-1"));
@@ -144,9 +140,7 @@ describe("ValidationDrawer", () => {
       },
     };
 
-    const { getByText } = render(
-      <ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />,
-    );
-    expect(getByText(/Dismissed/)).toBeTruthy();
+    render(<ValidationDrawer open on_close={() => {}} on_jump_to_node={() => {}} />);
+    expect(screen.getByText(/Dismissed/)).toBeTruthy();
   });
 });

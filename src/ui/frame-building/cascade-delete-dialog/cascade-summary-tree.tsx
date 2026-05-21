@@ -1,8 +1,7 @@
 import type { ReactElement } from "react";
+import { Trash } from "@phosphor-icons/react";
 import type { CascadeReport } from "@/state";
 import type { CascadeReason } from "@/runtime";
-import { useFrameStore } from "@/state";
-import { UIcon, humanizeNodeType } from "../../primitives";
 
 function reasonLabel(reason: CascadeReason): string {
   switch (reason.kind) {
@@ -21,91 +20,30 @@ export interface CascadeSummaryTreeProps {
 
 export function CascadeSummaryTree({ report }: CascadeSummaryTreeProps): ReactElement {
   const { cascade_nodes, cascade_edges } = report;
-  const all_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
-  const node_map = new Map(all_nodes.map((n) => [n.id, n]));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-      <p
-        style={{
-          margin: 0,
-          fontSize: "var(--font-size-sm)",
-          color: "var(--color-text-secondary)",
-        }}
-      >
+    <div className="flex flex-col gap-3">
+      <p className="m-0 text-sm text-muted-foreground">
         The following nodes and edges will be permanently removed:
       </p>
 
       {cascade_nodes.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-          <h3 className="argmap-section-heading">Nodes ({cascade_nodes.length})</h3>
+        <div className="flex flex-col gap-1">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Nodes ({cascade_nodes.length})
+          </h3>
           {cascade_nodes.map(({ node_id, reason }) => (
-            <div
-              key={node_id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-                padding: "var(--space-1) var(--space-2)",
-                background: "var(--color-surface-pane)",
-                borderRadius: "var(--radius-sm)",
-              }}
-            >
-              <UIcon
-                name="trash"
-                size={12}
-                style={{ color: "var(--color-text-tertiary)", flexShrink: 0 }}
-              />
-              <span
-                style={{
-                  fontSize: "var(--font-size-sm)",
-                  color: "var(--color-text-primary)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  flex: 1,
-                }}
-              >
-                {(() => {
-                  const n = node_map.get(node_id);
-                  if (!n) return node_id;
-                  return (
-                    (n as { name?: string; statement?: string; question?: string; citation?: string })
-                      .name ??
-                    (n as { name?: string; statement?: string; question?: string; citation?: string })
-                      .statement ??
-                    (n as { name?: string; statement?: string; question?: string; citation?: string })
-                      .question ??
-                    (n as { name?: string; statement?: string; question?: string; citation?: string })
-                      .citation ??
-                    humanizeNodeType(n.type)
-                  );
-                })()}
-              </span>
-              <span
-                style={{
-                  fontSize: "var(--font-size-xs)",
-                  color: "var(--color-text-tertiary)",
-                  flexShrink: 0,
-                }}
-              >
-                {reasonLabel(reason)}
-              </span>
+            <div key={node_id} className="flex items-center gap-2 rounded-md bg-muted px-2 py-1">
+              <Trash size={12} className="shrink-0 text-muted-foreground" />
+              <span className="flex-1 truncate font-mono text-sm text-foreground">{node_id}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{reasonLabel(reason)}</span>
             </div>
           ))}
         </div>
       )}
 
       {cascade_edges.length > 0 && (
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
-            padding: "var(--space-2)",
-            background: "var(--color-surface-pane)",
-            borderRadius: "var(--radius-sm)",
-          }}
-        >
+        <div className="rounded-md bg-muted p-2 text-sm text-muted-foreground">
           {cascade_edges.length} edge{cascade_edges.length !== 1 ? "s" : ""} will also be removed.
         </div>
       )}

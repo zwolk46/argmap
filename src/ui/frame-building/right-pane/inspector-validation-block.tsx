@@ -3,6 +3,7 @@ import type { NodeRef, ValidationResult } from "@/schema";
 import { VALIDATION_RULE_DESCRIPTIONS } from "@/schema";
 import { useFrameStore } from "@/state";
 import { SeverityIcon, humanizeValidationMessage } from "../../primitives";
+import { cn } from "#lib/utils";
 
 export interface InspectorValidationBlockProps {
   node_id: NodeRef;
@@ -29,52 +30,28 @@ export function InspectorValidationBlock(
   if (results.length === 0) return null;
 
   return (
-    <div
-      style={{
-        marginTop: "var(--space-4)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-2)",
-      }}
-    >
-      <h3 className="argmap-section-heading">Validation</h3>
+    <div className="mt-4 flex flex-col gap-2">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Validation
+      </h3>
       {results.map((r, i) => {
-        const tone =
+        const toneClasses =
           r.severity === "error"
-            ? {
-                fg: "var(--color-severity-error)",
-                bg: "var(--color-severity-error-bg)",
-                border: "var(--color-severity-error)",
-              }
+            ? "border-l-4 border-destructive bg-destructive/10 text-foreground"
             : r.severity === "warning"
-              ? {
-                  fg: "var(--color-severity-warning)",
-                  bg: "var(--color-severity-warning-bg)",
-                  border: "var(--color-severity-warning)",
-                }
-              : {
-                  fg: "var(--color-text-secondary)",
-                  bg: "var(--color-surface-pane)",
-                  border: "var(--color-border-subtle)",
-                };
+              ? "border-l-4 border-[var(--color-severity-warning)] bg-[var(--color-severity-warning-bg)] text-foreground"
+              : "border-l-4 border-border bg-muted text-foreground";
         return (
           <div
             key={`${r.rule_id}-${i}`}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "var(--space-2)",
-              padding: "var(--space-2) var(--space-3)",
-              background: tone.bg,
-              borderRadius: "var(--radius-md)",
-              borderLeft: `var(--border-thick) solid ${tone.border}`,
-              fontSize: "var(--font-size-sm)",
-              lineHeight: "var(--line-height-snug)",
-            }}
+            className={cn(
+              "flex items-start gap-2 rounded-md py-2 pl-3 pr-3 text-sm leading-snug",
+              toneClasses,
+            )}
           >
             <SeverityIcon severity={r.severity} />
             <span
-              style={{ color: "var(--color-text-primary)", flex: 1 }}
+              className="flex-1 text-foreground"
               title={VALIDATION_RULE_DESCRIPTIONS[r.rule_id] ?? r.rule_id}
             >
               {humanizeValidationMessage(r.message, frame_version)}

@@ -3,7 +3,9 @@ import type { ReactElement } from "react";
 import type { FrameVersionId } from "@/schema";
 import type { OrphanResolution } from "@/state";
 import { useRepository, useSessionStore, useFrameStore } from "@/state";
-import { Dialog, DialogHeader, DialogBody, DialogFooter, Button, useToast } from "../primitives";
+import { Dialog, DialogHeader, DialogBody, DialogFooter, useToast } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Alert } from "#components/ui/alert";
 import { MigrationDialogBody, type MigrationBodyPhase } from "./migration-dialog-body";
 import { usePreviewMigration } from "./use-preview-migration";
 
@@ -118,18 +120,11 @@ export function SessionMigrationDialog(props: SessionMigrationDialogProps): Reac
         {(session_version !== null || target_version !== null) && (
           <div
             data-testid="migration-version-preamble"
-            style={{
-              fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-secondary)",
-              marginBottom: "var(--space-3)",
-            }}
+            className="mb-3 text-sm text-muted-foreground"
           >
             Migrating session from frame{" "}
-            <strong style={{ color: "var(--color-text-primary)" }}>
-              v{session_version ?? "?"}
-            </strong>{" "}
-            →{" "}
-            <strong style={{ color: "var(--color-text-primary)" }}>v{target_version ?? "?"}</strong>
+            <strong className="text-foreground">v{session_version ?? "?"}</strong> →{" "}
+            <strong className="text-foreground">v{target_version ?? "?"}</strong>
           </div>
         )}
         <MigrationDialogBody
@@ -138,32 +133,20 @@ export function SessionMigrationDialog(props: SessionMigrationDialogProps): Reac
           onRetry={preview.retry}
         />
         {migrate_error ? (
-          <div
+          <Alert
             data-testid="migrate-error"
-            style={{
-              color: "var(--color-severity-error)",
-              background: "var(--color-severity-error-bg)",
-              padding: "var(--space-3) var(--space-4)",
-              fontSize: "var(--font-size-sm)",
-              borderRadius: "var(--radius-md)",
-              borderLeft: "var(--border-thick) solid var(--color-severity-error)",
-              marginTop: "var(--space-3)",
-            }}
+            variant="destructive"
+            className="mt-3 px-4 py-3 text-sm"
           >
             {migrate_error.message}
-          </div>
+          </Alert>
         ) : null}
       </DialogBody>
       <DialogFooter>
         <Button variant="secondary" data-testid="migration-cancel" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          variant="primary"
-          data-testid="migration-commit"
-          disabled={!can_migrate}
-          onClick={handleMigrate}
-        >
+        <Button data-testid="migration-commit" disabled={!can_migrate} onClick={handleMigrate}>
           Migrate
         </Button>
       </DialogFooter>

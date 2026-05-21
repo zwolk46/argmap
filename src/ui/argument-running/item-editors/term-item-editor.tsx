@@ -1,7 +1,9 @@
 import * as React from "react";
 import type { NodeRef, Term, Interpretation, Node, Edge } from "@/schema";
 import { useSessionStore, useRepository, useFrameStore } from "@/state";
-import { Button } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Label } from "#components/ui/label";
+import { RadioGroup, RadioGroupItem } from "#components/ui/radio-group";
 import { PremiseAuthoringSection, type PremiseAuthoringResult } from "./premise-authoring-section";
 import { AuthorityAttachmentSection } from "./authority-attachment-section";
 import { NotesField } from "./notes-field";
@@ -84,35 +86,22 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
           on_close();
         }
       }}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-        padding: "var(--space-3)",
-      }}
+      className="flex flex-col gap-3 p-3"
     >
-      <header style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "var(--font-size-base)",
-            color: "var(--color-text-primary)",
-          }}
-        >
-          {node.name}
-        </h3>
-        <span className="argmap-section-heading">Term</span>
+      <header className="flex flex-col gap-1">
+        <h3 className="m-0 text-base text-foreground">{node.name}</h3>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Term
+        </span>
       </header>
 
       {node.linked_to ? (
         <div
           data-testid="term-linked-notice"
+          className="rounded-md p-2 text-xs"
           style={{
-            padding: "var(--space-2)",
             background: "var(--color-background-warning)",
             color: "var(--color-text-warning)",
-            borderRadius: "var(--border-radius-md)",
-            fontSize: "var(--font-size-xs)",
           }}
         >
           This term is linked to another. Selecting an interpretation here will not affect the
@@ -120,56 +109,33 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
         </div>
       ) : null}
 
-      <fieldset
-        style={{
-          border: "var(--border-thin) solid var(--color-border-tertiary)",
-          borderRadius: "var(--border-radius-md)",
-          padding: "var(--space-2)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-1)",
-        }}
-      >
-        <legend
-          style={{
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-secondary)",
-            padding: "0 var(--space-1)",
-          }}
-        >
-          Interpretations
-        </legend>
+      <fieldset className="flex flex-col gap-1 rounded-md border p-2">
+        <legend className="px-1 text-xs text-muted-foreground">Interpretations</legend>
         {interpretations.length === 0 ? (
-          <span
-            style={{
-              fontSize: "var(--font-size-xs)",
-              color: "var(--color-text-tertiary)",
-            }}
-          >
+          <span className="text-xs text-muted-foreground/80">
             No interpretations attached to this term.
           </span>
         ) : (
-          interpretations.map((i) => (
-            <label
-              key={i.id}
-              data-testid={`term-interpretation-${i.id}`}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "var(--space-1)",
-                fontSize: "var(--font-size-xs)",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="radio"
-                name={`term-${node.id}`}
-                checked={selected_interpretation_id === i.id}
-                onChange={() => setSelectedInterpretationId(i.id)}
-              />
-              <span>{i.statement}</span>
-            </label>
-          ))
+          <RadioGroup
+            value={selected_interpretation_id ?? ""}
+            onValueChange={(v) => setSelectedInterpretationId(v)}
+            className="gap-1"
+          >
+            {interpretations.map((i) => {
+              const radio_id = `term-${node.id}-${i.id}`;
+              return (
+                <Label
+                  key={i.id}
+                  htmlFor={radio_id}
+                  data-testid={`term-interpretation-${i.id}`}
+                  className="flex cursor-pointer items-start gap-1 text-xs font-normal"
+                >
+                  <RadioGroupItem id={radio_id} value={i.id} />
+                  <span>{i.statement}</span>
+                </Label>
+              );
+            })}
+          </RadioGroup>
         )}
       </fieldset>
 
@@ -182,19 +148,13 @@ export function TermItemEditor(props: TermItemEditorProps): React.ReactElement {
       <AuthorityAttachmentSection value={authority_id} on_change={setAuthorityId} />
       <NotesField value={notes} on_change={setNotes} />
 
-      <footer
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "var(--space-1)",
-        }}
-      >
-        <Button variant="secondary" size="md" data-testid="term-editor-cancel" onClick={on_close}>
+      <footer className="flex justify-end gap-1">
+        <Button type="button" variant="outline" data-testid="term-editor-cancel" onClick={on_close}>
           Cancel
         </Button>
         <Button
-          variant="primary"
-          size="md"
+          type="button"
+          variant="default"
           data-testid="term-editor-save"
           onClick={on_save}
           disabled={!can_save}

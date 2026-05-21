@@ -93,17 +93,11 @@ export function PremiseReuseSuggestions(props: PremiseReuseSuggestionsProps): Re
   return (
     <div
       data-testid="premise-reuse-suggestions"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-        padding: "var(--space-2)",
-        background: "var(--color-surface-pane-secondary)",
-        borderRadius: "var(--border-radius-md)",
-        border: "var(--border-thin) solid var(--color-border-tertiary)",
-      }}
+      className="flex flex-col gap-1 rounded-md border bg-muted/50 p-2"
     >
-      <span className="argmap-section-heading">Reuse existing premise</span>
+      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        Reuse existing premise
+      </span>
       {/* KEEP RAW: dropdown menu rows (list-item buttons), not the standard Button taxonomy. */}
       {ranked.map(({ premise }) => (
         <button
@@ -111,16 +105,7 @@ export function PremiseReuseSuggestions(props: PremiseReuseSuggestionsProps): Re
           type="button"
           data-testid={`reuse-suggestion-${premise.id}`}
           onClick={() => props.on_select(premise.id)}
-          style={{
-            background: "transparent",
-            border: "none",
-            textAlign: "left",
-            cursor: "pointer",
-            fontSize: "var(--font-size-xs)",
-            color: "var(--color-text-primary)",
-            padding: "var(--space-1)",
-            borderRadius: "var(--border-radius-md)",
-          }}
+          className="cursor-pointer rounded-md bg-transparent p-1 text-left text-xs text-foreground transition-colors hover:bg-muted"
         >
           {(premise as { statement?: string }).statement ?? premise.id}
         </button>

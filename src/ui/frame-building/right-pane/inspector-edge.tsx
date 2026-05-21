@@ -1,7 +1,11 @@
 import type { ReactElement } from "react";
 import type { EdgeRef, NodeRef, Edge, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { Button } from "../../primitives";
+import { Button } from "#components/ui/button";
+import { Input } from "#components/ui/input";
+import { Textarea } from "#components/ui/textarea";
+import { Label } from "#components/ui/label";
+import { Separator } from "#components/ui/separator";
 import { EdgeEditor } from "./editors";
 
 function describeNode(nodes: ReadonlyArray<Node>, node_id: NodeRef): string {
@@ -29,19 +33,7 @@ function EndpointButton({
       type="button"
       onClick={onClick}
       title={`Jump to ${label}`}
-      style={{
-        all: "unset",
-        cursor: "pointer",
-        color: "var(--color-mode-current-accent)",
-        textDecoration: "underline",
-        textDecorationStyle: "dotted",
-        maxWidth: "160px",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        display: "inline-block",
-        verticalAlign: "bottom",
-      }}
+      className="inline-block max-w-40 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap align-bottom text-primary underline decoration-dotted underline-offset-2 hover:text-primary/80"
     >
       {label}
     </button>
@@ -62,75 +54,44 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
   const { frame_store } = useRepository();
 
   if (!edge) {
-    return (
-      <div
-        style={{
-          color: "var(--color-text-secondary)",
-          fontSize: "var(--font-size-sm)",
-        }}
-      >
-        Edge not found.
-      </div>
-    );
+    return <div className="text-sm text-muted-foreground">Edge not found.</div>;
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+    <div className="flex flex-col gap-3">
       {/* Header */}
-      <div
-        style={{
-          paddingBottom: "var(--space-3)",
-          borderBottom: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
-        <h3
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-        >
-          Edge type
-        </h3>
-        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: "var(--font-weight-medium)" }}>
-          {edge.type}
+      <div className="flex flex-col gap-2 pb-3">
+        <div className="flex flex-col gap-1">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Edge type
+          </h3>
+          <div className="text-sm font-medium">{edge.type}</div>
         </div>
-        <h3
-          className="argmap-section-heading"
-          style={{ display: "block", marginTop: "var(--space-2)", marginBottom: "var(--space-1)" }}
-        >
-          Direction
-        </h3>
-        <div
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-1)",
-          }}
-        >
-          <EndpointButton
-            node_id={edge.source as NodeRef}
-            label={describeNode(nodes, edge.source as NodeRef)}
-            onClick={() => on_navigate_to_node(edge.source as NodeRef)}
-          />
-          <span aria-hidden="true">→</span>
-          <EndpointButton
-            node_id={edge.target as NodeRef}
-            label={describeNode(nodes, edge.target as NodeRef)}
-            onClick={() => on_navigate_to_node(edge.target as NodeRef)}
-          />
+        <div className="flex flex-col gap-1">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Direction
+          </h3>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <EndpointButton
+              node_id={edge.source as NodeRef}
+              label={describeNode(nodes, edge.source as NodeRef)}
+              onClick={() => on_navigate_to_node(edge.source as NodeRef)}
+            />
+            <span aria-hidden="true">→</span>
+            <EndpointButton
+              node_id={edge.target as NodeRef}
+              label={describeNode(nodes, edge.target as NodeRef)}
+              onClick={() => on_navigate_to_node(edge.target as NodeRef)}
+            />
+          </div>
         </div>
       </div>
+      <Separator />
 
       {/* Label */}
-      <div>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor={`edge-label-${edge_id}`}
-        >
-          Label
-        </label>
-        <input
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={`edge-label-${edge_id}`}>Label</Label>
+        <Input
           id={`edge-label-${edge_id}`}
           type="text"
           defaultValue={(edge as { label?: string }).label ?? ""}
@@ -150,7 +111,6 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
               (e.currentTarget as HTMLInputElement).blur();
             }
           }}
-          className="argmap-input"
         />
       </div>
 
@@ -158,15 +118,9 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
       <EdgeEditor edge={edge} />
 
       {/* Notes */}
-      <div>
-        <label
-          className="argmap-section-heading"
-          style={{ display: "block", marginBottom: "var(--space-1)" }}
-          htmlFor={`edge-notes-${edge_id}`}
-        >
-          Notes
-        </label>
-        <textarea
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={`edge-notes-${edge_id}`}>Notes</Label>
+        <Textarea
           id={`edge-notes-${edge_id}`}
           rows={2}
           defaultValue={(edge as { notes?: string }).notes ?? ""}
@@ -186,21 +140,14 @@ export function InspectorEdge(props: InspectorEdgeProps): ReactElement {
               (e.currentTarget as HTMLTextAreaElement).blur();
             }
           }}
-          className="argmap-input"
-          style={{ resize: "vertical" }}
         />
       </div>
 
       {/* Footer */}
-      <div
-        style={{
-          paddingTop: "var(--space-3)",
-          borderTop: "var(--border-hairline) solid var(--color-border-subtle)",
-        }}
-      >
+      <Separator />
+      <div>
         <Button
           variant="destructive"
-          size="md"
           onClick={() => {
             frame_store.getState().applyPatch({ kind: "edge_removed", edge_id });
           }}

@@ -1,7 +1,8 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { useSessionStore, useRepository } from "@/state";
-import { Button, ConfirmDialog } from "../primitives";
+import { Button } from "#components/ui/button";
+import { ConfirmDialog } from "../primitives";
 
 export function previewProse(text: string | undefined, max_len = 120): string {
   if (!text) return "";
@@ -25,24 +26,10 @@ export function G6RemoveRewriteSection(): ReactElement {
   }
 
   return (
-    <section data-testid="g6-section" style={{ marginBottom: "var(--space-3)" }}>
-      <header
-        style={{
-          fontSize: "var(--font-size-sm)",
-          fontWeight: "var(--font-weight-medium)",
-          marginBottom: "var(--space-2)",
-        }}
-      >
-        Output rewrite (G6)
-      </header>
+    <section data-testid="g6-section" className="mb-3">
+      <header className="mb-2 text-sm font-medium">Output rewrite (G6)</header>
       {!has_rewrite ? (
-        <p
-          data-testid="g6-empty-state"
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--color-text-secondary)",
-          }}
-        >
+        <p data-testid="g6-empty-state" className="text-sm text-muted-foreground">
           {/* §9 #34: don't reference specific UI surfaces by name ("prose tab",
               "output viewer") — describe the feature instead. The rewrite is
               opt-in and visible only on sessions that have one, so saying
@@ -53,22 +40,14 @@ export function G6RemoveRewriteSection(): ReactElement {
         </p>
       ) : (
         <>
-          <p
-            data-testid="g6-preview"
-            style={{
-              fontSize: "var(--font-size-sm)",
-              color: "var(--color-text-primary)",
-              fontStyle: "italic",
-            }}
-          >
+          <p data-testid="g6-preview" className="text-sm italic text-foreground">
             {preview_text}
           </p>
           <Button
             variant="destructive"
-            size="md"
             data-testid="g6-remove-button"
             onClick={() => setConfirmOpen(true)}
-            style={{ marginTop: "var(--space-2)" }}
+            className="mt-2"
           >
             Remove rewrite
           </Button>

@@ -7,20 +7,18 @@ export interface RecomputeIndicatorProps {
 
 export function RecomputeIndicator(props: RecomputeIndicatorProps): ReactElement {
   const reduce = useReduceMotion();
+  // The pulse animation is keyed off the mode-current-accent token (preserved
+  // domain palette). The `argmap-recompute-pulse` / `argmap-recompute-flash`
+  // keyframes still live in globals.css; we re-key on counter to replay them.
   return (
     <span
       key={props.counter}
       data-testid="recompute-indicator"
       data-counter={props.counter}
       aria-hidden
+      className="inline-block size-2 shrink-0 rounded-full opacity-0"
       style={{
-        display: "inline-block",
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
         background: "var(--color-mode-current-accent)",
-        opacity: 0,
-        flexShrink: 0,
         animation: reduce
           ? "argmap-recompute-flash 600ms ease-out"
           : "argmap-recompute-pulse 600ms var(--ease-soft)",

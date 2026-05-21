@@ -42,14 +42,14 @@ export function FlavorChangeDialog(props: FlavorChangeDialogProps): ReactElement
       onConfirm={handleConfirm}
       onCancel={onClose}
     >
-      <div data-testid="flavor-change-body" style={{ fontSize: "var(--font-size-sm)" }}>
+      <div data-testid="flavor-change-body" className="text-sm">
         <p>
           Switch flavor from <strong>{current_flavor}</strong> to <strong>{target_flavor}</strong>?
         </p>
         {scan_result && scan_result.advisory.length > 0 ? (
           <AdvisoryList advisory={scan_result.advisory} />
         ) : (
-          <p style={{ color: "var(--color-text-tertiary)", fontStyle: "italic" }}>No advisories.</p>
+          <p className="italic text-muted-foreground">No advisories.</p>
         )}
       </div>
     </ConfirmDialog>

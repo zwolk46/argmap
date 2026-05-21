@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
-import { Button, Pill } from "../primitives";
+import { Button } from "#components/ui/button";
+import { Badge } from "#components/ui/badge";
 
 export interface NewFeatureNoticeProps {
   title: string;
@@ -13,39 +14,16 @@ export function NewFeatureNotice(props: NewFeatureNoticeProps): ReactElement {
     <div
       data-testid="new-feature-notice"
       role="status"
-      style={{
-        padding: "var(--space-3)",
-        background: "var(--color-surface-elevated)",
-        boxShadow: "var(--shadow-md)",
-        borderRadius: "var(--radius-md)",
-        border: "var(--border-thin) solid var(--color-border-default)",
-        maxWidth: 360,
-      }}
+      className="max-w-[360px] rounded-2xl bg-popover p-3 text-popover-foreground ring-1 ring-foreground/10 shadow-md"
     >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          marginBottom: "var(--space-2)",
-        }}
-      >
-        <Pill bg="var(--color-mode-current-accent-bg)" color="var(--color-mode-current-accent)">
+      <header className="mb-2 flex items-center gap-2">
+        <Badge className="bg-[var(--color-mode-current-accent-bg)] text-[var(--color-mode-current-accent)]">
           New
-        </Pill>
-        <span style={{ fontWeight: "var(--font-weight-medium)", fontSize: "var(--font-size-sm)" }}>
-          {props.title}
-        </span>
+        </Badge>
+        <span className="text-sm font-medium">{props.title}</span>
       </header>
-      <p style={{ fontSize: "var(--font-size-sm)", margin: 0 }}>{props.message}</p>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "var(--space-2)",
-          marginTop: "var(--space-2)",
-        }}
-      >
+      <p className="m-0 text-sm">{props.message}</p>
+      <div className="mt-2 flex justify-end gap-2">
         {props.on_learn_more ? (
           <Button
             variant="ghost"
@@ -57,7 +35,7 @@ export function NewFeatureNotice(props: NewFeatureNoticeProps): ReactElement {
           </Button>
         ) : null}
         <Button
-          variant="primary"
+          variant="default"
           size="sm"
           data-testid="new-feature-dismiss"
           onClick={props.on_dismiss}
