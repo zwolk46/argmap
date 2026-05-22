@@ -348,11 +348,10 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
 
   return (
     <React.Fragment>
-      <div className="flex h-screen flex-col">
-        <TopBar slots={top_bar_slots} mode="frame-building" />
-        <div className="flex-1 overflow-hidden">
-          <ThreePaneLayout
-            left={
+      <div className="h-screen">
+        <ThreePaneLayout
+          top_bar={<TopBar slots={top_bar_slots} mode="frame-building" />}
+          left={
               <React.Fragment>
                 <NodePalette
                   on_node_created={(node_id) => {
@@ -505,7 +504,6 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
               ) : null
             }
           />
-        </div>
       </div>
 
       <CascadeDeleteDialog cascade={cascade_confirmation} />
