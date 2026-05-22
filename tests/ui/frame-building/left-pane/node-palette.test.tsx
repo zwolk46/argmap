@@ -1,12 +1,23 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
+import * as React from "react";
 import {
   NodePalette,
   visibleNodeTypesForPalette,
   buildNodeDefaults,
 } from "@/ui/frame-building/left-pane/node-palette";
 import type { Node, NodeType } from "@/schema";
+import { SidebarProvider } from "#components/ui/sidebar";
+import { TooltipProvider } from "#components/ui/tooltip";
+
+function renderInSidebar(ui: React.ReactElement) {
+  return render(
+    <TooltipProvider>
+      <SidebarProvider>{ui}</SidebarProvider>
+    </TooltipProvider>,
+  );
+}
 
 const mockApplyPatch = vi.fn();
 let id_counter = 0;
@@ -127,18 +138,18 @@ describe("NodePalette component", () => {
   });
 
   it("renders without crashing", () => {
-    const { container } = render(<NodePalette />);
+    const { container } = renderInSidebar(<NodePalette />);
     expect(container).toBeTruthy();
   });
 
   it("renders the node palette container", () => {
-    const { container } = render(<NodePalette />);
+    const { container } = renderInSidebar(<NodePalette />);
     const palette = container.querySelector('[aria-label="Node palette"]');
     expect(palette).toBeTruthy();
   });
 
   it("uses visible_types_override when provided", () => {
-    const { container } = render(
+    const { container } = renderInSidebar(
       <NodePalette visible_types_override={["RootQuestion", "Conclusion"]} />,
     );
     const palette = container.querySelector('[aria-label="Node palette"]');
@@ -147,7 +158,7 @@ describe("NodePalette component", () => {
   });
 
   it("clicking a palette item dispatches a `node_added` patch with the deterministic id from useRepository().generateId()", () => {
-    const { container } = render(<NodePalette visible_types_override={["RootQuestion"]} />);
+    const { container } = renderInSidebar(<NodePalette visible_types_override={["RootQuestion"]} />);
     const button = container.querySelector(
       '[aria-label="Node palette"] button',
     ) as HTMLButtonElement;
@@ -169,7 +180,7 @@ describe("NodePalette component", () => {
   });
 
   it("clicking a Checkpoint palette item dispatches with both requires_premise and requires_authority defaulted to false", () => {
-    const { container } = render(<NodePalette visible_types_override={["Checkpoint"]} />);
+    const { container } = renderInSidebar(<NodePalette visible_types_override={["Checkpoint"]} />);
     const button = container.querySelector(
       '[aria-label="Node palette"] button',
     ) as HTMLButtonElement;
@@ -182,7 +193,7 @@ describe("NodePalette component", () => {
   });
 
   it("P0-12: clicking a palette item stamps a presentation.x/y so the node doesn't render at (0,0)", () => {
-    const { container } = render(<NodePalette visible_types_override={["RootQuestion"]} />);
+    const { container } = renderInSidebar(<NodePalette visible_types_override={["RootQuestion"]} />);
     const button = container.querySelector(
       '[aria-label="Node palette"] button',
     ) as HTMLButtonElement;
@@ -197,7 +208,7 @@ describe("NodePalette component", () => {
 
   it("§13 #5: clicking a palette item fires on_node_created with the new node id after applyPatch", () => {
     const on_node_created = vi.fn();
-    const { container } = render(
+    const { container } = renderInSidebar(
       <NodePalette visible_types_override={["RootQuestion"]} on_node_created={on_node_created} />,
     );
     const button = container.querySelector(
@@ -214,7 +225,7 @@ describe("NodePalette component", () => {
   });
 
   it("§13 #5: not providing on_node_created leaves applyPatch behavior unchanged", () => {
-    const { container } = render(<NodePalette visible_types_override={["RootQuestion"]} />);
+    const { container } = renderInSidebar(<NodePalette visible_types_override={["RootQuestion"]} />);
     const button = container.querySelector(
       '[aria-label="Node palette"] button',
     ) as HTMLButtonElement;
