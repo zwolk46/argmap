@@ -123,8 +123,18 @@ export interface ValidEdgePair {
 
 export const VALID_EDGE_PAIRS: Readonly<Record<EdgeType, ValidEdgePair>> = {
   DECOMPOSES_INTO: {
+    // Stream B amendment (F-031, 2026-05-21): widened to let a parent question
+    // structurally decompose into a Checkpoint or LogicalGate child as well as
+    // a SubQuestion. The original RootQuestion/SubQuestion → SubQuestion shape
+    // forced every element of a decomposition through a SubQuestion → Term →
+    // Interpretation chain, which doesn't match frames whose elements are
+    // boolean Checkpoints or whose children compose under a LogicalGate
+    // (AND/OR/UNLESS over per-element Checkpoints). Reachability into the
+    // checkpoints/gates remains expressible via this edge type; gate inputs
+    // continue to live in the LogicalGate's named slots per Stream B and are
+    // treated as structural reachability in the validation rules (V-FR-2/4/5/8).
     source_types: ["RootQuestion", "SubQuestion"],
-    target_types: ["SubQuestion"],
+    target_types: ["SubQuestion", "Checkpoint", "LogicalGate"],
   },
   TURNS_ON: {
     source_types: ["RootQuestion", "SubQuestion"],

@@ -1,4 +1,4 @@
-import type { NodeType, FrameVersion } from "@/schema";
+import type { Node, NodeRef, NodeType, FrameVersion } from "@/schema";
 
 export const NODE_TYPE_LABELS: Readonly<Record<NodeType, string>> = {
   RootQuestion: "Root Question",
@@ -123,6 +123,42 @@ function previewText(node: { id: string } & Record<string, unknown>): string {
   const trimmed = text.trim();
   if (trimmed.length <= 48) return trimmed;
   return trimmed.slice(0, 45).trimEnd() + "…";
+}
+
+/**
+ * Short, human-readable label for a node reference. The single source of
+ * truth used everywhere a node id surfaces in the UI (inspector chips, gate
+ * input rows, checkpoint option targets, term linked-to chips, etc.) so the
+ * user never sees a raw UUID. `max_chars` truncates with an ellipsis; the
+ * default is the conservative 48-char width that fits the standard
+ * inspector chip.
+ *
+ * The body falls through these fields in order, matching `previewText`:
+ *   Checkpoint.question → Sub/RootQuestion.statement → Interpretation.statement →
+ *   Conclusion.statement → Term.name → Authority.short_label / citation → type name.
+ */
+export function nodeLabel(node: Node | undefined, max_chars = 48): string {
+  if (!node) return "Missing node";
+  const candidate = previewText(node as unknown as { id: string } & Record<string, unknown>);
+  if (candidate.length <= max_chars) return candidate;
+  return candidate.slice(0, max_chars - 1).trimEnd() + "…";
+}
+
+/**
+ * Convenience: resolve a node by id from a FrameVersion and produce its
+ * label. When the id is unknown (deleted node, dangling reference), the
+ * returned string surfaces the missing-link state honestly.
+ */
+export function nodeLabelFromFrame(
+  node_id: NodeRef | undefined,
+  frame_version: Pick<FrameVersion, "nodes"> | undefined | null,
+  max_chars = 48,
+): string {
+  if (!node_id) return "—";
+  if (!frame_version) return "Loading…";
+  const node = frame_version.nodes.find((n) => n.id === node_id);
+  if (!node) return "Missing node";
+  return nodeLabel(node, max_chars);
 }
 
 const UUID_RE = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g;

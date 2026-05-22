@@ -478,6 +478,13 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                 on_select={setSelection}
                 on_request_delete={(node_id: NodeRef) => cascade_confirmation.request(node_id)}
                 on_open_settings={() => setSettingsPanelOpen(true)}
+                on_navigate_to_node={(node_id: NodeRef) => {
+                  // Click-to-focus from any node-reference chip: select the
+                  // target in the inspector + center the canvas viewport on
+                  // it so the user can see where it sits in the structure.
+                  setSelection({ kind: "node", node_id });
+                  canvas_ref.current?.zoomToNode(node_id);
+                }}
               />
             }
             bottom={
@@ -485,7 +492,10 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                 <ValidationDrawer
                   open={validation_drawer_open}
                   on_close={() => setValidationDrawerOpen(false)}
-                  on_jump_to_node={(node_id: NodeRef) => setSelection({ kind: "node", node_id })}
+                  on_jump_to_node={(node_id: NodeRef) => {
+                    setSelection({ kind: "node", node_id });
+                    canvas_ref.current?.zoomToNode(node_id);
+                  }}
                 />
               ) : null
             }

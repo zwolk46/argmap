@@ -379,11 +379,15 @@ export function termWithOneInterpretationNoLink(): Bundle {
 
 export function checkpointUnreachable(): Bundle {
   // V-FR-4: detach the LEADS_TO edges into n-cp so it isn't reachable.
+  //
+  // F-031: gate slot membership now counts for reachability, so the IF_THEN
+  // gate's `consequent: "n-cp"` reference would otherwise keep n-cp
+  // reachable. Drop the gate node (and any references to it) entirely so the
+  // only path into n-cp was the persisted LEADS_TO edges we strip here.
   return withMutFrame(({ frame }) => {
     frame.edges = frame.edges.filter((e) => !(e.type === "LEADS_TO" && e.target === "n-cp"));
-    // Also drop the gate's consequent reference by removing the gate (so V-NODE-1
-    // doesn't fire on gate.consequent dangling — but that's actually still
-    // resolved within the frame, so leaving the gate intact is fine).
+    frame.nodes = frame.nodes.filter((n) => n.id !== "n-gate");
+    frame.edges = frame.edges.filter((e) => e.source !== "n-gate" && e.target !== "n-gate");
   });
 }
 

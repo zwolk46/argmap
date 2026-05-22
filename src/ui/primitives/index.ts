@@ -58,10 +58,15 @@ export {
   humanizeFieldName,
   humanizeValidationMessage,
   humanizeConditionKind,
+  nodeLabel,
+  nodeLabelFromFrame,
   NODE_TYPE_LABELS,
   EDGE_TYPE_LABELS,
   CONDITION_KIND_LABELS,
 } from "./humanize";
+
+export { NodeChip } from "./node-chip";
+export type { NodeChipProps } from "./node-chip";
 
 export { ToastProvider, useToast, useOptionalToast } from "./toast";
 export type { ToastInput, ToastKind } from "./toast";

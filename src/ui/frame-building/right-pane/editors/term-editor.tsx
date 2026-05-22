@@ -1,8 +1,9 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { Plus, X } from "@phosphor-icons/react";
-import type { Term, Node } from "@/schema";
-import { useRepository } from "@/state";
+import type { Term, Node, NodeRef } from "@/schema";
+import { useFrameStore, useRepository } from "@/state";
+import { NodeChip } from "../../../primitives";
 import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Label } from "#components/ui/label";
@@ -12,10 +13,12 @@ import { FieldAttributionDecoration } from "../field-attribution-decoration";
 export interface TermEditorProps {
   node: Term;
   available_terms?: Array<{ id: string; label: string }>;
+  on_navigate_to_node?: (node_id: NodeRef) => void;
 }
 
 export function TermEditor(props: TermEditorProps): ReactElement {
-  const { node, available_terms = [] } = props;
+  const { node, available_terms = [], on_navigate_to_node } = props;
+  const frame_version_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
   const { frame_store } = useRepository();
   const [picking_link, set_picking_link] = React.useState(false);
 
@@ -58,10 +61,13 @@ export function TermEditor(props: TermEditorProps): ReactElement {
         <Label>Linked To</Label>
         <div>
           {node.linked_to && !picking_link ? (
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
-                {node.linked_to}
-              </span>
+            <span className="inline-flex items-center gap-2">
+              <NodeChip
+                node_id={node.linked_to as NodeRef}
+                nodes={frame_version_nodes}
+                on_navigate={on_navigate_to_node}
+                max_chars={42}
+              />
               <Button variant="ghost" size="sm" onClick={() => set_picking_link(true)}>
                 Change
               </Button>

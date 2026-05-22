@@ -92,7 +92,9 @@ export function InspectorNode(props: InspectorNodeProps): ReactElement {
       </div>
       <Separator />
 
-      {/* Per-node-type editor */}
+      {/* Per-node-type editor — every editor that displays node references
+          forwards `on_navigate_to_node` to its NodeChip so clicking the chip
+          selects + focuses the referenced node on the canvas. */}
       <EditorComponent
         node={node}
         on_navigate_to_node={on_navigate_to_node}

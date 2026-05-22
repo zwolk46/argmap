@@ -6,9 +6,10 @@ import type {
   CheckpointOption,
   BurdenLevel,
   Node,
+  NodeRef,
 } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
-import { SegmentedToggle } from "../../../primitives";
+import { SegmentedToggle, NodeChip } from "../../../primitives";
 import { Button } from "#components/ui/button";
 import { Input } from "#components/ui/input";
 import { Textarea } from "#components/ui/textarea";
@@ -26,6 +27,7 @@ import { FieldAttributionDecoration } from "../field-attribution-decoration";
 export interface CheckpointEditorProps {
   node: Checkpoint;
   on_pick_option_target: (option_id: string) => void;
+  on_navigate_to_node?: (node_id: NodeRef) => void;
 }
 
 const ANSWER_TYPE_OPTIONS: { value: CheckpointAnswerType; label: string }[] = [
@@ -45,9 +47,10 @@ const BURDEN_LEVELS: { value: BurdenLevel; label: string }[] = [
 const BURDEN_LEVEL_NONE = "__none__";
 
 export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
-  const { node, on_pick_option_target } = props;
+  const { node, on_pick_option_target, on_navigate_to_node } = props;
   const { frame_store } = useRepository();
   const mode = useFrameStore((s) => s.frame?.mode);
+  const frame_version_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
 
   function patch(partial: object) {
     frame_store.getState().applyPatch({
@@ -98,9 +101,12 @@ export function CheckpointEditor(props: CheckpointEditorProps): ReactElement {
                   placeholder="Option label"
                 />
                 {opt.target_node_id ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
-                    <span>{opt.target_node_id}</span>
-                  </span>
+                  <NodeChip
+                    node_id={opt.target_node_id as NodeRef}
+                    nodes={frame_version_nodes}
+                    on_navigate={on_navigate_to_node}
+                    max_chars={32}
+                  />
                 ) : (
                   <Button
                     variant="ghost"

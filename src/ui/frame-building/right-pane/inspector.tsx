@@ -1,3 +1,4 @@
+import * as React from "react";
 import type { ReactElement } from "react";
 import type { NodeRef, EdgeRef } from "@/schema";
 import { useFrameStore } from "@/state";
@@ -17,11 +18,30 @@ export interface InspectorProps {
   on_select: (next: InspectorSelection) => void;
   on_request_delete: (node_id: NodeRef) => void;
   on_open_settings: () => void;
+  /**
+   * Click-to-focus callback. Called from any node-reference chip in the
+   * editors (logical-gate slots, term linked_to, checkpoint option target,
+   * inspector-edge endpoints). Should both update the selection AND
+   * center the canvas viewport on the target node so the user can see the
+   * spatial location, not just the logical reference. If omitted, the
+   * Inspector falls back to plain select-only navigation.
+   */
+  on_navigate_to_node?: (node_id: NodeRef) => void;
 }
 
 export function Inspector(props: InspectorProps): ReactElement {
-  const { selection, on_select, on_request_delete, on_open_settings } = props;
+  const { selection, on_select, on_request_delete, on_open_settings, on_navigate_to_node } = props;
   const frame_version = useFrameStore((s) => s.frame_version);
+  // When the page wires a `on_navigate_to_node` (the dev usually does — it
+  // calls `setSelection` AND `canvas_ref.current.zoomToNode(id)`), use it
+  // verbatim. Otherwise fall back to select-only.
+  const handle_navigate = React.useMemo(
+    () => (id: NodeRef) => {
+      if (on_navigate_to_node) on_navigate_to_node(id);
+      else on_select({ kind: "node", node_id: id });
+    },
+    [on_navigate_to_node, on_select],
+  );
 
   return (
     <div className="h-full overflow-auto bg-card px-5 py-4">
@@ -37,13 +57,10 @@ export function Inspector(props: InspectorProps): ReactElement {
           key={selection.node_id}
           node_id={selection.node_id}
           on_request_delete={() => on_request_delete(selection.node_id)}
-          on_navigate_to_node={(id) => on_select({ kind: "node", node_id: id })}
+          on_navigate_to_node={handle_navigate}
         />
       ) : selection.kind === "edge" ? (
-        <InspectorEdge
-          edge_id={selection.edge_id}
-          on_navigate_to_node={(id) => on_select({ kind: "node", node_id: id })}
-        />
+        <InspectorEdge edge_id={selection.edge_id} on_navigate_to_node={handle_navigate} />
       ) : (
         <InspectorMulti
           node_ids={selection.node_ids}

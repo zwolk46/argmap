@@ -1,15 +1,16 @@
 import * as React from "react";
 import type { ReactElement } from "react";
 import { Plus } from "@phosphor-icons/react";
-import type { GateType, LogicalGate, Node } from "@/schema";
-import { useRepository } from "@/state";
-import { humanizeGateType } from "../../../primitives";
+import type { GateType, LogicalGate, Node, NodeRef } from "@/schema";
+import { useFrameStore, useRepository } from "@/state";
+import { humanizeGateType, NodeChip } from "../../../primitives";
 import { Button } from "#components/ui/button";
 import { Label } from "#components/ui/label";
 
 export interface LogicalGateEditorProps {
   node: LogicalGate;
   available_nodes?: Array<{ id: string; label: string }>;
+  on_navigate_to_node?: (node_id: NodeRef) => void;
 }
 
 const GATE_TYPES: GateType[] = ["AND", "OR", "NOT", "IF_THEN", "UNLESS"];
@@ -20,14 +21,17 @@ function SlotRow({
   available_nodes,
   on_pick,
   on_clear,
+  on_navigate_to_node,
 }: {
   label: string;
   value: string | undefined;
   available_nodes: Array<{ id: string; label: string }>;
   on_pick: (node_id: string) => void;
   on_clear?: () => void;
+  on_navigate_to_node?: (node_id: NodeRef) => void;
 }): ReactElement {
   const [picking, set_picking] = React.useState(false);
+  const frame_version_nodes = useFrameStore((s) => s.frame_version?.nodes ?? []);
 
   return (
     <div className="mb-2 flex items-center gap-2">
@@ -36,9 +40,12 @@ function SlotRow({
       </span>
       {value && !picking ? (
         <>
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm text-primary">
-            {value}
-          </span>
+          <NodeChip
+            node_id={value as NodeRef}
+            nodes={frame_version_nodes}
+            on_navigate={on_navigate_to_node}
+            max_chars={42}
+          />
           <Button variant="ghost" size="sm" onClick={() => set_picking(true)}>
             Change
           </Button>
@@ -81,7 +88,7 @@ function SlotRow({
 }
 
 export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
-  const { node, available_nodes = [] } = props;
+  const { node, available_nodes = [], on_navigate_to_node } = props;
   const { frame_store } = useRepository();
   const [adding_input, set_adding_input] = React.useState(false);
 
@@ -159,6 +166,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
                   available_nodes={available_nodes}
                   on_pick={(node_id) => pick_slot(`inputs.${i}`, node_id)}
                   on_clear={() => clear_slot(`inputs.${i}`)}
+                  on_navigate_to_node={on_navigate_to_node}
                 />
               ))}
               {adding_input ? (
@@ -199,6 +207,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
               available_nodes={available_nodes}
               on_pick={(node_id) => pick_slot("input", node_id)}
               on_clear={() => clear_slot("input")}
+              on_navigate_to_node={on_navigate_to_node}
             />
           )}
 
@@ -210,6 +219,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
                 available_nodes={available_nodes}
                 on_pick={(node_id) => pick_slot("antecedent", node_id)}
                 on_clear={() => clear_slot("antecedent")}
+                on_navigate_to_node={on_navigate_to_node}
               />
               <SlotRow
                 label="Consequent"
@@ -217,6 +227,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
                 available_nodes={available_nodes}
                 on_pick={(node_id) => pick_slot("consequent", node_id)}
                 on_clear={() => clear_slot("consequent")}
+                on_navigate_to_node={on_navigate_to_node}
               />
             </>
           )}
@@ -229,6 +240,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
                 available_nodes={available_nodes}
                 on_pick={(node_id) => pick_slot("main", node_id)}
                 on_clear={() => clear_slot("main")}
+                on_navigate_to_node={on_navigate_to_node}
               />
               <SlotRow
                 label="Exception"
@@ -236,6 +248,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
                 available_nodes={available_nodes}
                 on_pick={(node_id) => pick_slot("exception", node_id)}
                 on_clear={() => clear_slot("exception")}
+                on_navigate_to_node={on_navigate_to_node}
               />
             </>
           )}

@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { ReactElement } from "react";
-import { Plus, FileText } from "@phosphor-icons/react";
+import { Plus, FileText, TestTube } from "@phosphor-icons/react";
 import type { FrameId } from "@/schema";
 import { useAppStateStore, useRepository, PinnedCapReached } from "@/state";
 import { useAuth } from "../auth";
@@ -11,6 +11,7 @@ import { NewFrameWizard, type NewFrameWizardSubmitArgs } from "../onboarding";
 import { FrameSummaryCard, type FrameSummary } from "./frame-summary-card";
 import { createTutorial } from "@/tutorial";
 import { setTutorialPhase } from "../tutorial";
+import { seedPeopleVZach } from "@/demo/seed-people-v-zach";
 
 export interface HomePageProps {
   // Reserved for future extension; currently unused.
@@ -33,6 +34,7 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
   const toast = useToast();
   const [wizard_open, setWizardOpen] = React.useState(false);
   const [tutorial_loading, setTutorialLoading] = React.useState(false);
+  const [seed_demo_loading, setSeedDemoLoading] = React.useState(false);
   const [frames_loaded_once, setFramesLoadedOnce] = React.useState(false);
   const [run_argument_pending, setRunArgumentPending] = React.useState<FrameId | null>(null);
   const run_argument_in_flight = React.useRef<Set<FrameId>>(new Set());
@@ -134,6 +136,33 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
     }
   }
 
+  async function onSeedDemo(): Promise<void> {
+    if (seed_demo_loading) return;
+    setSeedDemoLoading(true);
+    try {
+      const result = await seedPeopleVZach({
+        repo: repository,
+        now,
+        generateId,
+        user_id: user?.id,
+      });
+      await app_state_store.getState().loadFrames();
+      app_state_store.getState().setRecent(result.frame_id);
+      toast.push({
+        kind: result.reused ? "info" : "success",
+        message: result.reused
+          ? "Opened existing People v. Zach demo frame."
+          : "Seeded the People v. Zach demo frame.",
+      });
+      navigate({ kind: "frame_building", frame_id: result.frame_id });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.push({ kind: "error", message: `Couldn't seed the demo frame: ${msg}` });
+    } finally {
+      setSeedDemoLoading(false);
+    }
+  }
+
   async function onStartTutorial(): Promise<void> {
     if (tutorial_loading) return;
     if (!user) {
@@ -201,6 +230,23 @@ export function HomePage(_props: HomePageProps = {}): ReactElement {
             {tutorial_loading ? <Spinner size={12} decorative /> : null}
             {tutorial_loading ? "Loading tutorial…" : "Try the tutorial"}
           </Button>
+          {import.meta.env.DEV ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="home-seed-demo"
+              title="Dev-only: seed the People v. Zach demo frame"
+              onClick={onSeedDemo}
+              disabled={seed_demo_loading}
+            >
+              {seed_demo_loading ? (
+                <Spinner size={12} decorative />
+              ) : (
+                <TestTube size={14} data-icon="inline-start" />
+              )}
+              {seed_demo_loading ? "Seeding…" : "Seed demo"}
+            </Button>
+          ) : null}
           <Button
             variant="default"
             data-testid="home-new-frame"
