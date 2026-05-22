@@ -368,7 +368,12 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                     });
                   }}
                 />
-                <OutlineTree selection={selection} on_selection_change={setSelection} />
+                {/* OutlineTree is unreadable below ~150px; hide it when the
+                    left pane is narrow. NodePalette stays visible as an
+                    icon column for one-click node-add at any pane width. */}
+                <div className="group-data-[pane-state=narrow]/pane:hidden">
+                  <OutlineTree selection={selection} on_selection_change={setSelection} />
+                </div>
               </React.Fragment>
             }
             center={

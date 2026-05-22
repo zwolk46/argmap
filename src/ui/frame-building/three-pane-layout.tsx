@@ -131,14 +131,13 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* LEFT */}
         <aside
-          className="relative shrink-0 overflow-auto border-r border-border bg-card transition-[width] duration-200 ease-out"
+          className="group/pane relative shrink-0 overflow-auto border-r border-border bg-card transition-[width] duration-200 ease-out"
           style={{ width: LEFT_PANE_WIDTHS[left_state] }}
           data-pane-state={left_state}
         >
-          {/* When narrow, the content inside the pane should adapt — most
-              pane content scrolls horizontally below ~120px which is ugly.
-              We render the children regardless and let the pane content
-              clip; an explicit narrow rendering mode is a follow-up. */}
+          {/* Children that subscribe to the narrow state should use
+              `group-data-[pane-state=narrow]/pane:` Tailwind variants on
+              their own elements to hide labels / compact layouts. */}
           <div className="h-full min-w-0">{left}</div>
           <PaneToggle side="left" state={left_state} on_cycle={cycle_left} label="Left pane" />
         </aside>
@@ -150,12 +149,15 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
 
         {/* RIGHT */}
         <aside
-          className="relative shrink-0 overflow-auto border-l border-border bg-card transition-[width] duration-200 ease-out"
+          className="group/pane relative shrink-0 overflow-auto border-l border-border bg-card transition-[width] duration-200 ease-out"
           style={{ width: RIGHT_PANE_WIDTHS[right_state] }}
           data-pane-state={right_state}
         >
           <PaneToggle side="right" state={right_state} on_cycle={cycle_right} label="Right pane" />
-          <div className="h-full min-w-0">{right}</div>
+          {/* When narrow, the inspector chrome is unusable. We hide the
+              inspector content entirely and just leave the chevron toggle
+              visible — the user can click it to expand back. */}
+          <div className="h-full min-w-0 group-data-[pane-state=narrow]/pane:hidden">{right}</div>
         </aside>
       </div>
 

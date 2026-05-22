@@ -39,12 +39,18 @@ export function PaletteItem(props: PaletteItemProps): ReactElement {
       onClick={disabled ? undefined : on_click}
       className={cn(
         "flex h-8 w-full items-center gap-2 rounded-md border-0 bg-transparent px-3 text-left text-sm text-foreground transition-colors",
+        // When the surrounding pane is in narrow state, collapse the row
+        // to an icon-only column so the palette item is still hittable
+        // at 56px. The title attribute supplies the type label on hover.
+        "group-data-[pane-state=narrow]/pane:justify-center group-data-[pane-state=narrow]/pane:px-0",
         "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         disabled ? "cursor-not-allowed opacity-40" : "cursor-grab",
       )}
     >
       <TypeIcon node_type={node_type} />
-      <span>{PALETTE_NODE_TYPE_LABELS[node_type]}</span>
+      <span className="group-data-[pane-state=narrow]/pane:hidden">
+        {PALETTE_NODE_TYPE_LABELS[node_type]}
+      </span>
     </button>
   );
 }

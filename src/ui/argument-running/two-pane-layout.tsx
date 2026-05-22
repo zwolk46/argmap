@@ -103,11 +103,13 @@ export function TwoPaneLayout(props: TwoPaneLayoutProps): ReactElement {
     >
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside
-          className="relative shrink-0 overflow-auto border-r border-border bg-background transition-[width] duration-200 ease-out"
+          className="group/pane relative shrink-0 overflow-auto border-r border-border bg-background transition-[width] duration-200 ease-out"
           style={{ width: LEFT_PANE_WIDTHS[left_state] }}
           data-pane-state={left_state}
         >
-          <div className="h-full min-w-0">{left}</div>
+          {/* Narrow-mode: interview list is unreadable below ~150px, so
+              we hide the content and just leave the chevron toggle visible. */}
+          <div className="h-full min-w-0 group-data-[pane-state=narrow]/pane:hidden">{left}</div>
           <LeftPaneToggle state={left_state} on_cycle={cycle_left} label="Left pane" />
         </aside>
 
