@@ -348,11 +348,10 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
 
   return (
     <React.Fragment>
-      <div className="flex h-screen flex-col">
-        <TopBar slots={top_bar_slots} mode="frame-building" />
-        <div className="flex-1 overflow-hidden">
-          <ThreePaneLayout
-            left={
+      <div className="h-screen">
+        <ThreePaneLayout
+          top_bar={<TopBar slots={top_bar_slots} mode="frame-building" />}
+          left={
               <React.Fragment>
                 <NodePalette
                   on_node_created={(node_id) => {
@@ -371,7 +370,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                 {/* OutlineTree is unreadable below ~150px; hide it when the
                     left pane is narrow. NodePalette stays visible as an
                     icon column for one-click node-add at any pane width. */}
-                <div className="group-data-[pane-state=narrow]/pane:hidden">
+                <div className="group-data-[collapsible=icon]:hidden">
                   <OutlineTree selection={selection} on_selection_change={setSelection} />
                 </div>
               </React.Fragment>
@@ -505,7 +504,6 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
               ) : null
             }
           />
-        </div>
       </div>
 
       <CascadeDeleteDialog cascade={cascade_confirmation} />

@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import type { NodeType, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 import { PaletteItem } from "./palette-item";
+import { SidebarGroup, SidebarGroupLabel, SidebarMenu } from "#components/ui/sidebar";
 
 /**
  * Pure helper. Produces a fully-stamped Node from a NodeType, separated for
@@ -223,22 +224,25 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
   }
 
   return (
-    <div className="flex flex-col py-2" aria-label="Node palette">
-      {visible.map((node_type) => {
-        const is_root_disabled = node_type === "RootQuestion" && has_root_question;
-        return (
-          <PaletteItem
-            key={node_type}
-            node_type={node_type}
-            disabled={is_root_disabled}
-            disabled_reason={
-              is_root_disabled ? "A frame can have only one Root Question (V-FR-1)." : undefined
-            }
-            on_click={() => handleClick(node_type)}
-            on_drag_start={handleDragStart(node_type)}
-          />
-        );
-      })}
-    </div>
+    <SidebarGroup aria-label="Node palette">
+      <SidebarGroupLabel>Palette</SidebarGroupLabel>
+      <SidebarMenu>
+        {visible.map((node_type) => {
+          const is_root_disabled = node_type === "RootQuestion" && has_root_question;
+          return (
+            <PaletteItem
+              key={node_type}
+              node_type={node_type}
+              disabled={is_root_disabled}
+              disabled_reason={
+                is_root_disabled ? "A frame can have only one Root Question (V-FR-1)." : undefined
+              }
+              on_click={() => handleClick(node_type)}
+              on_drag_start={handleDragStart(node_type)}
+            />
+          );
+        })}
+      </SidebarMenu>
+    </SidebarGroup>
   );
 }
