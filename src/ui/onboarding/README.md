@@ -3,7 +3,7 @@
 First-time welcome flow, new-frame wizard, coachmark primitive, new-feature-notice
 primitive, and onboarding preferences section composed into HelpGlossaryPane.
 
-**Spec:** `docs/stream_i_ui_onboarding_spec_v1.html`.
+**Spec:** retired 2026-05-23 (was `docs/stream_i_ui_onboarding_spec_v1.html`); this README is now the source of truth.
 **Coding session:** I.9d4 (2026-05-12).
 
 ## Public API

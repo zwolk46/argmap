@@ -3,7 +3,7 @@
 Argument-running UI — the run-through interview, the three-tab output viewer, the
 per-item editors, and the bottom panel (premise pool + session authorities).
 
-**Spec:** `docs/stream_i_ui_argument_running_spec_v1.html`. **Coding session:** I.9c (2026-05-12).
+**Spec:** retired 2026-05-23 (was `docs/stream_i_ui_argument_running_spec_v1.html`); this README is now the source of truth. **Coding session:** I.9c (2026-05-12).
 
 ## Public API
 

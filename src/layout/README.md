@@ -1,6 +1,6 @@
 # `src/layout/`
 
-**Spec:** `docs/stream_i_layout_spec_v1.html`. **Coding session:** I.7 (2026-05-12).
+**Spec:** retired 2026-05-23 (was `docs/stream_i_layout_spec_v1.html`); this README is now the source of truth. **Coding session:** I.7 (2026-05-12).
 ELK-based graph layout in a Web Worker. Pure-mapping core + Worker bridge. Imports `@/schema` only from the application codebase; `elkjs` is the sole third-party dependency. Imported by `@/ui` (canvas surfaces) to compute node positions on frame open and after structural edits.
 
 ## Public API surface
@@ -17,7 +17,7 @@ Barrel: `@/layout` re-exports the public surface from `index.ts`.
 | `LayoutDeps`                  | `{ now?: () => string }` — optional clock injection for test determinism.                                                                                                                             |
 | `DEFAULT_LAYOUT_OPTIONS`      | `{ direction: "DOWN", honor_user_anchors: true, collapse_subquestions: true }`.                                                                                                                       |
 
-### Signature deviation from `stream_i_contracts_v1.html`
+### Signature deviation from the original contracts spec (now `stream_i_contracts_v2.html`)
 
 Contract 5 declares `layout(frame, opts?)` with no clock-injection parameter. This module refines the signature to `layout(frame, opts?, deps?)` where `deps.now` is used for `LayoutResult.computed_at`. Production callers omit `deps`; tests pass a frozen-clock stub. Same F-003-family pattern as I.3/I.4/I.5/I.6; logged as in-session flag from I.7 for a future contracts-doc bump.
 
@@ -31,4 +31,4 @@ Off the Article II § 2 boundary, but practically deterministic: identical `Fram
 
 ## Tests
 
-Vitest acceptance tests live in `tests/layout/`; see `stream_i_layout_spec_v1.html` for the full test plan and behavioral contracts. Each test file uses `vi.useRealTimers()` in `beforeEach` because ELK's internal scheduling requires `setTimeout` to be real.
+Vitest acceptance tests live in `tests/layout/`; the tests are the behavioral contract. Each test file uses `vi.useRealTimers()` in `beforeEach` because ELK's internal scheduling requires `setTimeout` to be real.

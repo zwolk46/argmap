@@ -3,7 +3,7 @@
 Mode-change dialogs reached from `FrameSettingsPanel`: heavy architectural-mode
 change (legal ↔ general) and lighter flavor-change (personal ↔ academic).
 
-**Spec:** `docs/stream_i_ui_mode_change_migration_spec_v1.html`.
+**Spec:** retired 2026-05-23 (was `docs/stream_i_ui_mode_change_migration_spec_v1.html`); this README is now the source of truth.
 **Coding session:** I.9d2 (2026-05-12).
 
 ## Public API

@@ -3,7 +3,7 @@
 Version-history side pane (E5 + H3 wiring): browse, preview, restore, and
 compare FrameVersions and ArgumentSessionVersions.
 
-**Spec:** `docs/stream_i_ui_version_history_spec_v1.html`.
+**Spec:** retired 2026-05-23 (was `docs/stream_i_ui_version_history_spec_v1.html`); this README is now the source of truth.
 **Coding session:** I.9d1 (2026-05-12).
 
 ## Public API

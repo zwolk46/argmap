@@ -1,6 +1,6 @@
 # `src/modes/`
 
-**Spec:** `docs/stream_i_modes_spec_v1.html`. **Coding session:** I.6 (2026-05-12).
+**Spec:** retired 2026-05-23 (was `docs/stream_i_modes_spec_v1.html`); this README is now the source of truth. **Coding session:** I.6 (2026-05-12).
 The modes module implements the action orchestration layer: the `FrameActionDispatchTable`
 and `SessionActionDispatchTable` entries, four async `Repository`-composite wrappers,
 the transition gating function, the interview-order algorithm, and the cascade utility.

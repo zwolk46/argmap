@@ -4,7 +4,7 @@ Session-settings panel mounted page-locally inside `ArgumentRunningPage`. A
 right-edge `Drawer` with four sections (Metadata, G6 output rewrite, G12
 advisory toggle (read-only), Archive and Delete).
 
-**Spec:** `docs/stream_i_ui_session_settings_spec_v1.html`.
+**Spec:** retired 2026-05-23 (was `docs/stream_i_ui_session_settings_spec_v1.html`); this README is now the source of truth.
 **Coding session:** I.9d3 (2026-05-12).
 
 ## Public API

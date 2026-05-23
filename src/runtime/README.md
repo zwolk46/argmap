@@ -1,6 +1,6 @@
 # `src/runtime/`
 
-**Spec:** `docs/stream_i_runtime_spec_v1.html`. **Coding session:** I.3 (2026-05-12).
+**Spec:** retired 2026-05-23 (was `docs/stream_i_runtime_spec_v1.html`); this README is now the source of truth. **Coding session:** I.3 (2026-05-12).
 The runtime is the determinism boundary of the application (Article II § 2). It
 imports only `@/schema` and standard built-ins; it is pure, clock-free, and
 contains no randomness.

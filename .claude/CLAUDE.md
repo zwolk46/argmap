@@ -8,13 +8,16 @@ Anthropic's safety rules.
 ## Repository orientation
 
 - Project docs live under `docs/`. Authoritative state is `docs/current_state.html`.
-- Build kit entry point: `docs/stream_i_buildkit_index_v1.html`.
-- Cross-module contracts: `docs/stream_i_contracts_v1.html`.
-- Per-module specs: `docs/stream_i_*_spec_v1.html` (one per module; written
-  incrementally by chat-based planning sessions).
+- Cross-module contracts: `docs/stream_i_contracts_v2.html`.
+- Stream E v1 amendment (UI overhaul to shadcn/Phosphor/Tailwind v4):
+  `docs/stream_e_amendment_1.html`, planning artifact at
+  `docs/handoff/ui_overhaul_mapping_v1.md`.
 - Flag register: `docs/flags.html`.
-- Legacy / historical-only (Article VII § 1(f)): `docs/handoff_document_v2.html`,
-  `docs/master_plan_v1.html`. Do not act on these.
+- Per-module READMEs at `src/<module>/README.md` are the cross-session
+  compression artifacts (Token-optimization principle 2). The original
+  Stream A–H design docs and Stream I per-module spec docs were retired on
+  2026-05-23 after I.1–I.10 completed; module READMEs + the code itself
+  are now the post-implementation source of truth.
 
 ## Reading order for any session in this repo
 
@@ -22,14 +25,14 @@ Per Article VIII § 2 of the Protocol below:
 
 1. This file (Constitution + Protocol) — automatic.
 2. `docs/current_state.html` — canonical state.
-3. The work-specific docs identified by the requested work. For coding sessions,
-   that is: the buildkit index, the contracts doc, the relevant per-module spec,
-   and the READMEs of any dependent modules already implemented.
+3. The work-specific context identified by the requested work. For coding
+   sessions, that is: `docs/stream_i_contracts_v2.html`, the relevant
+   `src/<module>/README.md`, and the READMEs of any dependent modules.
 4. Any unresolved entries in `docs/flags.html` relevant to the work.
 
-A coding session does **not** read original Stream A–H documents. The
-consolidated state in `docs/current_state.html` plus the per-module Stream I
-spec is sufficient (Article XI § 2).
+A coding session does **not** read original Stream A–H or Stream I spec
+documents (Article XI § 2); they have been retired. `docs/current_state.html`
+plus the per-module READMEs are sufficient.
 
 ## Outputs of a coding session
 

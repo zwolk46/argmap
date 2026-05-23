@@ -1,6 +1,6 @@
 # `src/schema/`
 
-**Spec:** `docs/stream_i_schema_spec_v1.html`. **Coding session:** I.2 (2026-05-12).
+**Spec:** retired 2026-05-23 (was `docs/stream_i_schema_spec_v1.html`); this README is now the source of truth. **Coding session:** I.2 (2026-05-12).
 The schema module is the dependency root: every other module imports from it,
 and it imports nothing from the application codebase.
 

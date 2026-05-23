@@ -1,6 +1,6 @@
 # `src/state/`
 
-**Spec:** `docs/stream_i_state_spec_v1.html`. **Coding session:** I.5 (2026-05-12).
+**Spec:** retired 2026-05-23 (was `docs/stream_i_state_spec_v1.html`); this README is now the source of truth. **Coding session:** I.5 (2026-05-12).
 The state module bridges persistence, runtime, and UI. It owns the Zustand stores,
 the React Context provider, the action-runner orchestration layer, and the selectors.
 

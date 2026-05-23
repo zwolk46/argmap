@@ -4,7 +4,7 @@ Home page surface: pinned + recent frame cards + new-frame button (with reusable
 `NewFrameWizard` from `@/ui/onboarding`). Replaces the I.9a placeholder HomePage
 in `app-routes.tsx`.
 
-**Spec:** `docs/stream_i_integration_spec_v1.html` § 1 (Home page module).
+**Spec:** retired 2026-05-23 (was `docs/stream_i_integration_spec_v1.html` § 1 — Home page module); this README is now the source of truth.
 **Coding session:** I.10 (2026-05-12).
 
 ## Public API

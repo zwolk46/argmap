@@ -1,4 +1,4 @@
-/* React Flow CSS variable bindings from stream_e_visual_polish_v1.html § React Flow integration */
+/* React Flow CSS variable bindings originally from stream_e_visual_polish_v1.html § React Flow integration (retired 2026-05-23; see git history) */
 
 .react-flow {
   --xy-background-color: var(--color-surface-canvas);
