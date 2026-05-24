@@ -13,11 +13,13 @@ export interface RightPaneAnimatedProps {
   children: ReactNode;
 }
 
-// VARIANT BASE — "smooth width + opacity"
-// Pane slides in from the right with a width transition while the inner
-// surface fades in. On close it collapses width then unmounts. The reopen
-// strip cross-fades in once the pane is fully closed.
-const ANIM_MS = 220;
+// VARIANT C — "scale-from-strip reveal"
+// The pane unfolds from the right viewport edge: transform-origin: right,
+// scaleX 0 → 1 with a slight overshoot, while the underlying width
+// transitions in unison. On close the surface scales back into the strip
+// and the reopen tab pulses in. translateX provides an extra slide hint
+// so the motion reads as "into / out of the right edge".
+const ANIM_MS = 280;
 
 function useDelayedUnmount(open: boolean, delay: number): boolean {
   const [mounted, setMounted] = React.useState(open);
@@ -44,17 +46,22 @@ export function RightPaneAnimated(props: RightPaneAnimatedProps): ReactElement {
           data-state={open ? "open" : "closed"}
           style={{
             width: open ? width : "0px",
-            transition: `width ${ANIM_MS}ms ease-in-out`,
+            transition: `width ${ANIM_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
           }}
-          className="shrink-0 overflow-hidden p-2 data-[state=closed]:p-0"
+          className="shrink-0 overflow-visible p-2 data-[state=closed]:p-0"
         >
           <div
-            className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm transition-opacity ease-in-out data-[state=closed]:opacity-0 data-[state=open]:opacity-100"
             data-state={open ? "open" : "closed"}
             style={{
               height: `calc(100svh - ${TOPBAR_HEIGHT_PX}px - 1rem)`,
-              transitionDuration: `${ANIM_MS}ms`,
+              transformOrigin: "right center",
+              transform: open
+                ? "scaleX(1) translateX(0)"
+                : "scaleX(0.4) translateX(40px)",
+              opacity: open ? 1 : 0,
+              transition: `transform ${ANIM_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity ${ANIM_MS}ms ease-out`,
             }}
+            className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-lg"
           >
             <header className="flex flex-row items-center justify-between gap-2 p-2">
               <span className="text-sm font-medium">Inspector</span>
@@ -72,10 +79,7 @@ export function RightPaneAnimated(props: RightPaneAnimatedProps): ReactElement {
           </div>
         </aside>
       ) : null}
-      <RightReopenStrip
-        visible={!open && !mounted}
-        on_click={on_open}
-      />
+      <RightReopenStrip visible={!open && !mounted} on_click={on_open} />
     </React.Fragment>
   );
 }
@@ -102,8 +106,10 @@ function RightReopenStrip(props: RightReopenStripProps): ReactElement {
         height: "8rem",
         zIndex: 20,
         opacity: visible ? 1 : 0,
+        transform: visible ? "translateX(0) scale(1)" : "translateX(12px) scale(0.6)",
         pointerEvents: visible ? "auto" : "none",
-        transition: `opacity ${ANIM_MS}ms ease-in-out`,
+        transition: `opacity ${ANIM_MS}ms ease-out, transform ${ANIM_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`,
+        transformOrigin: "right center",
       }}
       className="flex w-7 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-border bg-card text-foreground/60 shadow-sm hover:text-foreground"
     >

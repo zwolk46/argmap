@@ -1,6 +1,5 @@
 import type { ReactElement } from "react";
-import { Stack, FileText } from "@phosphor-icons/react";
-import { Button } from "#components/ui/button";
+import { Stack, FileText, CaretUpDown } from "@phosphor-icons/react";
 import { cn } from "#lib/utils";
 
 export type LeftPaneTab = "nodes" | "premises";
@@ -12,54 +11,59 @@ export interface LeftPaneToggleProps {
   node_count: number;
 }
 
-// VARIANT A — "segmented control in the pane header"
-// Mirrors the look of the top-bar OperatingModeToggle (Frame / Argument).
-// Two pill buttons share a single rounded container; selected button is
-// elevated with the primary surface treatment.
+// VARIANT C — "stacked rail with active swap"
+// The active tab gets a full-width labeled card with the count; the
+// inactive tab collapses to an icon strip beneath it. Clicking the
+// inactive strip swaps which entry is the labeled card.
 export function LeftPaneToggle(props: LeftPaneToggleProps): ReactElement {
   const { tab, on_change, premise_count, node_count } = props;
+
+  const active_meta =
+    tab === "nodes"
+      ? { label: "Nodes", count: node_count, Icon: Stack, hint: "Frame interview list" }
+      : { label: "Premises", count: premise_count, Icon: FileText, hint: "Argument premises" };
+  const inactive: LeftPaneTab = tab === "nodes" ? "premises" : "nodes";
+  const inactive_meta =
+    inactive === "nodes"
+      ? { label: "Nodes", count: node_count, Icon: Stack }
+      : { label: "Premises", count: premise_count, Icon: FileText };
+
   return (
     <div
       data-testid="left-pane-toggle"
-      data-variant="segmented"
-      className="flex items-center gap-1 rounded-md border bg-muted/40 p-0.5"
+      data-variant="rail-swap"
+      className="flex flex-col gap-1"
       role="tablist"
       aria-label="Left pane content"
     >
-      <Button
-        type="button"
+      <div
         role="tab"
-        aria-selected={tab === "nodes"}
-        data-testid="left-pane-toggle-nodes"
-        variant={tab === "nodes" ? "default" : "ghost"}
-        size="xs"
-        onClick={() => on_change("nodes")}
+        aria-selected="true"
+        data-testid={`left-pane-toggle-${tab}`}
         className={cn(
-          "h-6 flex-1 gap-1 text-[10px] uppercase tracking-wide",
-          tab === "nodes" ? "shadow-sm" : "text-muted-foreground",
+          "flex w-full items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1.5 text-foreground shadow-sm",
         )}
       >
-        <Stack size={12} />
-        Nodes
-        <span className="opacity-70">·{node_count}</span>
-      </Button>
-      <Button
+        <active_meta.Icon size={14} className="shrink-0" />
+        <span className="flex-1 text-xs font-medium">{active_meta.label}</span>
+        <span className="rounded-full bg-background/60 px-1.5 text-[10px] text-muted-foreground">
+          {active_meta.count}
+        </span>
+        <CaretUpDown size={12} className="text-muted-foreground" />
+      </div>
+      <button
         type="button"
         role="tab"
-        aria-selected={tab === "premises"}
-        data-testid="left-pane-toggle-premises"
-        variant={tab === "premises" ? "default" : "ghost"}
-        size="xs"
-        onClick={() => on_change("premises")}
-        className={cn(
-          "h-6 flex-1 gap-1 text-[10px] uppercase tracking-wide",
-          tab === "premises" ? "shadow-sm" : "text-muted-foreground",
-        )}
+        aria-selected="false"
+        data-testid={`left-pane-toggle-${inactive}`}
+        onClick={() => on_change(inactive)}
+        title={`Switch to ${inactive_meta.label}`}
+        className="flex w-full items-center gap-2 rounded-md border border-transparent bg-muted/40 px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
       >
-        <FileText size={12} />
-        Premises
-        <span className="opacity-70">·{premise_count}</span>
-      </Button>
+        <inactive_meta.Icon size={12} className="shrink-0" />
+        <span className="flex-1 text-left text-[11px]">{inactive_meta.label}</span>
+        <span className="text-[10px] opacity-70">{inactive_meta.count}</span>
+      </button>
     </div>
   );
 }
