@@ -1,7 +1,6 @@
 import type { ReactElement } from "react";
 import { useSessionStore } from "@/state";
 import { CaretUp, CaretDown } from "@phosphor-icons/react";
-import { PremisePool } from "./premise-pool";
 import { SessionAuthorities } from "./session-authorities";
 import { Pill } from "../../primitives";
 import { Button } from "#components/ui/button";
@@ -27,7 +26,6 @@ export interface BottomPanelProps {
 // declined here.
 export function BottomPanel(props: BottomPanelProps): ReactElement {
   const { is_expanded, on_toggle_expanded, operating_mode, on_highlight_on_canvas } = props;
-  const premise_count = useSessionStore((s) => s.session?.premises.length ?? 0);
   const authority_count = useSessionStore((s) => s.session?.session_authorities?.length ?? 0);
 
   if (!is_expanded) {
@@ -44,20 +42,13 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
           aria-label="Expand bottom panel"
           onClick={on_toggle_expanded}
           data-testid="bottom-panel-toggle"
-          title="Expand premises and authorities"
+          title="Expand session authorities"
         >
           <CaretUp size={16} />
         </Button>
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Premises &amp; authorities
+          Authorities
         </span>
-        <Pill
-          variant={premise_count === 0 ? "neutral" : "status_open"}
-          data-testid="bottom-panel-premise-count"
-          size="xs"
-        >
-          {premise_count} {premise_count === 1 ? "premise" : "premises"}
-        </Pill>
         <Pill
           variant={authority_count === 0 ? "neutral" : "mode_accent"}
           data-testid="bottom-panel-authority-count"
@@ -76,7 +67,7 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
         style={{ height: "var(--height-row-toolbar)" }}
       >
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Premises &amp; authorities
+          Authorities
         </span>
         <Button
           type="button"
@@ -89,10 +80,7 @@ export function BottomPanel(props: BottomPanelProps): ReactElement {
           <CaretDown size={16} />
         </Button>
       </div>
-      <div className="grid flex-1 overflow-hidden" style={{ gridTemplateColumns: "3fr 2fr" }}>
-        <div className="overflow-hidden border-r">
-          <PremisePool on_highlight_on_canvas={on_highlight_on_canvas} />
-        </div>
+      <div className="flex-1 overflow-hidden">
         <SessionAuthorities
           operating_mode={operating_mode}
           on_highlight_on_canvas={on_highlight_on_canvas}

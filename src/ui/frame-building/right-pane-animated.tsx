@@ -1,0 +1,119 @@
+import * as React from "react";
+import type { ReactElement, ReactNode } from "react";
+import { SidebarSimple } from "@phosphor-icons/react";
+
+const TOPBAR_HEIGHT_PX = 48;
+const TOPBAR_HEIGHT_REM = "3rem";
+
+export interface RightPaneAnimatedProps {
+  open: boolean;
+  on_close: () => void;
+  on_open: () => void;
+  width: string;
+  children: ReactNode;
+}
+
+// VARIANT BASE — "smooth width + opacity"
+// Pane slides in from the right with a width transition while the inner
+// surface fades in. On close it collapses width then unmounts. The reopen
+// strip cross-fades in once the pane is fully closed.
+const ANIM_MS = 220;
+
+function useDelayedUnmount(open: boolean, delay: number): boolean {
+  const [mounted, setMounted] = React.useState(open);
+  React.useEffect(() => {
+    if (open) {
+      setMounted(true);
+      return;
+    }
+    const t = window.setTimeout(() => setMounted(false), delay);
+    return () => window.clearTimeout(t);
+  }, [open, delay]);
+  return mounted;
+}
+
+export function RightPaneAnimated(props: RightPaneAnimatedProps): ReactElement {
+  const { open, on_close, on_open, width, children } = props;
+  const mounted = useDelayedUnmount(open, ANIM_MS);
+
+  return (
+    <React.Fragment>
+      {mounted ? (
+        <aside
+          data-pane="right"
+          data-state={open ? "open" : "closed"}
+          style={{
+            width: open ? width : "0px",
+            transition: `width ${ANIM_MS}ms ease-in-out`,
+          }}
+          className="shrink-0 overflow-hidden p-2 data-[state=closed]:p-0"
+        >
+          <div
+            className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm transition-opacity ease-in-out data-[state=closed]:opacity-0 data-[state=open]:opacity-100"
+            data-state={open ? "open" : "closed"}
+            style={{
+              height: `calc(100svh - ${TOPBAR_HEIGHT_PX}px - 1rem)`,
+              transitionDuration: `${ANIM_MS}ms`,
+            }}
+          >
+            <header className="flex flex-row items-center justify-between gap-2 p-2">
+              <span className="text-sm font-medium">Inspector</span>
+              <button
+                type="button"
+                onClick={on_close}
+                aria-label="Close inspector"
+                title="Close inspector"
+                className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground"
+              >
+                <SidebarSimple size={16} />
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 overflow-auto px-2 pb-2">{children}</div>
+          </div>
+        </aside>
+      ) : null}
+      <RightReopenStrip
+        visible={!open && !mounted}
+        on_click={on_open}
+      />
+    </React.Fragment>
+  );
+}
+
+interface RightReopenStripProps {
+  visible: boolean;
+  on_click: () => void;
+}
+
+function RightReopenStrip(props: RightReopenStripProps): ReactElement {
+  const { visible, on_click } = props;
+  return (
+    <button
+      type="button"
+      onClick={on_click}
+      aria-label="Open inspector"
+      title="Open inspector"
+      aria-hidden={!visible}
+      tabIndex={visible ? 0 : -1}
+      style={{
+        position: "fixed",
+        top: `calc(${TOPBAR_HEIGHT_REM} + 1rem)`,
+        right: "0.5rem",
+        height: "8rem",
+        zIndex: 20,
+        opacity: visible ? 1 : 0,
+        pointerEvents: visible ? "auto" : "none",
+        transition: `opacity ${ANIM_MS}ms ease-in-out`,
+      }}
+      className="flex w-7 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-border bg-card text-foreground/60 shadow-sm hover:text-foreground"
+    >
+      <SidebarSimple size={14} />
+      <span
+        className="text-xs font-medium tracking-wide"
+        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+      >
+        Inspector
+      </span>
+    </button>
+  );
+}

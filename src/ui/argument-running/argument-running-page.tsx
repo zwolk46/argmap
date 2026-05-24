@@ -24,6 +24,8 @@ import {
 import { OutputViewer } from "./output-viewer";
 import { ItemEditorHost } from "./item-editors";
 import { BottomPanel } from "./bottom-panel";
+import { LeftPane } from "./left-pane";
+import type { LeftPaneTab } from "./left-pane-toggle";
 
 export interface ArgumentRunningPageProps {
   session_id: SessionId;
@@ -49,6 +51,7 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
   const frame_id = session?.frame_id ?? null;
 
   const [selected_item_id, setSelectedItemId] = React.useState<NodeRef | null>(null);
+  const [left_tab, setLeftTab] = React.useState<LeftPaneTab>("nodes");
   const [bottom_panel_expanded, setBottomPanelExpanded] = React.useState(false);
   const [help_pane_open, setHelpPaneOpen] = React.useState(false);
   const [filter, setFilter] = React.useState<InterviewFilterState>(DEFAULT_INTERVIEW_FILTER);
@@ -161,23 +164,32 @@ export function ArgumentRunningPage(props: ArgumentRunningPageProps): ReactEleme
         <div className="flex-1 overflow-hidden">
           <TwoPaneLayout
             left={
-              <InterviewPane
-                selected_item_id={selected_item_id}
-                on_select_item={(id) => setSelectedItemId(id)}
-                filter={filter}
-                on_filter_change={setFilter}
-                search_text={search_text}
-                on_search_change={setSearchText}
-                recompute_counter={recompute_counter}
-                on_save_milestone={async () => {
-                  setSavingMilestone(true);
-                  try {
-                    await session_store.getState().saveSessionMilestone("Milestone");
-                  } finally {
-                    setSavingMilestone(false);
-                  }
-                }}
-                saving_milestone={saving_milestone}
+              <LeftPane
+                tab={left_tab}
+                on_tab_change={setLeftTab}
+                on_highlight_on_canvas={(ids) =>
+                  ids.forEach((id) => canvas_ref.current?.zoomToNode(id))
+                }
+                interview_content={
+                  <InterviewPane
+                    selected_item_id={selected_item_id}
+                    on_select_item={(id) => setSelectedItemId(id)}
+                    filter={filter}
+                    on_filter_change={setFilter}
+                    search_text={search_text}
+                    on_search_change={setSearchText}
+                    recompute_counter={recompute_counter}
+                    on_save_milestone={async () => {
+                      setSavingMilestone(true);
+                      try {
+                        await session_store.getState().saveSessionMilestone("Milestone");
+                      } finally {
+                        setSavingMilestone(false);
+                      }
+                    }}
+                    saving_milestone={saving_milestone}
+                  />
+                }
               />
             }
             right={

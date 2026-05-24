@@ -5,6 +5,7 @@ import { Pill } from "../../primitives";
 import { Button } from "#components/ui/button";
 import { Textarea } from "#components/ui/textarea";
 import { Crosshair, PencilSimple, Trash } from "@phosphor-icons/react";
+import { PremiseAttachPicker } from "./premise-attach-picker";
 
 export interface PremiseRowProps {
   premise_id: string;
@@ -142,6 +143,7 @@ export function PremiseRow(props: PremiseRowProps): React.ReactElement | null {
               </Pill>
             ) : null}
             <span className="ml-auto flex gap-1">
+              <PremiseAttachPicker premise_id={premise.id} />
               <Button
                 type="button"
                 variant="ghost"
