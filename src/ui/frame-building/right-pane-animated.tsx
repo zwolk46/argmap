@@ -13,11 +13,11 @@ export interface RightPaneAnimatedProps {
   children: ReactNode;
 }
 
-// VARIANT BASE — "smooth width + opacity"
-// Pane slides in from the right with a width transition while the inner
-// surface fades in. On close it collapses width then unmounts. The reopen
-// strip cross-fades in once the pane is fully closed.
-const ANIM_MS = 220;
+// VARIANT B — "blur cross-fade"
+// On open the pane width animates in while the inner surface fades up
+// from opacity:0 + blur:8px to opacity:1 + blur:0. On close it reverses,
+// then the reopen strip blurs in over the cleared edge.
+const ANIM_MS = 260;
 
 function useDelayedUnmount(open: boolean, delay: number): boolean {
   const [mounted, setMounted] = React.useState(open);
@@ -44,13 +44,13 @@ export function RightPaneAnimated(props: RightPaneAnimatedProps): ReactElement {
           data-state={open ? "open" : "closed"}
           style={{
             width: open ? width : "0px",
-            transition: `width ${ANIM_MS}ms ease-in-out`,
+            transition: `width ${ANIM_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
           }}
           className="shrink-0 overflow-hidden p-2 data-[state=closed]:p-0"
         >
           <div
-            className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm transition-opacity ease-in-out data-[state=closed]:opacity-0 data-[state=open]:opacity-100"
             data-state={open ? "open" : "closed"}
+            className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm transition-all ease-out data-[state=closed]:opacity-0 data-[state=closed]:blur-md data-[state=open]:opacity-100 data-[state=open]:blur-none"
             style={{
               height: `calc(100svh - ${TOPBAR_HEIGHT_PX}px - 1rem)`,
               transitionDuration: `${ANIM_MS}ms`,
@@ -72,10 +72,7 @@ export function RightPaneAnimated(props: RightPaneAnimatedProps): ReactElement {
           </div>
         </aside>
       ) : null}
-      <RightReopenStrip
-        visible={!open && !mounted}
-        on_click={on_open}
-      />
+      <RightReopenStrip visible={!open && !mounted} on_click={on_open} />
     </React.Fragment>
   );
 }
@@ -102,8 +99,9 @@ function RightReopenStrip(props: RightReopenStripProps): ReactElement {
         height: "8rem",
         zIndex: 20,
         opacity: visible ? 1 : 0,
+        filter: visible ? "blur(0)" : "blur(6px)",
         pointerEvents: visible ? "auto" : "none",
-        transition: `opacity ${ANIM_MS}ms ease-in-out`,
+        transition: `opacity ${ANIM_MS}ms ease-out, filter ${ANIM_MS}ms ease-out`,
       }}
       className="flex w-7 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-border bg-card text-foreground/60 shadow-sm hover:text-foreground"
     >

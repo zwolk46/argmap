@@ -1,7 +1,6 @@
 import type { ReactElement } from "react";
 import { Stack, FileText } from "@phosphor-icons/react";
-import { Button } from "#components/ui/button";
-import { cn } from "#lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "#components/ui/tabs";
 
 export type LeftPaneTab = "nodes" | "premises";
 
@@ -12,54 +11,44 @@ export interface LeftPaneToggleProps {
   node_count: number;
 }
 
-// VARIANT A — "segmented control in the pane header"
-// Mirrors the look of the top-bar OperatingModeToggle (Frame / Argument).
-// Two pill buttons share a single rounded container; selected button is
-// elevated with the primary surface treatment.
+// VARIANT B — "shadcn Tabs across the pane"
+// Tabs primitive renders the full-width tab bar with an animated active
+// indicator. Selected tab is signaled by the shadcn surface treatment;
+// counts ride alongside the label in a muted pill.
 export function LeftPaneToggle(props: LeftPaneToggleProps): ReactElement {
   const { tab, on_change, premise_count, node_count } = props;
   return (
-    <div
+    <Tabs
+      value={tab}
+      onValueChange={(v) => on_change(v as LeftPaneTab)}
       data-testid="left-pane-toggle"
-      data-variant="segmented"
-      className="flex items-center gap-1 rounded-md border bg-muted/40 p-0.5"
-      role="tablist"
-      aria-label="Left pane content"
+      data-variant="tabs"
+      className="w-full"
     >
-      <Button
-        type="button"
-        role="tab"
-        aria-selected={tab === "nodes"}
-        data-testid="left-pane-toggle-nodes"
-        variant={tab === "nodes" ? "default" : "ghost"}
-        size="xs"
-        onClick={() => on_change("nodes")}
-        className={cn(
-          "h-6 flex-1 gap-1 text-[10px] uppercase tracking-wide",
-          tab === "nodes" ? "shadow-sm" : "text-muted-foreground",
-        )}
-      >
-        <Stack size={12} />
-        Nodes
-        <span className="opacity-70">·{node_count}</span>
-      </Button>
-      <Button
-        type="button"
-        role="tab"
-        aria-selected={tab === "premises"}
-        data-testid="left-pane-toggle-premises"
-        variant={tab === "premises" ? "default" : "ghost"}
-        size="xs"
-        onClick={() => on_change("premises")}
-        className={cn(
-          "h-6 flex-1 gap-1 text-[10px] uppercase tracking-wide",
-          tab === "premises" ? "shadow-sm" : "text-muted-foreground",
-        )}
-      >
-        <FileText size={12} />
-        Premises
-        <span className="opacity-70">·{premise_count}</span>
-      </Button>
-    </div>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger
+          value="nodes"
+          data-testid="left-pane-toggle-nodes"
+          className="gap-1 text-[11px]"
+        >
+          <Stack size={12} />
+          Nodes
+          <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">
+            {node_count}
+          </span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="premises"
+          data-testid="left-pane-toggle-premises"
+          className="gap-1 text-[11px]"
+        >
+          <FileText size={12} />
+          Premises
+          <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground">
+            {premise_count}
+          </span>
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 }
