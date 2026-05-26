@@ -66,27 +66,43 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
           <RightReopenStrip on_click={() => set_right_open(true)} />
         ) : null}
         <div className="pointer-events-none absolute inset-y-0 left-0 z-30">
-          <Sidebar
-            side="left"
-            variant="floating"
-            collapsible="icon"
-            className="pointer-events-auto"
-            style={{
-              top: TOPBAR_HEIGHT_REM,
-              height: `calc(100svh - ${TOPBAR_HEIGHT_REM})`,
-            }}
-          >
-            <SidebarHeader className="flex flex-row items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
-              <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">
-                Palette
-              </span>
-              <LeftSidebarToggle />
-            </SidebarHeader>
-            <SidebarContent>{left}</SidebarContent>
-          </Sidebar>
+          <FloatingLeftPanel>{left}</FloatingLeftPanel>
         </div>
       </div>
     </SidebarProvider>
+  );
+}
+
+function FloatingLeftPanel(props: { children: ReactNode }): ReactElement {
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
+  const expanded_style: React.CSSProperties = {
+    top: TOPBAR_HEIGHT_REM,
+    height: `calc(100svh - ${TOPBAR_HEIGHT_REM})`,
+  };
+  const collapsed_style: React.CSSProperties = {
+    top: TOPBAR_HEIGHT_REM,
+    bottom: "auto",
+    height: "auto",
+  };
+  return (
+    <Sidebar
+      side="left"
+      variant="floating"
+      collapsible="icon"
+      className="pointer-events-auto"
+      style={collapsed ? collapsed_style : expanded_style}
+    >
+      <SidebarHeader className="flex flex-row items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+        <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">
+          Palette
+        </span>
+        <LeftSidebarToggle />
+      </SidebarHeader>
+      <SidebarContent className="group-data-[collapsible=icon]:flex-none">
+        {props.children}
+      </SidebarContent>
+    </Sidebar>
   );
 }
 
