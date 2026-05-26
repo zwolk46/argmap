@@ -41,24 +41,7 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
       style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
     >
       {top_bar}
-      <div className="flex min-h-0 flex-1">
-        <Sidebar
-          side="left"
-          variant="floating"
-          collapsible="icon"
-          style={{
-            top: TOPBAR_HEIGHT_REM,
-            height: `calc(100svh - ${TOPBAR_HEIGHT_REM})`,
-          }}
-        >
-          <SidebarHeader className="flex flex-row items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
-            <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">
-              Palette
-            </span>
-            <LeftSidebarToggle />
-          </SidebarHeader>
-          <SidebarContent>{left}</SidebarContent>
-        </Sidebar>
+      <div className="relative flex min-h-0 flex-1">
         <SidebarInset
           className="flex flex-col overflow-hidden"
           style={{ height: `calc(100svh - ${TOPBAR_HEIGHT_PX}px)` }}
@@ -82,6 +65,26 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
         {!right_open ? (
           <RightReopenStrip on_click={() => set_right_open(true)} />
         ) : null}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-30">
+          <Sidebar
+            side="left"
+            variant="floating"
+            collapsible="icon"
+            className="pointer-events-auto"
+            style={{
+              top: TOPBAR_HEIGHT_REM,
+              height: `calc(100svh - ${TOPBAR_HEIGHT_REM})`,
+            }}
+          >
+            <SidebarHeader className="flex flex-row items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+              <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">
+                Palette
+              </span>
+              <LeftSidebarToggle />
+            </SidebarHeader>
+            <SidebarContent>{left}</SidebarContent>
+          </Sidebar>
+        </div>
       </div>
     </SidebarProvider>
   );
