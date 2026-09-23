@@ -57,7 +57,7 @@ function SlotRow({
         </>
       ) : picking ? (
         <select
-          className="argmap-input"
+          className="h-9 w-full rounded-4xl border border-input bg-input/30 px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
           autoFocus
           defaultValue=""
           onChange={(e) => {
@@ -140,7 +140,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
         <Label>Gate Type</Label>
         <div>
           <select
-            className="argmap-input"
+            className="h-9 w-full rounded-4xl border border-input bg-input/30 px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
             value={node.gate_type}
             onChange={(e) => change_gate_type(e.currentTarget.value as GateType)}
           >
@@ -171,7 +171,7 @@ export function LogicalGateEditor(props: LogicalGateEditorProps): ReactElement {
               ))}
               {adding_input ? (
                 <select
-                  className="argmap-input"
+                  className="h-9 w-full rounded-4xl border border-input bg-input/30 px-3 py-1 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
                   autoFocus
                   defaultValue=""
                   onChange={(e) => {

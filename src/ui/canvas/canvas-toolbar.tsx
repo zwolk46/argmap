@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { IconButton } from "../primitives/icon-button";
 import { Z } from "../primitives/z-index";
+import { Input } from "#components/ui/input";
 import type { ForeclosureVisibility } from "./edges/types";
 
 export type { ForeclosureVisibility };
@@ -129,12 +130,10 @@ export function CanvasToolbar({
         {foreclosureGlyph}
       </IconButton>
       {onSearch && (
-        // Plain <input> — the capture-phase keydown handler in frame-canvas.tsx
-        // checks `tag === "INPUT"` to skip the edge-creation hotkey. shadcn
-        // Input renders as a real <input> too, but we keep the .argmap-input
-        // class so it shares the form-field token sizing already living in
-        // global.css (which is protected).
-        <input
+        // shadcn Input renders a real <input>; the capture-phase keydown
+        // handler in frame-canvas.tsx checks `tag === "INPUT"` to skip the
+        // edge-creation hotkey, so behavior is preserved.
+        <Input
           aria-label="Search nodes"
           value={search_value}
           onChange={(e) => {
@@ -142,15 +141,7 @@ export function CanvasToolbar({
             onSearch(e.target.value);
           }}
           placeholder="Search…"
-          className="argmap-input"
-          style={{
-            // Compact density override for the floating canvas toolbar (small/square).
-            height: "26px",
-            padding: "0 var(--space-2)",
-            fontSize: "var(--font-size-xs)",
-            width: "140px",
-            background: "var(--color-surface-pane)",
-          }}
+          className="h-[26px] w-[140px] bg-muted px-2 text-xs"
         />
       )}
     </div>

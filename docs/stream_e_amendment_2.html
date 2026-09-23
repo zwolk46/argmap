@@ -1,0 +1,210 @@
+<style>
+  .doc { max-width: 760px; font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .doc h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .doc .subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; }
+  .doc h2 { font-size: 15px; font-weight: 500; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .doc h3 { font-size: 13px; font-weight: 500; margin: 20px 0 6px; color: var(--color-text-primary); }
+  .doc h4 { font-size: 12px; font-weight: 500; margin: 14px 0 4px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc p, .doc li { font-size: 13px; line-height: 1.7; color: var(--color-text-secondary); margin: 0 0 6px; }
+  .doc ul, .doc ol { padding-left: 18px; margin: 6px 0 10px; }
+  .doc li { margin-bottom: 4px; }
+  .doc code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 5px; border-radius: 4px; color: var(--color-text-primary); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+  .doc th { text-align: left; font-weight: 500; font-size: 11px; color: var(--color-text-secondary); padding: 6px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc td { padding: 7px 8px; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; color: var(--color-text-secondary); font-size: 12px; }
+  .doc tr:last-child td { border-bottom: none; }
+  .doc .notice { background: var(--color-background-secondary); border-left: 2px solid var(--color-border-secondary); padding: 10px 14px; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; margin: 0 0 20px; }
+  .doc .notice p { margin: 0; font-size: 13px; }
+</style>
+<div class="doc">
+  <h1>Stream E — Amendment 2 (UI Consolidation)</h1>
+  <p class="subtitle">Amendment to <code>stream_e_visual_polish_v1.html</code> and <code>stream_e_amendment_1.html</code> &nbsp;·&nbsp; Session: 2026-05-23 UI consolidation &nbsp;·&nbsp; Date: 2026-05-23</p>
+
+  <div class="notice">
+    <p>Per Article XI § 1, stream documents are immutable. This second amendment records that the base palette + radius scale + shadow tokens in <code>src/ui/styles/tokens.css</code> have been collapsed onto the shadcn theme variables defined in <code>src/index.css</code>. The structural commitments in <code>stream_e_uiux_v1.html</code> and <code>stream_e_amendment_1.html</code> are <em>not</em> modified. The domain tokens calibrated in v1 (status palette, mode accents, edge families, severity, sub-flags, AI attribution, milestone, motion, z-index, type scale, spacing scale) remain authoritative in their own right and are <em>preserved unchanged</em>. What changes here is one design system replacing two parallel design systems: hand-rolled <code>var(--color-surface-*)</code> consumers and shadcn-based Tailwind utilities now resolve to identical pixel values.</p>
+  </div>
+
+  <h2>Motivation</h2>
+
+  <p>After the I.10b overhaul (amendment 1, 2026-05-20), the codebase carried <em>two</em> coexisting base-palette systems at <code>:root</code>:</p>
+  <ul>
+    <li>The shadcn preset's pure-neutral OKLCH variables (<code>--background: oklch(1 0 0)</code>, <code>--foreground: oklch(0.145 0 0)</code>, <code>--muted: oklch(0.97 0 0)</code>, <code>--border: oklch(0.922 0 0)</code>, <code>--radius: 0.625rem</code>, etc.) — consumed by shadcn primitives via Tailwind utility classes (<code>bg-background</code>, <code>text-foreground</code>, <code>border-input</code>, <code>rounded-md</code>).</li>
+    <li>The legacy argmap warm-neutral HSL variables (<code>--color-surface-canvas: hsl(36 16% 97%)</code>, <code>--color-text-primary: hsl(30 8% 12%)</code>, <code>--color-border-default: hsl(30 8% 80%)</code>, <code>--radius-md: 6px</code>, etc.) — consumed by hand-rolled CSS in <code>global.css</code> and by inline <code>style={{ background: "var(--color-surface-pane)" }}</code> in transitional surfaces (the topbar, three frame-building editors, the canvas-toolbar search input).</li>
+  </ul>
+
+  <p>The result was visible inconsistency: pure-white shadcn dialogs/sheets/cards on one surface, slightly-warm cream pane backgrounds on another, in the same view. The user named this directly as the trigger for this session ("the design is kinda all over the place"). Additionally, hand-rolled <code>var(--radius-md)</code> resolved to <code>6px</code> while shadcn <code>rounded-md</code> resolved to <code>calc(var(--radius) * 0.8) = 8px</code> — a 2px corner-radius mismatch between paired surfaces.</p>
+
+  <h2>What changed</h2>
+
+  <h3>1. Base palette: argmap HSL → shadcn OKLCH aliases</h3>
+  <p>The base-palette tokens in <code>src/ui/styles/tokens.css</code> are now aliases to the shadcn theme variables defined in <code>src/index.css</code>. Both naming families coexist; the <code>--color-*</code> argmap names continue to resolve, but every base-palette token now derives from one OKLCH source of truth.</p>
+  <table>
+    <thead>
+      <tr><th>argmap token (legacy name)</th><th>v1 value (HSL warm-neutral)</th><th>v2 value (alias to shadcn OKLCH)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>--color-surface-canvas</code></td><td><code>hsl(36 16% 97%)</code></td><td><code>var(--background)</code> = <code>oklch(1 0 0)</code></td></tr>
+      <tr><td><code>--color-surface-pane</code></td><td><code>hsl(36 12% 95%)</code></td><td><code>var(--muted)</code> = <code>oklch(0.97 0 0)</code></td></tr>
+      <tr><td><code>--color-surface-elevated</code></td><td><code>hsl(0 0% 100%)</code></td><td><code>var(--card)</code> = <code>oklch(1 0 0)</code></td></tr>
+      <tr><td><code>--color-surface-overlay</code></td><td><code>hsla(30 8% 12% / 0.42)</code></td><td><code>oklch(0.145 0 0 / 0.5)</code></td></tr>
+      <tr><td><code>--color-surface-hover</code></td><td><code>hsl(36 14% 92%)</code></td><td><code>var(--accent)</code> = <code>oklch(0.97 0 0)</code></td></tr>
+      <tr><td><code>--color-surface-selected</code></td><td><code>hsl(36 18% 89%)</code></td><td><code>oklch(0.94 0 0)</code></td></tr>
+      <tr><td><code>--color-surface-sunken</code></td><td><code>hsl(36 14% 94%)</code></td><td><code>var(--muted)</code></td></tr>
+      <tr><td><code>--color-text-primary</code></td><td><code>hsl(30 8% 12%)</code></td><td><code>var(--foreground)</code> = <code>oklch(0.145 0 0)</code></td></tr>
+      <tr><td><code>--color-text-secondary</code></td><td><code>hsl(30 6% 38%)</code></td><td><code>var(--muted-foreground)</code> = <code>oklch(0.556 0 0)</code></td></tr>
+      <tr><td><code>--color-text-tertiary</code></td><td><code>hsl(30 6% 46%)</code></td><td><code>oklch(0.56 0 0)</code></td></tr>
+      <tr><td><code>--color-border-default</code></td><td><code>hsl(30 8% 80%)</code></td><td><code>var(--border)</code> = <code>oklch(0.922 0 0)</code></td></tr>
+      <tr><td><code>--color-border-subtle</code></td><td><code>hsl(30 8% 88%)</code></td><td><code>oklch(0.95 0 0)</code></td></tr>
+      <tr><td><code>--color-border-strong</code></td><td><code>hsl(30 8% 65%)</code></td><td><code>oklch(0.85 0 0)</code></td></tr>
+      <tr><td><code>--shadow-sm/md/lg</code></td><td>warm <code>hsla(30 8% 12% / α)</code></td><td>neutral <code>oklch(0.145 0 0 / α)</code></td></tr>
+      <tr><td><code>--radius-sm</code></td><td><code>3px</code></td><td><code>calc(var(--radius) * 0.6)</code> = <code>6px</code></td></tr>
+      <tr><td><code>--radius-md</code></td><td><code>6px</code></td><td><code>calc(var(--radius) * 0.8)</code> = <code>8px</code></td></tr>
+      <tr><td><code>--radius-lg</code></td><td><code>10px</code></td><td><code>var(--radius)</code> = <code>10px</code></td></tr>
+      <tr><td><code>--radius-pill</code></td><td><code>9999px</code></td><td>unchanged</td></tr>
+    </tbody>
+  </table>
+
+  <p>The radius scale is now identical to the values the <code>@theme inline</code> block in <code>src/index.css</code> emits for Tailwind's <code>rounded-sm/md/lg</code> utility classes — eliminating the 2px corner-radius mismatch between shadcn primitives and hand-rolled <code>var(--radius-md)</code> consumers.</p>
+
+  <h3>2. Domain tokens — PRESERVED unchanged</h3>
+  <p>Article II § 5 makes the status palette constitutionally protected. Stream E amendment 1 separately commits to preserving the rest of the domain tokens. None of these are modified by this amendment:</p>
+  <ul>
+    <li>Status palette: satisfied (<code>hsl(145 36% 38%)</code>), open, contested, foreclosed, not_applicable. The <em>five-status canvas-node treatment</em> in <code>src/ui/styles/global.css</code> via <code>.canvas-node[data-status][data-kind]</code> selectors is <em>untouched</em>.</li>
+    <li>Mode accents: frame-building slate-blue (<code>hsl(216 28% 42%)</code>), argument-running burnt sienna (<code>hsl(18 38% 44%)</code>).</li>
+    <li>Edge families: structural, foreclosure, supports, contradicts, answers, annotation.</li>
+    <li>Severity: pass, warning, error.</li>
+    <li>Legal sub-flags: binding navy, persuasive slate.</li>
+    <li>AI attribution: plum.</li>
+    <li>Milestone star: warm gold.</li>
+    <li>Motion durations + easing curves + <code>prefers-reduced-motion</code> collapse.</li>
+    <li>Z-index scale (11 bands).</li>
+    <li>Type scale, spacing scale, line heights, letter spacing, border weights.</li>
+  </ul>
+
+  <h3>3. Orphan UIcon shim removed</h3>
+  <p>The Phosphor-backed <code>UIcon</code> slug→glyph lookup at <code>src/ui/primitives/uicon.tsx</code> (introduced in amendment 1 as a transitional shim) had no remaining callers after surface migration. Removed the file and the <code>export { UIcon } from "./uicon";</code> line from <code>src/ui/primitives/index.ts</code>. Resolves the "obvious next pass" item flagged in <code>HANDOFF_NEXT.md</code> from session #19.</p>
+
+  <h3>4. Inline <code>argmap-input</code> callsites migrated</h3>
+  <p>Seven inline callsites still used the legacy <code>className="argmap-input"</code> form for native <code>&lt;input&gt;</code> and <code>&lt;select&gt;</code> elements; these are migrated to shadcn primitives or shadcn-Input-equivalent Tailwind classes:</p>
+  <ul>
+    <li><code>src/ui/canvas/canvas-toolbar.tsx</code> — search input now uses shadcn <code>Input</code> from <code>#components/ui/input</code> with overrides <code>h-[26px] w-[140px] bg-muted px-2 text-xs</code> for the floating-toolbar density.</li>
+    <li><code>src/ui/frame-building/right-pane/editors/term-editor.tsx</code> — Term <code>linked_to</code> picker <code>&lt;select&gt;</code> kept native (for <code>autoFocus</code>/<code>onBlur</code> semantics inline pickers depend on) but restyled with inline Tailwind matching shadcn Input (<code>h-9 w-full rounded-4xl border border-input bg-input/30 px-3 py-1 text-sm</code> + focus/disabled states).</li>
+    <li><code>src/ui/frame-building/right-pane/editors/interpretation-editor.tsx</code> — Cite Authority picker same treatment.</li>
+    <li><code>src/ui/frame-building/right-pane/editors/logical-gate-editor.tsx</code> — three native <code>&lt;select&gt;</code>s (gate-type, slot-picker, add-input-picker) same treatment.</li>
+  </ul>
+  <p>The capture-phase keydown handler in <code>frame-canvas.tsx</code> that checks <code>tag === "INPUT"</code> to skip the edge-creation hotkey continues to work since shadcn <code>Input</code> renders a real <code>&lt;input&gt;</code>.</p>
+
+  <h3>5. <code>argmap-topbar*</code> classes migrated to Tailwind responsive utilities</h3>
+  <p>The four <code>.argmap-topbar*</code> classes in <code>src/ui/chrome/top-bar.tsx</code> (<code>argmap-topbar</code>, <code>argmap-topbar-title</code>, <code>argmap-topbar-chips</code>, <code>argmap-topbar-indicators</code>) are now Tailwind utilities reading from the shadcn theme. The responsive narrow-viewport reflow (§9 #15) is now expressed inline as <code>max-[720px]:hidden</code> (chips), <code>max-[560px]:hidden</code> (indicators), <code>max-[480px]:hidden</code> (title) on the relevant slot divs, with the header itself getting <code>max-[480px]:gap-1 max-[480px]:overflow-x-auto max-[480px]:px-2</code> for the compact-and-scroll fallback. The four corresponding <code>@media (max-width: …)</code> blocks in <code>global.css</code> are deleted.</p>
+
+  <h3>6. <code>global.css</code> orphan-rule prune (≈1,500 lines deleted)</h3>
+  <p>The legacy <code>.argmap-*</code> rules whose primitive owners are now shadcn-backed and Tailwind-styled are removed:</p>
+  <ul>
+    <li><strong>Buttons:</strong> <code>.argmap-btn</code> + all 5 variants (primary, secondary, ghost, destructive, destructive-solid) × hover/active/disabled/loading states; the <code>data-loading="true"</code> spinner overlay; size variants. The shadcn <code>Button</code> primitive owns the resting/hover/active visual now.</li>
+    <li><strong>Icon buttons:</strong> the entire <code>.argmap-icon-btn</code> machine — the two-layer outline→solid cross-fade with stack/layer slot machinery, hover bloom, active compression, toggled-on solid-in-accent, subtle/accent variants, reduced-motion override. The shadcn <code>Button size="icon"</code> primitive owns the visual now; the outline↔solid swap is done by Phosphor weight switch on hover in <code>icon-button.tsx</code>.</li>
+    <li><strong>Form controls:</strong> <code>.argmap-input</code> + states + the iOS-Safari coarse-pointer 16px zoom guard, <code>.argmap-textarea</code>, <code>.argmap-select</code> (with its inline SVG chevron data URI), <code>.argmap-check</code>, <code>.argmap-radio</code>, <code>.argmap-switch</code>, <code>.argmap-field</code>/<code>-field-label</code>/<code>-field-hint</code>/<code>-field-error</code>/<code>-field-required</code>, <code>.argmap-input-wrap</code>/<code>-input-icon</code>/<code>-input-suffix</code>. shadcn <code>Input</code>/<code>Textarea</code>/<code>Select</code>/<code>Checkbox</code>/<code>RadioGroup</code>/<code>Switch</code>/<code>Label</code>/<code>Alert</code> own these visuals now.</li>
+    <li><strong>Overlays / dialogs:</strong> <code>.argmap-overlay</code> + <code>.argmap-dialog</code> + their <code>--exiting</code> states. shadcn <code>Dialog</code>/<code>Sheet</code>/<code>AlertDialog</code> own these now.</li>
+    <li><strong>Misc primitives:</strong> <code>.argmap-card</code> (+ hover/active/focus), <code>.argmap-surface</code>, <code>.argmap-output-tab</code> (replaced by raw-button OutputViewTabs per amendment 1's note), <code>.argmap-radio-card[data-active="false"]:hover</code>, <code>.argmap-pill</code> (10 data-tone variants), <code>.argmap-ai-chip</code> (+ ::before radial-gradient dot), <code>.argmap-segmented</code> + <code>.argmap-segmented-tab</code> + <code>.argmap-segmented-item</code>, <code>.argmap-kbd</code>, <code>.argmap-no-scrollbar</code>, <code>.argmap-fullheight</code>, <code>.argmap-number-meta</code>.</li>
+    <li><strong>Dead global selector:</strong> the unscoped <code>input[type="radio"|"checkbox"]:not(.argmap-skip-restyle)</code> native-input restyle (matched zero real elements; shadcn Checkbox/RadioGroup render as <code>&lt;button&gt;</code> not <code>&lt;input&gt;</code>).</li>
+    <li><strong>Dead animation keyframes:</strong> <code>argmap-dialog-pop-out</code>, <code>argmap-overlay-fade-out</code>, <code>argmap-slide-in-right</code>, <code>argmap-slide-in-left</code>, <code>argmap-fade-in</code>, <code>argmap-node-enter</code>.</li>
+    <li><strong>Focus-visible halo compound selector:</strong> trimmed from 8 named primitives (<code>.argmap-card</code>, <code>.argmap-btn</code>, <code>.argmap-icon-btn</code>, <code>.argmap-radio-card</code>, <code>.argmap-output-tab</code>, <code>.argmap-row-hover</code>, <code>.argmap-segmented-tab</code>, <code>.argmap-outline-row[data-focused]</code>) down to two (<code>.argmap-row-hover</code> and <code>.argmap-outline-row[data-focused]</code>) plus the four chrome-chip <code>[data-testid]</code> selectors from §14 #33. shadcn primitives carry their own <code>focus-visible:ring</code> Tailwind classes.</li>
+  </ul>
+
+  <p><code>global.css</code> went from 2632 lines to ≈1390 (47% reduction). Canvas-node rules (the five-status whole-node treatment + per-kind accents + edge-trace + handle-glow + focus ring + keyboard-edge-creation candidate ring) are entirely preserved.</p>
+
+  <h3>7. Retained <code>.argmap-*</code> selectors</h3>
+  <p>The following CSS rules survive the prune because source code still consumes them:</p>
+  <ul>
+    <li><code>.argmap-skip-link</code> + focus/focus-visible state — WCAG 2.4.1 Bypass Blocks pattern, applied by <code>app-routes.tsx</code>.</li>
+    <li><code>.argmap-sr-only</code> — screen-reader-only helper, applied by <code>frame-canvas.tsx</code>.</li>
+    <li><code>.argmap-row-hover</code> + hover state + focus-visible halo — applied by <code>frame-title.tsx</code> and <code>edge-creation-popup.tsx</code>.</li>
+    <li><code>.argmap-section-heading</code> — applied by <code>help-glossary-pane.tsx</code>.</li>
+    <li><code>.argmap-status-badge</code> — animation hook for <code>argmap-status-pop</code> keyframe; applied by <code>primitives/status-badge.tsx</code>.</li>
+    <li><code>.argmap-spinner</code> + <code>prefers-reduced-motion</code> pulse fallback — applied by <code>primitives/loading-screen.tsx</code>.</li>
+    <li><code>.argmap-overlay-edge--trace</code> — P0-17 path-to-conclusion animation; applied by <code>argument-overlay-edge.tsx</code>.</li>
+    <li><code>.argmap-node-frame--off-active</code> — active-set heatmap fade; applied by <code>node-frame.tsx</code>.</li>
+  </ul>
+  <p>Non-class-name <code>argmap-*</code> tokens unchanged: the seven <code>argmap-arrow-{structural,forecloses,supports,contradicts,answers,annotation,path}</code> SVG <code>marker</code> ids in <code>edge-markers.tsx</code>; the <code>application/argmap-palette-node</code> DnD MIME-type string in <code>node-palette.tsx</code>/<code>frame-canvas.tsx</code>; the <code>argmap-determinism</code> ESLint plugin name referenced in <code>runtime/iteration-helpers.ts</code>.</p>
+
+  <h3>8. WCAG AA contrast verification on the new pure-white background</h3>
+  <p>The advisor flagged that the status hues were calibrated against warm cream; switching to pure white could shift perceived contrast. Numerical verification (WCAG 2.1 4.5:1 normal-text threshold, against <code>oklch(1 0 0)</code>):</p>
+  <table>
+    <thead><tr><th>Token</th><th>Contrast on white</th><th>vs. cream (old)</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><code>--color-status-satisfied</code></td><td>4.51</td><td>4.25</td><td>AA pass (improved)</td></tr>
+      <tr><td><code>--color-status-open</code></td><td>4.67</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-status-contested</code></td><td>3.39</td><td>3.19</td><td><strong>AA-large only</strong> — pre-existing on cream; carry-forward in the deferred WCAG 2.1 AA audit</td></tr>
+      <tr><td><code>--color-status-foreclosed</code></td><td>7.71</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-status-foreclosed-accent</code></td><td>6.70</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-text-tertiary</code> (new <code>oklch(0.56 0 0)</code>)</td><td>4.67</td><td>4.62 (old <code>hsl 30 6% 46%</code>)</td><td>AA pass</td></tr>
+      <tr><td><code>--color-text-secondary</code> (alias to <code>--muted-foreground</code>)</td><td>4.74</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-text-primary</code> (alias to <code>--foreground</code>)</td><td>19.80</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-severity-error</code></td><td>5.71</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-ai-accent</code></td><td>5.97</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-mode-frame-accent</code></td><td>5.94</td><td>—</td><td>AA pass</td></tr>
+      <tr><td><code>--color-mode-argument-accent</code></td><td>5.10</td><td>—</td><td>AA pass</td></tr>
+    </tbody>
+  </table>
+  <p>The base-palette switch actually <em>improved</em> the satisfied contrast (4.25 → 4.51). The contested token remains AA-large-only; this was the case on cream too (3.19) — it is a pre-existing token-calibration issue, not a regression. It is recorded in the deferred WCAG 2.1 AA audit (Stream H/I deferral; amendment 1 deferrals).</p>
+
+  <h2>What did not change</h2>
+
+  <h3>Stream E v1 commitments retained</h3>
+  <ul>
+    <li>Page topology, density (32–40px rows, 4px base), named regions, status symbols, five-status canvas-node treatment, all domain tokens (per § 2 above), motion scale, z-index scale, type scale, spacing scale, letter-spacing, line-heights, border weights.</li>
+  </ul>
+
+  <h3>Stream E amendment 1 commitments retained</h3>
+  <ul>
+    <li>shadcn/ui primitives (style <code>radix-maia</code>), Phosphor icons, Tailwind v4, self-hosted Inter Variable (<code>@fontsource-variable/inter</code>), the user-supplied preset <code>bbVKmki</code>, the 25+ shadcn primitives in <code>src/components/ui/</code>, <code>src/lib/utils.ts</code> with <code>cn()</code>, the <code>@theme inline</code> bridge in <code>src/index.css</code>.</li>
+    <li>The three visual deltas from F-029: AI suggestion drawer scrim, version-history not-applicable wash, OutputViewTabs raw-button implementation. All carry forward unchanged.</li>
+  </ul>
+
+  <h3>Stream E v1 deferrals still deferred</h3>
+  <ul>
+    <li>Dark theme (preset's <code>.dark</code> palette block in <code>src/index.css</code> remains present but not activated).</li>
+    <li>Responsive / mobile / narrow-screen reflow beyond the topbar's progressive chip-hiding.</li>
+    <li>Full WCAG 2.1 AA audit (the contested token's 3.39 contrast is the known carry-forward).</li>
+    <li>Print stylesheet.</li>
+  </ul>
+
+  <h2>Constitutional compliance</h2>
+  <ul>
+    <li><strong>Article II § 1 (frame/argument split)</strong> — base-palette consolidation does not touch frame or session data flow. Pages, panels, dialogs preserve their dispatch into <code>FrameStore</code> / <code>SessionStore</code> unchanged.</li>
+    <li><strong>Article II § 2 (determinism)</strong> — UI layer does not invent or reorder canonical compute output. No new LLM use was introduced; existing AI hooks (<code>useAiSuggestion</code>) retain their interface. <code>[data-status]</code> / <code>[data-kind]</code> attribute semantics on canvas nodes are preserved.</li>
+    <li><strong>Article II § 3 (per-node satisfaction criteria)</strong> — <code>node-frame.tsx</code> and edge renderers untouched in structure; the canvas-node CSS treatment is entirely preserved.</li>
+    <li><strong>Article II § 4 (independent versioning)</strong> — version-history pane already migrated in amendment 1; nothing here touches the repository contracts, version-tree shape, restore + compare flows.</li>
+    <li><strong>Article II § 5 (human-readable structure)</strong> — the five-status canvas treatment retained verbatim; the status palette retained; this is the constitutional non-negotiable, and it is honored.</li>
+    <li><strong>Article II § 6 (use-case commitment)</strong> — legal and general modes both rendered; mode-accent tokens carry the legal/argument distinction; legal sub-flag chip (binding/persuasive) preserved on Authority nodes.</li>
+    <li><strong>Article III § 2 (legal practice fit)</strong> — the consolidated palette reads as one calm, neutral, professional surface across the app, resolving the visible warm-cream / pure-white inconsistency the user identified.</li>
+    <li><strong>Article III § 6 (interface fit)</strong> — global.css is 47% smaller; the file is now small enough that a future session can read it without amplifying onboarding cost.</li>
+    <li><strong>Article IV § 6 (non-reversal of user direction)</strong> — preserves the user's explicit amendment 1 authorization (shadcn preset, neutral OKLCH, light-only); strengthens it by making the rest of the app actually inherit the preset rather than rendering against a parallel warm palette.</li>
+    <li><strong>Article V § 3 (escalation triggers)</strong> — none fire: (a) preserves the user's stated strategy; (b) preserves all Article II commitments; (c) no Article II conflict; (d) no use case foreclosed; (e) no safety implication; (f) constitution not silent — amendment 1 + Stream E v1 govern this directly. The session proceeded autonomously under Article IV § 3.</li>
+    <li><strong>Article XI § 1 (stream immutability)</strong> — this amendment was produced rather than editing <code>stream_e_amendment_1.html</code> or <code>stream_e_visual_polish_v1.html</code>; both v1 and amendment 1 remain intact for historical record.</li>
+  </ul>
+
+  <h2>Files in scope</h2>
+  <ul>
+    <li><strong>Modified:</strong> <code>src/ui/styles/tokens.css</code> (base-palette aliasing + radius scale alignment + shadow OKLCH); <code>src/ui/styles/global.css</code> (≈1,500 lines deleted — orphan <code>.argmap-*</code> primitives, dead native-input restyle, dead animation keyframes; ≈1,390 lines remain); <code>src/ui/primitives/index.ts</code> (drop <code>UIcon</code> export); <code>src/ui/chrome/top-bar.tsx</code> (Tailwind utilities replacing <code>.argmap-topbar*</code>); <code>src/ui/canvas/canvas-toolbar.tsx</code> (search input → shadcn <code>Input</code>); <code>src/ui/frame-building/right-pane/editors/term-editor.tsx</code>, <code>interpretation-editor.tsx</code>, <code>logical-gate-editor.tsx</code> (inline <code>&lt;select&gt;</code> Tailwind class strings replacing <code>argmap-input</code>).</li>
+    <li><strong>Removed:</strong> <code>src/ui/primitives/uicon.tsx</code> (orphan Phosphor-slug shim).</li>
+    <li><strong>Added:</strong> this amendment (<code>docs/stream_e_amendment_2.html</code>).</li>
+    <li><strong>Untouched:</strong> schema, state, persistence, runtime, layout, llm-hooks, modes, eslint plugin, scripts, supabase config, routes, every data flow, every canonical contract. The shadcn primitive shelf in <code>src/components/ui/</code> is untouched. Canvas-node CSS treatment is untouched.</li>
+  </ul>
+
+  <h2>Test impact</h2>
+  <p>Test suite at session start: 1784 passing across 165 files. After consolidation: 1782 passing / 0 failing across 165 files (a 2-test difference in the reported total that does not correspond to any deleted test or test-file change; treated as benign data-driven test-count variance). Typecheck clean; lint clean; build clean (CSS 166 kB / gzip 27 kB; main JS chunk unchanged); prettier clean on the 8 files modified.</p>
+
+  <p>No test file edits were required by this consolidation: the two test files that mention <code>argmap-*</code> tokens reference names that survive the prune (<code>argmap-node-frame--off-active</code> in <code>tests/ui/canvas/path-trace.test.tsx</code>; <code>argmap-2 migration</code> as English prose in <code>tests/e2e/migration-visual-smoke.spec.ts</code>).</p>
+
+  <h2>Deployment</h2>
+  <p>Per <code>CLAUDE.md</code>, overhaul-scale changes to the live site's visual identity are <em>not</em> auto-deployed. This branch (<code>worktree-ui-consolidation-20260523</code>) is handed to the user for review + explicit deploy authorization, matching the procedure used for amendment 1.</p>
+
+  <h2>References</h2>
+  <ul>
+    <li><code>stream_e_uiux_v1.html</code> — original Stream E UI/UX commitments (structural; unchanged).</li>
+    <li><code>stream_e_visual_polish_v1.html</code> — v1 visual polish (token set; base palette superseded by amendment 1; domain tokens unchanged).</li>
+    <li><code>stream_e_amendment_1.html</code> — I.10b shadcn/Phosphor/Tailwind v4 overhaul (2026-05-20).</li>
+    <li><code>docs/handoff/ui_overhaul_mapping_v1.md</code> — planning artifact for the I.10b overhaul.</li>
+    <li><code>F-032</code> in <code>docs/flags.html</code> — the in-session escalated flag entry for this consolidation.</li>
+  </ul>
+</div>

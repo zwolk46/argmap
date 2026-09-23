@@ -71,9 +71,6 @@ export type { NodeChipProps } from "./node-chip";
 export { ToastProvider, useToast, useOptionalToast } from "./toast";
 export type { ToastInput, ToastKind } from "./toast";
 
-export { UIcon } from "./uicon";
-export type { UIconProps } from "./uicon";
-
 export { Z } from "./z-index";
 export type { ZBand } from "./z-index";
 

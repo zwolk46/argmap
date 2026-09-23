@@ -1,4 +1,49 @@
-Branch: main. Primary directory: /Users/zacharywolk/zwolk/argmap. The branch-scoped Vercel deploy lacks API keys, so the user has consented to direct main-branch deploys; per-session worktrees still isolate the harness, then merge to main and deploy from the primary directory. Test count: 1757. Production deploy: `dpl_4hUBwFY5TgWzxpbyyjPV3FcPkZKd` (May 21, 2026) at https://argmap.vercel.app.
+Branch: `worktree-ui-consolidation-20260523` (NOT main). Primary directory: /Users/zacharywolk/zwolk/argmap. Worktree: `.claude/worktrees/ui-consolidation-20260523`. Test count: 1782. Last production deploy on `main`: `dpl_4hUBwFY5TgWzxpbyyjPV3FcPkZKd` (May 21, 2026) at https://argmap.vercel.app. This branch is **not deployed** — overhaul-scale (Stream E amendment 2) per CLAUDE.md.
+
+**Coding session #22 (2026-05-23) — Stream E amendment 2: UI consolidation.** The user reported the post-overhaul UI as "kinda all over the place" and asked to standardize everything on shadcn — including colors and schema — to look like "a professional app." Root cause: the I.10b overhaul layered shadcn primitives on top of argmap but left two parallel design systems at `:root`. shadcn primitives consumed pure-neutral OKLCH (`--background`, `--foreground`, `--muted`, etc.); legacy argmap surfaces consumed warm-neutral HSL (`--color-surface-canvas` cream, etc.). Pure-white shadcn dialogs rendered alongside cream argmap panes in the same view.
+
+Scope of this consolidation:
+- **Base palette aliased to shadcn OKLCH.** `src/ui/styles/tokens.css` rewrites `--color-surface-*` / `--color-text-*` / `--color-border-*` / `--shadow-*` / `--radius-sm/md/lg` to alias the shadcn theme variables. Both naming families coexist; both resolve to the same OKLCH values. `--radius-md` no longer mismatches Tailwind `rounded-md` (was 6px vs 8px; now both 8px). `--color-text-tertiary` set to `oklch(0.56 0 0)` (4.67:1 on white — preserves the AA threshold the original 46%L HSL value hit at 4.62).
+- **Domain tokens unchanged.** Status palette (satisfied/open/contested/foreclosed/not_applicable), mode accents, edge families, severity, sub-flags, AI attribution, milestone — all preserved per Article II § 5 + Stream E amendment 1 commitment. Five-status canvas-node CSS treatment untouched.
+- **UIcon shim deleted** (`src/ui/primitives/uicon.tsx` + its export). No remaining callers; the obvious next-pass item from session #19 is resolved.
+- **Migrated inline argmap-input callsites (7):** `canvas-toolbar.tsx` search input → shadcn `Input`; 5 native `<select>`s in 3 frame-building editors (term, interpretation, logical-gate) kept native (for autoFocus/onBlur semantics inline pickers depend on) and restyled with inline Tailwind classes matching shadcn Input.
+- **Migrated argmap-topbar* classes (4):** `top-bar.tsx` now uses Tailwind utilities reading from the shadcn theme; the §9 #15 narrow-viewport reflow is now `max-[720px]:hidden` / `max-[560px]:hidden` / `max-[480px]:hidden` on the slot divs.
+- **Pruned global.css orphan CSS (≈1,500 lines, 2632 → ≈1,390):** `.argmap-btn` family (all 5 variants × hover/active/loading), `.argmap-icon-btn` two-layer cross-fade machine, full form-control family (input/textarea/select/check/radio/switch/field*/input-wrap), `.argmap-overlay`+`.argmap-dialog`, `.argmap-card`, `.argmap-surface`, `.argmap-output-tab`, `.argmap-radio-card`, `.argmap-pill` (10 tones), `.argmap-ai-chip` (+ ::before dot), `.argmap-segmented*`, `.argmap-kbd`, `.argmap-no-scrollbar`, `.argmap-fullheight`, `.argmap-number-meta`, the unscoped native `input[type="radio"|"checkbox"]` restyle that matched nothing, and dead animation keyframes (dialog-pop-out, overlay-fade-out, slide-in-left/right, fade-in, node-enter). Focus-visible halo compound trimmed from 8 primitives to 2 + 4 chrome-chip selectors.
+- **Retained `.argmap-*` (consumed by source):** `skip-link`, `sr-only`, `row-hover`, `section-heading`, `status-badge`, `spinner`, `overlay-edge--trace`, `node-frame--off-active`. (The `argmap-arrow-*` SVG marker ids and `argmap-palette-node` DnD MIME-type aren't CSS classes.)
+- **WCAG AA verified** on the new pure-white background: satisfied 4.51 (improved from cream's 4.25), open 4.67, foreclosed 7.71, severity-error 5.71, ai-accent 5.97, mode-frame-accent 5.94, mode-argument-accent 5.10, text-secondary 4.74, text-tertiary 4.67, foreground 19.80 — all AA pass. **Carry-forward (not a regression):** contested at 3.39 fails AA for normal text but was already 3.19 on cream; pre-existing, part of the deferred WCAG 2.1 AA audit.
+
+Verification: typecheck clean; lint clean; build clean (CSS 166 kB / gzip 27 kB; main JS unchanged); vitest **1782/1782** passing across 165 test files; prettier clean on the 8 modified + 1 deleted files. 5 pre-existing prettier warnings in untouched files left in place per scope discipline. The 1782 count is -2 from the 1784 baseline; investigated and explained: `tests/ui/import-boundary.test.ts` enumerates every `.tsx` under `src/ui/` and emits two assertions per file (no-value-imports-from-@/llm-hooks and no-value-imports-from-@/runtime/persistence/modes). Deleting `src/ui/primitives/uicon.tsx` removed its two corresponding boundary checks from the dynamic enumeration. Test count drop is mechanical, not behavioral.
+
+Persistence artifacts:
+- `docs/stream_e_amendment_2.html` — NEW, written per Article XI § 1.
+- `docs/current_state.html` — updated: subtitle, Stream E row in the stream table, "Visual polish of Stream E defaults" open-question entry, I.10b UIcon-shim deferral marked DONE, new session #22 prose block prepended to the Coding-phase handoff, new "UI consolidation" entry in the v1 ship checklist (after the I.10b row), new pointer-index entry for amendment 2.
+- `docs/flags.html` — updated: subtitle "Last appended" bumped to F-032, next-available-id bumped to F-033, F-032 row added to the in-session escalated table, F-032 full record added above F-031's record.
+- This HANDOFF_NEXT.md prepended with session #22.
+
+**Files changed:**
+```
+M src/ui/canvas/canvas-toolbar.tsx
+M src/ui/chrome/top-bar.tsx
+M src/ui/frame-building/right-pane/editors/interpretation-editor.tsx
+M src/ui/frame-building/right-pane/editors/logical-gate-editor.tsx
+M src/ui/frame-building/right-pane/editors/term-editor.tsx
+M src/ui/primitives/index.ts
+D src/ui/primitives/uicon.tsx
+M src/ui/styles/global.css   (≈1,500 lines deleted)
+M src/ui/styles/tokens.css   (base-palette aliasing)
+A docs/stream_e_amendment_2.html
+M docs/current_state.html
+M docs/flags.html
+M HANDOFF_NEXT.md
+```
+
+**Deployment held.** This is overhaul-scale per CLAUDE.md's exception clause ("Do not auto-deploy when the change is an overhaul-type change"). The branch is ready for user review + explicit deploy authorization. To merge + deploy: from `/Users/zacharywolk/zwolk/argmap` (the primary directory), `git merge worktree-ui-consolidation-20260523`, then `vercel deploy --prod --yes --scope zachs-projects-74dd78e7`.
+
+**Manual verification needed on a real browser** (background agents can't open a browser; the previous overhaul session #19 documented the same gap):
+- Confirm the visual is unified — pure-white shadcn dialogs/sheets/cards should now match the page background and pane surfaces rather than reading as a contrasting "card" over cream. Compare home, frame-building (canvas + left palette + right inspector), argument-running (two-pane + bottom panel), version-history, session-settings, all dialogs.
+- Confirm the five canvas-node statuses still read distinctly (satisfied green / open gray / contested amber / foreclosed brick-red / not_applicable desaturated). Mode accents (frame-building slate-blue / argument-running burnt-sienna) and the legal sub-flag chip (binding navy / persuasive slate) should be unchanged.
+- Confirm the topbar still collapses cleanly at 720px (chips hide), 560px (indicators hide), 480px (title hides + horizontal scroll inside the header).
+- Confirm `<select>` elements in term-editor / interpretation-editor / logical-gate-editor look consistent with shadcn `Input` (h-9 rounded-4xl pill, accent ring on focus).
 
 **Coding session #20 (2026-05-21) — overhaul merge + bug-fix port.** The I.10b shadcn/Phosphor/Tailwind-v4 UI overhaul (branch `worktree-ui-overhaul-shadcn-20260520`, commits b697064..11a2ab2) was merged into `main` per explicit user authorization (merge commit afb4f09), then the 14 bug fixes from the parallel `worktree-bugfix-ui-20260520` session (originally on `main` at 9a6c516 but written against the pre-overhaul primitives) were re-applied onto the new shadcn substrate (commit bfa2757). Each fix's port is recorded in F-030. All worktrees (`audit-fixes-20260516`, `audit-f09-f10-20260519`, `audit-a11y-canvas-kbd-20260520`, `ui-overhaul-shadcn-20260520`) are now stale and may be removed when convenient.
 

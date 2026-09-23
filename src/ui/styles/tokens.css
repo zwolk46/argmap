@@ -1,32 +1,46 @@
-/* Design tokens from stream_e_visual_polish_v1.html — transcribed verbatim */
+/* Design tokens originally transcribed verbatim from stream_e_visual_polish_v1.html
+   (retired 2026-05-23; see git history).
+
+   2026-05-23 consolidation (Stream E amendment 2): the base palette
+   (surfaces, text, borders) has been collapsed onto the shadcn OKLCH theme
+   tokens defined in src/index.css. The legacy argmap names below are now
+   aliases that resolve to the canonical shadcn values, so any consumer that
+   reads either family ends up with the same pixel value. Domain tokens
+   below (status, mode accents, edges, severity, sub-flags, AI, milestone)
+   remain authoritative in their own right and are unchanged. */
 
 :root {
-  /* Surfaces (warm-neutral grays) */
-  --color-surface-canvas: hsl(36 16% 97%);
-  --color-surface-pane: hsl(36 12% 95%);
-  --color-surface-elevated: hsl(0 0% 100%);
-  --color-surface-overlay: hsla(30 8% 12% / 0.42);
-  --color-surface-hover: hsl(36 14% 92%);
-  --color-surface-selected: hsl(36 18% 89%);
-  /* `sunken` is the disabled-input wash; one shade darker than `pane`,
-     used by `.argmap-input:disabled` and `.argmap-select:disabled` so the
-     control reads as clearly inert against the surrounding `pane`. */
-  --color-surface-sunken: hsl(36 14% 94%);
+  /* Surfaces — alias the shadcn OKLCH neutral palette so every surface
+     in the app reads from one source of truth.
 
-  /* Text */
-  --color-text-primary: hsl(30 8% 12%);
-  --color-text-secondary: hsl(30 6% 38%);
-  /* Darkened to hsl(30 6% 46%) for ~4.6:1 contrast on white — passes WCAG
-     AA for normal text. Previous value (56%) was ~3.5:1 which only met
-     the large-text AA threshold and read as illegible against pane fills. */
-  --color-text-tertiary: hsl(30 6% 46%);
-  --color-text-on-accent: hsl(0 0% 100%);
-  --color-text-on-status: hsl(30 8% 12%);
+     The hover/selected pair are explicit OKLCH values (not aliased to
+     --accent) because the shadcn preset has --accent == --muted at the
+     same lightness, which would make .argmap-row-hover invisible when
+     the row sits on a pane (muted) surface. Three-tier hierarchy:
+     pane 0.97 → hover 0.955 → selected 0.94. */
+  --color-surface-canvas: var(--background);
+  --color-surface-pane: var(--muted);
+  --color-surface-elevated: var(--card);
+  --color-surface-overlay: oklch(0.145 0 0 / 0.5);
+  --color-surface-hover: oklch(0.955 0 0);
+  --color-surface-selected: oklch(0.94 0 0);
+  /* `sunken` is the disabled-input wash; same as muted for the consolidated
+     neutral palette. Consumers: `.argmap-input:disabled`, `.argmap-select:disabled`. */
+  --color-surface-sunken: var(--muted);
 
-  /* Borders */
-  --color-border-subtle: hsl(30 8% 88%);
-  --color-border-default: hsl(30 8% 80%);
-  --color-border-strong: hsl(30 8% 65%);
+  /* Text — alias the shadcn foreground/muted-foreground pair. */
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  /* Tertiary text — a hair lighter than muted-foreground but still WCAG AA
+     on white (4.67:1 at oklch 0.56). Anything ≥0.58 drops below AA. */
+  --color-text-tertiary: oklch(0.56 0 0);
+  --color-text-on-accent: oklch(0.985 0 0);
+  --color-text-on-status: var(--foreground);
+
+  /* Borders — alias the shadcn border with a subtle/strong fanout. */
+  --color-border-subtle: oklch(0.95 0 0);
+  --color-border-default: var(--border);
+  --color-border-strong: oklch(0.85 0 0);
 
   /* Status — satisfied */
   --color-status-satisfied: hsl(145 36% 38%);
@@ -171,16 +185,18 @@
   --border-medium: 1.5px;
   --border-thick: 2px;
 
-  /* Border radii */
-  --radius-sm: 3px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  /* Border radii — derived from the shadcn --radius (0.625rem = 10px) so
+     hand-rolled var(--radius-md) consumers and Tailwind rounded-md utilities
+     resolve to the same pixel value. */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
   --radius-pill: 9999px;
 
-  /* Elevation */
-  --shadow-sm: 0 1px 2px hsla(30 8% 12% / 0.05);
-  --shadow-md: 0 2px 6px hsla(30 8% 12% / 0.08), 0 1px 2px hsla(30 8% 12% / 0.05);
-  --shadow-lg: 0 8px 24px hsla(30 8% 12% / 0.12), 0 2px 6px hsla(30 8% 12% / 0.06);
+  /* Elevation — neutral OKLCH shadow for the consolidated palette. */
+  --shadow-sm: 0 1px 2px oklch(0.145 0 0 / 0.05);
+  --shadow-md: 0 2px 6px oklch(0.145 0 0 / 0.08), 0 1px 2px oklch(0.145 0 0 / 0.05);
+  --shadow-lg: 0 8px 24px oklch(0.145 0 0 / 0.12), 0 2px 6px oklch(0.145 0 0 / 0.06);
 
   /* Motion — duration scale */
   --duration-instant: 50ms;

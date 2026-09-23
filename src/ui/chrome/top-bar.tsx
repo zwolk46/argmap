@@ -21,9 +21,12 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
     <header
       data-mode={mode}
       className={cn(
-        "argmap-topbar sticky top-0 flex h-12 items-center gap-3 px-4",
-        "bg-background/95 supports-[backdrop-filter]:backdrop-blur-sm border-b",
-        "shrink-0",
+        "sticky top-0 flex h-12 shrink-0 items-center gap-3 px-4",
+        "border-b bg-background/95 supports-[backdrop-filter]:backdrop-blur-sm",
+        // §9 #15: narrow-viewport reflow. Below 480px we collapse padding,
+        // shrink the gap, and let the header itself scroll horizontally so
+        // any leftover slop scrolls inside the chrome instead of the page.
+        "max-[480px]:gap-1 max-[480px]:overflow-x-auto max-[480px]:px-2",
       )}
       style={{
         zIndex: Z.topbar,
@@ -35,18 +38,17 @@ export function TopBar({ slots, mode = "frame-building" }: TopBarProps): ReactEl
     >
       {slots.home && <div className="shrink-0">{slots.home}</div>}
       {slots.modeToggle && <div className="shrink-0">{slots.modeToggle}</div>}
-      {slots.title && <div className="argmap-topbar-title flex-1 min-w-0">{slots.title}</div>}
-      {/* Secondary slots: chips → indicators → buttons. On narrow viewports
-          the title can compress to 0 before these spill horizontally, so
-          we hide the chips first (they're status decorations the user can
-          re-derive from the page body), then indicators. The home button,
-          mode toggle, and primary chrome buttons stay reachable at all
-          widths via .argmap-topbar-* breakpoints in global.css. */}
-      {slots.chips && <div className="argmap-topbar-chips flex gap-1 shrink-0">{slots.chips}</div>}
+      {/* Secondary slots: title → chips → indicators → buttons. On narrow
+          viewports the chips spill first (status decorations the user can
+          re-derive from the page body), then indicators, then title.
+          The home button, mode toggle, and primary chrome buttons stay
+          reachable at all widths. */}
+      {slots.title && <div className="min-w-0 flex-1 max-[480px]:hidden">{slots.title}</div>}
+      {slots.chips && <div className="flex shrink-0 gap-1 max-[720px]:hidden">{slots.chips}</div>}
       {slots.indicators && (
-        <div className="argmap-topbar-indicators flex gap-2 shrink-0">{slots.indicators}</div>
+        <div className="flex shrink-0 gap-2 max-[560px]:hidden">{slots.indicators}</div>
       )}
-      {slots.buttons && <div className="flex gap-1 shrink-0">{slots.buttons}</div>}
+      {slots.buttons && <div className="flex shrink-0 gap-1">{slots.buttons}</div>}
     </header>
   );
 }
