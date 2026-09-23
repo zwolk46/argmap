@@ -34,6 +34,12 @@ export function PaletteItem(props: PaletteItemProps): ReactElement {
         asChild
         tooltip={disabled && disabled_reason ? disabled_reason : label}
         aria-disabled={disabled || undefined}
+        // Match the sidebar container's 200ms linear width transition so the
+        // panel's vertical collapse (driven by these buttons shrinking to
+        // icons) finishes in lockstep with the horizontal collapse. The base
+        // SidebarMenuButton transition has no explicit duration, so it falls
+        // back to Tailwind's 150ms default and would otherwise complete first.
+        className="duration-200 ease-linear"
       >
         <button
           type="button"

@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import type { NodeType, Node } from "@/schema";
 import { useFrameStore, useRepository } from "@/state";
 import { PaletteItem } from "./palette-item";
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu } from "#components/ui/sidebar";
+import { SidebarGroup, SidebarMenu } from "#components/ui/sidebar";
 
 /**
  * Pure helper. Produces a fully-stamped Node from a NodeType, separated for
@@ -224,8 +224,7 @@ export function NodePalette(props: NodePaletteProps): ReactElement {
   }
 
   return (
-    <SidebarGroup aria-label="Node palette">
-      <SidebarGroupLabel>Palette</SidebarGroupLabel>
+    <SidebarGroup aria-label="Node palette" className="pt-0">
       <SidebarMenu>
         {visible.map((node_type) => {
           const is_root_disabled = node_type === "RootQuestion" && has_root_question;
