@@ -37,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "#components/ui/alert-dialog";
-import { ThreePaneLayout } from "./three-pane-layout";
+import { ThreePaneLayout, RightPaneTopbarToggle } from "./three-pane-layout";
 import { NodePalette, OutlineTree, buildNodeDefaults } from "./left-pane";
 import { Inspector } from "./right-pane";
 import type { InspectorSelection } from "./right-pane";
@@ -331,6 +331,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     ),
     buttons: (
       <>
+        <RightPaneTopbarToggle />
         <VersionHistoryButton
           active={props.version_history_open}
           onToggle={props.onToggleVersionHistory}
@@ -370,7 +371,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                 {/* OutlineTree is unreadable below ~150px; hide it when the
                     left pane is narrow. NodePalette stays visible as an
                     icon column for one-click node-add at any pane width. */}
-                <div className="group-data-[pane-state=narrow]/pane:hidden">
+                <div className="group-data-[collapsible=icon]:hidden">
                   <OutlineTree selection={selection} on_selection_change={setSelection} />
                 </div>
               </React.Fragment>
