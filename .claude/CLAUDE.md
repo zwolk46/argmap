@@ -49,6 +49,29 @@ appends to `docs/flags.html` if any flags arose. Per Article XI § 1, stream
 documents are immutable; if a later session's work would modify stream content,
 the session produces an amendment document and notes it in current_state.
 
+## Local development & preview servers
+
+The dev server is Vite: `npm run dev` (defaults to port 5173). It has hot
+module replacement, so saved edits appear in the browser live.
+
+Two files the app needs at runtime are **gitignored**, so they are absent from
+any fresh checkout or git worktree and must be provided manually before the dev
+server will work:
+
+- **`.env.local`** — holds `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+  Without it the app refuses to start with "Missing Supabase env vars" (see
+  `SETUP.md`). Copy it from an existing working checkout:
+  `cp <existing-checkout>/.env.local .env.local`.
+- **`node_modules`** — when spinning up a dev server in a **git worktree**
+  (e.g. under `.claude/worktrees/`), give the worktree its own `node_modules`
+  by APFS-cloning the main checkout's copy: `cp -Rc <main-checkout>/node_modules
+  ./node_modules`. Do **not** symlink to the main checkout's `node_modules`:
+  its realpath then resolves outside the worktree root and Vite's
+  `server.fs.allow` blocks runtime-served assets (e.g. the Inter font).
+
+When running a second dev server alongside the main one (e.g. for a worktree
+preview), pass a distinct port: `npm run dev -- --port 5174 --strictPort`.
+
 ---
 
 ========================================================================
