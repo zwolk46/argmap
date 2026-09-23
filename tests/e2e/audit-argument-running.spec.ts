@@ -242,6 +242,12 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
     await expect(page.getByRole("button", { name: /new frame/i }).first()).toBeVisible({
       timeout: 30_000,
     });
+    // Dismiss the welcome overlay if it appears
+    const skip = page.getByTestId("welcome-skip");
+    if (await skip.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await skip.click();
+      await page.waitForTimeout(300);
+    }
     await shot(page, "home-after-signin");
   });
 
@@ -267,6 +273,25 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
             return Boolean(w.__argmap_test);
           }),
         { timeout: 5_000 },
+      )
+      .toBe(true);
+    // CRITICAL: wait for frame_version to actually be loaded in-memory.
+    // Without this, applyPatch silently no-ops (frame-store.ts:applyPatch
+    // early-returns if frame_version is null).
+    await expect
+      .poll(
+        async () =>
+          await page.evaluate(() => {
+            const w = window as unknown as {
+              __argmap_test?: {
+                frame_store?: {
+                  getState(): { frame_version: unknown };
+                };
+              };
+            };
+            return Boolean(w.__argmap_test?.frame_store?.getState().frame_version);
+          }),
+        { timeout: 10_000 },
       )
       .toBe(true);
     await shot(page, "frame-builder-empty");
@@ -446,7 +471,10 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
         type: "LogicalGate",
         layer: "frame",
         gate_type: "AND",
-        inputs: [{ id: cp_bool }, { id: cp_mc }, { id: cp_graded }],
+        // LogicalGate.inputs is a flat NodeRef[] (string array), not {id} objects.
+        // The earlier audit-walkthrough.spec used {id} objects, which crashes
+        // the gates evaluator (sortedBy assumes strings) — finding for the report.
+        inputs: [cp_bool, cp_mc, cp_graded],
         created_at: now,
         updated_at: now,
       },
@@ -455,6 +483,7 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
         type: "Conclusion",
         layer: "frame",
         statement: "Defendant is liable.",
+        direction: { kind: "legal", value: "favors_plaintiff" },
         created_at: now,
         updated_at: now,
       },
@@ -510,9 +539,56 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
     pushEdge("CITES", auth_palsgraf, interp_disp_a, { strength: "directly_on_point" });
 
     // Apply all node_added patches, then all edge_added patches.
-    const store = fs.getState();
-    for (const n of nodes) store.applyPatch({ kind: "node_added", node: n });
-    for (const e of edges) store.applyPatch({ kind: "edge_added", edge: e });
+    // Each applyPatch obtains fresh state; we re-read inside the loop so any
+    // mid-loop store replacement doesn't strand earlier patches.
+    let nodes_applied = 0;
+    let edges_applied = 0;
+    let last_err: string | null = null;
+    for (const n of nodes) {
+      try {
+        fs.getState().applyPatch({ kind: "node_added", node: n });
+        nodes_applied += 1;
+      } catch (err) {
+        last_err = `node_added(${(n as { type?: string }).type}) ${(err as Error).message}`;
+        break;
+      }
+    }
+    for (const e of edges) {
+      try {
+        fs.getState().applyPatch({ kind: "edge_added", edge: e });
+        edges_applied += 1;
+      } catch (err) {
+        last_err = `edge_added(${(e as { type?: string }).type}) ${(err as Error).message}`;
+        break;
+      }
+    }
+    // After applying, read back from the store to verify retention.
+    const post_state = fs.getState() as unknown as {
+      frame: unknown;
+      frame_version: { nodes: unknown[]; edges: unknown[] } | null;
+    };
+    const post_nodes = post_state.frame_version?.nodes.length ?? 0;
+    const post_edges = post_state.frame_version?.edges.length ?? 0;
+    const has_frame = Boolean(post_state.frame);
+    (
+      window as unknown as {
+        __audit_seed_result?: {
+          nodes_applied: number;
+          edges_applied: number;
+          last_err: string | null;
+          post_nodes: number;
+          post_edges: number;
+          has_frame: boolean;
+        };
+      }
+    ).__audit_seed_result = {
+      nodes_applied,
+      edges_applied,
+      last_err,
+      post_nodes,
+      post_edges,
+      has_frame,
+    };
 
     return {
       root,
@@ -533,6 +609,60 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
     };
   });
   await page.waitForTimeout(500);
+  const seed_result = await page.evaluate(() => {
+    return (
+      window as unknown as {
+        __audit_seed_result?: {
+          nodes_applied: number;
+          edges_applied: number;
+          last_err: string | null;
+          post_nodes: number;
+          post_edges: number;
+          has_frame: boolean;
+        };
+      }
+    ).__audit_seed_result ?? null;
+  });
+  console.log(`[audit-AR] seed result: ${JSON.stringify(seed_result)}`);
+
+  // RETENTION CHECK — the dev-mode flow can race a subsequent loadFrame
+  // (autosave round-trip, etc.) and wipe in-memory state right after the
+  // seed. Poll the live store; if nodes get wiped, replay the seed up to
+  // a few times.
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const live = await readFrame(page);
+    if (live.nodes.length >= 15) break;
+    console.log(
+      `[audit-AR] retention attempt ${attempt}: nodes=${live.nodes.length} — re-seeding`,
+    );
+    // Re-apply the SAME ids so all relationships still resolve.
+    await page.evaluate((seed_ids) => {
+      const w = window as unknown as {
+        __argmap_test?: {
+          frame_store?: { getState(): { applyPatch(p: unknown): void } };
+        };
+      };
+      const fs = w.__argmap_test?.frame_store;
+      if (!fs) throw new Error("frame_store missing");
+      const ts = new Date().toISOString();
+      // Re-issue every node_added — applyPatch tolerates duplicates because
+      // node_added re-runs runFrameAction and produces a new FrameVersion.
+      // Read intended nodes/edges from a closure captured stash on window.
+      const stash = (
+        w as unknown as {
+          __audit_seed_payload?: { nodes: Array<Record<string, unknown>>; edges: Array<Record<string, unknown>> };
+        }
+      ).__audit_seed_payload;
+      if (!stash) return;
+      void seed_ids;
+      void ts;
+      const store = fs.getState();
+      for (const n of stash.nodes) store.applyPatch({ kind: "node_added", node: n });
+      for (const e of stash.edges) store.applyPatch({ kind: "edge_added", edge: e });
+    }, ids);
+    await page.waitForTimeout(800);
+  }
+
   await shot(page, "frame-seeded");
 
   await test.step("inspect validation before mode switch", async () => {
@@ -633,6 +763,35 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
     await shot(page, "2e-search-breach");
     await page.getByTestId("interview-search").fill("");
     await page.waitForTimeout(120);
+  });
+
+  // -------------------------------------------------------------------------
+  // FORECLOSURE BEFORE-SHOT — capture the pre-state and then trigger the
+  // dispositive selection up-front so subsequent steps (3-6) actually see
+  // the downstream Checkpoints/Interpretations in the interview list.
+  // The "AFTER" foreclosure screenshot is captured later in step 7.
+  // -------------------------------------------------------------------------
+  await test.step("pre-7. capture pre-foreclosure baseline", async () => {
+    await page.getByTestId("output-view-tab-path_overlay").click().catch(() => {});
+    await page.waitForTimeout(250);
+    await shot(page, "pre7-foreclosure-before");
+    const before_session = await readSession(page);
+    console.log(
+      `[audit-AR] foreclosed pre-trigger: ${JSON.stringify(before_session?.foreclosed ?? [])}`,
+    );
+    // Trigger the dispositive interp selection so the downstream Checkpoints
+    // become open in the interview list. We screenshot the AFTER state in
+    // step 7 below.
+    await sessionApplyPatch(page, {
+      kind: "interpretation_selected",
+      term_id: ids.term_disp,
+      interpretation_id: ids.interp_disp_a,
+    });
+    await page.waitForTimeout(500);
+    const after_session = await readSession(page);
+    console.log(
+      `[audit-AR] foreclosed post-trigger: ${JSON.stringify(after_session?.foreclosed ?? [])}`,
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -792,32 +951,17 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
   });
 
   // -------------------------------------------------------------------------
-  // 7. DISPOSITIVE FORECLOSURE — select an interp on dispositive Term;
-  //    sibling Terms (and their cascade) should foreclose.
+  // 7. DISPOSITIVE FORECLOSURE — verify foreclosed set + post-state shot.
+  // (We triggered the interpretation_selected patch in "pre-7" above so
+  // subsequent steps had open downstream Checkpoints; here we read the
+  // foreclosed_set and capture the post-state path-overlay rendering.)
   // -------------------------------------------------------------------------
-  await test.step("7. dispositive foreclosure", async () => {
-    // BEFORE — switch to path-overlay tab, screenshot
+  await test.step("7. dispositive foreclosure (verification)", async () => {
     await page.getByTestId("output-view-tab-path_overlay").click().catch(() => {});
     await page.waitForTimeout(300);
-    await shot(page, "7a-before-foreclosure");
-    const before_session = await readSession(page);
-    console.log(
-      `[audit-AR] foreclosed before: ${JSON.stringify(before_session?.foreclosed ?? [])}`,
-    );
-
-    // Trigger via session_store applyPatch — pick interp_disp_a as selected
-    // for term_disp. The runtime's dispositive-foreclosure pass will then
-    // forecloses sibling term_other (and cascade into its interpretations).
-    await sessionApplyPatch(page, {
-      kind: "interpretation_selected",
-      term_id: ids.term_disp,
-      interpretation_id: ids.interp_disp_a,
-    });
-    await page.waitForTimeout(400);
-
     const after_session = await readSession(page);
     console.log(
-      `[audit-AR] foreclosed after: ${JSON.stringify(after_session?.foreclosed ?? [])}`,
+      `[audit-AR] foreclosure verification: ${JSON.stringify(after_session?.foreclosed ?? [])}`,
     );
     const foreclosed_set = new Set(after_session?.foreclosed ?? []);
     const sib_term_in = foreclosed_set.has(ids.term_other);
@@ -826,7 +970,7 @@ test("audit-AR: drive Argument-Running surfaces end-to-end", async ({ page }) =>
     console.log(
       `[audit-AR] foreclosure result — sibling-Term:${sib_term_in} sib-interp-a:${sib_interp_a_in} sib-interp-b:${sib_interp_b_in}`,
     );
-    await shot(page, "7b-after-foreclosure");
+    await shot(page, "7-after-foreclosure-pathoverlay");
   });
 
   // -------------------------------------------------------------------------

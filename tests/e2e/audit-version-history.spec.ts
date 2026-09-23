@@ -144,55 +144,28 @@ async function readFrameStore(page: Page): Promise<{
   });
 }
 
-async function loadFrameSummaries(
-  page: Page,
-  frame_id: string,
-): Promise<
-  Array<{
-    id: string;
-    version_number: number;
-    is_milestone: boolean;
-    change_summary?: string;
-  }>
-> {
-  return await page.evaluate(async (fid) => {
-    const w = window as unknown as {
-      // Repository accessed via store — but the repo lives on the
-      // RepositoryProvider, not on window. Cheaper path: shell out to the
-      // version-history use-version-summaries hook? No — that's a hook.
-      // Easiest: call the repo via the frame store's parent provider —
-      // but the test handle only exposes stores. Resort to reading store
-      // state and falling back: ask the version-tree DOM.
-      __argmap_test?: unknown;
-    };
-    // Use the DOM. We open the pane in the calling step and read rows.
-    void w;
-    void fid;
-    return [] as Array<{
-      id: string;
-      version_number: number;
-      is_milestone: boolean;
-      change_summary?: string;
-    }>;
-  }, frame_id);
-}
-
 // Read the rendered version-tree rows from the pane (assumes pane is open).
+// version_number is parsed from the "vN" text inside the row — the row
+// itself only exposes data-version-id / data-is-milestone / data-is-current.
 async function readVersionTreeRows(page: Page): Promise<
-  Array<{ id: string; version_number: number; is_milestone: boolean }>
+  Array<{ id: string; version_number: number; is_milestone: boolean; is_current: boolean }>
 > {
   return await page.evaluate(() => {
     const rows = Array.from(
       document.querySelectorAll('[data-testid="version-tree-row"]'),
     ) as HTMLElement[];
-    return rows.map((r) => ({
-      id: r.dataset.versionId ?? r.getAttribute("data-version-id") ?? "",
-      version_number: Number(
-        r.dataset.versionNumber ?? r.getAttribute("data-version-number") ?? "0",
-      ),
-      is_milestone:
-        (r.dataset.isMilestone ?? r.getAttribute("data-is-milestone")) === "true",
-    }));
+    return rows.map((r) => {
+      const text = r.textContent ?? "";
+      const m = text.match(/v(\d+)/);
+      return {
+        id: r.dataset.versionId ?? r.getAttribute("data-version-id") ?? "",
+        version_number: m ? Number(m[1]) : 0,
+        is_milestone:
+          (r.dataset.isMilestone ?? r.getAttribute("data-is-milestone")) === "true",
+        is_current:
+          (r.dataset.isCurrent ?? r.getAttribute("data-is-current")) === "true",
+      };
+    });
   });
 }
 
@@ -200,7 +173,6 @@ async function readVersionTreeRows(page: Page): Promise<
 // UI helpers
 // ---------------------------------------------------------------------------
 async function paletteAdd(page: Page, label: string): Promise<string> {
-  const before = await readFrameStore(page);
   const beforeIds = new Set<string>(
     await page.evaluate(() => {
       const w = window as unknown as {
@@ -237,7 +209,6 @@ async function paletteAdd(page: Page, label: string): Promise<string> {
     )
     .toBe(true);
   if (!freshId) throw new Error(`paletteAdd(${label}) failed`);
-  void before;
   return freshId;
 }
 
@@ -596,6 +567,11 @@ test("audit version history: frame + session — milestones, preview, compare, r
     // Click Preview in the footer.
     await page.getByTestId("footer-preview").click();
 
+    // Close the drawer so it doesn't intercept clicks on the canvas / banner.
+    // The drawer doesn't auto-close on preview entry — that's itself a UX
+    // wrinkle (see findings).
+    await closeHistoryPane(page);
+
     // Banner appears.
     const banner = page.getByTestId("preview-banner");
     await expect(banner).toBeVisible({ timeout: 5_000 });
@@ -848,7 +824,6 @@ test("audit version history: frame + session — milestones, preview, compare, r
     expect(before.frame_id).toBeTruthy();
 
     const savedFrameId = before.frame_id!;
-    const savedVersionId = before.frame_version_id;
 
     // Reload.
     await page.reload();
@@ -866,9 +841,12 @@ test("audit version history: frame + session — milestones, preview, compare, r
       timeout: 30_000,
     });
 
-    // Re-open our frame from Home — click the row containing FRAME_TITLE.
-    const row = page.getByText(FRAME_TITLE, { exact: false }).first();
-    await row.click();
+    // Re-open our frame from Home — find the frame-summary-card whose
+    // title matches FRAME_TITLE and click its open-link.
+    const cards = page.getByTestId("frame-summary-card");
+    const targetCard = cards.filter({ hasText: FRAME_TITLE }).first();
+    await expect(targetCard).toBeVisible({ timeout: 10_000 });
+    await targetCard.getByTestId("frame-card-open").click();
     await page.waitForTimeout(1_500);
 
     // Wait for the dev test handle to remount.
@@ -892,7 +870,6 @@ test("audit version history: frame + session — milestones, preview, compare, r
     expect(after.jurisdiction_default).toEqual({ level: "state", region: "NY" });
     // mode/flavor should be present on the snapshot (legal mode).
     expect(after.mode).toBe("legal");
-    void savedVersionId;
     await shot(page, "23-f028-after-reload");
   });
 
