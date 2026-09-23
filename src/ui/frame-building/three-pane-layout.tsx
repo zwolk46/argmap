@@ -1,56 +1,68 @@
+import * as React from "react";
 import type { ReactElement, ReactNode } from "react";
+import { SidebarSimple } from "@phosphor-icons/react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarHeader,
   SidebarInset,
   SidebarProvider,
+  useSidebar,
 } from "#components/ui/sidebar";
 
 export interface ThreePaneLayoutProps {
-  /** Top bar rendered inside SidebarInset. */
   top_bar?: ReactNode;
   left: ReactNode;
   center: ReactNode;
-  /**
-   * In prototype 3 the right pane is rendered as a Sheet at the page
-   * level (driven by selection state), not inside the layout. This prop
-   * is accepted for prop-shape compat but not rendered here.
-   */
-  right?: ReactNode;
+  right: ReactNode;
   bottom?: ReactNode | null;
-  /**
-   * Deprecated. Pixel-based width hints; unused by the shadcn layout.
-   * Kept so existing callers don't fail typecheck.
-   */
   left_width?: string;
   right_width?: string;
   bottom_height?: string;
 }
 
+const TOPBAR_HEIGHT_PX = 48;
+const TOPBAR_HEIGHT_REM = "3rem";
+const RIGHT_PANE_WIDTH = "20rem";
+
 /**
- * Prototype 3 — hybrid:
- *   - LEFT pane: shadcn Sidebar variant="sidebar" collapsible="icon".
- *     Default-collapsed to an icon rail. ⌘B/Ctrl+B toggles between rail
- *     and full-width.
- *   - RIGHT pane: rendered as a shadcn Sheet at the page level (driven
- *     by node selection state), not inside this layout. When the user
- *     selects a node, the Sheet slides in from the right with the
- *     inspector; clicking off / hitting Esc closes it.
+ * Prototype 3 (v2) — same skeleton as P1/P2 but the right-pane reopen
+ * affordance is a thin vertical "Inspector" tab strip pinned to the right
+ * viewport edge. Always present, low-noise, click to expand back.
  */
 export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
-  const { top_bar, left, center, bottom = null } = props;
+  const { top_bar, left, center, right, bottom = null } = props;
+  const [right_open, set_right_open] = React.useState(true);
 
   return (
     <SidebarProvider
-      defaultOpen={false}
-      style={{ "--sidebar-width": "18rem" } as React.CSSProperties}
+      defaultOpen={true}
+      className="!flex-col"
+      style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
     >
-      <Sidebar side="left" variant="sidebar" collapsible="icon">
-        <SidebarContent>{left}</SidebarContent>
-      </Sidebar>
-      <SidebarInset className="flex h-svh flex-col overflow-hidden">
-        {top_bar}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {top_bar}
+      <div className="flex min-h-0 flex-1">
+        <Sidebar
+          side="left"
+          variant="floating"
+          collapsible="icon"
+          style={{
+            top: TOPBAR_HEIGHT_REM,
+            height: `calc(100svh - ${TOPBAR_HEIGHT_REM})`,
+          }}
+        >
+          <SidebarHeader className="flex flex-row items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+            <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">
+              Palette
+            </span>
+            <LeftSidebarToggle />
+          </SidebarHeader>
+          <SidebarContent>{left}</SidebarContent>
+        </Sidebar>
+        <SidebarInset
+          className="flex flex-col overflow-hidden"
+          style={{ height: `calc(100svh - ${TOPBAR_HEIGHT_PX}px)` }}
+        >
           <div className="relative min-h-0 flex-1 overflow-hidden bg-background">
             {center}
           </div>
@@ -59,8 +71,103 @@ export function ThreePaneLayout(props: ThreePaneLayoutProps): ReactElement {
               {bottom}
             </div>
           ) : null}
-        </div>
-      </SidebarInset>
+        </SidebarInset>
+        <RightPane
+          open={right_open}
+          on_close={() => set_right_open(false)}
+          width={RIGHT_PANE_WIDTH}
+        >
+          {right}
+        </RightPane>
+        {!right_open ? (
+          <RightReopenStrip on_click={() => set_right_open(true)} />
+        ) : null}
+      </div>
     </SidebarProvider>
+  );
+}
+
+function LeftSidebarToggle(): ReactElement {
+  const { toggleSidebar, state } = useSidebar();
+  return (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      aria-label={state === "expanded" ? "Collapse sidebar" : "Expand sidebar"}
+      title="Toggle sidebar (⌘B)"
+      className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground"
+    >
+      <SidebarSimple size={16} />
+    </button>
+  );
+}
+
+interface RightPaneProps {
+  open: boolean;
+  on_close: () => void;
+  width: string;
+  children: ReactNode;
+}
+
+function RightPane(props: RightPaneProps): ReactElement | null {
+  const { open, on_close, width, children } = props;
+  if (!open) return null;
+  return (
+    <aside
+      data-pane="right"
+      className="shrink-0 p-2 transition-[width] duration-200 ease-linear"
+      style={{ width }}
+    >
+      <div
+        className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm"
+        style={{ height: `calc(100svh - ${TOPBAR_HEIGHT_PX}px - 1rem)` }}
+      >
+        <header className="flex flex-row items-center justify-between gap-2 p-2">
+          <span className="text-sm font-medium">Inspector</span>
+          <button
+            type="button"
+            onClick={on_close}
+            aria-label="Close inspector"
+            title="Close inspector"
+            className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          >
+            <SidebarSimple size={16} />
+          </button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-auto px-2 pb-2">{children}</div>
+      </div>
+    </aside>
+  );
+}
+
+/**
+ * Always-present vertical tab strip on the right viewport edge. Reads
+ * "Inspector" rotated 90°, low-contrast, expands when clicked. Stable
+ * affordance that telegraphs the panel exists even when collapsed.
+ */
+function RightReopenStrip(props: { on_click: () => void }): ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={props.on_click}
+      aria-label="Open inspector"
+      title="Open inspector"
+      style={{
+        position: "fixed",
+        top: `calc(${TOPBAR_HEIGHT_REM} + 1rem)`,
+        right: "0.5rem",
+        height: "8rem",
+        zIndex: 20,
+      }}
+      className="flex w-7 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-border bg-card text-foreground/60 shadow-sm hover:text-foreground"
+    >
+      <SidebarSimple size={14} />
+      <span
+        className="text-xs font-medium tracking-wide"
+        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+      >
+        Inspector
+      </span>
+    </button>
   );
 }

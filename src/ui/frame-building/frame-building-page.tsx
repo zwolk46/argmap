@@ -37,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "#components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "#components/ui/sheet";
 import { ThreePaneLayout } from "./three-pane-layout";
 import { NodePalette, OutlineTree, buildNodeDefaults } from "./left-pane";
 import { Inspector } from "./right-pane";
@@ -347,10 +346,6 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
     return <LoadingScreen label="Loading frame…" />;
   }
 
-  // Prototype 3: inspector lives in a Sheet that auto-opens when selection
-  // becomes non-empty and auto-closes when the user clears the selection.
-  const inspector_open = selection.kind !== "empty";
-
   return (
     <React.Fragment>
       <div className="h-screen">
@@ -375,7 +370,7 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                 {/* OutlineTree is unreadable below ~150px; hide it when the
                     left pane is narrow. NodePalette stays visible as an
                     icon column for one-click node-add at any pane width. */}
-                <div className="group-data-[pane-state=narrow]/pane:hidden">
+                <div className="group-data-[collapsible=icon]:hidden">
                   <OutlineTree selection={selection} on_selection_change={setSelection} />
                 </div>
               </React.Fragment>
@@ -493,35 +488,20 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                 />
               ) : null
             }
+            right={
+              <Inspector
+                selection={selection}
+                on_select={setSelection}
+                on_request_delete={(node_id: NodeRef) => cascade_confirmation.request(node_id)}
+                on_open_settings={() => setSettingsPanelOpen(true)}
+                on_navigate_to_node={(node_id: NodeRef) => {
+                  setSelection({ kind: "node", node_id });
+                  canvas_ref.current?.zoomToNode(node_id);
+                }}
+              />
+            }
           />
       </div>
-
-      {/* Prototype 3: inspector as Sheet — slides in from the right when
-          something is selected, closes when user clicks off or hits Esc. */}
-      <Sheet
-        open={inspector_open}
-        onOpenChange={(open) => {
-          if (!open) setSelection({ kind: "empty" });
-        }}
-      >
-        <SheetContent side="right" className="w-[380px] sm:max-w-[420px]">
-          <SheetHeader>
-            <SheetTitle>Inspector</SheetTitle>
-          </SheetHeader>
-          <div className="overflow-auto px-4">
-            <Inspector
-              selection={selection}
-              on_select={setSelection}
-              on_request_delete={(node_id: NodeRef) => cascade_confirmation.request(node_id)}
-              on_open_settings={() => setSettingsPanelOpen(true)}
-              on_navigate_to_node={(node_id: NodeRef) => {
-                setSelection({ kind: "node", node_id });
-                canvas_ref.current?.zoomToNode(node_id);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
 
       <CascadeDeleteDialog cascade={cascade_confirmation} />
 
