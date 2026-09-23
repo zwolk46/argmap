@@ -367,10 +367,11 @@ export function FrameBuildingPage(props: FrameBuildingPageProps): ReactElement {
                     });
                   }}
                 />
-                {/* OutlineTree is unreadable below ~150px; hide it when the
-                    left pane is narrow. NodePalette stays visible as an
-                    icon column for one-click node-add at any pane width. */}
-                <div className="group-data-[pane-state=narrow]/pane:hidden">
+                {/* OutlineTree is too dense for icon-only mode. The shadcn
+                    Sidebar emits `data-collapsible=icon` on the sidebar
+                    wrapper when collapsed; this selector hides the tree
+                    entirely in that state. Palette stays visible as icons. */}
+                <div className="group-data-[collapsible=icon]:hidden">
                   <OutlineTree selection={selection} on_selection_change={setSelection} />
                 </div>
               </React.Fragment>
